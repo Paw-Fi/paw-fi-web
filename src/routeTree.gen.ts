@@ -11,11 +11,28 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as ResultsImport } from './routes/results'
+import { Route as QuestionnaireImport } from './routes/questionnaire'
 import { Route as IntroImport } from './routes/intro'
+import { Route as RootImport } from './routes/_root'
 import { Route as IndexImport } from './routes/index'
+import { Route as LearningIndexImport } from './routes/learning/index'
+import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
 
 // Create/Update Routes
+
+const ResultsRoute = ResultsImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const QuestionnaireRoute = QuestionnaireImport.update({
+  id: '/questionnaire',
+  path: '/questionnaire',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const IntroRoute = IntroImport.update({
   id: '/intro',
@@ -23,9 +40,26 @@ const IntroRoute = IntroImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const RootRoute = RootImport.update({
+  id: '/_root',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LearningIndexRoute = LearningIndexImport.update({
+  id: '/learning/',
+  path: '/learning/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LearningLessonIdRoute = LearningLessonIdImport.update({
+  id: '/learning/$lessonId',
+  path: '/learning/$lessonId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -46,11 +80,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/_root': {
+      id: '/_root'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof RootImport
+      parentRoute: typeof rootRoute
+    }
     '/intro': {
       id: '/intro'
       path: '/intro'
       fullPath: '/intro'
       preLoaderRoute: typeof IntroImport
+      parentRoute: typeof rootRoute
+    }
+    '/questionnaire': {
+      id: '/questionnaire'
+      path: '/questionnaire'
+      fullPath: '/questionnaire'
+      preLoaderRoute: typeof QuestionnaireImport
+      parentRoute: typeof rootRoute
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsImport
       parentRoute: typeof rootRoute
     }
     '/demo/tanstack-query': {
@@ -60,6 +115,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTanstackQueryImport
       parentRoute: typeof rootRoute
     }
+    '/learning/$lessonId': {
+      id: '/learning/$lessonId'
+      path: '/learning/$lessonId'
+      fullPath: '/learning/$lessonId'
+      preLoaderRoute: typeof LearningLessonIdImport
+      parentRoute: typeof rootRoute
+    }
+    '/learning/': {
+      id: '/learning/'
+      path: '/learning'
+      fullPath: '/learning'
+      preLoaderRoute: typeof LearningIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -67,42 +136,92 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '': typeof RootRoute
   '/intro': typeof IntroRoute
+  '/questionnaire': typeof QuestionnaireRoute
+  '/results': typeof ResultsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/learning': typeof LearningIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '': typeof RootRoute
   '/intro': typeof IntroRoute
+  '/questionnaire': typeof QuestionnaireRoute
+  '/results': typeof ResultsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/learning': typeof LearningIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/_root': typeof RootRoute
   '/intro': typeof IntroRoute
+  '/questionnaire': typeof QuestionnaireRoute
+  '/results': typeof ResultsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/learning/': typeof LearningIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/intro' | '/demo/tanstack-query'
+  fullPaths:
+    | '/'
+    | ''
+    | '/intro'
+    | '/questionnaire'
+    | '/results'
+    | '/demo/tanstack-query'
+    | '/learning/$lessonId'
+    | '/learning'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/intro' | '/demo/tanstack-query'
-  id: '__root__' | '/' | '/intro' | '/demo/tanstack-query'
+  to:
+    | '/'
+    | ''
+    | '/intro'
+    | '/questionnaire'
+    | '/results'
+    | '/demo/tanstack-query'
+    | '/learning/$lessonId'
+    | '/learning'
+  id:
+    | '__root__'
+    | '/'
+    | '/_root'
+    | '/intro'
+    | '/questionnaire'
+    | '/results'
+    | '/demo/tanstack-query'
+    | '/learning/$lessonId'
+    | '/learning/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RootRoute: typeof RootRoute
   IntroRoute: typeof IntroRoute
+  QuestionnaireRoute: typeof QuestionnaireRoute
+  ResultsRoute: typeof ResultsRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
+  LearningLessonIdRoute: typeof LearningLessonIdRoute
+  LearningIndexRoute: typeof LearningIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RootRoute: RootRoute,
   IntroRoute: IntroRoute,
+  QuestionnaireRoute: QuestionnaireRoute,
+  ResultsRoute: ResultsRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
+  LearningLessonIdRoute: LearningLessonIdRoute,
+  LearningIndexRoute: LearningIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -116,18 +235,38 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/_root",
         "/intro",
-        "/demo/tanstack-query"
+        "/questionnaire",
+        "/results",
+        "/demo/tanstack-query",
+        "/learning/$lessonId",
+        "/learning/"
       ]
     },
     "/": {
       "filePath": "index.tsx"
     },
+    "/_root": {
+      "filePath": "_root.tsx"
+    },
     "/intro": {
       "filePath": "intro.tsx"
     },
+    "/questionnaire": {
+      "filePath": "questionnaire.tsx"
+    },
+    "/results": {
+      "filePath": "results.tsx"
+    },
     "/demo/tanstack-query": {
       "filePath": "demo.tanstack-query.tsx"
+    },
+    "/learning/$lessonId": {
+      "filePath": "learning/$lessonId.tsx"
+    },
+    "/learning/": {
+      "filePath": "learning/index.tsx"
     }
   }
 }
