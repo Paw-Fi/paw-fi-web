@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 @theme {
     --color-background: #F5F3FF; /* Light purple for page background */
     --color-secondary: #9181FF; /* Medium purple for section backgrounds */

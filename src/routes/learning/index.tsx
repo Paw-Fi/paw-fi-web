@@ -17,6 +17,13 @@ function LearningPage() {
   const { lessons } = introInvestingCourse;
   const cardsRef = useRef<HTMLDivElement>(null);
   
+  // Helper function to calculate approximate completion time
+  const getCompletionTime = (questionsCount: number): string => {
+    // Assume average of 45 seconds per question plus 1 minute intro/conclusion
+    const estimatedMinutes = Math.ceil((questionsCount * 45 / 60) + 1);
+    return `~${estimatedMinutes} min${estimatedMinutes > 1 ? 's' : ''}`;
+  };
+  
   // Add hover animation for lesson cards using useGSAP
   useGSAP(() => {
     if (!cardsRef.current) return;
@@ -68,20 +75,7 @@ function LearningPage() {
   }, { scope: cardsRef });
 
   return (
-    <div className="min-h-screen bg-background pb-20 [view-transition-name:main-content]">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-white py-4 shadow-sm">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4">
-          <h1 className="text-xl font-bold text-gray-900">Learning Center</h1>
-          <Link 
-            to="/" 
-            viewTransition={{ types: ['slide-right'] }} 
-            className="text-primary hover:underline"
-          >
-            Back to Home
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background pb-20 [view-transition-name:main-content] flex items-center">  
 
       {/* Lessons grid */}
       <div className="mx-auto max-w-4xl px-4 pt-8">
@@ -119,23 +113,45 @@ function LearningPage() {
                         {lesson.description}
                       </p>
 
-                      {/* Questions counter */}
-                      <div className="flex items-center text-sm text-gray-500">
-                        <svg
-                          className="mr-1 h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          ></path>
-                        </svg>
-                        {lesson.questions.length} Questions
+                      {/* Questions and time info */}
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        {/* Questions counter */}
+                        <div className="flex items-center">
+                          <svg
+                            className="mr-1 h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                          </svg>
+                          {lesson.questions.length} Questions
+                        </div>
+                        
+                        {/* Completion time */}
+                        <div className="flex items-center">
+                          <svg 
+                            className="mr-1 h-4 w-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24" 
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth="2" 
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                          </svg>
+                          {getCompletionTime(lesson.questions.length)}
+                        </div>
                       </div>
                     </div>
 
