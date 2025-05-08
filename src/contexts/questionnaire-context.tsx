@@ -34,7 +34,7 @@ export function QuestionnaireProvider({ children }: { children: ReactNode }) {
   );
 
 // Define all questionnaire questions
-const questions: Question[] = [
+const questions: Question[] = [ 
   {
     id: 'investingExperience',
     type: 'scq',

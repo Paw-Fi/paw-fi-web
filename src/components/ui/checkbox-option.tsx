@@ -23,7 +23,7 @@ function CheckboxOption({ option, isSelected, onChange }: CheckboxOptionProps) {
         <div className={classnames(
           'w-6 h-6 rounded-md mr-3',
           {
-            'bg-purple-600 flex items-center justify-center': isSelected,
+            'bg-purple-primary flex items-center justify-center': isSelected,
             'border border-gray-300': !isSelected
           }
         )}>

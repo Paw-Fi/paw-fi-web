@@ -59,7 +59,7 @@ function SortableItem({ item }: SortableItemProps) {
       )}
     >
       <div className="flex items-center">
-        <div className="w-6 h-6 flex items-center justify-center mr-3 text-purple-600">
+        <div className="w-6 h-6 flex items-center justify-center mr-3 text-purple-primary">
           <svg 
             width="18" 
             height="18" 
@@ -178,7 +178,7 @@ function Exercise({ title, description, submitAnswer, initialItems }: ExercisePr
         className={classnames(
           'w-full py-3 rounded-full text-white font-medium transition-colors',
           {
-            'bg-purple-600 hover:bg-purple-700': !completed,
+            'bg-purple-primary hover:bg-purple-700': !completed,
             'bg-green-600': completed
           }
         )}

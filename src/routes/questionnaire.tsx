@@ -6,10 +6,11 @@ import { useEffect } from "react";
 
 // Import question components from learning folder
 import ChoiceQuestion from "@/components/learning/question-types/choice-question";
-import SortCategoriesQuestion from "@/components/learning/question-types/sort-categories-question";
 import MatchQuestion from "@/components/learning/question-types/match-question";
+import SortCategoriesQuestion from "@/components/learning/question-types/sort-categories-question";
 import MatrixRatingQuestion from "@/components/learning/question-types/matrix-rating-question";
 import TextInputQuestion from "@/components/learning/question-types/text-input-question";
+import { ImageChoiceQuestion } from "@/components/learning/question-types/image-choice-question";
 
 // Import context and types
 import { useQuestionnaire } from "@/contexts/questionnaire-context";
@@ -113,6 +114,15 @@ function Questionnaire() {
           />
         );
 
+      case "image-choice":
+        return (
+          <ImageChoiceQuestion
+            question={currentQuestion}
+            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
+            value={answers[currentQuestion.id] as string | undefined}
+          />
+        );
+
       // If we add new question types to learning.ts, we can handle them here
 
       default:
@@ -151,7 +161,7 @@ function Questionnaire() {
       return !!textAnswer && textAnswer.trim() !== "";
     }
 
-    // For other question types, just check if there's any answer
+    // Image-choice questions work like standard choice questions
     return !!answers[currentQuestion.id];
   };
 
@@ -192,7 +202,7 @@ function Questionnaire() {
           {/* Loading state shown briefly during redirect */}
           {isComplete ? (
             <div className="flex items-center justify-center">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-600 border-t-transparent"></div>
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-primary border-t-transparent"></div>
             </div>
           ) : (
             // Show current question

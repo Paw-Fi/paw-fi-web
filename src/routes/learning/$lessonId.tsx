@@ -9,6 +9,8 @@ import SortCategoriesQuestion from "@/components/learning/question-types/sort-ca
 import ChoiceQuestion from "@/components/learning/question-types/choice-question";
 import MatchQuestion from "@/components/learning/question-types/match-question";
 import MatrixRatingQuestion from "@/components/learning/question-types/matrix-rating-question";
+import TextInputQuestion from "@/components/learning/question-types/text-input-question";
+import { ImageChoiceQuestion } from "@/components/learning/question-types/image-choice-question";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import catBottle from "@/assets/images/cat-bottle.svg";
 import catCash from "@/assets/images/cat-cash.svg";
@@ -99,6 +101,12 @@ function LessonPage() {
         string
       >;
       return currentQuestion.items.every((item) => !!matrixAnswer[item.id]);
+    }
+    
+    // For text input questions, check if there is text and it's not empty
+    if (currentQuestion.type === "text-input") {
+      const textAnswer = answers[currentQuestion.id] as string;
+      return !!textAnswer && textAnswer.trim() !== "";
     }
 
     // For other question types, just check if there's any answer
@@ -265,6 +273,22 @@ function LessonPage() {
                     handleAnswer(currentQuestion.id, answer)
                   }
                   value={answers[currentQuestion.id]}
+                />
+              )}
+
+              {currentQuestion.type === "text-input" && (
+                <TextInputQuestion
+                  question={currentQuestion}
+                  onAnswer={(value: string) => handleAnswer(currentQuestion.id, value)}
+                  value={answers[currentQuestion.id] as string}
+                />
+              )}
+
+              {currentQuestion.type === "image-choice" && (
+                <ImageChoiceQuestion
+                  question={currentQuestion}
+                  onAnswer={(value: string) => handleAnswer(currentQuestion.id, value)}
+                  value={answers[currentQuestion.id] as string}
                 />
               )}
 

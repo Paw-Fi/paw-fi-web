@@ -58,7 +58,7 @@ function SortableItem({ item, isActive = false }: SortableItemProps) {
       })}
     >
       <div className="flex items-center">
-        <div className="mr-3 flex h-6 w-6 items-center justify-center text-purple-600">
+        <div className="mr-3 flex h-6 w-6 items-center justify-center text-purple-primary">
           <svg
             width="18"
             height="18"

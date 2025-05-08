@@ -10,7 +10,7 @@ export const lessons: Record<string, Lesson> = {
     xp: 50,
     unlocked: true,
     icon: "💰",
-    questions: [      
+    questions: [          
       {
         id: "sort-actions",
         type: "sort-categories",
@@ -105,6 +105,30 @@ export const lessons: Record<string, Lesson> = {
           },
           { id: "opt-4", content: "Tax advantages", isCorrect: false },
         ],
+      },
+      {
+        id: 'portfolioPreference',
+        type: 'image-choice',
+        question: "Which portfolio is better diversified?",
+        explanation: "Diversification helps reduce risk by spreading investments across different asset classes.",
+        helpTips: "Diversification means not putting all your eggs in one basket. A diversified portfolio includes different types of assets — like tech, real estate, bonds, and savings — so that if one drops, others might stay steady or even rise. It helps reduce risk while giving your money more ways to grow!",
+        itemsPerRow: 2,
+        options: [
+          {
+            id: 'portfolio1',
+            content: 'Portfolio 1',
+            imageUrl: '/src/assets/images/image-choices/chart1.png',
+            caption: '100% Tech Stocks',
+            isCorrect: false
+          },
+          {
+            id: 'portfolio2',
+            content: 'Portfolio 2',
+            imageUrl: '/src/assets/images/image-choices/chart2.png',
+            caption: 'Tech (20%), Real Estate (25%), Bonds (25%), Savings (20%), Healthcare (10%)',
+            isCorrect: true
+          }
+        ]
       },
       // {
       //   id: "sort-risk-returns",
