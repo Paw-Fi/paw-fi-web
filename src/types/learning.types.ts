@@ -33,12 +33,13 @@ export interface BaseQuestion {
 }
 
 // Types of questions
-export type QuestionType = 'sort' | 'sort-categories' | 'mcq' | 'scq' | 'match' | 'matrix-rating';
+export type QuestionType = 'sort' | 'sort-categories' | 'mcq' | 'scq' | 'match' | 'matrix-rating' | 'text-input';
 
 // Multiple/Single choice question
 export interface ChoiceQuestion extends BaseQuestion {
   type: 'mcq' | 'scq';
   options: Array<ChoiceOption>;
+  itemsPerRow?: 1 | 2; // Controls layout - defaults to 1 if not specified
 }
 
 // Sorting question
@@ -85,13 +86,29 @@ export interface MatrixRatingQuestion extends BaseQuestion {
   imageUrl?: string;         // Optional image to display with the question
 }
 
+// Text input question (e.g., for entering a dollar amount, name, etc.)
+export interface TextInputQuestion extends BaseQuestion {
+  type: 'text-input';
+  placeholder?: string;
+  prefix?: string; // Optional prefix like '$' or '€'
+  suffix?: string; // Optional suffix like '%' or 'lbs'
+  validation?: {
+    pattern?: string; // RegExp pattern for validation
+    min?: number; // Minimum value (if numeric)
+    max?: number; // Maximum value (if numeric)
+    required?: boolean; // Whether input is required
+    errorMessage?: string; // Custom error message
+  }
+}
+
 // Union type for all question types
 export type Question =
   | ChoiceQuestion
   | SortQuestion
   | SortCategoriesQuestion
   | MatchQuestion
-  | MatrixRatingQuestion;
+  | MatrixRatingQuestion
+  | TextInputQuestion;
 
 // Lesson structure
 export interface Lesson {

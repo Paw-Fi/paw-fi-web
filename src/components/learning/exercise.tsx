@@ -23,7 +23,7 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 
-import type { DraggableItem } from '@/types/learning';
+import type { DraggableItem } from '@/types/learning.types';
 
 interface SortableItemProps {
   item: DraggableItem;

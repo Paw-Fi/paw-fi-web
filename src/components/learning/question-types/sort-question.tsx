@@ -23,7 +23,7 @@ import classnames from "classnames";
 import type {
   DraggableItem,
   SortQuestion as SortQuestionType,
-} from "@/types/learning";
+} from "@/types/learning.types";
 
 interface SortableItemProps {
   item: DraggableItem;

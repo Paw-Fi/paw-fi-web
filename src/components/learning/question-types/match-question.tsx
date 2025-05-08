@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import classnames from 'classnames';
-import type { MatchQuestion as MatchQuestionType, Item } from '@/types/learning';
+import type { MatchQuestion as MatchQuestionType, Item } from '@/types/learning.types';
 
 interface MatchQuestionProps {
   question: MatchQuestionType;

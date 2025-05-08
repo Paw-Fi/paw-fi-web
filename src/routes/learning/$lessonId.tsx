@@ -69,11 +69,6 @@ function LessonPage() {
       // Lesson completed
       setIsComplete(true);
       setEarnedXp(lesson.xp);
-
-      // Wait a moment before returning to the learning page
-      setTimeout(() => {
-        navigate({ to: "/learning" });
-      }, 2500);
     }
   };
 
@@ -96,13 +91,16 @@ function LessonPage() {
   const isCurrentQuestionAnswered = () => {
     // If no answer yet, question is not answered
     if (!answers[currentQuestion.id]) return false;
-    
+
     // For matrix rating questions, all items must be rated
-    if (currentQuestion.type === 'matrix-rating') {
-      const matrixAnswer = answers[currentQuestion.id] as Record<string, string>;
-      return currentQuestion.items.every(item => !!matrixAnswer[item.id]);
+    if (currentQuestion.type === "matrix-rating") {
+      const matrixAnswer = answers[currentQuestion.id] as Record<
+        string,
+        string
+      >;
+      return currentQuestion.items.every((item) => !!matrixAnswer[item.id]);
     }
-    
+
     // For other question types, just check if there's any answer
     return !!answers[currentQuestion.id];
   };
@@ -259,7 +257,7 @@ function LessonPage() {
                   value={answers[currentQuestion.id]}
                 />
               )}
-              
+
               {currentQuestion.type === "matrix-rating" && (
                 <MatrixRatingQuestion
                   question={currentQuestion}
@@ -297,7 +295,7 @@ function LessonPage() {
         description="Great job! You've completed this lesson."
         reward={{
           amount: earnedXp,
-          unit: "XP"
+          unit: "XP",
         }}
         actionText="Continue Learning"
       />

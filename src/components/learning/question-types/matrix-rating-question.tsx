@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import classNames from "classnames";
-import type { MatrixRatingQuestion as MatrixRatingQuestionType } from "@/types/learning";
+import type { MatrixRatingQuestion as MatrixRatingQuestionType } from "@/types/learning.types";
 
 interface MatrixRatingQuestionProps {
   question: MatrixRatingQuestionType;

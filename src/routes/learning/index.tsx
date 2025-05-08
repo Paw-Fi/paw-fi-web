@@ -6,7 +6,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 
 // Import data from separate data file
-import type { Lesson } from '@/types/learning';
+import type { Lesson } from '@/types/learning.types';
 import introInvestingCourse from '@/data/learning';
 
 export const Route = createFileRoute('/learning/')({ 

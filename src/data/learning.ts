@@ -1,4 +1,4 @@
-import type { Course, Lesson, Question } from "@/types/learning";
+import type { Course, Lesson, Question } from "@/types/learning.types";
 
 // Individual lessons with multiple question types
 export const lessons: Record<string, Lesson> = {

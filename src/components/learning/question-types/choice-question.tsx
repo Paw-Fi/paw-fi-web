@@ -1,7 +1,7 @@
 'use client';
 
 import classnames from 'classnames';
-import type { ChoiceQuestion as ChoiceQuestionType } from '@/types/learning';
+import type { ChoiceQuestion as ChoiceQuestionType } from '@/types/learning.types';
 
 interface ChoiceQuestionProps {
   question: ChoiceQuestionType;
@@ -37,9 +37,17 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
     }
   };
   
+  // Determine if options should be displayed in a grid layout
+  const useGridLayout = question.itemsPerRow === 2;
+  
   return (
     <div className="choice-question">
-      <div className="space-y-3">
+      <div className={classnames(
+        // For single item per row, use vertical spacing
+        {'space-y-3': !useGridLayout,
+        // For two items per row, use grid
+        'grid grid-cols-1 sm:grid-cols-2 gap-3': useGridLayout}
+      )}>
         {question.options.map((option) => (
           <div 
             key={option.id}

@@ -16,7 +16,7 @@ import {
 import { DraggableItem, Droppable, DragOverlay } from '../dnd';
 
 // Import types from the learning types file
-import type { SortCategoriesQuestion as SortCategoriesQuestionType, DraggableItem as DraggableItemType } from '@/types/learning';
+import type { SortCategoriesQuestion as SortCategoriesQuestionType, DraggableItem as DraggableItemType } from '@/types/learning.types';
 
 interface SortCategoriesQuestionProps {
   question: SortCategoriesQuestionType;
