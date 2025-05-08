@@ -62,7 +62,7 @@ function LessonPage() {
   const { questions } = lesson;
   const currentQuestion = questions[currentQuestionIndex];
   console.log(currentQuestion);
-  const progressPercentage = (currentQuestionIndex / questions.length) * 100;
+  const progressPercentage = isComplete ? 100 : (currentQuestionIndex / questions.length) * 100;
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -155,7 +155,12 @@ function LessonPage() {
           {/* Help tips container*/}
           <div className="absolute top-0 right-0 w-72 translate-x-[105%]">
             {currentQuestion.helpTips && (
-              <div className="rounded-3xl bg-green-50 p-6 shadow-md">
+              <div className="rounded-3xl bg-green-50 p-6 shadow-md relative">
+                {/* Triangle pointing from help tips toward main content */}
+                <div 
+                  className="absolute w-4 h-4 bg-green-50 left-[-8px] top-10 transform rotate-45"
+                  style={{ boxShadow: '-2px 2px 2px rgba(0, 0, 0, 0.1)' }}
+                ></div>
                 <div className="mb-4 flex items-center">
                   <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-green-500">
                     <img src={bulbIcon} alt="Bulb" />
