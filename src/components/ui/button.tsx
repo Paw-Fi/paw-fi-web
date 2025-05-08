@@ -33,8 +33,9 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClasses = classnames(
-    'font-medium rounded-lg transition-colors text-center cursor-pointer',
+    'font-medium rounded-lg transition-colors text-center',
     {
+      "cursor-pointer": !props.disabled,
       // Size variants
       'py-2 px-4 text-xs': size === 'sm',
       'py-3 px-6 text-sm': size === 'md',

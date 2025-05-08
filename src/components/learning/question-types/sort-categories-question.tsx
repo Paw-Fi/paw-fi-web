@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   closestCenter,
   DndContext,
@@ -186,8 +186,8 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
     );
   };
   
-  function handleDragStart(event: { active: { id: string } }) {
-    setActiveId(event.active.id as string);
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -197,23 +197,50 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
     
     if (!over) return;
     
-    // Find the containers involved in the drag operation
+    const itemId = String(active.id);
     const overId = String(over.id);
     
-    // If the item was dropped into a category container
+    // Handle dropping onto category containers
     if (question.categories.some(cat => cat.id === overId)) {
-      const itemId = String(active.id);
-      
-      // Update the item's category
+      // Item was dropped directly onto a category container
+      // Update the item's category mapping
       setItemCategories(prev => ({
         ...prev,
         [itemId]: overId
       }));
       
-      // Remove the item from uncategorized if necessary
+      // Remove the item from uncategorized
       setUncategorizedItems(prev => 
         prev.filter(item => item.id !== itemId)
       );
+    } else {
+      // The over.id might be another item, so we need to find the parent container
+      // Try to find the parent category by looking at the element's container
+      const containers = question.categories.map(cat => cat.id);
+      
+      // Find which container the over item belongs to
+      let targetContainer = '';
+      
+      for (const container of containers) {
+        const containerItems = getItemsForCategory(container);
+        if (containerItems.some(item => item.id === overId)) {
+          targetContainer = container;
+          break;
+        }
+      }
+      
+      if (targetContainer) {
+        // Update the item's category to the found container
+        setItemCategories(prev => ({
+          ...prev,
+          [itemId]: targetContainer
+        }));
+        
+        // Remove the item from uncategorized
+        setUncategorizedItems(prev => 
+          prev.filter(item => item.id !== itemId)
+        );
+      }
     }
   }
 

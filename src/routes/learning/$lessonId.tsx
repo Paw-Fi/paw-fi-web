@@ -88,9 +88,10 @@ function LessonPage() {
   const isCurrentQuestionAnswered = !!answers[currentQuestion.id];
   
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4 flex flex-col items-center justify-center">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-md overflow-hidden">
       {/* Back button and progress indicator */}
-      <div className="flex items-center justify-between mb-4 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <button 
           onClick={handleBack}
           className="flex items-center font-medium cursor-pointer text-gray-600"
@@ -120,15 +121,15 @@ function LessonPage() {
       </div>
       
       {/* Progress bar */}
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden max-w-4xl mx-auto mb-8">
+      <div className="w-full bg-gray-200 h-2">
         <div 
-          className="h-full bg-green-500 transition-all duration-300"
+          className="bg-primary h-2" 
           style={{ width: `${progressPercentage}%` }}
         ></div>
       </div>
       
-      {/* Main content area - Question and help tips */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Main content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
         {/* Question container - takes up 3/4 on larger screens */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-3xl shadow-md p-8">
@@ -234,6 +235,7 @@ function LessonPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
       
       {/* Completion message */}
