@@ -16,19 +16,15 @@ function NumberInput({
   max 
 }: NumberInputProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value === '' ? undefined : Number(e.target.value);
+    const newValue = !e.target.value ? 0 : Number(e.target.value);
     
-    if (newValue !== undefined) {
-      onChange(newValue);
-    } else {
-      onChange(0);
-    }
+      onChange(newValue);   
   };
 
   return (
     <div className="w-full">
       <input
-        type="text"
+        type="number"
         inputMode="numeric"
         pattern="[0-9]*"
         value={value === undefined ? '' : value}

@@ -33,7 +33,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClasses = classnames(
-    'font-medium rounded-lg transition-colors text-center',
+    'font-medium rounded-lg transition-colors text-center cursor-pointer',
     {
       // Size variants
       'py-2 px-4 text-xs': size === 'sm',

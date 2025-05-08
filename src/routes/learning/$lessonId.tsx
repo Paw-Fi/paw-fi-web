@@ -1,7 +1,7 @@
 'use client';
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Button } from '@/components/ui/button';
 import { getLessonById } from '@/data/learning';
 import SortQuestion from '@/components/learning/question-types/sort-question';
@@ -209,14 +209,14 @@ function LessonPage() {
                       </div>
                       
                       {currentQuestion.helpTipsData?.map((tip: { col1: string; col2: string }, index: number) => (
-                        <React.Fragment key={index}>
+                        <Fragment key={index}>
                           <div className="text-green-700 text-sm border-t border-green-200 pt-2">
                             {tip.col1}
                           </div>
                           <div className="text-green-700 text-sm border-t border-green-200 pt-2">
                             {tip.col2}
                           </div>
-                        </React.Fragment>
+                        </Fragment>
                       ))}
                     </div>
                   )}

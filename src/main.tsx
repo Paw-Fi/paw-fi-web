@@ -20,6 +20,30 @@ const router = createRouter({
   scrollRestoration: true,
   defaultStructuralSharing: true,
   defaultPreloadStaleTime: 0,
+  
+  // Enable view transitions by default
+  defaultViewTransition: {
+    types: ({ fromLocation, toLocation }) => {
+      // If coming from nowhere (initial load), use fade
+      if (!fromLocation) return ['fade'];
+      
+      // Get indices to determine direction for back/forward navigation
+      const fromPathDepth = fromLocation.pathname.split('/').filter(Boolean).length;
+      const toPathDepth = toLocation.pathname.split('/').filter(Boolean).length;
+      
+      // Determine direction based on path depth for intuitive transitions
+      if (fromPathDepth < toPathDepth) {
+        // Going deeper in the navigation - slide left
+        return ['slide-left'];
+      } else if (fromPathDepth > toPathDepth) {
+        // Going back up in the navigation - slide right
+        return ['slide-right'];
+      }
+      
+      // Same level navigation - use fade
+      return ['fade'];
+    },
+  }
 })
 
 // Register the router instance for type safety

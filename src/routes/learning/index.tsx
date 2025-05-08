@@ -1,102 +1,190 @@
-import { Link, createFileRoute } from '@tanstack/react-router';
+'use client';
 
-// Import data from separate data file
-import type { Lesson } from '@/types/learning';
-import introInvestingCourse from '@/data/learning';
+import { useRef } from 'react';
+import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import introInvestingCourse from "../../data/learning";
+import type { Lesson } from "../../types/learning";
 
-export const Route = createFileRoute('/learning/')({ 
+export const Route = createFileRoute("/learning/")({
   component: LearningPage,
 });
 
 function LearningPage() {
   // Get lessons data from imported course
   const { lessons } = introInvestingCourse;
+  const cardsRef = useRef<HTMLDivElement>(null);
+  
+  // Add hover animation for lesson cards using useGSAP
+  useGSAP(() => {
+    if (!cardsRef.current) return;
+    
+    const cards = cardsRef.current.querySelectorAll('.lesson-card');
+    if (cards.length === 0) return;
+    
+    // Animate cards in with stagger
+    gsap.fromTo(
+      cards,
+      { y: 20, opacity: 0 },
+      { 
+        y: 0, 
+        opacity: 1, 
+        stagger: 0.1, 
+        duration: 0.5, 
+        ease: 'power2.out'
+      }
+    );
+    
+    // Set up hover animations for each card
+    cards.forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        gsap.to(card, {
+          y: -8,
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          duration: 0.3,
+          ease: 'power2.out'
+        });
+      });
+      
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, {
+          y: 0,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          duration: 0.3,
+          ease: 'power2.out'
+        });
+      });
+    });
+    
+    return () => {
+      // Clean up event listeners
+      cards.forEach(card => {
+        card.removeEventListener('mouseenter', () => {});
+        card.removeEventListener('mouseleave', () => {});
+      });
+    };
+  }, { scope: cardsRef });
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background pb-20 [view-transition-name:main-content]">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">{introInvestingCourse.title}</h1>
-        <p className="text-gray-600 max-w-md mx-auto">
-          {introInvestingCourse.description}
-        </p>
+      <div className="border-b border-gray-200 bg-white py-4 shadow-sm">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4">
+          <h1 className="text-xl font-bold text-gray-900">Learning Center</h1>
+          <Link 
+            to="/" 
+            viewTransition={{ types: ['slide-right'] }} 
+            className="text-primary hover:underline"
+          >
+            Back to Home
+          </Link>
+        </div>
       </div>
 
-      {/* Main content - Lesson cards in single column */}
-      <div className="max-w-xl mx-auto space-y-6">
-        {lessons.map((lesson: Lesson) => (
-          lesson.unlocked ? (
-            <Link
-              key={lesson.id}
-              to="/learning/$lessonId"
-              params={{ lessonId: lesson.id }}
-              className="block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
-            >
-              <div className="p-4">
-                <div className="flex items-center mb-3">
-                  <div className="mr-3 text-3xl" aria-hidden="true">
-                    {lesson.icon || '📚'}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{lesson.title}</h3>
-                    <p className="text-sm text-gray-500">{lesson.description}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 rounded-full mr-2 bg-primary flex items-center justify-center text-white font-semibold text-xs">
-                      {lesson.questions.length}
+      {/* Lessons grid */}
+      <div className="mx-auto max-w-4xl px-4 pt-8">
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">
+          Intro to Investing Course
+        </h2>
+
+        <div ref={cardsRef} className="flex flex-col gap-6">
+          {lessons.map((lesson: Lesson) => (
+            <div key={lesson.id}>
+              {lesson.unlocked ? (
+                <Link
+                  to="/learning/$lessonId"
+                  params={{ lessonId: lesson.id }}
+                  viewTransition={{ types: ['slide-left'] }}
+                  className="lesson-card block overflow-hidden rounded-2xl bg-white shadow-md transition-all"
+                >
+                  <div className="flex p-6">
+                    {/* Icon & XP */}
+                    <div className="mr-6 flex flex-col items-center">
+                      <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 text-3xl text-purple-600">
+                        {lesson.icon}
+                      </div>
+                      <span className="mt-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-white">
+                        {lesson.xp} XP
+                      </span>
                     </div>
-                    <span className="text-sm">Questions</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm text-gray-500">
-                      ~{Math.max(5, lesson.questions.length * 2)} min
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col">
+                      <h3 className="mb-2 text-xl font-bold text-gray-900">
+                        {lesson.title}
+                      </h3>
+                      <p className="mb-4 flex-1 text-gray-600">
+                        {lesson.description}
+                      </p>
+
+                      {/* Questions counter */}
+                      <div className="flex items-center text-sm text-gray-500">
+                        <svg
+                          className="mr-1 h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          ></path>
+                        </svg>
+                        {lesson.questions.length} Questions
+                      </div>
                     </div>
-                    <div className="bg-primary text-white px-3 py-1 text-sm rounded-full">
-                      +{lesson.xp}XP
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <div 
-              key={lesson.id}
-              className="block bg-white rounded-2xl shadow-md overflow-hidden opacity-70"
-            >
-              <div className="p-4">
-                <div className="flex items-center mb-3">
-                  <div className="mr-3 text-3xl" aria-hidden="true">
-                    {lesson.icon || '📚'}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{lesson.title}</h3>
-                    <p className="text-sm text-gray-500">{lesson.description}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 rounded-full mr-2 bg-gray-300 flex items-center justify-center text-white font-semibold text-xs">
-                      {lesson.questions.length}
-                    </div>
-                    <span className="text-sm">Questions</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full flex items-center">
-                      <svg className="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M19 11H5C3.89543 11 3 11.8954 3 13V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V13C21 11.8954 20.1046 11 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M7 11V7C7 5.93913 7.42143 4.92172 8.17157 4.17157C8.92172 3.42143 9.93913 3 11 3H13C14.0609 3 15.0783 3.42143 15.8284 4.17157C16.5786 4.92172 17 5.93913 17 7V11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+
+                    {/* Arrow */}
+                    <div className="flex items-center">
+                      <svg
+                        className="h-6 w-6 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 5l7 7-7 7"
+                        ></path>
                       </svg>
-                      Locked
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                /* Locked lesson card */
+                <div className="lesson-card block overflow-hidden rounded-2xl bg-white shadow-md opacity-70">
+                  <div className="flex p-6">
+                    {/* Locked icon & XP */}
+                    <div className="mr-6 flex flex-col items-center">
+                      <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-3xl text-gray-400">
+                        🔒
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col">
+                      <h3 className="mb-2 text-xl font-bold text-gray-500">
+                        {lesson.title}
+                      </h3>
+                      <p className="mb-4 flex-1 text-gray-400">
+                        Complete previous lessons to unlock
+                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )
-        ))}
-      </div>   
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
