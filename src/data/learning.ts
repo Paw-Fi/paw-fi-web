@@ -10,30 +10,7 @@ export const lessons: Record<string, Lesson> = {
     xp: 50,
     unlocked: true,
     icon: "💰",
-    questions: [
-      {
-        id: "risk-assessment",
-        type: "matrix-rating",
-        question: "Tap to rate each one as Low, Medium, or High risk.",
-        items: [
-          { id: "item-1", content: "Government bond" },
-          { id: "item-2", content: "Real estate" },
-          { id: "item-3", content: "Single tech stock" },
-          { id: "item-4", content: "Savings account" },
-        ],
-        ratingOptions: [
-          { id: "low", content: "Low", color: "green" },
-          { id: "medium", content: "Medium", color: "yellow" },
-          { id: "high", content: "High", color: "red" },
-        ],
-        correctRatings: {
-          "item-1": "low",
-          "item-2": "medium",
-          "item-3": "high",
-          "item-4": "low",
-        },
-        helpTips: "Low Risk: Safer, more stable options — like savings accounts or government bonds. Returns are usually smaller but more predictable.\n\nMedium Risk: Balanced choices — like real estate or diversified funds. They can grow more, but prices may rise and fall along the way.\n\nHigh Risk: Big ups and downs — like single stocks or crypto. Potential for high rewards, but also higher chance of losing money.",
-      },
+    questions: [      
       {
         id: "sort-actions",
         type: "sort-categories",
@@ -87,6 +64,29 @@ export const lessons: Record<string, Lesson> = {
         ],
       },
       {
+        id: "risk-assessment",
+        type: "matrix-rating",
+        question: "Tap to rate each one as Low, Medium, or High risk.",
+        items: [
+          { id: "item-1", content: "Government bond" },
+          { id: "item-2", content: "Real estate" },
+          { id: "item-3", content: "Single tech stock" },
+          { id: "item-4", content: "Savings account" },
+        ],
+        ratingOptions: [
+          { id: "low", content: "Low", color: "green" },
+          { id: "medium", content: "Medium", color: "yellow" },
+          { id: "high", content: "High", color: "red" },
+        ],
+        correctRatings: {
+          "item-1": "low",
+          "item-2": "medium",
+          "item-3": "high",
+          "item-4": "low",
+        },
+        helpTips: "Low Risk: Safer, more stable options — like savings accounts or government bonds. Returns are usually smaller but more predictable.\n\nMedium Risk: Balanced choices — like real estate or diversified funds. They can grow more, but prices may rise and fall along the way.\n\nHigh Risk: Big ups and downs — like single stocks or crypto. Potential for high rewards, but also higher chance of losing money.",
+      },
+      {
         id: "scq-savings-purpose",
         type: "scq",
         question: "Which is the MOST important purpose of a savings account?",
@@ -106,20 +106,20 @@ export const lessons: Record<string, Lesson> = {
           { id: "opt-4", content: "Tax advantages", isCorrect: false },
         ],
       },
-      {
-        id: "sort-risk-returns",
-        type: "sort",
-        question:
-          "Arrange these investment options from highest to lowest potential returns.",
-        items: [
-          { id: "item-1", content: "High-growth stock investments" },
-          { id: "item-2", content: "Index funds" },
-          { id: "item-3", content: "Corporate bonds" },
-          { id: "item-4", content: "Savings account" },
-          { id: "item-5", content: "Certificate of deposit" },
-        ],
-        correctOrder: ["item-1", "item-2", "item-3", "item-5", "item-4"],
-      },
+      // {
+      //   id: "sort-risk-returns",
+      //   type: "sort",
+      //   question:
+      //     "Arrange these investment options from highest to lowest potential returns.",
+      //   items: [
+      //     { id: "item-1", content: "High-growth stock investments" },
+      //     { id: "item-2", content: "Index funds" },
+      //     { id: "item-3", content: "Corporate bonds" },
+      //     { id: "item-4", content: "Savings account" },
+      //     { id: "item-5", content: "Certificate of deposit" },
+      //   ],
+      //   correctOrder: ["item-1", "item-2", "item-3", "item-5", "item-4"],
+      // },
     ],
   },
   "investment-types": {
