@@ -4,9 +4,8 @@
     "**/*.tsx",
     "eslint.config.js",
     "prettier.config.js",
-    "vite.config.ts",
-    "tailwind.config.js"
-  ],
+    "vite.config.js"
+, "tailwind.config.js"  ],
 
   "compilerOptions": {
     "target": "ES2022",
@@ -29,13 +28,7 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@types/*": ["./src/types/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@contexts/*": ["./src/contexts/*"],
-      "@assets/*": ["./src/assets/*"],
-      "@styles/*": ["./src/styles/*"]
+      "@/*": ["./src/*"]
     }
   }
 }
