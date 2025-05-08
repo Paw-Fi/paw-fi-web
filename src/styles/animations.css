@@ -1,0 +1,51 @@
+/* Animation styles for GSAP usage */
+
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.confetti {
+  position: absolute;
+  will-change: transform;
+}
+
+/* Modal content container */
+.modal-content {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ensure emoji displays properly */
+.emoji-display {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-style: normal;
+  display: inline-block;
+  height: 1.2em;
+  width: 1.2em;
+  margin: 0 0.2em;
+  vertical-align: middle;
+}
+
+/* Basic common animations that don't require GSAP */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.spin {
+  animation: spin 2s linear infinite;
+}

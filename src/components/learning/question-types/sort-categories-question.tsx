@@ -1,145 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { useState, useEffect, useRef } from 'react';
+import type { UniqueIdentifier, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
-  closestCenter,
   DndContext,
-  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
-  useSensors
+  useSensors,
+  pointerWithin
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import classnames from 'classnames';
+// No need for modifiers at this point
 
-import type { SortCategoriesQuestion as SortCategoriesQuestionType, DraggableItem } from '@/types/learning';
+// Import our drag-and-drop components
+import { DraggableItem, Droppable, DragOverlay } from '../dnd';
 
-interface SortableItemProps {
-  item: DraggableItem;
-}
-
-function SortableItem({ item }: SortableItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={classnames(
-        'p-3 rounded-lg border mb-2 transition-all bg-white',
-        {
-          'border-purple-300 shadow-sm z-10': isDragging,
-          'border-gray-200 hover:border-purple-200 cursor-grab': !isDragging
-        }
-      )}
-    >
-      <div className="flex items-center">
-        <div className="w-6 h-6 flex items-center justify-center mr-2 text-gray-400">
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path 
-              d="M8 6H6V8H8V6Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M8 11H6V13H8V11Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M8 16H6V18H8V16Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M13 6H11V8H13V6Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M13 11H11V13H13V11Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M13 16H11V18H13V16Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M18 6H16V8H18V6Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M18 11H16V13H18V11Z" 
-              fill="currentColor" 
-            />
-            <path 
-              d="M18 16H16V18H18V16Z" 
-              fill="currentColor" 
-            />
-          </svg>
-        </div>
-        <span className="font-medium text-gray-900">{item.content}</span>
-      </div>
-    </div>
-  );
-}
-
-interface CategoryContainerProps {
-  category: {
-    id: string;
-    name: string;
-  };
-  items: Array<DraggableItem>;
-}
-
-function CategoryContainer({ category, items }: CategoryContainerProps) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-      <h3 className="font-semibold mb-3 text-lg">{category.name} {items.length > 0 && `(${items.length})`}</h3>
-      <div className="min-h-[100px]">
-        <SortableContext
-          items={items.map(item => item.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {items.map((item) => (
-            <SortableItem key={item.id} item={item} />
-          ))}
-        </SortableContext>
-        
-        {items.length === 0 && (
-          <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center text-gray-400">
-            Drag items here
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// Import types from the learning types file
+import type { SortCategoriesQuestion as SortCategoriesQuestionType, DraggableItem as DraggableItemType } from '@/types/learning';
 
 interface SortCategoriesQuestionProps {
   question: SortCategoriesQuestionType;
@@ -149,33 +26,44 @@ interface SortCategoriesQuestionProps {
 
 function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQuestionProps) {
   // Store item-to-category mapping
-  const [itemCategories, setItemCategories] = useState<Record<string, string>>(
-    value || {}
-  );
+  const [itemCategories, setItemCategories] = useState<Record<string, string>>(value || {});
   
-  // For the initial state, place items that don't have a category yet in an "uncategorized" section
-  const [uncategorizedItems, setUncategorizedItems] = useState<Array<DraggableItem>>(
+  // Keep track of items not yet categorized
+  const [uncategorizedItems, setUncategorizedItems] = useState<Array<DraggableItemType>>(
     question.items.filter(item => !value || !value[item.id])
   );
   
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Track dragging state (following the example pattern)
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   
+  // Reference to prevent infinite update loops
+  const prevAnswerRef = useRef<string>('');
+  
+  // Configure sensors for drag operations with proper activation constraints
   const sensors = useSensors(
     useSensor(PointerSensor, {
+      // Use distance only without delay to avoid issues with undefined coordinates
       activationConstraint: {
-        distance: 5,
+        distance: 8,
       },
     }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor)
   );
 
-  // Update the answer when itemCategories changes
+  // Effect to notify parent component of answer changes
   useEffect(() => {
-    // Only call onAnswer when we have categorized all items
-    if (Object.keys(itemCategories).length === question.items.length) {
-      onAnswer(itemCategories);
+    const currentAnswer = JSON.stringify(itemCategories);
+    
+    // Only update if we have a full answer and it has changed
+    if (Object.keys(itemCategories).length === question.items.length && 
+        currentAnswer !== prevAnswerRef.current) {
+      prevAnswerRef.current = currentAnswer;
+      
+      // Use requestAnimationFrame to avoid state updates during render
+      requestAnimationFrame(() => {
+        onAnswer(itemCategories);
+      });
     }
   }, [itemCategories, onAnswer, question.items.length]);
 
@@ -185,116 +73,123 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
       itemCategories[item.id] === categoryId
     );
   };
-  
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(String(event.active.id));
-  }
 
-  function handleDragEnd(event: DragEndEvent) {
+  // Event handlers for drag operations
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setIsDragging(false);
     setActiveId(null);
     
     const { active, over } = event;
     
     if (!over) return;
     
+    // Get the IDs for the dragged item and the drop target
     const itemId = String(active.id);
-    const overId = String(over.id);
+    const categoryId = String(over.id);
     
-    // Handle dropping onto category containers
-    if (question.categories.some(cat => cat.id === overId)) {
-      // Item was dropped directly onto a category container
-      // Update the item's category mapping
+    // Check if the target is a category container
+    const isCategory = question.categories.some(cat => cat.id === categoryId);
+    
+    if (isCategory) {
+      // Update the item's category
       setItemCategories(prev => ({
         ...prev,
-        [itemId]: overId
+        [itemId]: categoryId
       }));
       
-      // Remove the item from uncategorized
+      // Remove from uncategorized if needed
       setUncategorizedItems(prev => 
         prev.filter(item => item.id !== itemId)
       );
-    } else {
-      // The over.id might be another item, so we need to find the parent container
-      // Try to find the parent category by looking at the element's container
-      const containers = question.categories.map(cat => cat.id);
-      
-      // Find which container the over item belongs to
-      let targetContainer = '';
-      
-      for (const container of containers) {
-        const containerItems = getItemsForCategory(container);
-        if (containerItems.some(item => item.id === overId)) {
-          targetContainer = container;
-          break;
-        }
-      }
-      
-      if (targetContainer) {
-        // Update the item's category to the found container
-        setItemCategories(prev => ({
-          ...prev,
-          [itemId]: targetContainer
-        }));
-        
-        // Remove the item from uncategorized
-        setUncategorizedItems(prev => 
-          prev.filter(item => item.id !== itemId)
-        );
-      }
     }
-  }
+  };
 
-  // Find the active item when dragging
+  const handleDragCancel = () => {
+    setIsDragging(false);
+    setActiveId(null);
+  };
+
+  // Find the active item for the drag overlay
   const activeItem = activeId 
-    ? question.items.find(item => item.id === activeId)
+    ? question.items.find(item => item.id === activeId) 
     : null;
 
   return (
     <div className="sort-categories-question">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        {/* Category containers */}
+        {/* Category containers in a grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {question.categories.map(category => (
-            <div key={category.id} id={category.id}>
-              <CategoryContainer 
-                category={category} 
-                items={getItemsForCategory(category.id)} 
-              />
-            </div>
+            <Droppable 
+              key={category.id}
+              id={category.id}
+              dragging={isDragging}
+              className="bg-gray-50 rounded-lg p-4 mb-4"
+            >
+              <h3 className="font-semibold mb-3 text-lg">
+                {category.name} {getItemsForCategory(category.id).length > 0 && 
+                  `(${getItemsForCategory(category.id).length})`
+                }
+              </h3>
+              
+              <div className="h-48">
+                {getItemsForCategory(category.id).map(item => (
+                  <DraggableItem key={item.id} id={item.id}>
+                    <span className="font-medium text-gray-900">{item.content}</span>
+                  </DraggableItem>
+                ))}
+                
+                {getItemsForCategory(category.id).length === 0 && (
+                  <div className="border border-dashed border-gray-300 rounded-lg h-full flex items-center justify-center text-gray-400">
+                    Drag items here
+                  </div>
+                )}
+              </div>
+            </Droppable>
           ))}
         </div>
         
         {/* Uncategorized items */}
         {uncategorizedItems.length > 0 && (
           <div className="mt-6">
-            <h3 className="font-semibold mb-3">Drag these items to categorize them:</h3>
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <SortableContext
-                items={uncategorizedItems.map(item => item.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {uncategorizedItems.map((item) => (
-                  <SortableItem key={item.id} item={item} />
-                ))}
-              </SortableContext>
+            <div className="bg-white p-4  border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {uncategorizedItems.map(item => (
+                <DraggableItem key={item.id} id={item.id} className="h-16 rounded-2xl">
+                  <span className="font-medium text-gray-900">{item.content}</span>
+                </DraggableItem>
+              ))}
             </div>
           </div>
         )}
         
-        {/* Drag overlay */}
+        {/* Display when all items have been categorized */}
+        {uncategorizedItems.length === 0 && !value && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+            <p className="text-green-700">
+              Great job! You've categorized all items.
+            </p>
+          </div>
+        )}
+        
+        {/* Drag overlay component with active item content */}
         <DragOverlay>
-          {activeItem ? (
-            <div className="p-3 rounded-lg border bg-white shadow-md">
-              <div className="flex items-center">
-                <span className="font-medium text-gray-900">{activeItem.content}</span>
-              </div>
+          {activeItem && (
+            <div className="p-3 bg-white border border-gray-200 select-none rounded-lg shadow-md">
+              <span className="font-medium text-gray-900">{activeItem.content}</span>
             </div>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
     </div>

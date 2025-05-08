@@ -6,7 +6,7 @@ import classnames from 'classnames';
 import { useQuestionnaire } from '@/contexts/questionnaire-context';
 import type { Option, Question } from '@/types/questions';
 
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   closestCenter,
   DndContext,
@@ -23,6 +23,7 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Droppable } from './components/droppable';
 
 interface SortableItemProps {
   option: Option;
@@ -36,11 +37,16 @@ function SortableItem({ option }: SortableItemProps) {
     transform,
     transition,
     isDragging
-  } = useSortable({ id: option.id });
+  } = useSortable({ 
+    id: option.id,
+    data: option, // Include the data for easier reference
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 10 : 1, // Ensure dragging item is always on top
+    opacity: isDragging ? 0.8 : 1, // Add subtle transparency to dragged item
   };
 
   return (
@@ -50,9 +56,10 @@ function SortableItem({ option }: SortableItemProps) {
       {...attributes}
       {...listeners}
       className={classnames(
-        'p-4 rounded-lg border mb-3 cursor-move transition-all',
+        'relative', // Position relative for proper stacking
+        'p-4 rounded-lg border mb-3 cursor-grab transition-all touch-manipulation',
         {
-          'border-purple-300 bg-purple-50 shadow-md': isDragging,
+          'border-purple-300 bg-purple-50 shadow-md cursor-grabbing': isDragging,
           'border-gray-200 hover:border-purple-200': !isDragging
         }
       )}
@@ -123,6 +130,9 @@ function SortableQuestion({ question }: SortableQuestionProps) {
   const { state, setAnswer } = useQuestionnaire();
   const initialItems = question.options || [];
   
+  // Track the active item being dragged
+  const [activeId, setActiveId] = useState<string | null>(null);
+  
   // Use existing answer or initialize with original options
   const [items, setItems] = useState<Array<Option>>(() => {
     const savedAnswer = state.answers[question.id] as Array<string> | undefined;
@@ -138,14 +148,29 @@ function SortableQuestion({ question }: SortableQuestionProps) {
     return initialItems;
   });
   
+  // Configure sensors with appropriate options for better touch/mouse handling
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      // Wait a small distance before initiating drag
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
+  // Handle drag start to track active item
+  function handleDragStart(event: DragStartEvent) {
+    console.log("handleDragStart", event)
+    setActiveId(event.active.id as string);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    console.log("handleDragEnd", event)
+    setActiveId(null); // Clear the active ID
+    
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
@@ -166,16 +191,26 @@ function SortableQuestion({ question }: SortableQuestionProps) {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        autoScroll={true} /* Enable auto-scrolling during drag */
       >
-        <SortableContext
-          items={items.map(item => item.id)}
-          strategy={verticalListSortingStrategy}
-        >
+       
           {items.map((option) => (
-            <SortableItem key={option.id} option={option} />
+            <Droppable key={option.id} id={option.id} >
+                   <div className="flex flex-col">
+          <span className="font-medium text-gray-900">{option.label}</span>
+          {option.description && (
+            <span className="text-sm text-gray-500">{option.description}</span>
+          )}
+        </div>
+              </Droppable>
           ))}
-        </SortableContext>
+
+        {/* This adds a visual overlay during drag operations */}
+        {activeId && (
+          <div className="fixed inset-0 bg-black opacity-5 pointer-events-none z-0" />
+        )}
       </DndContext>
     </div>
   );

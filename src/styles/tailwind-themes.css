@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-    --color-background: #F5F3FF; /* Light purple for page background */
-    --color-secondary: #9181FF; /* Medium purple for section backgrounds */
-    --color-primary: #7458FF; /* Darker purple for accents and interactive elements */
+    --color-background: #F5F3FF;
+    --color-secondary: #9181FF;
+    --color-primary: #7458FF;
+    --color-success:#16CDA2;
+    --color-success-light:#F1FFF8;
+    --color-warning:#FFC219;
+    --color-warning-light:#FFF4D5;
+    --color-danger:#FF6060;
+    --color-danger-light:#FFE8E8;
+    --color-overlay: rgba(0, 0, 0, 0.8);
   }
   

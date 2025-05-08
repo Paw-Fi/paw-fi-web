@@ -33,7 +33,7 @@ export interface BaseQuestion {
 }
 
 // Types of questions
-export type QuestionType = 'sort' | 'sort-categories' | 'mcq' | 'scq' | 'match';
+export type QuestionType = 'sort' | 'sort-categories' | 'mcq' | 'scq' | 'match' | 'matrix-rating';
 
 // Multiple/Single choice question
 export interface ChoiceQuestion extends BaseQuestion {
@@ -65,12 +65,33 @@ export interface MatchQuestion extends BaseQuestion {
   correctMatches: Record<string, string>; // itemId -> matchItemId
 }
 
+// Rating option for matrix rating questions
+export interface RatingOption extends Item {
+  color?: string; // Optional color for styling (e.g., 'green', 'yellow', 'red')
+}
+
+export interface RatingOption {
+  id: string;
+  content: string;
+  color?: string;
+}
+
+// Matrix rating question (e.g., rate items on a scale like low/medium/high risk)
+export interface MatrixRatingQuestion extends BaseQuestion {
+  type: 'matrix-rating';
+  items: Array<Item>;
+  ratingOptions: Array<RatingOption>;
+  correctRatings: Record<string, string>; // itemId -> ratingId
+  imageUrl?: string;         // Optional image to display with the question
+}
+
 // Union type for all question types
 export type Question =
   | ChoiceQuestion
   | SortQuestion
   | SortCategoriesQuestion
-  | MatchQuestion;
+  | MatchQuestion
+  | MatrixRatingQuestion;
 
 // Lesson structure
 export interface Lesson {
