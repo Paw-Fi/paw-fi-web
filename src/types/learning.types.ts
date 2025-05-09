@@ -14,12 +14,21 @@ export interface DraggableItem extends Item {
 // Option for choice questions
 export interface ChoiceOption extends Item {
   isCorrect: boolean;
+  description?: string; // Optional description/subtitle for the option
 }
 
 // Help tips data for category comparison
 export interface HelpTipCategoryData {
   col1: string;
   col2: string;
+}
+
+// Content block types for structured content
+export type ContentBlockType = 'paragraph' | 'bulletList' | 'numberedList' | 'scenario';
+
+export interface ContentBlock {
+  type: ContentBlockType;
+  content: string | string[];
 }
 
 // Base question type
@@ -30,6 +39,7 @@ export interface BaseQuestion {
   explanation?: string;
   hint?: string;
   helpTips?: string;
+  contentBlocks?: ContentBlock[];
 }
 
 // Types of questions

@@ -117,19 +117,109 @@ export const lessons: Record<string, Lesson> = {
           {
             id: 'portfolio1',
             content: 'Portfolio 1',
-            imageUrl: '/src/assets/images/image-choices/chart1.png',
+            imageUrl: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web//chart1.png',
             caption: '100% Tech Stocks',
             isCorrect: false
           },
           {
             id: 'portfolio2',
             content: 'Portfolio 2',
-            imageUrl: '/src/assets/images/image-choices/chart2.png',
+            imageUrl: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web//chart2.png',
             caption: 'Tech (20%), Real Estate (25%), Bonds (25%), Savings (20%), Healthcare (10%)',
             isCorrect: true
           }
         ]
       },
+
+      {
+        id: 'brokerOrDealer',
+        type: 'scq',
+        question: "Is It a Broker or a Dealer?",
+        explanation: "Understanding the difference between brokers and dealers is important for investors.",
+        helpTips: "Broker = A matchmaker. Helps you buy or sell by finding someone on the other side of the trade. They don't own the stock — they just connect buyers and sellers.\n\nDealer = A seller or buyer. They trade from their own inventory, meaning they're the one actually selling to (or buying from) you.",
+        contentBlocks: [
+          {
+            type: 'paragraph',
+            content: "You're investing in stocks using a financial firm."
+          },
+          {
+            type: 'bulletList',
+            content: [
+              "First, you buy 100 shares of Apple — the firm helps you find someone to buy from.",
+              "Later, you buy 100 shares of Microsoft — this time, the firm sells you the shares from its own inventory."
+            ]
+          },
+          {
+            type: 'paragraph',
+            content: "What best describes the firm's role in each case?"
+          }
+        ],
+        itemsPerRow: 2,
+        options: [
+          {
+            id: 'brokerBoth',
+            content: 'Broker for both',
+            isCorrect: false
+          },
+          {
+            id: 'dealerBoth',
+            content: 'Dealer for both',
+            isCorrect: false
+          },
+          {
+            id: 'brokerAppleDealerMicrosoft',
+            content: 'Broker for Apple, Dealer for Microsoft',
+            isCorrect: true
+          },
+          {
+            id: 'dealerAppleBrokerMicrosoft',
+            content: 'Dealer for Apple, Broker for Microsoft',
+            isCorrect: false
+          }
+        ]
+      },
+      
+      {
+        id: 'primaryOrSecondaryMarket',
+        type: 'scq',
+        question: "Was it the Primary or Secondary Market?",
+        explanation: "Understanding the difference between primary and secondary markets is essential for investors.",
+        helpTips: "Primary Market = Buying from the company for the first time. When a company sells new shares to investors (like in an IPO), that's the primary market. Your money goes to the company.\n\nSecondary Market = Buying or selling from other investors. When you trade stocks with other people through the stock market (like NYSE or NASDAQ), that's the secondary market. The company isn't involved.",
+        contentBlocks: [
+          {
+            type: 'paragraph',
+            content: "You bought shares of a tech company during its IPO (the first time the stock was sold to the public). A few months later, you sold those shares to another investor through the stock market."
+          },
+          {
+            type: 'paragraph',
+            content: "Which market were you in for each trade?"
+          }
+        ],
+        itemsPerRow: 1, // Display options one per row
+        options: [
+          {
+            id: 'secondaryPrimary',
+            content: 'Bought in the Secondary Market, sold in the Primary Market',
+            isCorrect: false
+          },
+          {
+            id: 'primarySecondary',
+            content: 'Bought in the Primary Market, sold in the Secondary Market',
+            isCorrect: true
+          },
+          {
+            id: 'bothPrimary',
+            content: 'Both trades were in the Primary Market',
+            isCorrect: false
+          },
+          {
+            id: 'bothSecondary',
+            content: 'Both trades were in the Secondary Market',
+            isCorrect: false
+          }
+        ]
+      },
+      
       // {
       //   id: "sort-risk-returns",
       //   type: "sort",

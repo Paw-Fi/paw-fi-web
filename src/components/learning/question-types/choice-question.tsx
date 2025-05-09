@@ -2,6 +2,7 @@
 
 import classnames from 'classnames';
 import type { ChoiceQuestion as ChoiceQuestionType } from '@/types/learning.types';
+import { ContentBlockRenderer } from '@/components/learning/content-block-renderer';
 
 interface ChoiceQuestionProps {
   question: ChoiceQuestionType;
@@ -42,6 +43,12 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
   
   return (
     <div className="choice-question">
+      {/* Render content blocks if available */}
+      {question.contentBlocks && question.contentBlocks.length > 0 && (
+        <div className="mb-4">
+          <ContentBlockRenderer blocks={question.contentBlocks} />
+        </div>
+      )}
       <div className={classnames(
         // For single item per row, use vertical spacing
         {'space-y-3': !useGridLayout,
@@ -90,8 +97,11 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="flex flex-col">
                 <span className="font-medium text-gray-900">{option.content}</span>
+                {option.description && (
+                  <span className="text-sm text-gray-600">{option.description}</span>
+                )}
               </div>
             </div>
           </div>

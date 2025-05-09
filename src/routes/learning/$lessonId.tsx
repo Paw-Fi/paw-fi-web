@@ -26,6 +26,7 @@ function LessonPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isComplete, setIsComplete] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(true); // Track if all answers are correct
   const [earnedXp, setEarnedXp] = useState(0);
 
   // Get lesson data from our data file
@@ -64,13 +65,83 @@ function LessonPage() {
   console.log(currentQuestion);
   const progressPercentage = isComplete ? 100 : (currentQuestionIndex / questions.length) * 100;
 
+  // Function to check if all answers are correct
+  const areAllAnswersCorrect = () => {
+    // Loop through all questions and verify answers
+    return questions.every((question) => {
+      const userAnswer = answers[question.id];
+      
+      // If no answer, it's incorrect
+      if (!userAnswer) return false;
+      
+      switch(question.type) {
+        case 'mcq':
+          // For multiple choice, all selected options should be correct
+          if (Array.isArray(userAnswer)) {
+            const correctOptions = question.options.filter(opt => opt.isCorrect).map(opt => opt.id);
+            const userSelected = userAnswer as string[];
+            
+            // Check if user selected all correct options and no incorrect ones
+            return correctOptions.every(id => userSelected.includes(id)) && 
+                   userSelected.every(id => correctOptions.includes(id));
+          }
+          return false;
+          
+        case 'scq':
+        case 'image-choice':
+          // For single choice, the selected option should be correct
+          const correctOption = question.options.find(opt => opt.isCorrect);
+          return correctOption && correctOption.id === userAnswer;
+          
+        case 'sort':
+          // For sort questions, compare with correct order
+          return JSON.stringify(userAnswer) === JSON.stringify(question.correctOrder);
+          
+        case 'sort-categories':
+          // For category sorting, compare with correct categories
+          return JSON.stringify(userAnswer) === JSON.stringify(question.correctCategories);
+          
+        case 'match':
+          // For matching, compare with correct matches
+          return JSON.stringify(userAnswer) === JSON.stringify(question.correctMatches);
+          
+        case 'matrix-rating':
+          // For matrix rating, compare with correct ratings
+          return JSON.stringify(userAnswer) === JSON.stringify(question.correctRatings);
+          
+        case 'text-input':
+          // For text input, could be custom validation or exact match
+          // Simplified version for now
+          return true; // You might want to replace this with actual validation
+          
+        default:
+          return false;
+      }
+    });
+  };
+
+  const handleRetry = () => {
+    // Reset to first question and clear answers
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setIsComplete(false);
+  };
+
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
+      // Check if all answers are correct before completing
+      const allCorrect = areAllAnswersCorrect();
+      setIsSuccess(allCorrect);
+      
       // Lesson completed
       setIsComplete(true);
-      setEarnedXp(lesson.xp);
+      
+      // Only award XP if all answers are correct
+      if (allCorrect) {
+        setEarnedXp(lesson.xp);
+      }
     }
   };
 
@@ -316,18 +387,47 @@ function LessonPage() {
       </div>
       <div className="flex flex-1 flex-col"></div>
 
-      {/* Completion message */}
-      <CompletionDisplay
-        isOpen={isComplete}
-        onClose={() => navigate({ to: "/learning" })}
-        title="Lesson Complete!"
-        description="Great job! You've completed this lesson."
-        reward={{
-          amount: earnedXp,
-          unit: "XP",
-        }}
-        actionText="Continue Learning"
-      />
+      {/* Completion message - success case */}
+      {isSuccess ? (
+        <CompletionDisplay
+          isOpen={isComplete}
+          onClose={() => navigate({ to: "/learning" })}
+          description="Great job! You've completed this lesson."
+          lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
+          reward={{
+            amount: earnedXp,
+            unit: "XP",
+          }}
+          rewardsProgress={25}
+          nextSteps={{
+            challenges: {
+              title: "Take Challenges",
+              description: "Earn XP"
+            },
+            badges: {
+              title: "Course Badges",
+              description: "Earn a badge"
+            }
+          }}
+          actionText="Continue Learning"
+          isSuccess
+        />
+      ) : (
+        // Try again screen when answers are incorrect
+        <CompletionDisplay
+          isOpen={isComplete}
+          onClose={() => navigate({ to: "/learning" })}
+          title="Keep Learning"
+          description={`Some of your answers were incorrect in Lesson ${lessonId}: ${lesson?.title}.`}
+          // No reward since they didn't pass
+          actionText="Go to Home Page"
+          // Custom handler for retry button
+          onCustomAction={() => handleRetry()}
+          // Use a different emoji for the retry screen - no emoji for retry screen
+          emoji=""
+          isSuccess={false}
+        />
+      )}
     </div>
   );
 }

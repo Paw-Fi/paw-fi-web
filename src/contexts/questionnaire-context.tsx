@@ -34,7 +34,7 @@ export function QuestionnaireProvider({ children }: { children: ReactNode }) {
   );
 
 // Define all questionnaire questions
-const questions: Question[] = [ 
+const questions: Question[] = [
   {
     id: 'investingExperience',
     type: 'scq',
@@ -43,17 +43,20 @@ const questions: Question[] = [
     options: [
       {
         id: 'beginner',
-        content: 'Just Starting',
+        content: "Just Starting",
+        description: "I'm new to investing and saving.",
         isCorrect: false
       },
       {
         id: 'intermediate',
-        content: 'Some Experience',
+        content: "Some Experience",
+        description: "I know the basics but want to learn more.",
         isCorrect: false
       },
       {
         id: 'advanced',
-        content: 'Experienced',
+        content: "Experienced",
+        description: "I'm comfortable with investing concepts.",
         isCorrect: false
       }
     ]
