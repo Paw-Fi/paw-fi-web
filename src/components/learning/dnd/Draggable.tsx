@@ -84,7 +84,7 @@ export function DraggableItem({ id, children, className }: { id: string; childre
       {...listeners}
       {...attributes}
       className={classNames(
-        'p-3 rounded-lg border mb-2 bg-white hover:border-purple-200 select-none touch-none',
+        'p-3 rounded-2xl border-4 border-gray-300 bg-white  select-none touch-none flex items-center',
         {
           'opacity-60 cursor-grabbing': isDragging,
           'cursor-grab': !isDragging,

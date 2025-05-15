@@ -1,4 +1,5 @@
 import type { Course, Lesson, Question } from "@/types/learning.types";
+import mockLessons from "./mock1.json";
 
 // Individual lessons with multiple question types
 export const lessons: Record<string, Lesson> = {
@@ -117,14 +118,14 @@ export const lessons: Record<string, Lesson> = {
           {
             id: 'portfolio1',
             content: 'Portfolio 1',
-            imageUrl: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web//chart1.png',
+            imagePrompt: "optional Mermaid diagram description if needed",
             caption: '100% Tech Stocks',
             isCorrect: false
           },
           {
             id: 'portfolio2',
             content: 'Portfolio 2',
-            imageUrl: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web//chart2.png',
+            imagePrompt: "optional Mermaid diagram description if needed",
             caption: 'Tech (20%), Real Estate (25%), Bonds (25%), Savings (20%), Healthcare (10%)',
             isCorrect: true
           }
@@ -218,22 +219,8 @@ export const lessons: Record<string, Lesson> = {
             isCorrect: false
           }
         ]
-      },
-      
-      // {
-      //   id: "sort-risk-returns",
-      //   type: "sort",
-      //   question:
-      //     "Arrange these investment options from highest to lowest potential returns.",
-      //   items: [
-      //     { id: "item-1", content: "High-growth stock investments" },
-      //     { id: "item-2", content: "Index funds" },
-      //     { id: "item-3", content: "Corporate bonds" },
-      //     { id: "item-4", content: "Savings account" },
-      //     { id: "item-5", content: "Certificate of deposit" },
-      //   ],
-      //   correctOrder: ["item-1", "item-2", "item-3", "item-5", "item-4"],
-      // },
+      },      
+     
     ],
   },
   "investment-types": {
@@ -350,24 +337,6 @@ export const lessons: Record<string, Lesson> = {
         ],
         
       },
-      // {
-      //   id: "sort-compound-frequency",
-      //   type: "sort",
-      //   question:
-      //     "Arrange these compound interest frequencies from highest total return to lowest (assuming same interest rate and time period).",
-      //   items: [
-      //     { id: "item-1", content: "Annually" },
-      //     { id: "item-2", content: "Quarterly" },
-      //     { id: "item-3", content: "Monthly" },
-      //     { id: "item-4", content: "Daily" },
-      //     { id: "item-5", content: "Continuously" },
-      //   ],
-      //   correctOrder: ["item-5", "item-4", "item-3", "item-2", "item-1"],
-      //   helpTips:
-      //   "Compound interest is the interest earned on both the initial principal and the accumulated interest from previous periods. The more frequently interest is compounded, the more you earn over time. This is why starting to invest early is so important.",
-     
-      // },
-      
     ],
   },
 };
@@ -388,6 +357,11 @@ export function getLessonById(id: string): Lesson | undefined {
   return lessons[id];
 }
 
+export function getMockLessonById(id: string): Lesson | undefined {
+  return mockLessons.find((lesson) => lesson.id === id);
+}
+
+
 // Helper function to get course by ID
 export function getCourseById(id: string): Course | undefined {
   return courses[id];
@@ -402,6 +376,10 @@ export function getQuestionById(
   if (!lesson) return undefined;
 
   return lesson.questions.find((q) => q.id === questionId);
+}
+
+export function getAllLessons(): Lesson[] {
+  return mockLessons
 }
 
 // Default export for the current active course

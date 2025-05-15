@@ -3,6 +3,11 @@ import "@styles/main.css";
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import * as TanstackQuery from './integrations/tanstack-query/root-provider'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
+// Import GSAP configuration with plugins registered
+import './lib/gsap-config'
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
@@ -61,6 +66,18 @@ if (rootElement && !rootElement.innerHTML) {
     <StrictMode>
       <TanstackQuery.Provider>
         <QuestionnaireProvider>
+          <ToastContainer 
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
           <RouterProvider router={router} />
         </QuestionnaireProvider>
       </TanstackQuery.Provider>

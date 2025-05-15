@@ -16,24 +16,31 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
   // Track which item is currently selected
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
+  // Get items from the question, with null safety
+  const items: Item[] = Array.isArray(question.items) ? question.items : [];
+  
+  // Support both matchItems and options field names with fallback to empty array
+  const matchOptions: Item[] = Array.isArray(question.matchItems) ? question.matchItems : 
+                       Array.isArray((question as any).options) ? (question as any).options : [];
+  
   // Effect to call onAnswer when matches change
   useEffect(() => {
     // Only call onAnswer when all items have been matched
-    if (Object.keys(matches).length === question.items.length) {
+    if (items.length > 0 && Object.keys(matches).length === items.length) {
       onAnswer(matches);
     }
-  }, [matches, onAnswer, question.items.length]);
+  }, [matches, onAnswer, items.length]);
   
   const handleItemClick = (itemId: string) => {
     // If we already have a selected item, don't allow selecting another item
-    if (selectedItemId && question.items.find(item => item.id === itemId)) {
+    if (selectedItemId && items.some(item => item.id === itemId)) {
       return;
     }
     
     setSelectedItemId(itemId);
     
     // If we have a selected item and clicked a match item, create a match
-    if (selectedItemId && question.matchItems.find(item => item.id === itemId)) {
+    if (selectedItemId && matchOptions.some((item: Item) => item.id === itemId)) {
       // Create a match
       setMatches(prev => ({
         ...prev,
@@ -55,13 +62,24 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
   // Function to get the matched item for an item
   const getMatchForItem = (itemId: string): Item | undefined => {
     const matchItemId = matches[itemId];
-    return question.matchItems.find(item => item.id === matchItemId);
+    if (!matchItemId) return undefined;
+    return matchOptions.find(item => item.id === matchItemId);
   };
   
   // Function to check if a match item is already matched
   const isMatchItemMatched = (matchItemId: string): boolean => {
     return Object.values(matches).includes(matchItemId);
   };
+  
+  // Check if we have the required data to render
+  if (!items.length || !matchOptions.length) {
+    return (
+      <div className="p-4 rounded-lg border border-red-300 bg-red-50 text-red-700">
+        <p className="font-medium">Error: Match question is missing required data.</p>
+        <p className="text-sm mt-1">The question needs both items and matching options.</p>
+      </div>
+    );
+  }
   
   return (
     <div className="match-question">
@@ -70,7 +88,7 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
         <div>
           <h3 className="font-medium mb-3">Items</h3>
           <div className="space-y-3">
-            {question.items.map((item) => {
+            {items.map((item: Item) => {
               const matchedItem = getMatchForItem(item.id);
               
               return (
@@ -123,7 +141,7 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
         <div>
           <h3 className="font-medium mb-3">Matches</h3>
           <div className="space-y-3">
-            {question.matchItems.map((matchItem) => {
+            {matchOptions.map((matchItem: Item) => {
               const isMatched = isMatchItemMatched(matchItem.id);
               
               return (

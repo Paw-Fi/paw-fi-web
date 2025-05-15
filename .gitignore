@@ -7,3 +7,11 @@ dist-ssr
 bun.lockb
 
 .firebase/
+
+.env
+
+firebase-debug.log
+
+package-lock.json
+
+public/PawFi-Pitch.mp4

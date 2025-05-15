@@ -3,7 +3,8 @@
 import { useState } from "react";
 import classNames from "classnames";
 import type { MatrixRatingQuestion as MatrixRatingQuestionType } from "@/types/learning.types";
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLightbulb } from '@fortawesome/free-solid-svg-icons'
 interface MatrixRatingQuestionProps {
   question: MatrixRatingQuestionType;
   onAnswer: (answer: Record<string, string>) => void;
@@ -57,13 +58,6 @@ function MatrixRatingQuestion({
     return selectedRatings[itemId] === ratingId;
   };
 
-  // Get appropriate icon based on option position
-  const getRatingIcon = (index: number) => {
-    // Fixed icons based on position
-    const icons = ["🟢", "🟡", "🔴"];
-    return icons[index] || icons[icons.length - 1];
-  };
-
   return (
     <div className="matrix-rating-question">
       <div className="space-y-6">
@@ -89,7 +83,11 @@ function MatrixRatingQuestion({
                     )}
                     aria-label={`Rate ${item.content} as ${option.content}`}
                   >
-                    <span className="mr-1">{getRatingIcon(index)}</span>
+                    <FontAwesomeIcon icon={faLightbulb} className={classNames("mr-1",{
+                      "text-danger": index === 0,
+                      "text-warning": index === 1,
+                      "text-success": index === 2,
+                    })} />
                     <span>{option.content}</span>
                   </button>
                 ),

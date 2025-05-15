@@ -7,7 +7,7 @@ import gsap from 'gsap';
 
 // Import data from separate data file
 import type { Lesson } from '@/types/learning.types';
-import introInvestingCourse from '@/data/learning';
+import introInvestingCourse, { getAllLessons } from '@/data/lessons';
 
 export const Route = createFileRoute('/learning/')({ 
   component: LearningPage,
@@ -15,7 +15,9 @@ export const Route = createFileRoute('/learning/')({
 
 function LearningPage() {
   // Get lessons data from imported course
-  const { lessons } = introInvestingCourse;
+  //const { lessons } = introInvestingCourse;
+
+  const lessons=getAllLessons()
   
   // Reference to the container of lesson cards
   const lessonCardsRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ function LearningPage() {
           ) : (
             <div 
               key={lesson.id}
-              className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden opacity-70 cursor-not-allowed"
+              className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden brightness-[0.97] cursor-not-allowed"
             >
               <div className="p-4">
                 <div className="flex items-center mb-3">

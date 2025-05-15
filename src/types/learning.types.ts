@@ -105,7 +105,8 @@ export interface ImageChoiceQuestion extends BaseQuestion {
 
 // Option for image choice questions
 export interface ImageChoiceOption extends ChoiceOption {
-  imageUrl: string;
+  imageUrl?: string;  // URL to an image
+  imagePrompt?: string; // Mermaid diagram code
   caption?: string; // Optional text to display under the image
 }
 
@@ -115,12 +116,14 @@ export interface TextInputQuestion extends BaseQuestion {
   placeholder?: string;
   prefix?: string; // Optional prefix like '$' or '€'
   suffix?: string; // Optional suffix like '%' or 'lbs'
+  correctAnswer?: string | string[]; // Single correct answer or array of acceptable answers
   validation?: {
     pattern?: string; // RegExp pattern for validation
     min?: number; // Minimum value (if numeric)
     max?: number; // Maximum value (if numeric)
     required?: boolean; // Whether input is required
     errorMessage?: string; // Custom error message
+    caseSensitive?: boolean; // Whether to match case (defaults to false)
   }
 }
 

@@ -166,12 +166,12 @@ function Questionnaire() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col">
+    <div className="relative flex min-h-screen flex-col bg-background">
       {/* Back button - positioned outside the container in the top left */}
-      <button
+     { currentStep > 0 && <button
         onClick={handleBack}
         disabled={currentStep === 0}
-        className="absolute top-4 left-4 flex items-center font-medium"
+        className="absolute top-4 left-4 flex items-center font-medium cursor-pointer"
       >
         <svg
           width="16"
@@ -191,7 +191,7 @@ function Questionnaire() {
         </svg>
         Back
       </button>
-
+}
       <div className="flex flex-grow items-center justify-center">
         <div className="my-8 w-[35rem] overflow-hidden rounded-3xl bg-white p-6 shadow-lg">
           {/* Progress indicator */}

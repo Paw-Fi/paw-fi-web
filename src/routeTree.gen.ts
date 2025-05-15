@@ -11,9 +11,12 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as TermsOfServiceImport } from './routes/terms-of-service'
 import { Route as ResultsImport } from './routes/results'
 import { Route as QuestionnaireImport } from './routes/questionnaire'
+import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
+import { Route as CookiePolicyImport } from './routes/cookie-policy'
 import { Route as RootImport } from './routes/_root'
 import { Route as IndexImport } from './routes/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
@@ -21,6 +24,12 @@ import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
 
 // Create/Update Routes
+
+const TermsOfServiceRoute = TermsOfServiceImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const ResultsRoute = ResultsImport.update({
   id: '/results',
@@ -34,9 +43,21 @@ const QuestionnaireRoute = QuestionnaireImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const PrivacyPolicyRoute = PrivacyPolicyImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IntroRoute = IntroImport.update({
   id: '/intro',
   path: '/intro',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const CookiePolicyRoute = CookiePolicyImport.update({
+  id: '/cookie-policy',
+  path: '/cookie-policy',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -87,11 +108,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RootImport
       parentRoute: typeof rootRoute
     }
+    '/cookie-policy': {
+      id: '/cookie-policy'
+      path: '/cookie-policy'
+      fullPath: '/cookie-policy'
+      preLoaderRoute: typeof CookiePolicyImport
+      parentRoute: typeof rootRoute
+    }
     '/intro': {
       id: '/intro'
       path: '/intro'
       fullPath: '/intro'
       preLoaderRoute: typeof IntroImport
+      parentRoute: typeof rootRoute
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyImport
       parentRoute: typeof rootRoute
     }
     '/questionnaire': {
@@ -106,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/results'
       fullPath: '/results'
       preLoaderRoute: typeof ResultsImport
+      parentRoute: typeof rootRoute
+    }
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceImport
       parentRoute: typeof rootRoute
     }
     '/demo/tanstack-query': {
@@ -137,9 +179,12 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '': typeof RootRoute
+  '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/learning': typeof LearningIndexRoute
@@ -148,9 +193,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '': typeof RootRoute
+  '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/learning': typeof LearningIndexRoute
@@ -160,9 +208,12 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/_root': typeof RootRoute
+  '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/learning/': typeof LearningIndexRoute
@@ -173,9 +224,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | ''
+    | '/cookie-policy'
     | '/intro'
+    | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/learning'
@@ -183,9 +237,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | ''
+    | '/cookie-policy'
     | '/intro'
+    | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/learning'
@@ -193,9 +250,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_root'
+    | '/cookie-policy'
     | '/intro'
+    | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/learning/'
@@ -205,9 +265,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RootRoute: typeof RootRoute
+  CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   QuestionnaireRoute: typeof QuestionnaireRoute
   ResultsRoute: typeof ResultsRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   LearningLessonIdRoute: typeof LearningLessonIdRoute
   LearningIndexRoute: typeof LearningIndexRoute
@@ -216,9 +279,12 @@ export interface RootRouteChildren {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RootRoute: RootRoute,
+  CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   QuestionnaireRoute: QuestionnaireRoute,
   ResultsRoute: ResultsRoute,
+  TermsOfServiceRoute: TermsOfServiceRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   LearningLessonIdRoute: LearningLessonIdRoute,
   LearningIndexRoute: LearningIndexRoute,
@@ -236,9 +302,12 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/_root",
+        "/cookie-policy",
         "/intro",
+        "/privacy-policy",
         "/questionnaire",
         "/results",
+        "/terms-of-service",
         "/demo/tanstack-query",
         "/learning/$lessonId",
         "/learning/"
@@ -250,14 +319,23 @@ export const routeTree = rootRoute
     "/_root": {
       "filePath": "_root.tsx"
     },
+    "/cookie-policy": {
+      "filePath": "cookie-policy.tsx"
+    },
     "/intro": {
       "filePath": "intro.tsx"
+    },
+    "/privacy-policy": {
+      "filePath": "privacy-policy.tsx"
     },
     "/questionnaire": {
       "filePath": "questionnaire.tsx"
     },
     "/results": {
       "filePath": "results.tsx"
+    },
+    "/terms-of-service": {
+      "filePath": "terms-of-service.tsx"
     },
     "/demo/tanstack-query": {
       "filePath": "demo.tanstack-query.tsx"

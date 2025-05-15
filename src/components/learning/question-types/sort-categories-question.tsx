@@ -166,7 +166,7 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
           <div className="mt-6">
             <div className="bg-white p-4  border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-6">
               {uncategorizedItems.map(item => (
-                <DraggableItem key={item.id} id={item.id} className="h-16 rounded-2xl">
+                <DraggableItem key={item.id} id={item.id} className="h-20 rounded-2xl">
                   <span className="font-medium text-gray-900">{item.content}</span>
                 </DraggableItem>
               ))}
