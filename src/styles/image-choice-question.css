@@ -1,0 +1,16 @@
+
+  /* Mermaid diagram styling */
+  .mermaid-diagram {
+    transition: transform 0.2s ease-in-out;
+    height: 100%;
+    width: 100%;
+    transform-origin: center;
+  }
+  
+  /* Only scale the mermaid diagram on hover, not the container */
+  .image-choice-question-container:hover .mermaid-diagram {
+    transform: scale(2.5);
+    z-index: 999;
+    position: relative;
+  }
+ 

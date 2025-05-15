@@ -29,7 +29,7 @@ export function ImageChoiceQuestion({
   };
 
   return (
-    <div className="image-choice-question">
+    <div className="image-choice-question ">
       <div
         className={classnames("mt-4 grid gap-4", {
           "grid-cols-1 md:grid-cols-1": itemsPerRow === 1,
@@ -40,7 +40,7 @@ export function ImageChoiceQuestion({
           <div
             key={option.id}
             className={classnames(
-              "cursor-pointer rounded-xl transition-all border-2 flex flex-col gap-3 p-4",
+              "cursor-pointer rounded-xl transition-all border-2 flex flex-col gap-3 p-4 image-choice-question-container",
               "hover:shadow-md",
               {
                 "border-primary shadow-lg": selectedOption === option.id,
