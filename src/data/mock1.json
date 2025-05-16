@@ -8,17 +8,27 @@
     "icon": "📈",
     "questions": [
       {
-        "id": "q1-invest-basics",
-        "type": "scq",
-        "question": "What is investing?",
+        "id": "portfolio-rebalancing",
+        "type": "image-choice",
+        "question": "Which portfolio needs rebalancing?",
+        "itemsPerRow": 2,
         "options": [
-          { "id": "opt-1", "content": "Spending money on things you want", "isCorrect": false },
-          { "id": "opt-2", "content": "Putting money into assets that might grow in value over time", "isCorrect": true },
-          { "id": "opt-3", "content": "Saving money in a piggy bank", "isCorrect": false },
-          { "id": "opt-4", "content": "Lending money to friends", "isCorrect": false }
+          {
+            "id": "balanced",
+            "content": "Portfolio A",
+            "imagePrompt": "pie title \"Current: 60% Stocks, 40% Bonds\" \"Stocks\" : 60 \"Bonds\" : 40",
+            "caption": "Target: 60% Stocks, 40% Bonds",
+            "isCorrect": false
+          },
+          {
+            "id": "unbalanced",
+            "content": "Portfolio B",
+            "imagePrompt": "pie title \"Current: 80% Stocks, 20% Bonds\" \"Stocks\" : 80 \"Bonds\" : 20",
+            "caption": "Target: 60% Stocks, 40% Bonds",
+            "isCorrect": true
+          }
         ],
-        "explanation": "Great job! Investing means putting your money to work in assets that have potential to grow in value or generate income over time. Unlike just spending money on things that lose value (like most purchases) or keeping it in a piggy bank where it doesn't grow, investing helps your money make more money! This is exactly how passive income works - your money works for you even while you sleep.",
-        "imagePrompt": "flowchart LR\n  Money[Your Money] --> Invest[Investing]\n  Invest --> Growth[Growth Over Time]\n  Growth --> More[More Money]\n  More --> Goals[Your Goals]\n  style Money fill:#c4e3ff\n  style Invest fill:#a5d8ff\n  style Growth fill:#86cefa\n  style More fill:#68bdf8\n  style Goals fill:#4a9ced"
+        "explanation": "Rebalancing means adjusting your portfolio back to your target allocation. Portfolio B has drifted significantly from its 60/40 target and needs rebalancing to maintain your desired risk level."
       },
       {
         "id": "dividend-aristocrats",
