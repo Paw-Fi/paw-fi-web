@@ -133,7 +133,11 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
     // If the countdown timer is active, we still want to allow the user to select
     // a different answer, but not reset the countdown timer
     if (countdownSeconds === 0) {
-      resetQuestionStates();
+      // Only reset these specific states to avoid infinite update loops
+      setShowExplanation(false);
+      setCurrentAnswerCorrect(false);
+      setShowFeedback(false);
+      // Don't call resetQuestionStates() as it triggers an update loop
     } else {
       // Just reset the feedback states but keep the countdown
       setCurrentAnswerCorrect(false);
