@@ -12,6 +12,10 @@ if (typeof window !== 'undefined') {
     securityLevel: 'loose',
     fontFamily: 'system-ui, sans-serif',
     flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    pie: {
+      useWidth: 800,
+      textPosition: 0.5
+    },
     fontSize: 14
   });
 }
@@ -64,21 +68,38 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
       svg.style.maxHeight = '100%';
       svg.style.margin = '0 auto';
       
-      // Ensure viewBox for scaling
-      const viewBox = svg.getAttribute('viewBox');
-      if (!viewBox) {
-        const width = parseInt(svg.getAttribute('width') || '1000');
-        const height = parseInt(svg.getAttribute('height') || '600');
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-      }
-      
-      // Scale down text if diagram is complex
-      const nodes = svg.querySelectorAll('.node');
-      if (nodes.length > 10) {
-        const textElements = svg.querySelectorAll('text');
-        textElements.forEach(text => {
-          text.style.fontSize = '0.9em';
-        });
+      // Special handling for pie charts
+      if (container.innerHTML.includes('title') && container.innerHTML.includes('%')) {
+        // Likely a pie chart - ensure the viewBox is set properly
+        const pieGroup = svg.querySelector('g.pieChart');
+        if (pieGroup) {
+          // Adjust sizing to ensure full pie is visible
+          svg.setAttribute('viewBox', '-10 -10 420 420');
+          
+          // Ensure text is properly positioned and visible
+          const textElements = svg.querySelectorAll('text');
+          textElements.forEach(text => {
+            text.style.fontWeight = 'bold';
+            text.style.fontSize = '1.1em';
+          });
+        }
+      } else {
+        // Ensure viewBox for scaling for other diagram types
+        const viewBox = svg.getAttribute('viewBox');
+        if (!viewBox) {
+          const width = parseInt(svg.getAttribute('width') || '1000');
+          const height = parseInt(svg.getAttribute('height') || '600');
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        }
+        
+        // Scale down text if diagram is complex
+        const nodes = svg.querySelectorAll('.node');
+        if (nodes.length > 10) {
+          const textElements = svg.querySelectorAll('text');
+          textElements.forEach(text => {
+            text.style.fontSize = '0.9em';
+          });
+        }
       }
     }
   };
@@ -123,13 +144,16 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
 
   // No hover handlers or modal functionality
 
+  // Detect if this is likely a pie chart based on content
+  const isPieChart = content.includes('pie title') || content.includes('pie ') || content.includes(' : '); 
+  
   return (
-    <div className="relative ">
+    <div className="relative">
       {/* Main diagram container */}
       <div className="bg-white p-2 rounded-lg overflow-hidden shadow-sm mermaid-diagram">
         <div 
           ref={diagramRef} 
-          className="w-full min-h-56 md:min-h-64 flex items-center justify-center overflow-hidden"
+          className={`w-full flex items-center justify-center overflow-hidden ${isPieChart ? 'min-h-72 md:min-h-80' : 'min-h-56 md:min-h-64'}`}
         />
       </div>
       

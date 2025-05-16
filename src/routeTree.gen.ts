@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as TermsOfServiceImport } from './routes/terms-of-service'
+import { Route as SabinaLearningImport } from './routes/sabina-learning'
 import { Route as ResultsImport } from './routes/results'
 import { Route as QuestionnaireImport } from './routes/questionnaire'
 import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
@@ -28,6 +29,12 @@ import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
 const TermsOfServiceRoute = TermsOfServiceImport.update({
   id: '/terms-of-service',
   path: '/terms-of-service',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SabinaLearningRoute = SabinaLearningImport.update({
+  id: '/sabina-learning',
+  path: '/sabina-learning',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -143,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsImport
       parentRoute: typeof rootRoute
     }
+    '/sabina-learning': {
+      id: '/sabina-learning'
+      path: '/sabina-learning'
+      fullPath: '/sabina-learning'
+      preLoaderRoute: typeof SabinaLearningImport
+      parentRoute: typeof rootRoute
+    }
     '/terms-of-service': {
       id: '/terms-of-service'
       path: '/terms-of-service'
@@ -184,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
@@ -198,6 +213,7 @@ export interface FileRoutesByTo {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
@@ -213,6 +229,7 @@ export interface FileRoutesById {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
+  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
@@ -229,6 +246,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/sabina-learning'
     | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
@@ -242,6 +260,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/sabina-learning'
     | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
@@ -255,6 +274,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/questionnaire'
     | '/results'
+    | '/sabina-learning'
     | '/terms-of-service'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
@@ -270,6 +290,7 @@ export interface RootRouteChildren {
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   QuestionnaireRoute: typeof QuestionnaireRoute
   ResultsRoute: typeof ResultsRoute
+  SabinaLearningRoute: typeof SabinaLearningRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   LearningLessonIdRoute: typeof LearningLessonIdRoute
@@ -284,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   QuestionnaireRoute: QuestionnaireRoute,
   ResultsRoute: ResultsRoute,
+  SabinaLearningRoute: SabinaLearningRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   LearningLessonIdRoute: LearningLessonIdRoute,
@@ -307,6 +329,7 @@ export const routeTree = rootRoute
         "/privacy-policy",
         "/questionnaire",
         "/results",
+        "/sabina-learning",
         "/terms-of-service",
         "/demo/tanstack-query",
         "/learning/$lessonId",
@@ -333,6 +356,9 @@ export const routeTree = rootRoute
     },
     "/results": {
       "filePath": "results.tsx"
+    },
+    "/sabina-learning": {
+      "filePath": "sabina-learning.tsx"
     },
     "/terms-of-service": {
       "filePath": "terms-of-service.tsx"

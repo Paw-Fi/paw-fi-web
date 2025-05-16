@@ -1,0 +1,183 @@
+[
+    {
+      "id": "lesson1",
+      "title": "Needs vs Wants",
+      "description": "Learn how to tell the difference between what you need and what you just want.",
+      "xp": 20,
+      "unlocked": true,
+      "icon": "🧃",
+      "helpTips": "Needs = things you must have to live. Wants = nice extras.",
+      "questions": [
+      
+        {
+          "id": "q2",
+          "type": "mcq",
+          "question": "What’s a smart thing to do before spending money on a want?",
+          "options": ["Check your budget", "Call a friend", "Ignore it", "Spend now, think later"],
+          "explanation": "Smart spending means checking your budget first!",
+          "hint": "Budget = your money plan."
+        },
+        {
+          "id": "q3",
+          "type": "text-input",
+          "question": "Name one thing you really *want* right now!",
+          "hint": "Just for fun — no wrong answers."
+        }
+      ]
+    },
+    {
+      "id": "lesson2",
+      "title": "Build a Weekly Spending Plan",
+      "description": "Learn how to keep track of where your money goes.",
+      "xp": 25,
+      "unlocked": true,
+      "icon": "📅",
+      "helpTips": "Tracking = being aware. It’s not about strict limits, it’s about smart choices.",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "text-input",
+          "question": "Write one thing you spent money on this week."
+        },
+        {
+          "id": "q2",
+          "type": "matrix-rating",
+          "question": "Rate how necessary these spending choices are",
+          "questionItems": ["Fast food", "Bus fare", "New headphones", "Snacks", "Notebook"],
+          "scale": ["Not Needed", "Kind of Needed", "Totally Needed"]
+        },
+        {
+          "id": "q3",
+          "type": "mcq",
+          "question": "Which tool helps most with weekly tracking?",
+          "options": ["Calendar", "Notebook", "Spending app", "Your memory"],
+          "explanation": "Apps or journals make tracking easier than trying to remember everything!"
+        },
+        {
+          "id": "q4",
+          "type": "image-choice",
+          "question": "Pick the visual that best shows a balanced spending week.",
+          "imagePrompt": "bar title Weekly Spending bars \"Needs\" : 50 \"Wants\" : 30 \"Savings\" : 20",
+          "options": ["Balanced bar chart", "100% Wants", "0% Savings"]
+        }
+      ]
+    },
+    {
+      "id": "lesson3",
+      "title": "Saving for Big Goals",
+      "description": "Learn how to save for big stuff without stressing your day-to-day spending.",
+      "xp": 30,
+      "unlocked": true,
+      "icon": "🎯",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "mcq",
+          "question": "What’s the best way to save for a big goal?",
+          "options": [
+            "Put aside a little every week",
+            "Wait and hope for a bonus",
+            "Only save when you feel like it"
+          ],
+          "explanation": "Small, regular saving builds up faster than waiting for something big."
+        },
+        {
+          "id": "q2",
+          "type": "text-input",
+          "question": "What’s one big thing you’re saving for?",
+          "hint": "Phone? Travel? Something else?"
+        },
+        {
+          "id": "q3",
+          "type": "scq",
+          "question": "Where is the safest place to keep savings for a big goal?",
+          "options": [
+            "In a savings account",
+            "Under your pillow",
+            "In your game wallet",
+            "As cash in your backpack"
+          ],
+          "explanation": "Savings accounts keep your money safe and sometimes earn a little interest."
+        }
+      ]
+    },
+    {
+      "id": "lesson4",
+      "title": "Spend Smarter",
+      "description": "Learn tricks to avoid overspending and impulse buys.",
+      "xp": 25,
+      "unlocked": true,
+      "icon": "🧠",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "mcq",
+          "question": "What’s an impulse buy?",
+          "options": [
+            "A planned, budgeted item",
+            "Something you buy without thinking",
+            "A monthly bill",
+            "Groceries"
+          ],
+          "explanation": "Impulse = sudden decision without a plan."
+        },
+        {
+          "id": "q2",
+          "type": "scq",
+          "question": "Which of these is a smart way to avoid impulse spending?",
+          "options": [
+            "Wait 24 hours before buying",
+            "Buy as soon as you see it",
+            "Use all your savings",
+            "Ignore your budget"
+          ]
+        },
+        {
+          "id": "q3",
+          "type": "match",
+          "question": "Match each behavior to Smart or Risky spending",
+          "questionItems": ["Checking your budget", "Shopping when bored", "Using a spending limit"],
+          "matchOptions": ["Smart", "Risky"]
+        }
+      ]
+    },
+    {
+      "id": "lesson5",
+      "title": "Emergency Savings",
+      "description": "Why it’s smart to save for things you didn’t plan for.",
+      "xp": 30,
+      "unlocked": true,
+      "icon": "🚨",
+      "helpTips": "Emergencies are surprise costs — like phone repair, vet bills, or lost bus passes.",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "scq",
+          "question": "What’s an emergency fund for?",
+          "options": [
+            "To buy fun stuff",
+            "To cover surprise costs",
+            "To save for vacations",
+            "To pay for wants"
+          ]
+        },
+        {
+          "id": "q2",
+          "type": "sort",
+          "question": "Which of these are true emergencies?",
+          "questionItems": [
+            "Cracked phone screen",
+            "Forgot your charger",
+            "Lost bus card",
+            "Sneaker sale"
+          ],
+          "sortOptions": ["Emergency", "Not Emergency"]
+        },
+        {
+          "id": "q3",
+          "type": "text-input",
+          "question": "Have you ever needed money for an emergency? What happened?"
+        }
+      ]
+    }
+  ]

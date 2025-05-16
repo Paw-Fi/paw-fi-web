@@ -40,6 +40,8 @@ export interface BaseQuestion {
   hint?: string;
   helpTips?: string;
   contentBlocks?: ContentBlock[];
+  imagePrompt?: string;
+  caption?: string;
 }
 
 // Types of questions

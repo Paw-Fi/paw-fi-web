@@ -1,5 +1,6 @@
 import type { Course, Lesson, Question } from "@/types/learning.types";
 import mockLessons from "./mock1.json";
+import sabinaLessons from "./sabina-mock.json"
 
 // Individual lessons with multiple question types
 export const lessons: Record<string, Lesson> = {
@@ -354,11 +355,11 @@ export const courses: Record<string, Course> = {
 
 // Helper function to get lesson by ID
 export function getLessonById(id: string): Lesson | undefined {
-  return lessons[id];
+  return lessons[id] || sabinaLessons.find((lesson) => lesson.id === id)
 }
 
 export function getMockLessonById(id: string): Lesson | undefined {
-  return mockLessons.find((lesson) => lesson.id === id);
+  return mockLessons.find((lesson) => lesson.id === id) || sabinaLessons.find((lesson) => lesson.id === id)
 }
 
 
