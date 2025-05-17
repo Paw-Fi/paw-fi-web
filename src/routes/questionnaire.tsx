@@ -4,8 +4,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import catIcon from "@/assets/images/cat.gif";
 import { useState } from "react";
 
-// Import the chat interface component
+// Import the chat interface component and mock data
 import { ChatInterface } from "@/components/chat/chat-interface";
+import mockLessons from "@/data/mock1.json";
+
+// LocalStorage key for lesson data (must match the one in lessons.ts)
+const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
 
 export const Route = createFileRoute("/questionnaire")({
   component: Questionnaire,
@@ -16,20 +20,39 @@ function Questionnaire() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isGeneratingLessons, setIsGeneratingLessons] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-
+  
   // This function will be called when the AI chat is complete
-  const handleSurveyComplete = (_aiResponse: any) => {
-    // In a real implementation, you would:
-    // 1. Store the AI-generated lessons in state/context/localStorage
-    // 2. Navigate to the results or learning page to show these lessons
-    // The response parameter would be used to generate personalized lessons
-    
-    setIsRedirecting(true);
-    
-    // Navigate to results page after a short delay to show loading state
-    setTimeout(() => {
-      navigate({ to: "/results" });
-    }, 1500);
+  const handleSurveyComplete = async (_aiResponse: any) => {
+    // The ChatInterface component has already shown a progress animation up to 100%
+    // Now we just need to store the lessons in localStorage and redirect
+    try {
+      // Store the mock lessons in localStorage
+      localStorage.setItem(LESSONS_STORAGE_KEY, JSON.stringify(mockLessons));
+      console.log('Mock lessons stored in localStorage successfully');
+      
+      // Set redirecting state (first progress was already handled by ChatInterface)
+      setIsRedirecting(true);
+      
+      // Navigate to learning page after a short delay to show completion message
+      setTimeout(() => {
+        navigate({ to: "/learning" });
+      }, 1500);
+    } catch (error) {
+      console.error('Error storing mock lessons in localStorage:', error);
+      
+      // Even if there's an error, still redirect to learning
+      // It will fall back to using the default lessons
+      setIsRedirecting(true);
+      setTimeout(() => {
+        navigate({ to: "/learning" });
+      }, 1500);
+    }
+  };
+  
+  // This handles the generation state from ChatInterface
+  const handleGeneratingStateChange = (isGenerating: boolean, progress: number) => {
+    setIsGeneratingLessons(isGenerating);
+    setGenerationProgress(progress);
   };
 
   return (
@@ -90,10 +113,7 @@ function Questionnaire() {
             // Chat interface
             <ChatInterface 
               onCompleteSurvey={handleSurveyComplete}
-              onGeneratingStateChange={(isGenerating, progress) => {
-                setIsGeneratingLessons(isGenerating);
-                setGenerationProgress(progress);
-              }} 
+              onGeneratingStateChange={handleGeneratingStateChange} 
             />
           )}
       </div>

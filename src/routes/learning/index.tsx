@@ -135,68 +135,6 @@ function LearningPage() {
         </p>
       </div>
 
-      {/* JSON Import UI - Show if there are no lessons in localStorage */}
-      {!isLoading && localStorage.getItem(LESSONS_STORAGE_KEY) === null && (
-        <div className="max-w-xl mx-auto mb-8 p-6 bg-white rounded-2xl shadow-md">
-          <h2 className="text-lg font-medium mb-4">Import Lesson Data</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Paste the JSON content from your lessons file to customize the learning experience.
-          </p>
-          
-          <textarea
-            className={`w-full h-40 p-3 border rounded-lg font-mono text-sm resize-none mb-3 ${jsonError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-            placeholder="Paste JSON data here..."
-            value={jsonInput}
-            onChange={(e) => setJsonInput(e.target.value)}
-          />
-          
-          {jsonError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              <strong>Error:</strong> {jsonError}
-            </div>
-          )}
-          
-          <div className="flex space-x-3">
-            <button
-              onClick={handleJsonImport}
-              disabled={!jsonInput.trim()}
-              className="px-4 py-2 bg-purple-600 disabled:bg-purple-300 text-white rounded-lg transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
-            >
-              Import Lessons
-            </button>
-            
-            <button
-              onClick={() => {
-                // Use default lessons without storing in localStorage
-                setLessons(getAllLessons());
-                setJsonInput('');
-                setJsonError('');
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg transition-colors hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
-            >
-              Use Default Lessons
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Control panel if lessons are loaded from localStorage */}
-      {!isLoading && localStorage.getItem(LESSONS_STORAGE_KEY) !== null && (
-        <div className="max-w-xl mx-auto mb-6 flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">{lessons.length}</span> lessons loaded from custom data
-          </p>
-          <button
-            onClick={handleResetLessons}
-            className="text-sm text-purple-600 hover:text-purple-800 flex items-center"
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Reset to Default
-          </button>
-        </div>
-      )}
 
       {/* Loading indicator */}
       {isLoading ? (
@@ -208,7 +146,16 @@ function LearningPage() {
         <div ref={lessonCardsRef} className="max-w-xl mx-auto space-y-6">
           {lessons.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-2xl shadow-md">
-              <p className="text-gray-600">No lessons available. Import data or use default lessons.</p>
+              <p className="text-gray-600 mb-4">No lessons available. Take our questionnaire to generate personalized lessons.</p>
+              <Link
+                to="/questionnaire"
+                className="inline-flex items-center justify-center px-5 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Take Questionnaire
+              </Link>
             </div>
           ) : (
             lessons.map((lesson: Lesson) => (
