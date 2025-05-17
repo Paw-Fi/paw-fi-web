@@ -91,6 +91,40 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
   };
   
   // Move to the next question
+  // Helper function to unlock the next lesson in sequence
+  const unlockNextLesson = () => {
+    // Local storage key for lesson data
+    const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+    
+    try {
+      // Get current lessons data from localStorage
+      const storedData = localStorage.getItem(LESSONS_STORAGE_KEY);
+      if (!storedData) return;
+      
+      // Parse the stored lessons
+      const lessons = JSON.parse(storedData);
+      if (!Array.isArray(lessons) || lessons.length === 0) return;
+      
+      // Find the current lesson's index
+      const currentLessonIndex = lessons.findIndex(lesson => lesson.id === lessonId);
+      if (currentLessonIndex === -1 || currentLessonIndex === lessons.length - 1) return;
+      
+      // Get the next lesson in sequence
+      const nextLesson = lessons[currentLessonIndex + 1];
+      if (!nextLesson) return;
+      
+      // Update the next lesson to be unlocked
+      nextLesson.unlocked = true;
+      
+      // Save the updated lessons back to localStorage
+      localStorage.setItem(LESSONS_STORAGE_KEY, JSON.stringify(lessons));
+      
+      console.log(`Next lesson "${nextLesson.title}" has been unlocked!`);
+    } catch (error) {
+      console.error('Error unlocking next lesson:', error);
+    }
+  };
+  
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Move to the next question
@@ -105,6 +139,8 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
       // Set XP earned based on correct answers
       if (allCorrect) {
         setEarnedXp(xp);
+        // If all answers are correct, unlock the next lesson
+        unlockNextLesson();
       } else {
         // Partial XP based on number of correct answers
         const correctCount = questions.filter((q) => 
