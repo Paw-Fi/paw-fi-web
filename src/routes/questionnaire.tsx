@@ -2,239 +2,100 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import catIcon from "@/assets/images/cat.gif";
-import { useEffect } from "react";
+import { useState } from "react";
 
-// Import question components from learning folder
-import ChoiceQuestion from "@/components/learning/question-types/choice-question";
-import MatchQuestion from "@/components/learning/question-types/match-question";
-import SortCategoriesQuestion from "@/components/learning/question-types/sort-categories-question";
-import MatrixRatingQuestion from "@/components/learning/question-types/matrix-rating-question";
-import TextInputQuestion from "@/components/learning/question-types/text-input-question";
-import { ImageChoiceQuestion } from "@/components/learning/question-types/image-choice-question";
-
-// Import context and types
-import { useQuestionnaire } from "@/contexts/questionnaire-context";
-import type {
-  ChoiceQuestion as ChoiceQuestionType,
-  SortCategoriesQuestion as SortCategoriesQuestionType,
-  MatrixRatingQuestion as MatrixRatingQuestionType,
-  TextInputQuestion as TextInputQuestionType,
-} from "@/types/learning.types";
-import { Button } from "@/components/ui/button";
+// Import the chat interface component
+import { ChatInterface } from "@/components/chat/chat-interface";
 
 export const Route = createFileRoute("/questionnaire")({
   component: Questionnaire,
 });
 
 function Questionnaire() {
-  // Initialize navigation
   const navigate = useNavigate();
-  
-  // Use the questionnaire context
-  const { state, nextStep, prevStep, setAnswer } = useQuestionnaire();
-  const { currentStep, answers } = state;
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isGeneratingLessons, setIsGeneratingLessons] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
 
-  // Get questions from context and get the current question
-  const { questions } = useQuestionnaire();
-  const currentQuestion = questions[currentStep];
-
-  // Determine if questionnaire is complete (currentStep is past the end of questions)
-  const isComplete = currentStep >= questions.length;
-  
-  // Redirect to results page when questionnaire is complete
-  useEffect(() => {
-    if (isComplete) {
+  // This function will be called when the AI chat is complete
+  const handleSurveyComplete = (_aiResponse: any) => {
+    // In a real implementation, you would:
+    // 1. Store the AI-generated lessons in state/context/localStorage
+    // 2. Navigate to the results or learning page to show these lessons
+    // The response parameter would be used to generate personalized lessons
+    
+    setIsRedirecting(true);
+    
+    // Navigate to results page after a short delay to show loading state
+    setTimeout(() => {
       navigate({ to: "/results" });
-    }
-  }, [isComplete, navigate]);
-
-  // Handle answers using the context
-  const handleAnswer = (questionId: string, answer: any) => {
-    // Type assertion to ensure compatibility with different question types
-    setAnswer(
-      questionId,
-      answer as string | string[] | number | Record<string, string>,
-    );
-  };
-
-  const renderQuestion = () => {
-    if (!currentQuestion) return <div>Loading questions...</div>;
-
-    // Handle each question type
-    switch (currentQuestion.type) {
-      case "scq":
-      case "mcq":
-        return (
-          <ChoiceQuestion
-            question={currentQuestion as ChoiceQuestionType}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={answers[currentQuestion.id] as string | undefined}
-          />
-        );
-
-      case "sort-categories":
-        return (
-          <SortCategoriesQuestion
-            question={currentQuestion as SortCategoriesQuestionType}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={
-              answers[currentQuestion.id] as Record<string, string> | undefined
-            }
-          />
-        );
-
-      case "matrix-rating":
-        return (
-          <MatrixRatingQuestion
-            question={currentQuestion as MatrixRatingQuestionType}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={
-              answers[currentQuestion.id] as Record<string, string> | undefined
-            }
-          />
-        );
-
-      case "match":
-        return (
-          <MatchQuestion
-            question={currentQuestion}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={
-              answers[currentQuestion.id] as Record<string, string> | undefined
-            }
-          />
-        );
-
-      case "text-input":
-        return (
-          <TextInputQuestion
-            question={currentQuestion as TextInputQuestionType}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={answers[currentQuestion.id] as string | undefined}
-          />
-        );
-
-      case "image-choice":
-        return (
-          <ImageChoiceQuestion
-            question={currentQuestion}
-            onAnswer={(answer) => handleAnswer(currentQuestion.id, answer)}
-            value={answers[currentQuestion.id] as string | undefined}
-          />
-        );
-
-      // If we add new question types to learning.ts, we can handle them here
-
-      default:
-        return <div>Unknown question type: {currentQuestion.type}</div>;
-    }
-  };
-
-  const handleBack = () => {
-    prevStep();
-  };
-
-  const handleNext = () => {
-    nextStep();
-  };
-
-  // Check if current question has been answered
-  const isCurrentQuestionAnswered = () => {
-    // Don't enable the button if we're already complete
-    if (isComplete) return false;
-
-    // If no answer yet, question is not answered
-    if (!answers[currentQuestion.id]) return false;
-
-    // For matrix rating questions, all items must be rated
-    if (currentQuestion.type === "matrix-rating") {
-      const matrixAnswer = answers[currentQuestion.id] as Record<
-        string,
-        string
-      >;
-      return currentQuestion.items.every((item) => !!matrixAnswer[item.id]);
-    }
-
-    // For text-input questions, ensure there's a non-empty value
-    if (currentQuestion.type === "text-input") {
-      const textAnswer = answers[currentQuestion.id] as string;
-      return !!textAnswer && textAnswer.trim() !== "";
-    }
-
-    // Image-choice questions work like standard choice questions
-    return !!answers[currentQuestion.id];
+    }, 1500);
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background">
-      {/* Back button - positioned outside the container in the top left */}
-     { currentStep > 0 && <button
-        onClick={handleBack}
-        disabled={currentStep === 0}
-        className="absolute top-4 left-4 flex items-center font-medium cursor-pointer"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="mr-1"
-        >
-          <path
-            d="M10 4L6 8L10 12"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        Back
-      </button>
-}
-      <div className="flex flex-grow items-center justify-center">
-        <div className="my-8 w-[35rem] overflow-hidden rounded-3xl bg-white p-6 shadow-lg">
-          {/* Progress indicator */}
-          <div className="mb-6 flex justify-center">
+    <div className="h-screen bg-background flex items-center justify-center p-4 md:p-6">
+      <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden h-[70vh] flex flex-col">
+          {/* Header */}
+          <div className="mb-4 flex justify-center items-center">
             <img src={catIcon} alt="PawFi Cat" className="h-16 w-16" />
           </div>
-
-          {/* Loading state shown briefly during redirect */}
-          {isComplete ? (
-            <div className="flex items-center justify-center">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-primary border-t-transparent"></div>
+          
+          {/* Title */}
+          <div className="mb-4 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Financial Learning Assistant
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Chat with our AI to get personalized financial education.
+            </p>
+          </div>
+          
+          {/* Main content area */}
+          {isRedirecting || isGeneratingLessons ? (
+            // Shared loading state for both lesson generation and redirection
+            <div className="flex-grow flex items-center justify-center flex-col p-6">
+              <div className="w-24 h-24 mb-6 bg-white rounded-full shadow-lg p-4 flex items-center justify-center">
+                <svg className="w-full h-full text-purple-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                {isRedirecting ? "Preparing Your Lessons" : "Generating Your Lessons"}
+              </h3>
+              <p className="text-gray-600 mb-4 text-center max-w-md text-lg">
+                {isRedirecting ? 
+                  "Your personalized lessons are ready! Taking you there now..." : 
+                  "I'm creating personalized financial lessons based on our conversation. This might take a few minutes."}
+              </p>
+              
+              {/* Only show progress bar during generation */}
+              {isGeneratingLessons && (
+                <>
+                  <p className="text-amber-700 mb-8 text-center font-medium">
+                    Please wait, this might take a while...
+                  </p>
+                  <div className="w-full max-w-md bg-white shadow-inner rounded-full h-6 mb-3 overflow-hidden border border-gray-200">
+                    <div 
+                      className="bg-purple-600 h-6 rounded-full transition-all duration-300 ease-out" 
+                      style={{ width: `${generationProgress}%` }}
+                    >
+                    </div>
+                  </div>
+                  <div className="text-base font-medium text-purple-800">{generationProgress}% complete</div>
+                </>
+              )}
             </div>
           ) : (
-            // Show current question
-            <>
-              {/* Display the current question number and title */}
-              <div className="mb-4 text-center">
-                <h2 className="text-primary-600 text-lg font-medium">
-                  Question {currentStep + 1} of {questions.length}
-                </h2>
-                <h1 className="mt-2 text-2xl font-bold text-gray-900">
-                  {currentQuestion.question}
-                </h1>
-                <p className="mt-2 text-sm text-gray-600">
-                  {currentQuestion.explanation}
-                </p>
-              </div>
-
-              {/* Dynamic question content */}
-              {renderQuestion()}
-
-              {/* Next button */}
-              <Button
-                onClick={handleNext}
-                variant="dark"
-                disabled={!isCurrentQuestionAnswered()}
-                className={`mt-6 w-full rounded-lg px-6 py-3 transition-colors ${isCurrentQuestionAnswered()}`}
-              >
-                {currentStep < questions.length - 1 ? "Next" : "Finish"}
-              </Button>
-            </>
+            // Chat interface
+            <ChatInterface 
+              onCompleteSurvey={handleSurveyComplete}
+              onGeneratingStateChange={(isGenerating, progress) => {
+                setIsGeneratingLessons(isGenerating);
+                setGenerationProgress(progress);
+              }} 
+            />
           )}
-        </div>
       </div>
     </div>
   );

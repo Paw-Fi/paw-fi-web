@@ -5,9 +5,9 @@ import { Link, createFileRoute } from '@tanstack/react-router';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import lessonData from '@/data/sabina-mock.json'
+
 // Import data from separate data file
 import type { Lesson } from '@/types/learning.types';
-import introInvestingCourse, { getAllLessons } from '@/data/lessons';
 
 export const Route = createFileRoute('/sabina-learning')({ 
   component: LearningPage,
@@ -43,13 +43,13 @@ function LearningPage() {
     });
   }, { scope: lessonCardsRef });
 
-  return (
+  return (  
     <div className="min-h-screen bg-background py-12 px-4">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">{introInvestingCourse.title}</h1>
+        <h1 className="text-2xl font-bold mb-2">Introduction to Investing</h1>
         <p className="text-gray-600 max-w-md mx-auto">
-          {introInvestingCourse.description}
+          Understand how money grows—and how you can make it work for you.
         </p>
       </div>
 

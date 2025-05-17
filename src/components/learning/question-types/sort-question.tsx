@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
   closestCenter,
@@ -106,10 +106,30 @@ function SortQuestion({ question, onAnswer, value }: SortQuestionProps) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  
+  // Reference to prevent infinite update loops
+  const prevAnswerRef = useRef<string>('');
 
-  // Call onAnswer when items change
+  // Update initial items if value changes from parent
   useEffect(() => {
-    onAnswer(items);
+    if (value) {
+      setItems(value);
+    }
+  }, [value]);
+  
+  // Effect to notify parent component of answer changes
+  useEffect(() => {
+    const currentAnswer = JSON.stringify(items);
+    
+    // Only update if the answer has changed
+    if (currentAnswer !== prevAnswerRef.current) {
+      prevAnswerRef.current = currentAnswer;
+      
+      // Use requestAnimationFrame to safely notify parent after render
+      requestAnimationFrame(() => {
+        onAnswer(items);
+      });
+    }
   }, [items, onAnswer]);
 
   // Track active dragging state to improve visual feedback
@@ -126,14 +146,15 @@ function SortQuestion({ question, onAnswer, value }: SortQuestionProps) {
     setActiveId(null);
 
     if (over && active.id !== over.id) {
-      setItems((currentItems) => {
-        const oldIndex = currentItems.findIndex(
-          (item) => item.id === active.id,
-        );
-        const newIndex = currentItems.findIndex((item) => item.id === over.id);
-
-        return arrayMove(currentItems, oldIndex, newIndex);
-      });
+      // Find the indices first outside the state update function
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      
+      // Create the new array without being inside the state setter
+      const newItems = arrayMove([...items], oldIndex, newIndex);
+      
+      // Just update the state - the useEffect will handle calling onAnswer
+      setItems(newItems);
     }
   }
 

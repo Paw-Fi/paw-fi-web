@@ -3,6 +3,7 @@
 interface AnswerFeedbackProps {
   isCorrect: boolean | null;
   explanation?: string;
+  incorrectExplanation?: string;
   countdownSeconds: number;
   showExplanation: boolean;
   showFeedback: boolean;
@@ -11,14 +12,17 @@ interface AnswerFeedbackProps {
 export function AnswerFeedback({ 
   isCorrect, 
   explanation, 
+  incorrectExplanation,
   countdownSeconds, 
   showExplanation ,
   showFeedback
 }: AnswerFeedbackProps) {
+  // Don't show anything if feedback shouldn't be displayed yet
   if (!showFeedback) return null;
   if (isCorrect === null) return null;
 
-  if (isCorrect && showExplanation) {
+  // Show correct feedback only when answer is correct and explanation should be shown
+  if (isCorrect === true && showExplanation) {
     return (
       <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 transition-all duration-300 ease-in-out animate-fadeIn">
         <div className="flex items-center mb-2">
@@ -34,6 +38,7 @@ export function AnswerFeedback({
     );
   }
 
+  // Show incorrect feedback only when answer is explicitly false
   if (isCorrect === false) {
     return (
       <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 transition-all duration-300 ease-in-out animate-fadeIn">
@@ -49,7 +54,7 @@ export function AnswerFeedback({
             )}
           </span>
         </div>
-        <p className="text-gray-700">Take a moment to review your answer and try again.</p>
+        <p className="text-gray-700">{incorrectExplanation ?? "Take a moment to review your answer and try again."}</p>
       </div>
     );
   }

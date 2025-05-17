@@ -68,6 +68,10 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
       // Show explanation for correct answer
       setShowExplanation(true);
     } else {
+      // Explicitly set showExplanation to false for incorrect answers
+      // to ensure correct feedback isn't shown
+      setShowExplanation(false);
+      
       // Incorrect answer - set countdown timer
       setCountdownSeconds(5);
       
@@ -124,24 +128,35 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
 
   // Record an answer
   const handleAnswer = (questionId: string, answer: any) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
+    // For sort questions, we need to check if the answer is actually different
+    // to prevent infinite loops with the drag-and-drop component
+    const prevAnswer = answers[questionId];
     
-    // Reset UI states when a new answer is submitted
-    // If the countdown timer is active, we still want to allow the user to select
-    // a different answer, but not reset the countdown timer
-    if (countdownSeconds === 0) {
-      // Only reset these specific states to avoid infinite update loops
-      setShowExplanation(false);
-      setCurrentAnswerCorrect(false);
-      setShowFeedback(false);
-      // Don't call resetQuestionStates() as it triggers an update loop
-    } else {
-      // Just reset the feedback states but keep the countdown
-      setCurrentAnswerCorrect(false);
-      setShowExplanation(false);
+    // Check if this is the same answer as before (deep comparison for arrays)
+    const isSameAnswer = Array.isArray(answer) && Array.isArray(prevAnswer) &&
+      answer.length === prevAnswer.length &&
+      answer.every((item, index) => {
+        return item.id === prevAnswer[index]?.id;
+      });
+    
+    // Only update if the answer is different
+    if (!isSameAnswer) {
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: answer,
+      }));
+      
+      // Reset UI states when a new answer is submitted, but only if the answer changed
+      if (countdownSeconds === 0) {
+        // Only reset these specific states to avoid infinite update loops
+        setShowExplanation(false);
+        setCurrentAnswerCorrect(false);
+        setShowFeedback(false);
+      } else {
+        // Just reset the feedback states but keep the countdown
+        setCurrentAnswerCorrect(false);
+        setShowExplanation(false);
+      }
     }
   };
 

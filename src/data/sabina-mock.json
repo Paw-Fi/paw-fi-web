@@ -163,7 +163,7 @@
         },
         {
           "id": "q2",
-          "type": "sort",
+          "type": "sort-order",
           "question": "Which of these are true emergencies?",
           "questionItems": [
             "Cracked phone screen",

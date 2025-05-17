@@ -36,26 +36,26 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
         return false;
       }
     }
-    
+        
     // Validate numeric input if min/max specified
-    if (question.validation.min !== undefined || question.validation.max !== undefined) {
-      const numVal = parseFloat(val);
+    // if (question.validation.min !== undefined || question.validation.max !== undefined) {
+    //   const numVal = parseFloat(val);
       
-      if (isNaN(numVal)) {
-        setError('Please enter a valid number');
-        return false;
-      }
+    //   if (isNaN(numVal)) {
+    //     setError('Please enter a valid number');
+    //     return false;
+    //   }
       
-      if (question.validation.min !== undefined && numVal < question.validation.min) {
-        setError(`Value must be at least ${question.validation.min}`);
-        return false;
-      }
+    //   if (question.validation.min !== undefined && numVal < question.validation.min) {
+    //     setError(`Value must be at least ${question.validation.min}`);
+    //     return false;
+    //   }
       
-      if (question.validation.max !== undefined && numVal > question.validation.max) {
-        setError(`Value must be no more than ${question.validation.max}`);
-        return false;
-      }
-    }
+    //   if (question.validation.max !== undefined && numVal > question.validation.max) {
+    //     setError(`Value must be no more than ${question.validation.max}`);
+    //     return false;
+    //   }
+    // }
     
     // All validations passed
     setError(null);
@@ -69,10 +69,9 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
     // Clear error when user types
     if (error) setError(null);
     
-    // Validate and update answer
-    if (validateInput(newValue)) {
-      onAnswer(newValue);
-    }
+    // Just update the answer without validating
+    // This matches the behavior of other question types
+    onAnswer(newValue);
   };
 
   const handleBlur = () => {

@@ -1,10 +1,9 @@
 "use client";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import {useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { useQuestionnaire } from "../contexts/questionnaire-context";
 import piggyIcon from "@/assets/images/piggy.svg";
 import lightbulbIcon from "@/assets/images/lightbulb.svg";
 import bookIcon from "@/assets/images/book.svg";
@@ -65,14 +64,8 @@ const featureCards: FeatureCard[] = [
 ];
 
 function Results() {
-  const { state } = useQuestionnaire();
   const resultsRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
-
-  // Debug state
-  useEffect(() => {
-    console.log("Results page state:", state);
-  }, [state]);
 
   // Animate results content using GSAP
   useGSAP(

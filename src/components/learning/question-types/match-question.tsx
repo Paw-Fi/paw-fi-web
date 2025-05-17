@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import classnames from 'classnames';
 import type { MatchQuestion as MatchQuestionType, Item } from '@/types/learning.types';
 
@@ -16,6 +16,9 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
   // Track which item is currently selected
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
+  // Reference to prevent infinite update loops
+  const prevAnswerRef = useRef<string>('');
+  
   // Get items from the question, with null safety
   const items: Item[] = Array.isArray(question.items) ? question.items : [];
   
@@ -25,9 +28,21 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
   
   // Effect to call onAnswer when matches change
   useEffect(() => {
-    // Only call onAnswer when all items have been matched
-    if (items.length > 0 && Object.keys(matches).length === items.length) {
-      onAnswer(matches);
+    // Convert matches to string for comparison
+    const currentMatches = JSON.stringify(matches);
+    
+    // Only call onAnswer when all items have been matched AND the matches have changed
+    if (items.length > 0 && 
+        Object.keys(matches).length === items.length && 
+        currentMatches !== prevAnswerRef.current) {
+      
+      // Update the reference
+      prevAnswerRef.current = currentMatches;
+      
+      // Use requestAnimationFrame to avoid state updates during render
+      requestAnimationFrame(() => {
+        onAnswer(matches);
+      });
     }
   }, [matches, onAnswer, items.length]);
   

@@ -92,6 +92,7 @@ function LessonPage() {
               <AnswerFeedback 
                 isCorrect={currentAnswerCorrect} 
                 explanation={currentQuestion.explanation}
+                incorrectExplanation={currentQuestion.incorrectExplanation}
                 countdownSeconds={countdownSeconds}
                 showExplanation={showExplanation}
                 showFeedback={showFeedback}

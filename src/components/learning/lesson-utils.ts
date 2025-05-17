@@ -56,30 +56,89 @@ export function isAnswerCorrect(question: Question, answer: any): boolean {
       }
       return answer === correctOption.id;
 
-    case "sort":
+    case "sort-order":
       // For sorting questions, check against correct order
-      if (Array.isArray(answer) && question.correctOrder) {
-        return JSON.stringify(answer) === JSON.stringify(question.correctOrder);
+      if (Array.isArray(answer) && question.correctAnswers) {
+        // Extract just the IDs from the answer if it contains objects with an id property
+        // This handles both array of objects and array of strings
+        const answerIds = answer.map((item) => typeof item === 'object' && item.id ? item.id : item);
+        return JSON.stringify(answerIds) === JSON.stringify(question.correctAnswers);
       }
       return false;
 
     case "sort-categories":
       // For categorization, compare with correct categories
-      if (question.correctCategories && typeof answer === "object") {
-        const userCategorization = answer as Record<string, string>;
-        return Object.entries(question.correctCategories).every(
-          ([itemId, categoryId]) => userCategorization[itemId] === categoryId
-        );
+      if (question.correctAnswers && typeof answer === "object") {
+        const userCategorization = answer as Record<string, string>; // item ID -> category ID
+        
+        // Create inverted user mapping for easier comparison
+        const userCategoryItems: Record<string, string[]> = {};
+        
+        // Initialize all categories with empty arrays
+        if (question.categories) {
+          question.categories.forEach(category => {
+            userCategoryItems[category.id] = [];
+          });
+        }
+        
+        // Group items by category
+        Object.entries(userCategorization).forEach(([itemId, categoryId]) => {
+          if (!userCategoryItems[categoryId]) {
+            userCategoryItems[categoryId] = [];
+          }
+          userCategoryItems[categoryId].push(itemId);
+        });
+        
+        // Now compare with expected correctAnswers
+        return Object.entries(question.correctAnswers).every(([categoryId, expectedItems]) => {
+          const userItems = userCategoryItems[categoryId] || [];
+          
+          // Check if all expected items for this category are present in user's answer
+          if (Array.isArray(expectedItems)) {
+            // First, check if the counts match
+            if (expectedItems.length !== userItems.length) {
+              return false;
+            }
+            
+            // Then check if every expected item is in the user's items for this category
+            return expectedItems.every(expectedItemId => 
+              userItems.includes(expectedItemId as string)
+            );
+          }
+          return false;
+        });
       }
       return false;
 
     case "match":
       // For matching, compare with correct matches
-      if (question.correctMatches && typeof answer === "object") {
+      if (question.correctAnswers && typeof answer === "object") {
         const userMatches = answer as Record<string, string>;
-        return Object.entries(question.correctMatches).every(
-          ([itemId, matchId]) => userMatches[itemId] === matchId
-        );
+        const correctMatches = question.correctMatches || question.correctAnswers;
+        
+        // Normalize the data formats
+        const correctEntries = Object.entries(correctMatches);
+        const userEntries = Object.entries(userMatches);
+        
+        // If lengths don't match, can't be correct
+        if (correctEntries.length !== userEntries.length) {
+          return false;
+        }
+        
+        // Check if all correct pairs exist in user matches (in either direction)
+        return correctEntries.every(([itemId, matchId]) => {
+          // Check direct match (item → match)
+          if (userMatches[itemId] === matchId) {
+            return true;
+          }
+          
+          // Check reverse match (match → item) in case the UI swapped them
+          const reversePair = userEntries.find(
+            ([userItemId, userMatchId]) => userItemId === matchId && userMatchId === itemId
+          );
+          
+          return !!reversePair;
+        });
       }
       return false;
 
@@ -94,39 +153,59 @@ export function isAnswerCorrect(question: Question, answer: any): boolean {
       return false;
 
     case "text-input":
-      // For text input, check against accepted answers
-      if (question.correctAnswer) {
-        const textInputQuestion = question as TextInputQuestionType;
-        const userText = answer as string;
-        
-        if (!userText || userText.trim() === "") {
-          return false;
-        }
-        
-        // If there's no correctAnswer defined, we can't validate
-        if (!textInputQuestion.correctAnswer) {
-          return false;
-        }
-        
-        const isCaseSensitive = textInputQuestion.validation?.caseSensitive ?? false;
-        const normalizedUserAnswer = isCaseSensitive ? userText.trim() : userText.trim().toLowerCase();
-        
-        // Check against array of possible answers
-        if (Array.isArray(textInputQuestion.correctAnswer)) {
-          return textInputQuestion.correctAnswer.some((answer: string) => {
-            const normalizedCorrectAnswer = isCaseSensitive ? answer.trim() : answer.trim().toLowerCase();
-            return normalizedUserAnswer === normalizedCorrectAnswer;
-          });
-        }
-        
-        // Check against single correct answer
-        const normalizedCorrectAnswer = isCaseSensitive 
-          ? textInputQuestion.correctAnswer.trim() 
-          : textInputQuestion.correctAnswer.trim().toLowerCase();
-        
-        return normalizedUserAnswer === normalizedCorrectAnswer;
+      // For text input, validate input against rules
+      const textInputQuestion = question as TextInputQuestionType;
+      const userText = answer as string;
+      
+      // Check if the user provided any text at all
+      if (!userText || userText.trim() === "") {
+        return false;
       }
-      return false;
+      
+      // First, always check pattern validation if present
+      // This applies to both open-ended and specific-answer questions
+      if (textInputQuestion.validation?.pattern) {
+        try {
+          const regex = new RegExp(textInputQuestion.validation.pattern);
+          if (!regex.test(userText.trim())) {
+            return false;
+          }
+        } catch (e) {
+          // If regex is invalid, log error and continue with other validations
+          console.error("Invalid regex pattern:", textInputQuestion.validation.pattern);
+        }
+      }
+      
+      // If there's no correctAnswer defined, this is an open-ended question
+      // For open-ended questions, we've already checked the pattern if present
+      if (!textInputQuestion.correctAnswer) {
+        // Also validate minimum text length if specified
+        const minLength = textInputQuestion.validation?.min;
+        if (minLength && userText.trim().length < minLength) {
+          return false;
+        }
+        // The answer is valid if it passed all validations above
+        return true;
+      }
+      
+      // Below logic applies when there is a specific correct answer
+      const isCaseSensitive = textInputQuestion.validation?.caseSensitive ?? false;
+      const normalizedUserAnswer = isCaseSensitive ? userText.trim() : userText.trim().toLowerCase();
+      
+      // Check against array of possible answers
+      if (Array.isArray(textInputQuestion.correctAnswer)) {
+        return textInputQuestion.correctAnswer.some((answer: string) => {
+          const normalizedCorrectAnswer = isCaseSensitive ? answer.trim() : answer.trim().toLowerCase();
+          return normalizedUserAnswer === normalizedCorrectAnswer;
+        });
+      }
+      
+      // Check against single correct answer
+      const normalizedCorrectAnswer = isCaseSensitive 
+        ? textInputQuestion.correctAnswer.trim() 
+        : textInputQuestion.correctAnswer.trim().toLowerCase();
+      
+      return normalizedUserAnswer === normalizedCorrectAnswer;
 
     default:
       return false;

@@ -4,7 +4,7 @@
 export type ContentBlockType = 'paragraph' | 'bulletList' | 'numberedList' | 'scenario';
 
 // Types of questions - using string to be compatible with JSON data
-export type QuestionType = string;
+export type QuestionType = 'mcq' | 'scq' | 'sort-order' | 'sort-categories' | 'match' | 'matrix-rating' | 'text-input' | 'image-choice';
 
 // Base item for any question option
 export type Item = {
@@ -63,6 +63,7 @@ export type BaseQuestion = {
   type: QuestionType;
   question: string;
   explanation?: string;
+  incorrectExplanation?: string;
   hint?: string;
   helpTips?: string;
   contentBlocks?: ContentBlock[];
@@ -73,7 +74,7 @@ export type BaseQuestion = {
 // A fully flexible Question type to accommodate JSON data
 export type Question = {
   id: string;
-  type: string;
+  type: QuestionType;
   question: string;
   explanation?: string;
   hint?: string;
@@ -88,14 +89,12 @@ export type Question = {
   
   // Sort and category properties
   items?: any[]; // Allow any array
-  correctOrder?: string[];
+  correctAnswers?: string[];
   categories?: any[]; // Allow any array format
-  correctCategories?: Record<string, string>;
   helpTipsData?: any[]; // Allow any array format
   
   // Match properties
   matchItems?: any[];
-  correctMatches?: Record<string, string>;
   
   // Matrix rating properties
   ratingOptions?: any[];
@@ -128,7 +127,7 @@ export function isChoiceQuestion(question: Question): question is Question {
 }
 
 export function isSortQuestion(question: Question): question is Question {
-  return question.type === 'sort';
+  return question.type === 'sort-order';
 }
 
 export function isSortCategoriesQuestion(question: Question): question is Question {
@@ -160,7 +159,6 @@ export type Lesson = {
   unlocked: boolean;
   icon?: string;
   questions: Question[];
-  helpTips?: string;
 };
 
 // Course containing multiple lessons

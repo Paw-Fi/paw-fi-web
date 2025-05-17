@@ -24,7 +24,7 @@ export function QuestionContent({
 }: QuestionContentProps) {
   return (
     <div className={countdownSeconds > 0 ? "pointer-events-none opacity-70" : ""} aria-disabled={countdownSeconds > 0}>
-      {question.type === "sort" && (
+      {question.type === "sort-order" && (
         <SortQuestion
           question={question}
           onAnswer={(answer) =>

@@ -131,7 +131,7 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
       >
         {/* Category containers in a grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {question.categories.map(category => (
+          {question.categories?.map(category => (
             <Droppable 
               key={category.id}
               id={category.id}
@@ -139,7 +139,7 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
               className="bg-gray-50 rounded-lg p-4 mb-4"
             >
               <h3 className="font-semibold mb-3 text-lg">
-                {category.name} {getItemsForCategory(category.id).length > 0 && 
+                {category.content||category.name} {getItemsForCategory(category.id).length > 0 && 
                   `(${getItemsForCategory(category.id).length})`
                 }
               </h3>
