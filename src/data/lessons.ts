@@ -1,14 +1,40 @@
 import type { Course, Lesson } from "@/types/learning.types";
-import mockLessons from "./mock1.json";
-import sabinaLessons from "./sabina-mock.json"
+import mockCourse from "./mock1.json";
+import sabinaLessons from "./sabina-mock.json";
 
 // Helper function to get lesson by ID
 // LocalStorage key for lesson data (must match the one in learning/index.tsx)
 const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+const COURSE_STORAGE_KEY = 'paw-fi-course';
+
+// Helper function to get course from localStorage
+function getCourseFromLocalStorage(): Course | null {
+  try {
+    const storedData = localStorage.getItem(COURSE_STORAGE_KEY);
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      // Basic validation for course structure
+      if (parsedData && parsedData.id && Array.isArray(parsedData.lessons)) {
+        return parsedData as Course;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error retrieving course from localStorage:', error);
+    return null;
+  }
+}
 
 // Helper function to get lessons from localStorage
 function getLessonsFromLocalStorage(): Lesson[] {
   try {
+    // First try to get from course storage format
+    const course = getCourseFromLocalStorage();
+    if (course && Array.isArray(course.lessons)) {
+      return course.lessons;
+    }
+    
+    // Fall back to legacy format (array of lessons)
     const storedData = localStorage.getItem(LESSONS_STORAGE_KEY);
     if (storedData) {
       const parsedData = JSON.parse(storedData);
@@ -36,22 +62,40 @@ export function getLessonById(id: string): Lesson | undefined {
   }
   
   // Otherwise fallback to mock data
-  return mockLessons.find((lesson) => lesson.id === id) || sabinaLessons.find((lesson) => lesson.id === id);
+  // Check in mockCourse
+  const lessonFromMockCourse = mockCourse.lessons.find((lesson) => lesson.id === id);
+  if (lessonFromMockCourse) {
+    return lessonFromMockCourse;
+  }
+  
+  // Lastly check in sabinaLessons (which is still in the array format)
+  return sabinaLessons.find((lesson) => lesson.id === id);
 }
 
 // Helper function to get course by ID
 export function getCourseById(id: string): Course | undefined {
   // First check localStorage
-  const localStorageLessons = getLessonsFromLocalStorage();
-  const courseFromStorage = localStorageLessons.find((lesson) => lesson.id === id);
-  
-  // If found in localStorage, return it (need to adapt if needed)
-  if (courseFromStorage) {
-    return courseFromStorage as unknown as Course; // This might need proper type adaptation
+  const courseFromStorage = getCourseFromLocalStorage();
+  if (courseFromStorage && courseFromStorage.id === id) {
+    return courseFromStorage;
   }
   
   // Otherwise fallback to mock data
-  return mockLessons.find((lesson) => lesson.id === id) as unknown as Course;
+  if (mockCourse.id === id) {
+    return mockCourse;
+  }
+  
+  return undefined;
+}
+
+// Get all courses (currently we only have one course in the new format)
+export function getAllCourses(): Course[] {
+  const courseFromStorage = getCourseFromLocalStorage();
+  if (courseFromStorage) {
+    return [courseFromStorage];
+  }
+  
+  return [mockCourse];
 }
 
 export function getAllLessons(): Lesson[] {
@@ -63,6 +107,6 @@ export function getAllLessons(): Lesson[] {
     return localStorageLessons;
   }
   
-  // Otherwise fallback to mock data
-  return mockLessons;
+  // Otherwise fallback to mock data's lessons
+  return mockCourse.lessons;
 }

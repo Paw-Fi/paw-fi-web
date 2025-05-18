@@ -21,8 +21,11 @@ import { Route as CookiePolicyImport } from './routes/cookie-policy'
 import { Route as RootImport } from './routes/_root'
 import { Route as IndexImport } from './routes/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
+import { Route as AuthorIndexImport } from './routes/author/index'
 import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
+import { Route as AuthorImportImport } from './routes/author/import'
+import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
 
 // Create/Update Routes
 
@@ -85,6 +88,12 @@ const LearningIndexRoute = LearningIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const AuthorIndexRoute = AuthorIndexImport.update({
+  id: '/author/',
+  path: '/author/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const LearningLessonIdRoute = LearningLessonIdImport.update({
   id: '/learning/$lessonId',
   path: '/learning/$lessonId',
@@ -94,6 +103,18 @@ const LearningLessonIdRoute = LearningLessonIdImport.update({
 const DemoTanstackQueryRoute = DemoTanstackQueryImport.update({
   id: '/demo/tanstack-query',
   path: '/demo/tanstack-query',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthorImportRoute = AuthorImportImport.update({
+  id: '/author/import',
+  path: '/author/import',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
+  id: '/author/course/$courseId',
+  path: '/author/course/$courseId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -164,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsOfServiceImport
       parentRoute: typeof rootRoute
     }
+    '/author/import': {
+      id: '/author/import'
+      path: '/author/import'
+      fullPath: '/author/import'
+      preLoaderRoute: typeof AuthorImportImport
+      parentRoute: typeof rootRoute
+    }
     '/demo/tanstack-query': {
       id: '/demo/tanstack-query'
       path: '/demo/tanstack-query'
@@ -178,11 +206,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningLessonIdImport
       parentRoute: typeof rootRoute
     }
+    '/author/': {
+      id: '/author/'
+      path: '/author'
+      fullPath: '/author'
+      preLoaderRoute: typeof AuthorIndexImport
+      parentRoute: typeof rootRoute
+    }
     '/learning/': {
       id: '/learning/'
       path: '/learning'
       fullPath: '/learning'
       preLoaderRoute: typeof LearningIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/author/course/$courseId': {
+      id: '/author/course/$courseId'
+      path: '/author/course/$courseId'
+      fullPath: '/author/course/$courseId'
+      preLoaderRoute: typeof AuthorCourseCourseIdImport
       parentRoute: typeof rootRoute
     }
   }
@@ -200,9 +242,12 @@ export interface FileRoutesByFullPath {
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/author': typeof AuthorIndexRoute
   '/learning': typeof LearningIndexRoute
+  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -215,9 +260,12 @@ export interface FileRoutesByTo {
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/author': typeof AuthorIndexRoute
   '/learning': typeof LearningIndexRoute
+  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
 export interface FileRoutesById {
@@ -231,9 +279,12 @@ export interface FileRoutesById {
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
+  '/author/': typeof AuthorIndexRoute
   '/learning/': typeof LearningIndexRoute
+  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
 export interface FileRouteTypes {
@@ -248,9 +299,12 @@ export interface FileRouteTypes {
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
+    | '/author/import'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
+    | '/author'
     | '/learning'
+    | '/author/course/$courseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -262,9 +316,12 @@ export interface FileRouteTypes {
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
+    | '/author/import'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
+    | '/author'
     | '/learning'
+    | '/author/course/$courseId'
   id:
     | '__root__'
     | '/'
@@ -276,9 +333,12 @@ export interface FileRouteTypes {
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
+    | '/author/import'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
+    | '/author/'
     | '/learning/'
+    | '/author/course/$courseId'
   fileRoutesById: FileRoutesById
 }
 
@@ -292,9 +352,12 @@ export interface RootRouteChildren {
   ResultsRoute: typeof ResultsRoute
   SabinaLearningRoute: typeof SabinaLearningRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  AuthorImportRoute: typeof AuthorImportRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   LearningLessonIdRoute: typeof LearningLessonIdRoute
+  AuthorIndexRoute: typeof AuthorIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
+  AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -307,9 +370,12 @@ const rootRouteChildren: RootRouteChildren = {
   ResultsRoute: ResultsRoute,
   SabinaLearningRoute: SabinaLearningRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  AuthorImportRoute: AuthorImportRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   LearningLessonIdRoute: LearningLessonIdRoute,
+  AuthorIndexRoute: AuthorIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
+  AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -331,9 +397,12 @@ export const routeTree = rootRoute
         "/results",
         "/sabina-learning",
         "/terms-of-service",
+        "/author/import",
         "/demo/tanstack-query",
         "/learning/$lessonId",
-        "/learning/"
+        "/author/",
+        "/learning/",
+        "/author/course/$courseId"
       ]
     },
     "/": {
@@ -363,14 +432,23 @@ export const routeTree = rootRoute
     "/terms-of-service": {
       "filePath": "terms-of-service.tsx"
     },
+    "/author/import": {
+      "filePath": "author/import.tsx"
+    },
     "/demo/tanstack-query": {
       "filePath": "demo.tanstack-query.tsx"
     },
     "/learning/$lessonId": {
       "filePath": "learning/$lessonId.tsx"
     },
+    "/author/": {
+      "filePath": "author/index.tsx"
+    },
     "/learning/": {
       "filePath": "learning/index.tsx"
+    },
+    "/author/course/$courseId": {
+      "filePath": "author/course/$courseId.tsx"
     }
   }
 }

@@ -4,7 +4,7 @@
 export type ContentBlockType = 'paragraph' | 'bulletList' | 'numberedList' | 'scenario';
 
 // Types of questions - using string to be compatible with JSON data
-export type QuestionType = 'mcq' | 'scq' | 'sort-order' | 'sort-categories' | 'match' | 'matrix-rating' | 'text-input' | 'image-choice';
+export type QuestionType = 'mcq' | 'scq' | 'sort-order' | 'sort-categories' | 'match' | 'matrix-rating' | 'text-input' | 'image-choice' | string;
 
 // Base item for any question option
 export type Item = {
@@ -77,6 +77,7 @@ export type Question = {
   type: QuestionType;
   question: string;
   explanation?: string;
+  incorrectExplanation?: string;
   hint?: string;
   helpTips?: string;
   contentBlocks?: ContentBlock[];
@@ -89,7 +90,7 @@ export type Question = {
   
   // Sort and category properties
   items?: any[]; // Allow any array
-  correctAnswers?: string[];
+  correctAnswers?: string[] | Record<string, string[]> | any; // Support both array and record formats
   categories?: any[]; // Allow any array format
   helpTipsData?: any[]; // Allow any array format
   
@@ -159,6 +160,8 @@ export type Lesson = {
   unlocked: boolean;
   icon?: string;
   questions: Question[];
+  contentBlocks?: ContentBlock[] | any[]; // Support for structured content blocks
+  helpTips?: string; // Some lessons may have help tips directly
 };
 
 // Course containing multiple lessons
@@ -166,5 +169,6 @@ export type Course = {
   id: string;
   title: string;
   description: string;
+  icon?: string; // Allow for course icon
   lessons: Lesson[];
 };

@@ -1,24 +1,26 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 
 // Import data from separate data file
-import type { Lesson } from '@/types/learning.types';
-import { getAllLessons } from '@/data/lessons';
+import type { Lesson, Course } from '@/types/learning.types';
+import { getAllLessons, getAllCourses } from '@/data/lessons';
 
-// Local storage key for lesson data
+// Storage keys
 const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 export const Route = createFileRoute('/learning/')({ 
   component: LearningPage,
 });
 
 function LearningPage() {
-  // State for lessons and JSON input
+  // State for lessons and courses
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [course, setCourse] = useState<Course | null>(null);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -31,31 +33,57 @@ function LearningPage() {
     setIsLoading(true);
     
     try {
-      // Try to get data from localStorage
-      const storedData = localStorage.getItem(LESSONS_STORAGE_KEY);
+      // First try to get course data (new format)
+      const storedCourseData = localStorage.getItem(COURSE_STORAGE_KEY);
       
-      if (storedData) {
+      if (storedCourseData) {
         // Parse stored JSON data
-        const parsedData = JSON.parse(storedData) as Lesson[];
+        const parsedCourse = JSON.parse(storedCourseData) as Course;
         
-        // Verify that the parsed data is an array and has expected shape
-        if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0]) {
-          setLessons(parsedData);
-        } else {
-          // If data structure is invalid, fall back to default data
-          const defaultLessons = getAllLessons();
-          setLessons(defaultLessons);
+        // Verify that the parsed data has the expected shape
+        if (parsedCourse && parsedCourse.id && Array.isArray(parsedCourse.lessons)) {
+          setCourse(parsedCourse);
+          setLessons(parsedCourse.lessons);
         }
       } else {
-        // If no data exists in localStorage, use default data
-        // const defaultLessons = getAllLessons();
-        // setLessons(defaultLessons);
+        // Try legacy format (array of lessons)
+        const storedLessonsData = localStorage.getItem(LESSONS_STORAGE_KEY);
+        
+        if (storedLessonsData) {
+          // Parse stored JSON data
+          const parsedData = JSON.parse(storedLessonsData) as Lesson[];
+          
+          // Verify that the parsed data is an array and has expected shape
+          if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0]) {
+            setLessons(parsedData);
+          } else {
+            // If data structure is invalid, fall back to default data
+            const defaultLessons = getAllLessons();
+            setLessons(defaultLessons);
+            
+            // Also get the course data
+            const [defaultCourse] = getAllCourses();
+            setCourse(defaultCourse);
+          }
+        } else {
+          // If no data exists in localStorage, use default data
+          const defaultLessons = getAllLessons();
+          setLessons(defaultLessons);
+          
+          // Also get the course data
+          const [defaultCourse] = getAllCourses();
+          setCourse(defaultCourse);
+        }
       }
     } catch (error) {
-      console.error('Error loading lessons:', error);
+      console.error('Error loading data:', error);
       // Use default data as fallback
       const defaultLessons = getAllLessons();
       setLessons(defaultLessons);
+      
+      // Also get the course data
+      const [defaultCourse] = getAllCourses();
+      setCourse(defaultCourse);
     } finally {
       setIsLoading(false);
     }
@@ -129,9 +157,9 @@ function LearningPage() {
     <div className="min-h-screen bg-background py-12 px-4">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">Introduction to Investing</h1>
+        <h1 className="text-2xl font-bold mb-2">{course?.title}</h1>
         <p className="text-gray-600 max-w-md mx-auto">
-          Understand how money grows—and how you can make it work for you.
+          {course?.description}
         </p>
       </div>
 
