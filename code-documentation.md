@@ -432,10 +432,136 @@ The codebase emphasizes component reuse:
 
 ---
 
+## 7. AI Integration
+
+### `/src/services/gemini-service.ts`
+
+**Purpose:** Service for interacting with Google's Gemini API.
+
+**Key Features:**
+- Creates and manages chat sessions with the Gemini API
+- Sends user messages and processes AI responses
+- Extracts and validates JSON lesson data from AI responses
+- Handles error states and provides fallbacks
+
+**Key Functions:**
+- `createChatSession`: Initializes a new chat session with the Gemini API
+- `sendMessageToGemini`: Sends a message to the API and processes the response
+- `isValidLesson`: Validates that JSON data from the API matches the expected lesson format
+
+**Usage:**
+```typescript
+// Initialize a chat session
+const chatSession = createChatSession(systemPrompt);
+
+// Send a message and get a response
+const response = await sendMessageToGemini(chatSession, userMessage);
+
+// Check if the response contains lesson data
+if (response.isComplete && response.generatedLessons) {
+  // Process the generated lesson data
+  handleLessonData(response.generatedLessons);
+}
+```
+
+### `/src/utils/prompt-utils.ts`
+
+**Purpose:** Utilities for working with AI prompts and responses.
+
+**Key Functions:**
+- `formatSystemPrompt`: Formats a system prompt for the Gemini API
+- `formatUserMessage`: Formats a user message for the Gemini API
+- `extractJsonFromText`: Extracts JSON data from text responses using multiple strategies
+- `safeJsonParse`: Safely parses JSON strings with error handling
+
+**Implementation Details:**
+- Uses multiple strategies to extract JSON from AI responses
+- Handles edge cases like code blocks and single-quoted JSON
+- Provides robust error handling for JSON parsing
+
+### `/src/utils/gemini-prompts.ts`
+
+**Purpose:** Specialized prompts for the Gemini API.
+
+**Key Prompts:**
+- `generateLessonsPrompt`: Prompt to request lesson generation after a conversation
+- `directLessonGenerationPrompt`: Prompt for immediate lesson generation
+
+**Usage:**
+```typescript
+// Request lesson generation after conversation
+const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
+```
+
+### `/src/components/chat/chat-interface.tsx`
+
+**Purpose:** Interactive chat interface that uses the Gemini API with automatic JSON continuation.
+
+**Key Features:**
+- Real-time conversation with the Gemini AI
+- Detects when to generate personalized lessons
+- Stores generated lesson data in localStorage
+- Displays lesson cards with links to the learning page
+- Automatically handles incomplete JSON responses from the AI
+- Seamlessly merges multiple JSON fragments into a complete response
+
+**Implementation Details:**
+
+**JSON Continuation System:**
+- `checkJsonString(str: string)`: Detects if a string is valid JSON and whether it's complete
+  - Checks for unbalanced braces, brackets, and JSON patterns
+  - Returns `{ isJson: boolean, isComplete: boolean }`
+  - Uses sophisticated detection for JSON-like structures
+
+- `continueJsonResponse()`: Handles the automatic continuation of incomplete JSON
+  - Automatically triggered when incomplete JSON is detected
+  - Sends a "continue" message to the Gemini API
+  - Merges JSON fragments with proper formatting
+  - Removes intermediate messages from the chat history
+  - Shows loading indicators during the continuation process
+  - Recursively continues if the JSON is still incomplete after the first continuation
+
+- `getAIResponse(userMessage: string, addToChat: boolean)`: Enhanced to support JSON continuation
+  - Added `addToChat` parameter to control whether messages appear in the chat
+  - Automatically triggers JSON continuation when incomplete JSON is detected
+  - Uses a timeout-based approach to ensure state updates complete before continuation
+
+- `startLessonGeneration(lessonData: any)`: Updated to handle multiple data formats
+  - Supports both single lesson format and course format with multiple lessons
+  - Detects the data structure and processes it accordingly
+  - Creates appropriate course objects for localStorage
+
+**Message Rendering:**
+- Enhanced JSON parsing logic to handle both complete and incomplete JSON
+- Two-step parsing approach: first tries to parse the entire content, then falls back to extracting JSON
+- Improved debugging information for development mode
+- Loading indicators for the continuation process
+- Special handling for course format with multiple lessons
+
+**Data Flow:**
+- User messages are sent to the Gemini API
+- AI responses are displayed in the chat
+- If an incomplete JSON response is detected:
+  1. The system automatically sends a "continue" message to the API
+  2. The response is combined with the previous incomplete JSON
+  3. The process repeats until complete JSON is obtained
+  4. Only the final complete JSON is shown to the user
+- When complete JSON is available, it's parsed and displayed as a lesson card
+- The JSON data is stored in localStorage for access in the learning system
+
 ## Changelog
 
 ### 2025-05-19
+- Added JSON continuation feature documentation
+  - Detailed implementation of automatic JSON continuation in `chat-interface.tsx`
+  - Documented the JSON detection and validation system
+  - Explained the seamless merging of JSON fragments
+  - Added information about handling both single lesson and course formats
+  - Documented the recursive continuation approach for large JSON responses
+
+### 2025-05-18
 - Initial comprehensive code documentation
 - Added file-by-file breakdown
 - Included usage examples for key components
 - Documented relationships between components
+- Added documentation for Gemini API integration

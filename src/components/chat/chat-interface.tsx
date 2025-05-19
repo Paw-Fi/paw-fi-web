@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { Link } from "@tanstack/react-router";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
-import { getMockAIResponse } from "@/data/mock-conversations";
+import type { Lesson } from "@/types/learning.types";
+import { sendMessageToGemini, createChatSession } from "@/services/gemini-service";
 
 interface Message {
   content: string;
@@ -16,27 +19,45 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: ChatInterfaceProps) {
+  // State for chat messages
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentMessage, setCurrentMessage] = useState("");
+  const [currentMessage, setCurrentMessage] = useState("start");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingLessons, setIsGeneratingLessons] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Thinking...");
+  
+  // State for JSON continuation
+  const [incompleteJson, setIncompleteJson] = useState<string | null>(null);
+  const [waitingForContinuation, setWaitingForContinuation] = useState(false);
+  
+  // Refs for DOM elements
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const chatSessionRef = useRef<any>(null);
   
   // Get AI prompt from environment variable
-  const aiPrompt = "Hi I'm Paw-FI! I'll help you learn about personal finance. What topics interest you most?";
+  const welcomeMessage = "Hi I'm Paw-FI! I'll help you learn about personal finance. Type 'start' to begin.";
+
+  // Initialize chat session
+  useEffect(() => {
+    // Create a new chat session with the Gemini API
+    const aiPrompt = import.meta.env.VITE_AI_PROMPT || "Hi I'm Paw-FI! I'll help you learn about personal finance. What topics interest you most?";
+    chatSessionRef.current = createChatSession(aiPrompt);
+    
+    return () => {
+      // Clean up any resources if needed in the future
+    };
+  }, []);
 
   // Initialize chat with the first message from AI
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{
-        content: aiPrompt,
+        content: welcomeMessage,
         role: "assistant",
         timestamp: Date.now(),
       }]);
     }
-  }, [aiPrompt, messages.length]);
+  }, [welcomeMessage, messages.length]);
 
   // Auto-scroll to the bottom of the chat
   useEffect(() => {
@@ -48,18 +69,299 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     inputRef.current?.focus();
   }, []);
 
-  // Auto-resize textarea as user types
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = "inherit";
-      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
+  // Function to check if a string might be JSON and if it's complete
+  const checkJsonString = (str: string): { isJson: boolean; isComplete: boolean } => {
+    try {
+      // Try to parse it as JSON
+      JSON.parse(str);
+      return { isJson: true, isComplete: true };
+    } catch (e) {
+      // Check if it looks like it might be incomplete JSON
+      const hasOpeningBrace = str.includes('{');
+      // We use hasClosingBrace in the JSON pattern detection logic below
+      const hasClosingBrace = str.includes('}');
+      const openingCount = (str.match(/\{/g) || []).length;
+      const closingCount = (str.match(/\}/g) || []).length;
+      const openingBracketCount = (str.match(/\[/g) || []).length;
+      const closingBracketCount = (str.match(/\]/g) || []).length;
+      
+      // Check for unbalanced braces or brackets
+      const hasUnbalancedBraces = openingCount !== closingCount;
+      const hasUnbalancedBrackets = openingBracketCount !== closingBracketCount;
+      
+      // Check for common JSON patterns
+      const startsWithJsonPattern = /^\s*\{|^\s*\[/.test(str);
+      const hasJsonKeyValuePattern = /"\s*:\s*"/.test(str) || /"\s*:\s*\d/.test(str);
+      
+      // If it has JSON-like structure but is incomplete, it's likely incomplete JSON
+      if (hasOpeningBrace && (hasUnbalancedBraces || hasUnbalancedBrackets || !hasClosingBrace) && 
+          (startsWithJsonPattern || hasJsonKeyValuePattern)) {
+        console.log("[DEBUG] Detected incomplete JSON:", {
+          openingCount, closingCount, openingBracketCount, closingBracketCount,
+          hasJsonKeyValuePattern, startsWithJsonPattern
+        });
+        return { isJson: true, isComplete: false };
+      }
+      
+      // If it fails and doesn't look like incomplete JSON, it's not JSON
+      return { isJson: false, isComplete: false };
     }
-  }, [currentMessage]);
+  };
+
+  // Process generated lessons and store in localStorage
+  const startLessonGeneration = (lessonData: any) => {
+    try {
+      // Check if the data is already in course format (has lessons array)
+      if (lessonData.id && lessonData.title && Array.isArray(lessonData.lessons)) {
+        console.log("[DEBUG] Storing course format data");
+        // Already in course format, store directly
+        const course = {
+          id: lessonData.id,
+          title: lessonData.title,
+          description: lessonData.description || "Learn the basics of personal finance.",
+          lessons: lessonData.lessons,
+          currentLessonId: lessonData.lessons[0]?.id || lessonData.id,
+        };
+        
+        // Store the course in localStorage
+        localStorage.setItem("paw-fi-course", JSON.stringify(course));
+        console.log("[DEBUG] Course data stored in localStorage");
+        
+        // Notify parent component that survey is complete
+        if (onCompleteSurvey) {
+          onCompleteSurvey(lessonData.lessons[0] || lessonData);
+        }
+      } else {
+        // Single lesson format, create a course object with the generated lesson
+        console.log("[DEBUG] Storing single lesson format data");
+        const course = {
+          id: "paw-fi-course",
+          title: "Personal Finance Fundamentals",
+          description: "Learn the basics of personal finance to build a strong financial foundation.",
+          lessons: [lessonData],
+          currentLessonId: lessonData.id,
+        };
+        
+        // Store the course in localStorage
+        localStorage.setItem("paw-fi-course", JSON.stringify(course));
+        console.log("[DEBUG] Course data stored in localStorage");
+        
+        // Notify parent component that survey is complete
+        if (onCompleteSurvey) {
+          onCompleteSurvey(lessonData);
+        }
+      }
+      
+      // Update progress state
+      if (onGeneratingStateChange) {
+        onGeneratingStateChange(false, 100);
+      }
+    } catch (error) {
+      console.error("Error storing lesson data:", error);
+    }
+  };
+
+  // This function sends a message to the Gemini API and gets a response
+  const getAIResponse = async (userMessage: string, addToChat: boolean = true): Promise<{
+    content: string;
+    isComplete: boolean;
+    generatedLessons?: any;
+  }> => {
+    try {
+      if (!chatSessionRef.current) {
+        throw new Error("Chat session not initialized");
+      }
+      
+      // Pass the user's message to the AI model
+      // If addToChat is false, this is a continuation request and should not be displayed
+      const response = await sendMessageToGemini(chatSessionRef.current, userMessage);
+      
+      // Check if the response is valid JSON for a lesson
+      try {
+        const lessonData = JSON.parse(response.content);
+        if (lessonData && lessonData.id && lessonData.title && lessonData.questions) {
+          return {
+            content: response.content,
+            isComplete: true,
+            generatedLessons: lessonData
+          };
+        }
+      } catch (e) {
+        // Check if it might be incomplete JSON
+        const jsonCheck = checkJsonString(response.content);
+        if (jsonCheck.isJson && !jsonCheck.isComplete && addToChat) {
+          // Only store for continuation if this is a message that's being added to chat
+          setIncompleteJson(response.content);
+          setWaitingForContinuation(true);
+          
+          // Automatically trigger JSON continuation without user interaction
+          setTimeout(() => {
+            console.log("[DEBUG] Auto-triggering JSON continuation");
+            continueJsonResponse();
+          }, 500); // Small delay to allow state updates to complete
+          
+          return { content: response.content, isComplete: false };
+        }
+        // Not valid JSON, which is fine for normal responses
+      }
+      
+      return { content: response.content, isComplete: true };
+    } catch (error) {
+      console.error("Error in getAIResponse:", error);
+      return { content: "Sorry, I encountered an error. Please try again.", isComplete: false };
+    }
+  };
+
+  // Function to handle continuing JSON response
+  const continueJsonResponse = async () => {
+    if (!incompleteJson) return;
+    
+    setWaitingForContinuation(false);
+    setIsLoading(true);
+    setLoadingMessage("Getting the rest of the data...");
+    
+    try {
+      // Get the continuation without adding the "continue" message to the chat
+      const response = await getAIResponse("continue", false);
+      
+      // Combine the previous incomplete JSON with the new response
+      // First, clean up any potential formatting issues
+      let firstPart = incompleteJson.trim();
+      let secondPart = response.content.trim();
+      
+      // Check if the first part ends with a comma and the second part starts with one
+      if (firstPart.endsWith(',') && secondPart.startsWith(',')) {
+        secondPart = secondPart.substring(1);
+      }
+      // If first part doesn't end with comma and second doesn't start with one, add it
+      else if (!firstPart.endsWith(',') && !secondPart.startsWith(',') && 
+               !firstPart.endsWith('{') && !secondPart.startsWith('}')) {
+        firstPart += ',';
+      }
+      
+      // Properly merge the two parts
+      const combinedJson = firstPart + secondPart;
+      console.log("[DEBUG] Combined JSON:", combinedJson.substring(0, 100) + "...");
+      
+      const jsonCheck = checkJsonString(combinedJson);
+      
+      // Check if we now have complete JSON
+      if (jsonCheck.isJson && jsonCheck.isComplete) {
+        console.log("[DEBUG] Successfully merged into complete JSON");
+        
+        // Remove the incomplete message and add a new complete one
+        setMessages(prev => {
+          // Filter out any messages that contain parts of the incomplete JSON
+          const filteredMessages = prev.filter(m => 
+            !(m.role === "assistant" && 
+              (m.content === incompleteJson || m.content === response.content))
+          );
+          
+          // Add a new message with the complete JSON
+          return [
+            ...filteredMessages,
+            {
+              content: combinedJson,
+              role: "assistant",
+              timestamp: Date.now()
+            }
+          ];
+        });
+        
+        // Reset the incomplete JSON state
+        setIncompleteJson(null);
+        
+        // Try to parse the complete JSON to see if it's lesson data
+        try {
+          const parsedData = JSON.parse(combinedJson);
+          console.log("[DEBUG] Parsed data:", parsedData);
+          
+          if (parsedData && parsedData.id && parsedData.title && parsedData.questions) {
+            // Store the lesson data in localStorage
+            console.log("[DEBUG] Storing valid lesson data from combined JSON");
+            startLessonGeneration(parsedData);
+          }
+        } catch (e) {
+          console.error("Error parsing combined JSON:", e);
+        }
+      } else if (jsonCheck.isJson && !jsonCheck.isComplete) {
+        // Still incomplete, update and continue
+        console.log("[DEBUG] JSON is still incomplete after continuation");
+        setIncompleteJson(combinedJson);
+        setWaitingForContinuation(true);
+        
+        // Remove the old incomplete message and add a new one with updated content
+        setMessages(prev => {
+          // Filter out the old incomplete message
+          const filteredMessages = prev.filter(m => 
+            !(m.role === "assistant" && m.content === incompleteJson)
+          );
+          
+          // Add a new message with the updated incomplete content
+          return [
+            ...filteredMessages,
+            {
+              content: combinedJson,
+              role: "assistant",
+              timestamp: Date.now()
+            }
+          ];
+        });
+        
+        // Try again after a short delay if still incomplete
+        setTimeout(() => {
+          if (waitingForContinuation) {
+            console.log("[DEBUG] Auto-triggering another JSON continuation");
+            continueJsonResponse();
+          }
+        }, 1000);
+      } else {
+        // Something went wrong, add as a new message
+        console.error("[DEBUG] Failed to create valid JSON after continuation");
+        setMessages(prev => [
+          ...prev,
+          {
+            content: "Sorry, I encountered an error processing the data. Please try again.",
+            role: "assistant",
+            timestamp: Date.now()
+          }
+        ]);
+        setIncompleteJson(null);
+      }
+    } catch (error) {
+      console.error("Error continuing JSON response:", error);
+      setMessages(prev => [
+        ...prev,
+        {
+          content: "Sorry, I encountered an error getting the rest of the data. Please try again.",
+          role: "assistant",
+          timestamp: Date.now()
+        }
+      ]);
+      setIncompleteJson(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Format timestamp
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!currentMessage.trim() || isLoading) return;
+    
+    // Special case for "continue" - handle it differently
+    if (currentMessage.trim().toLowerCase() === "continue" && incompleteJson) {
+      // Don't add this message to the chat
+      setCurrentMessage("");
+      // Just call continueJsonResponse directly
+      continueJsonResponse();
+      return;
+    }
     
     // Add user message to chat
     const newUserMessage: Message = {
@@ -71,29 +373,28 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     setMessages((prev) => [...prev, newUserMessage]);
     setCurrentMessage("");
     setIsLoading(true);
+    setLoadingMessage("Thinking...");
     
     try {
-      // In a real implementation, this would call your AI API with the conversation history
-      // For now, we'll simulate a response
-      const response = await simulateAIResponse(
-        messages.concat(newUserMessage)
-      );
+      // Call the Gemini API with the user's message (explicitly set addToChat to true)
+      setLoadingMessage("Generating response...");
+      const response = await getAIResponse(newUserMessage.content, true);
+      
+      // Add AI response to chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          content: response.content,
+          role: "assistant",
+          timestamp: Date.now(),
+        },
+      ]);
       
       // Check if AI response indicates we should start generating lessons
-      if (response.isComplete) {
-        // In a real implementation, we would now start generating the lesson JSON
-        // For demo, we'll simulate this process with a progress indicator
+      if (response.isComplete && response.generatedLessons) {
+        // Start generating lessons with the provided data
+        setLoadingMessage("Processing lesson data...");
         startLessonGeneration(response.generatedLessons);
-      } else {
-        // Add AI response to chat
-        setMessages((prev) => [
-          ...prev,
-          {
-            content: response.content,
-            role: "assistant",
-            timestamp: Date.now(),
-          },
-        ]);
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
@@ -110,137 +411,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     }
   };
 
-  // Simulates the process of generating lessons with a progress indicator
-  const startLessonGeneration = (generatedLessons: any) => {
-    // Add a message indicating that lessons are being generated
-    setMessages((prev) => [
-      ...prev,
-      {
-        content: "I'm now generating personalized lessons based on our conversation. This might take a few minutes. I'll let you know when they're ready!",
-        role: "assistant",
-        timestamp: Date.now(),
-      },
-    ]);
-    
-    // Notify parent immediately with initial generation state
-    setIsGeneratingLessons(true);
-    onGeneratingStateChange?.(true, 5); // Start at 5%
-    
-    // Create predefined progress steps for more predictable increases
-    const progressSteps = [
-      { percent: 15, delay: 800 },
-      { percent: 28, delay: 800 },  
-      { percent: 42, delay: 1000 },
-      { percent: 60, delay: 1000 },
-      { percent: 75, delay: 1200 },
-      { percent: 88, delay: 800 },
-      { percent: 95, delay: 1000 }
-    ];
-    
-    // Use a recursive function for more reliable incremental updates
-    const updateProgressSequentially = (stepIndex: number) => {
-      if (stepIndex < progressSteps.length) {
-        const { percent, delay } = progressSteps[stepIndex];
-        
-        // Update the progress
-        console.log(`Setting progress to ${percent}%`);
-        onGeneratingStateChange?.(true, percent);
-        
-        // Schedule the next update
-        setTimeout(() => {
-          updateProgressSequentially(stepIndex + 1);
-        }, delay);
-      }
-    };
-    
-    // Start the progress updates
-    updateProgressSequentially(0);
-    
-    // Real-world implementation would look something like:
-    // async function generateLessons() {
-    //   try {
-    //     const response = await fetch('/api/generate-lessons', {
-    //       method: 'POST',
-    //       body: JSON.stringify({ messages: messages.map(m => ({ role: m.role, content: m.content })) }),
-    //     });
-    //     
-    //     if (response.ok) {
-    //       const lessons = await response.json();
-    //       onCompleteSurvey(lessons);
-    //     }
-    //   } catch (error) {
-    //     console.error('Error generating lessons:', error);
-    //     setIsGeneratingLessons(false);
-    //     // Show error message
-    //   }
-    // }
-    // generateLessons();
-    
-    // Complete the progress to 100% after the steps have had time to run
-    // Total time for steps is about 6.6 seconds, so wait 7.5 seconds before completing
-    setTimeout(() => {
-      // Clear any ongoing intervals just in case
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-      
-      // Set final progress to 100%
-      console.log('Setting final progress to 100%');
-      onGeneratingStateChange?.(true, 100);
-      
-      // After showing 100% for a moment, redirect
-      setTimeout(() => {
-        console.log('Completing generation process');
-        setIsGeneratingLessons(false);
-        // Notify parent that generation is complete 
-        onGeneratingStateChange?.(false, 0);
-        onCompleteSurvey(generatedLessons || { lessons: [] });
-      }, 1500); // Slightly longer pause at 100% for better user visibility
-    }, 7500); // Wait until all progress steps have had time to complete
-  };
-  
-  // This simulates the AI response using our mock conversation data
-  const simulateAIResponse = async (messageHistory: Message[]): Promise<{
-    content: string;
-    isComplete: boolean;
-    generatedLessons?: any;
-  }> => {
-    return new Promise((resolve) => {
-      // Add a slight delay to simulate AI thinking
-      setTimeout(() => {
-        // Count user messages to track conversation step
-        const userMessages = messageHistory.filter(m => m.role === "user");
-        const conversationStep = userMessages.length - 1; // 0-indexed
-        
-        // Get the latest user message
-        const latestUserMessage = userMessages[conversationStep].content;
-        
-        // Get appropriate response from mock data
-        const aiResponse = getMockAIResponse(latestUserMessage, conversationStep);
-        
-        resolve(aiResponse);
-      }, 1500);
-    });
-  };
-  
-  // Clean up interval on unmount
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Format timestamp
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
     <div className="flex flex-col flex-1 bg-gray-50 rounded-lg overflow-hidden shadow-inner relative">
-
-      
       
       {/* Chat messages area */}
       <div className="flex-grow overflow-y-auto py-4 px-3 space-y-4">
@@ -262,13 +434,226 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
               <div
                 className={`px-4 py-3 rounded-2xl ${message.role === "user"
                   ? "bg-purple-600 text-white rounded-tr-none shadow-sm"
-                  : "bg-white text-gray-800 rounded-tl-none shadow-sm border border-gray-200"
+                  : message.content.startsWith('{"type":"lesson-card"') 
+                    ? "bg-transparent" 
+                    : "bg-white text-gray-800 rounded-tl-none shadow-sm border border-gray-200"
                 }`}
               >
-                {message.content}
+                {/* Debug info - only visible during development */}
+                {process.env.NODE_ENV === 'development' && message.content.includes('{') && (
+                  <div className="debug-info bg-yellow-50 p-2 mb-2 text-xs border border-yellow-200 rounded">
+                    <div className="font-bold text-yellow-700">Debug:</div>
+                    <div>Message contains JSON-like content</div>
+                    <div>Content length: {message.content.length} chars</div>
+                    <div>First 50 chars: "{message.content.substring(0, 50)}..."</div>
+                  </div>
+                )}
+                
+                {/* Try to parse JSON content if it looks like JSON */}
+                {(message.content.includes('{') && message.content.includes('}')) ? (
+                  (() => {
+                    // Check if this is incomplete JSON and waiting for continuation
+                    const jsonCheck = checkJsonString(message.content);
+                    
+                    // If it's incomplete JSON and we're waiting for continuation
+                    if (jsonCheck.isJson && !jsonCheck.isComplete && waitingForContinuation && message.content === incompleteJson) {
+                      return (
+                        <div className="flex flex-col">
+                          <div className="prose prose-sm max-w-none mb-3">
+                            <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+                              {message.content.substring(0, 50)}...
+                            </pre>
+                            <div className="text-amber-600 text-sm mt-2">
+                              Automatically retrieving complete data...
+                            </div>
+                            <div className="flex space-x-2 mt-2">
+                              <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                              <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                              <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    try {
+                      // Try to parse the complete message content first
+                      let lessonData;
+                      try {
+                        // First attempt: try to parse the entire content
+                        lessonData = JSON.parse(message.content);
+                        console.log("[DEBUG] Successfully parsed complete JSON");
+                      } catch (parseError) {
+                        // Second attempt: try to extract JSON from the message content
+                        const jsonMatch = message.content.match(/\{[\s\S]*\}/);
+                        const jsonContent = jsonMatch ? jsonMatch[0] : null;
+                        
+                        if (!jsonContent) {
+                          throw new Error("No JSON content found");
+                        }
+                        
+                        lessonData = JSON.parse(jsonContent);
+                        console.log("[DEBUG] Parsed extracted JSON");
+                      }
+                      
+                      // Debug: Log the parsed data
+                      console.log("[DEBUG] Parsed lesson data:", lessonData);
+                      
+                      // Debug the structure of the parsed data
+                      console.log("[DEBUG] Checking lesson data structure:", {
+                        hasId: !!lessonData?.id,
+                        hasTitle: !!lessonData?.title,
+                        hasLessons: Array.isArray(lessonData?.lessons),
+                        lessonsLength: lessonData?.lessons?.length,
+                        firstLessonHasQuestions: Array.isArray(lessonData?.lessons?.[0]?.questions),
+                        hasQuestions: Array.isArray(lessonData?.questions)
+                      });
+                      
+                      // Check for course format (contains lessons array)
+                      if (lessonData?.id && lessonData?.title && Array.isArray(lessonData?.lessons) && lessonData.lessons.length > 0) {
+                        console.log("[DEBUG] Found valid course data with lessons");
+                        // Store the course data directly
+                        const course = {
+                          id: lessonData.id,
+                          title: lessonData.title,
+                          description: lessonData.description || "Learn about personal finance",
+                          lessons: lessonData.lessons,
+                          currentLessonId: lessonData.lessons[0].id,
+                        };
+                        
+                        // Store the course in localStorage
+                        localStorage.setItem("paw-fi-course", JSON.stringify(course));
+                        console.log("[DEBUG] Stored course data in localStorage");
+                        
+                        // Notify parent component
+                        if (onCompleteSurvey) {
+                          onCompleteSurvey(lessonData.lessons[0]);
+                        }
+                        
+                        // Render the lesson card for the first lesson
+                        const firstLesson = lessonData.lessons[0];
+                        return (
+                          <div className="lesson-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <div className="flex items-start">
+                              <div className="text-3xl mr-3">{firstLesson.icon || '📚'}</div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-purple-700 mb-1">{lessonData.title}</h3>
+                                <p className="text-sm text-gray-700 mb-3">{lessonData.description}</p>
+                                <div className="flex items-center">
+                                  <Link 
+                                    to="/learning" 
+                                    className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                                  >
+                                    Start Learning
+                                  </Link>
+                                  <span className="ml-2 text-sm text-gray-500">
+                                    {lessonData.lessons.length} {lessonData.lessons.length === 1 ? 'lesson' : 'lessons'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Check for single lesson format
+                      if (!lessonData || !lessonData.id || !lessonData.title || !Array.isArray(lessonData.questions)) {
+                        console.log("[DEBUG] Invalid lesson data format:", lessonData);
+                        
+                        // In development mode, show a special debug message
+                        if (process.env.NODE_ENV === 'development') {
+                          return (
+                            <div className="debug-error p-2 bg-red-50 border border-red-200 rounded">
+                              <div className="text-red-600 font-bold mb-1">JSON Parsing Debug:</div>
+                              <div className="text-xs text-gray-700 overflow-auto max-h-40">
+                                {message.content}
+                              </div>
+                            </div>
+                          );
+                        }
+                        // If not in development mode, render the message content as markdown
+                        return (
+                          <div className="markdown-content text-sm text-gray-800">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          </div>
+                        );
+                      }
+                      
+                      // If we have valid single lesson data, store it in localStorage and render a lesson card
+                      if (lessonData && lessonData.id && lessonData.title && Array.isArray(lessonData.questions)) {
+                        // Store the lesson data in localStorage
+                        console.log("[DEBUG] Storing valid lesson data in localStorage");
+                        startLessonGeneration(lessonData);
+                        return (
+                          <div className="lesson-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <div className="flex items-start">
+                              <div className="text-3xl mr-3">{lessonData.icon || '📚'}</div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-purple-700 mb-1">{lessonData.title}</h3>
+                                <p className="text-sm text-gray-700 mb-3">{lessonData.description}</p>
+                                <div className="flex items-center">
+                                  <Link 
+                                    to="/learning" 
+                                    className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                                  >
+                                    Start Learning
+                                  </Link>
+                                  <span className="ml-2 text-sm text-gray-500">{lessonData.questions.length} questions</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      console.error("[DEBUG] Error parsing JSON:", e);
+                      
+                      // Check if it might be incomplete JSON
+                      const jsonCheck = checkJsonString(message.content);
+                      if (jsonCheck.isJson && !jsonCheck.isComplete) {
+                        // Store the incomplete JSON for later continuation if not already stored
+                        if (!incompleteJson) {
+                          setIncompleteJson(message.content);
+                          setWaitingForContinuation(true);
+                        }
+                        
+                        // If this is the incomplete JSON message and we're waiting for continuation
+                        if (waitingForContinuation && message.content === incompleteJson) {
+                          return (
+                            <div className="flex flex-col">
+                              <div className="prose prose-sm max-w-none mb-3">
+                                <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+                                  {message.content.substring(0, 50)}...
+                                </pre>
+                                <div className="text-amber-600 text-sm mt-2">
+                                  Automatically retrieving complete data...
+                                </div>
+                                <div className="flex space-x-2 mt-2">
+                                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      }
+                      
+                      // If it's not valid JSON or not waiting for continuation, render as markdown
+                      return (
+                        <div className="markdown-content text-sm text-gray-800">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      );
+                    }
+                  })()
+                ) : (
+                  // Regular message content (non-JSON)
+                  <div className="markdown-content text-sm">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                )}
               </div>
-              
-              {/* Timestamp - visible on hover */}
               <div className="text-xs text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 {formatTime(message.timestamp)}
               </div>
@@ -299,10 +684,13 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
               </svg>
             </div>
             <div className="bg-white rounded-2xl rounded-tl-none shadow-sm px-4 py-3 border border-gray-200">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-600 mb-1">{loadingMessage}</span>
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                </div>
               </div>
             </div>
           </div>
@@ -320,7 +708,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
               placeholder="Type your message..."
               className="w-full border border-gray-300 rounded-full py-3 px-4 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent overflow-x-hidden"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !isGeneratingLessons) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSubmit(e);
                 }
@@ -330,7 +718,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
           <Button
             type="submit"
             variant="dark"
-            disabled={!currentMessage.trim() || isLoading || isGeneratingLessons}
+            disabled={!currentMessage.trim() || isLoading}
             className="ml-2 p-3 rounded-full h-12 w-12 flex items-center justify-center bg-purple-600 hover:bg-purple-700 transition-colors"
           >
             <svg

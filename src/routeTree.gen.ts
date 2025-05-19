@@ -21,6 +21,7 @@ import { Route as CookiePolicyImport } from './routes/cookie-policy'
 import { Route as RootImport } from './routes/_root'
 import { Route as IndexImport } from './routes/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
+import { Route as FormatIndexImport } from './routes/format/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
 import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
@@ -85,6 +86,12 @@ const IndexRoute = IndexImport.update({
 const LearningIndexRoute = LearningIndexImport.update({
   id: '/learning/',
   path: '/learning/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const FormatIndexRoute = FormatIndexImport.update({
+  id: '/format/',
+  path: '/format/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -213,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorIndexImport
       parentRoute: typeof rootRoute
     }
+    '/format/': {
+      id: '/format/'
+      path: '/format'
+      fullPath: '/format'
+      preLoaderRoute: typeof FormatIndexImport
+      parentRoute: typeof rootRoute
+    }
     '/learning/': {
       id: '/learning/'
       path: '/learning'
@@ -246,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
@@ -264,6 +279,7 @@ export interface FileRoutesByTo {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
@@ -283,6 +299,7 @@ export interface FileRoutesById {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author/': typeof AuthorIndexRoute
+  '/format/': typeof FormatIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
@@ -303,6 +320,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/format'
     | '/learning'
     | '/author/course/$courseId'
   fileRoutesByTo: FileRoutesByTo
@@ -320,6 +338,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/format'
     | '/learning'
     | '/author/course/$courseId'
   id:
@@ -337,6 +356,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author/'
+    | '/format/'
     | '/learning/'
     | '/author/course/$courseId'
   fileRoutesById: FileRoutesById
@@ -356,6 +376,7 @@ export interface RootRouteChildren {
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   LearningLessonIdRoute: typeof LearningLessonIdRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
+  FormatIndexRoute: typeof FormatIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
 }
@@ -374,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   LearningLessonIdRoute: LearningLessonIdRoute,
   AuthorIndexRoute: AuthorIndexRoute,
+  FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
 }
@@ -401,6 +423,7 @@ export const routeTree = rootRoute
         "/demo/tanstack-query",
         "/learning/$lessonId",
         "/author/",
+        "/format/",
         "/learning/",
         "/author/course/$courseId"
       ]
@@ -443,6 +466,9 @@ export const routeTree = rootRoute
     },
     "/author/": {
       "filePath": "author/index.tsx"
+    },
+    "/format/": {
+      "filePath": "format/index.tsx"
     },
     "/learning/": {
       "filePath": "learning/index.tsx"

@@ -85,6 +85,7 @@ The questionnaire system has been refactored to reuse components from the learni
 - Unified data models
 - Integrated AI assistance for generating personalized learning paths
 - Real-time progress indicators for course generation
+- Automatic JSON continuation for handling large AI responses
 
 ### 3.3. Drag-and-Drop Categorization
 
@@ -244,6 +245,33 @@ The application stores data in localStorage with a unified approach:
 - Course structure with nested lessons
 - Automatic unlocking of lessons based on completion
 - XP reward tracking
+
+### 3.4. JSON Continuation Feature
+
+The application implements an automatic JSON continuation mechanism to handle large JSON responses from the Gemini API that may be truncated due to token limitations.
+
+#### 3.4.1. Key Components
+
+- `ChatInterface` (`/components/chat/chat-interface.tsx`): Manages the chat UI and JSON continuation
+- `continueJsonResponse` function: Handles the automatic continuation process
+- `checkJsonString` function: Detects incomplete JSON and validates structure
+
+#### 3.4.2. Implementation Details
+
+- **Automatic Detection**: The system automatically detects when a JSON response from the AI is incomplete
+- **Background Continuation**: When incomplete JSON is detected, the system automatically sends a "continue" message to the API
+- **Seamless Merging**: The system properly merges multiple JSON fragments into a single coherent JSON object
+- **Clean UI**: Only the final, complete JSON is displayed to the user, with intermediate steps removed
+- **Format Support**: Handles both single lesson format and complete course format with multiple lessons
+- **Loading Indicators**: Shows loading animation while retrieving the rest of the data
+
+#### 3.4.3. Technical Implementation
+
+- Uses a timeout-based approach to automatically trigger continuation requests
+- Implements smart JSON merging logic to handle formatting issues between fragments
+- Filters message history to remove intermediate messages and show only the complete result
+- Enhanced JSON validation to detect both single lesson and course data structures
+- Recursive continuation for handling particularly large JSON responses
 
 ## 10. Documentation Maintenance Guidelines
 
