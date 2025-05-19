@@ -9,8 +9,7 @@ import gsap from 'gsap';
 import type { Lesson, Course } from '@/types/learning.types';
 import { getAllLessons, getAllCourses } from '@/data/lessons';
 
-// Storage keys
-const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+// Storage keys - using only one storage key for consistency
 const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 export const Route = createFileRoute('/learning/')({ 
@@ -47,7 +46,7 @@ function LearningPage() {
         }
       } else {
         // Try legacy format (array of lessons)
-        const storedLessonsData = localStorage.getItem(LESSONS_STORAGE_KEY);
+        const storedLessonsData = localStorage.getItem(COURSE_STORAGE_KEY);
         
         if (storedLessonsData) {
           // Parse stored JSON data
@@ -112,7 +111,7 @@ function LearningPage() {
       }
       
       // Store in localStorage
-      localStorage.setItem(LESSONS_STORAGE_KEY, jsonInput);
+      localStorage.setItem(COURSE_STORAGE_KEY, jsonInput);
       
       // Update state
       setLessons(parsedData);
@@ -125,7 +124,7 @@ function LearningPage() {
   
   // Clear localStorage and reset to default lessons
   const handleResetLessons = () => {
-    localStorage.removeItem(LESSONS_STORAGE_KEY);
+    localStorage.removeItem(COURSE_STORAGE_KEY);
     const defaultLessons = getAllLessons();
     setLessons(defaultLessons);
     setJsonInput('');

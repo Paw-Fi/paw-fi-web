@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import gsap from "gsap";
 
+// Import the unlockNextLesson function - we'll use this directly in the component
+import { unlockNextLesson } from './hooks/unlock-next-lesson';
+
 interface CompletionDisplayProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string; // Optional as we'll construct it with reward info
   description: string;
   lessonTitle?: string; // The completed lesson title
+  lessonId?: string; // Added explicit lessonId prop for direct access
   reward?: {
     amount: number;
     unit: string;
@@ -38,6 +42,7 @@ export function CompletionDisplay({
   title = "Success!",
   description,
   lessonTitle,
+  lessonId, // Add the direct lessonId parameter
   reward,
   rewardsProgress,
   nextSteps,
@@ -420,8 +425,34 @@ export function CompletionDisplay({
         
         ) : (
           <Button
-            onClick={onClose}
-            variant={"primary"}
+            onClick={(e) => {
+              // Prevent event propagation
+              e.stopPropagation();
+              e.preventDefault();
+              
+              // If this is a success completion and we have the lessonId, unlock next lesson
+              if (isSuccess && lessonId) {
+                // Use our extracted unlockNextLesson function with the direct lessonId
+                console.log('Attempting to unlock next lesson with ID:', lessonId);
+                const unlocked = unlockNextLesson(lessonId);
+                if (unlocked) {
+                  console.log('Successfully unlocked next lesson');
+                } else {
+                  console.warn('Failed to unlock next lesson - no matching lesson found or already unlocked');
+                }
+              } else {
+                console.warn('Missing lessonId or not a success case - cannot unlock next lesson');
+              }
+              
+              // Use immediate navigation to avoid background help tips interference
+              if (actionText === "Continue Learning") {
+                window.location.href = "/learning";
+              } else {
+                // Use normal onClose for other action texts
+                onClose();
+              }
+            }}
+            variant="primary"
             className="w-full py-4 text-lg font-medium"
           >
             {actionText}

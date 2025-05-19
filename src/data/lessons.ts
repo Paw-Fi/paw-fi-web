@@ -3,8 +3,7 @@ import mockCourse from "./mock1.json";
 import sabinaLessons from "./sabina-mock.json";
 
 // Helper function to get lesson by ID
-// LocalStorage key for lesson data (must match the one in learning/index.tsx)
-const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+// LocalStorage key for course data - unified to use only one key for consistency
 const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 // Helper function to get course from localStorage
@@ -28,19 +27,10 @@ function getCourseFromLocalStorage(): Course | null {
 // Helper function to get lessons from localStorage
 function getLessonsFromLocalStorage(): Lesson[] {
   try {
-    // First try to get from course storage format
+    // Get from course storage format
     const course = getCourseFromLocalStorage();
     if (course && Array.isArray(course.lessons)) {
       return course.lessons;
-    }
-    
-    // Fall back to legacy format (array of lessons)
-    const storedData = localStorage.getItem(LESSONS_STORAGE_KEY);
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      if (Array.isArray(parsedData) && parsedData.length > 0) {
-        return parsedData as Lesson[];
-      }
     }
     
     // Return empty array if no data or invalid data

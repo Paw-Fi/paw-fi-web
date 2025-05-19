@@ -1,365 +1,409 @@
 {
-  "id": "selling-online-basics-teen",
-  "title": "Teen's Guide to Selling Anything Online 🚀",
-  "description": "Curious about making money by selling stuff online? This course covers the essentials to get you started. Explore different platforms and learn how to list your items!",
-  "icon": "🛒",
+  "id": "investing-stocks-teen",
+  "title": "Stocks: Your First Dive",
+  "description": "Get a simple intro to what it means to invest in stocks and why it could be interesting for you.",
   "lessons": [
     {
-      "id": "online-platforms-101",
-      "title": "Where Can You Sell Your Stuff? 🌐",
-      "description": "Discover the different online marketplaces and platforms where teens can sell their items. Each has its own vibe and audience!",
-      "xp": 75,
+      "id": "what-are-stocks-101",
+      "title": "What Exactly Are Stocks?",
+      "description": "Unpack the basics of stock ownership without the confusing Wall Street talk.",
+      "xp": 50,
       "unlocked": true,
       "icon": "🏢",
       "questions": [
         {
-          "id": "platform-choice-1",
+          "id": "stock-ownership-q1",
           "type": "mcq",
-          "question": "Which of these is a popular platform for selling handmade or unique items?",
+          "question": "Imagine a pizza cut into slices. If a company's stock is like the whole pizza, what's buying a share like?",
           "options": [
-            { "id": "opt-1a", "content": "Google", "isCorrect": false, "description": "This is a search engine." },
-            { "id": "opt-1b", "content": "Etsy", "isCorrect": true, "description": "This platform is known for crafts and vintage goods." },
-            { "id": "opt-1c", "content": "Wikipedia", "isCorrect": false, "description": "This is an online encyclopedia." },
-            { "id": "opt-1d", "content": "Zoom", "isCorrect": false, "description": "This is a video conferencing tool." }
+            {
+              "id": "opt-1a",
+              "content": "Buying the whole pizza.",
+              "isCorrect": false,
+              "description": "That would mean you own the entire company, not just a part."
+            },
+            {
+              "id": "opt-1b",
+              "content": "Buying one slice of the pizza.",
+              "isCorrect": true,
+              "description": "Exactly! One share represents a small piece of ownership in the company."
+            },
+            {
+              "id": "opt-1c",
+              "content": "Just looking at the pizza.",
+              "isCorrect": false,
+              "description": "That's observing, not owning any part of the company."
+            }
           ],
-          "explanation": "Great choice! Etsy is a go-to place for people selling handmade, vintage, and unique items. It helps your products reach buyers looking for something special.",
-          "incorrectExplanation": "Not quite! While other platforms exist, Etsy is particularly popular for handmade and unique goods.",
-          "helpTips": "Think about where you might find unique or crafted items online. This platform focuses on those types of products."
+          "explanation": "Good job! Buying a share of stock means you own a tiny part of that company. As the company does well, the value of your 'slice' can also increase!",
+          "helpTips": "Think about your favorite brands. If they sell stock, owning a share means you're a part-owner."
         },
         {
-          "id": "platform-choice-2",
+          "id": "why-companies-sell-q2",
           "type": "scq",
-          "question": "If you wanted to sell clothes you no longer wear, which of these platforms is often used for that?",
+          "question": "Why do companies usually sell their stock to the public?",
           "options": [
-            { "id": "opt-2a", "content": "LinkedIn", "isCorrect": false, "description": "This is a professional networking site." },
-            { "id": "opt-2b", "content": "Instagram", "isCorrect": false, "description": "This is a social media platform mainly for sharing photos and videos." },
-            { "id": "opt-2c", "content": "Depop", "isCorrect": true, "description": "This platform is popular for buying and selling used and vintage clothing." },
-            { "id": "opt-2d", "content": "Pinterest", "isCorrect": false, "description": "This is a visual discovery engine." }
+            {
+              "id": "opt-2a",
+              "content": "To give away free money.",
+              "isCorrect": false,
+              "description": "Companies sell stock to get money, not give it away."
+            },
+            {
+              "id": "opt-2b",
+              "content": "To raise money to grow their business.",
+              "isCorrect": true,
+              "description": "That's right! Selling stock helps them fund new projects, expand, and innovate."
+            },
+            {
+              "id": "opt-2c",
+              "content": "Just because it's a trend.",
+              "isCorrect": false,
+              "description": "There's a real business reason behind selling stock."
+            }
           ],
-          "explanation": "You got it! Depop is a popular app and website specifically for buying and selling pre-loved and vintage fashion. It's great for giving your old clothes a new life!",
-          "incorrectExplanation": "Not exactly. While you could try selling on some other platforms, Depop is very popular for used clothing.",
-          "helpTips": "Consider platforms where people often look for second-hand fashion. This one is known for its focus on clothing resale."
+          "explanation": "Nice work! When you buy stock, you're helping the company get the funds they need to expand and improve. Hopefully, that growth can also make your investment more valuable!",
+          "helpTips": "Imagine a small business wanting to open more stores – selling stock can give them that cash."
         },
         {
-          "id": "platform-choice-3",
+          "id": "stock-market-q3",
           "type": "mcq",
-          "question": "Which of these platforms allows you to sell a wide variety of new and used items, often through auctions?",
+          "question": "Where do people usually buy and sell stocks?",
           "options": [
-            { "id": "opt-3a", "content": "Twitch", "isCorrect": false, "description": "This is a live streaming platform, popular for gaming." },
-            { "id": "opt-3b", "content": "eBay", "isCorrect": true, "description": "This is a long-standing marketplace with auction and 'buy it now' options." },
-            { "id": "opt-3c", "content": "TikTok", "isCorrect": false, "description": "This is a social media platform known for short-form videos." },
-            { "id": "opt-3d", "content": "Snapchat", "isCorrect": false, "description": "This is a messaging app with disappearing photos and videos." }
+            {
+              "id": "opt-3a",
+              "content": "At a regular grocery store.",
+              "isCorrect": false,
+              "description": "Grocery stores sell food, not stocks."
+            },
+            {
+              "id": "opt-3b",
+              "content": "On something called the 'stock market'.",
+              "isCorrect": true,
+              "description": "Exactly! The stock market is like a special marketplace for buying and selling stocks."
+            },
+            {
+              "id": "opt-3c",
+              "content": "From a lemonade stand.",
+              "isCorrect": false,
+              "description": "Lemonade stands sell drinks, not company ownership."
+            }
           ],
-          "explanation": "That's right! eBay is a large online marketplace where you can sell almost anything, and it's famous for its auction style listings as well as fixed-price options.",
-          "incorrectExplanation": "Not this time! While the others are popular online, eBay is the one best known for its wide range of items and auction format.",
-          "helpTips": "Think about a website that has been around for a long time and lets people bid on items. This one is a classic for online selling."
+          "explanation": "You got it! The stock market is where buyers and sellers of stocks come together. It can be online or a physical place (though mostly online these days!).",
+          "helpTips": "Think of it like eBay, but for pieces of companies."
         },
         {
-          "id": "platform-choice-4",
+          "id": "stock-value-q4",
           "type": "scq",
-          "question": "If you're selling something locally, like furniture or larger items, which platform might be a good option to reach people nearby?",
+          "question": "What can make the price (value) of a company's stock go up?",
           "options": [
-            { "id": "opt-4a", "content": "X (formerly Twitter)", "isCorrect": false, "description": "This is a social media platform for sharing short messages." },
-            { "id": "opt-4b", "content": "Facebook Marketplace", "isCorrect": true, "description": "This allows users to buy and sell within their local community." },
-            { "id": "opt-4c", "content": "Behance", "isCorrect": false, "description": "This is a platform for showcasing creative work." },
-            { "id": "opt-4d", "content": "Flickr", "isCorrect": false, "description": "This is a photo sharing website." }
+            {
+              "id": "opt-4a",
+              "content": "If the company starts losing money.",
+              "isCorrect": false,
+              "description": "Usually, bad news for a company makes its stock price go down."
+            },
+            {
+              "id": "opt-4b",
+              "content": "If the company does well and makes more profit.",
+              "isCorrect": true,
+              "description": "That's right! When a company is successful, more people want to own a part of it, driving the price up."
+            },
+            {
+              "id": "opt-4c",
+              "content": "If the company changes its logo.",
+              "isCorrect": false,
+              "description": "While branding is important, it doesn't directly cause big stock price changes."
+            }
           ],
-          "explanation": "Correct! Facebook Marketplace is great for selling to people in your local area. It makes it easier for meetups and selling bigger items.",
-          "incorrectExplanation": "Not quite. While social media can sometimes be used, Facebook Marketplace is specifically designed for local buying and selling.",
-          "helpTips": "Consider a social media platform that has a specific section for buying and selling within your community."
+          "explanation": "Fantastic! A company's success often leads to a higher stock price because more investors are interested in buying shares.",
+          "helpTips": "Think about a popular game or app. If lots of people use it, the company behind it might see its stock price increase."
         },
         {
-          "id": "platform-choice-5",
+          "id": "stocks-risk-reward-q5",
           "type": "mcq",
-          "question": "Which of these platforms are known for allowing artists and small businesses to create their own online stores?",
+          "question": "Is investing in stocks a guaranteed way to make money?",
           "options": [
-            { "id": "opt-5a", "content": "Reddit", "isCorrect": false, "description": "This is a platform for online communities and discussions." },
-            { "id": "opt-5b", "content": "Shopify", "isCorrect": true, "description": "This platform helps you build your own e-commerce website." },
-            { "id": "opt-5c", "content": "Big Cartel", "isCorrect": true, "description": "This is designed for artists and small businesses to create simple online stores." },
-            { "id": "opt-5d", "content": "Tumblr", "isCorrect": false, "description": "This is a microblogging and social networking website." }
+            {
+              "id": "opt-5a",
+              "content": "Yes, it's always a sure thing.",
+              "isCorrect": false,
+              "description": "Investing always involves some level of risk."
+            },
+            {
+              "id": "opt-5b",
+              "content": "No, the value of stocks can go up or down.",
+              "isCorrect": true,
+              "description": "Correct! Stock prices can fluctuate based on many factors."
+            },
+            {
+              "id": "opt-5c",
+              "content": "Only if you invest a lot of money.",
+              "isCorrect": false,
+              "description": "The amount you invest doesn't guarantee profits; the performance of the investment does."
+            }
           ],
-          "explanation": "Excellent! Both Shopify and Big Cartel provide tools for creators to set up their own branded online shops, giving them more control over their sales.",
-          "incorrectExplanation": "Not quite. While the others are online platforms, Shopify and Big Cartel specifically focus on helping individuals create their own online stores.",
-          "helpTips": "Think about platforms that offer website building and e-commerce features specifically for sellers."
-        },
+          "explanation": "You're right! The stock market has ups and downs. That's why it's important to learn more and make informed decisions.",
+          "helpTips": "Think of it like a rollercoaster – there are exciting highs and sometimes a few dips."
+        }
+      ]
+    },
+    {
+      "id": "types-of-stocks-201",
+      "title": "Different Flavors of Stocks",
+      "description": "Discover that not all stocks are the same! Learn about some common categories.",
+      "xp": 75,
+      "unlocked": false,
+      "icon": "📊",
+      "questions": [
         {
-          "id": "platform-summary-sort",
+          "id": "common-vs-preferred-q1",
           "type": "sort-categories",
-          "question": "Sort these platforms based on what they're best known for selling.",
+          "question": "Sort these descriptions into 'Common Stock' or 'Preferred Stock'.",
           "categories": [
-            { "id": "cat-1", "content": "Handmade & Unique Items" },
-            { "id": "cat-2", "content": "Used Clothes" },
-            { "id": "cat-3", "content": "General Items (Auction/Fixed Price)" },
-            { "id": "cat-4", "content": "Local Sales" },
-            { "id": "cat-5", "content": "Own Online Store" }
+            { "id": "cat-1", "content": "Common Stock" },
+            { "id": "cat-2", "content": "Preferred Stock" }
           ],
           "items": [
-            { "id": "item-s1", "content": "Etsy" },
-            { "id": "item-s2", "content": "Depop" },
-            { "id": "item-s3", "content": "eBay" },
-            { "id": "item-s4", "content": "Facebook Marketplace" },
-            { "id": "item-s5", "content": "Shopify" },
-            { "id": "item-s6", "content": "Big Cartel" }
+            { "id": "item-1", "content": "Usually has voting rights in the company." },
+            { "id": "item-2", "content": "Often pays a fixed dividend amount." },
+            { "id": "item-3", "content": "Shareholders are typically last in line if the company goes bankrupt." },
+            { "id": "item-4", "content": "Shareholders get paid dividends before common stockholders." }
           ],
           "correctAnswers": {
-            "cat-1": ["item-s1"],
-            "cat-2": ["item-s2"],
-            "cat-3": ["item-s3"],
-            "cat-4": ["item-s4"],
-            "cat-5": ["item-s5", "item-s6"]
+            "cat-1": ["item-1", "item-3"],
+            "cat-2": ["item-2", "item-4"]
           },
-          "explanation": "Fantastic sorting! Understanding each platform's focus helps you choose the best place to sell your items and reach the right buyers.",
-          "helpTips": "Think about the main types of goods each platform is known for. Some specialize, while others are more general."
-        }
-      ],
-      "contentBlocks": [
-        {
-          "type": "paragraph",
-          "content": "There are many places to sell online, and each has its own strengths! Some are great for specific types of items, while others are more like online flea markets. Picking the right platform can help you reach more buyers who are interested in what you're selling."
+          "explanation": "You sorted them correctly! Common stockholders have voting rights but are riskier in bankruptcy. Preferred stockholders get paid first but usually don't get a vote.",
+          "helpTips": "Think of 'preferred' as getting special treatment with dividends."
         },
         {
-          "type": "bulletList",
-          "content": [
-            "Etsy: Best for handmade, vintage, and unique items.",
-            "Depop: Popular for selling used and vintage clothing.",
-            "eBay: A large marketplace for all sorts of new and used goods, with auctions.",
-            "Facebook Marketplace: Good for selling locally within your community.",
-            "Shopify & Big Cartel: Platforms to create your own online store."
-          ]
+          "id": "growth-vs-income-q2",
+          "type": "mcq",
+          "question": "Which of these describes a 'Growth Stock'?",
+          "options": [
+            {
+              "id": "opt-2a",
+              "content": "Stock from a well-established company that pays regular dividends.",
+              "isCorrect": false,
+              "description": "That sounds more like an 'income stock'."
+            },
+            {
+              "id": "opt-2b",
+              "content": "Stock from a company expected to increase its earnings faster than average.",
+              "isCorrect": true,
+              "description": "Exactly! Growth stocks are about potential future increases in value."
+            },
+            {
+              "id": "opt-2c",
+              "content": "Stock that doesn't change in price very much.",
+              "isCorrect": false,
+              "description": "Growth stocks can actually be more volatile."
+            }
+          ],
+          "explanation": "Great job! Growth stocks are exciting because they have the potential to increase in value quickly, but they can also be riskier.",
+          "helpTips": "Think of new tech companies – their stock might be considered a growth stock."
+        },
+        {
+          "id": "blue-chip-q3",
+          "type": "scq",
+          "question": "What is a 'Blue-Chip' stock?",
+          "options": [
+            {
+              "id": "opt-3a",
+              "content": "Stock from a small, new company.",
+              "isCorrect": false,
+              "description": "Blue-chip companies are usually large and well-known."
+            },
+            {
+              "id": "opt-3b",
+              "content": "Stock from a large, well-established company with a history of good performance.",
+              "isCorrect": true,
+              "description": "That's right! Blue-chip stocks are often seen as safer investments."
+            },
+            {
+              "id": "opt-3c",
+              "content": "A stock that is blue in color.",
+              "isCorrect": false,
+              "description": "The color has nothing to do with it!"
+            }
+          ],
+          "explanation": "Correct! Blue-chip companies are like the giants of the stock market – they're usually stable and reliable.",
+          "helpTips": "Think of brands you've known for a long time and trust – they might be blue-chip companies."
+        },
+        {
+          "id": "market-cap-q4",
+          "type": "sort-order",
+          "question": "Order these by company size, from LARGEST to SMALLEST (based on 'market cap').",
+          "items": [
+            { "id": "item-a", "content": "Large-Cap Stock" },
+            { "id": "item-b", "content": "Small-Cap Stock" },
+            { "id": "item-c", "content": "Mid-Cap Stock" }
+          ],
+          "correctAnswers": ["item-a", "item-c", "item-b"],
+          "explanation": "You got the order right! Large-cap companies are the biggest, followed by mid-cap, and then small-cap.",
+          "helpTips": "Think of it like sizes: Large, Medium, Small."
+        },
+        {
+          "id": "dividend-stocks-q5",
+          "type": "mcq",
+          "question": "What's a key feature of 'Dividend Stocks'?",
+          "options": [
+            {
+              "id": "opt-5a",
+              "content": "They are guaranteed to increase in price quickly.",
+              "isCorrect": false,
+              "description": "Price increases are never guaranteed."
+            },
+            {
+              "id": "opt-5b",
+              "content": "They often pay out a portion of the company's profits to shareholders regularly.",
+              "isCorrect": true,
+              "description": "Exactly! Dividends are like getting a little extra income from owning the stock."
+            },
+            {
+              "id": "opt-5c",
+              "content": "They are only from new, unproven companies.",
+              "isCorrect": false,
+              "description": "Established companies can also pay dividends."
+            }
+          ],
+          "explanation": "That's correct! Dividend stocks can be attractive if you're looking for regular income from your investments.",
+          "helpTips": "Think of it like a company sharing its success with its owners (shareholders)."
         }
       ]
     },
     {
-      "id": "listing-like-a-pro",
-      "title": "Making Your Stuff Look Good Online ✨",
-      "description": "Learn how to create listings that grab attention! Good photos and descriptions can make a big difference in selling your items.",
-      "xp": 85,
+      "id": "getting-started-301",
+      "title": "Your First Steps in Stocks",
+      "description": "Understand the basic ways you can start investing in stocks.",
+      "xp": 100,
       "unlocked": false,
-      "icon": "📸",
+      "icon": "🚀",
       "questions": [
         {
-          "id": "listing-photo-1",
+          "id": "brokerage-account-q1",
           "type": "scq",
-          "question": "When taking photos of something you want to sell online, which of these is generally the best lighting?",
+          "question": "What's usually the first thing you need to open if you want to buy and sell stocks?",
           "options": [
-            { "id": "opt-lp1a", "content": "Dim, indoor lighting", "isCorrect": false, "description": "This can make the item look unclear and shadowy." },
-            { "id": "opt-lp1b", "content": "Direct sunlight at midday", "isCorrect": false, "description": "This can create harsh shadows and wash out colors." },
-            { "id": "opt-lp1c", "content": "Soft, natural light", "isCorrect": true, "description": "This shows the item clearly and with true colors." },
-            { "id": "opt-lp1d", "content": "Using only the camera's flash", "isCorrect": false, "description": "This can create glare and flatten the image." }
+            {
+              "id": "opt-1a",
+              "content": "A library card.",
+              "isCorrect": false,
+              "description": "Library cards are for borrowing books."
+            },
+            {
+              "id": "opt-1b",
+              "content": "A brokerage account.",
+              "isCorrect": true,
+              "description": "That's right! A brokerage account is like a special bank account for investing."
+            },
+            {
+              "id": "opt-1c",
+              "content": "A pizza delivery app.",
+              "isCorrect": false,
+              "description": "That's for ordering food."
+            }
           ],
-          "explanation": "You nailed it! Soft, natural light, like from a window on a cloudy day, helps show your item clearly and with its true colors, making it more appealing to buyers.",
-          "incorrectExplanation": "Almost! While light is important, dim light or harsh direct sunlight can make your item look less appealing in photos.",
-          "helpTips": "Think about the lighting that makes things look the clearest and most natural in photos."
+          "explanation": "Correct! A brokerage account lets you deposit money and then use that money to buy and sell investments like stocks.",
+          "helpTips": "Think of a brokerage account as your online portal to the stock market."
         },
         {
-          "id": "listing-description-1",
+          "id": "stock-funds-q2",
           "type": "mcq",
-          "question": "What kind of information should you include in the description of an item you're selling?",
+          "question": "What's a 'stock fund' (like an ETF or mutual fund)?",
           "options": [
-            { "id": "opt-ld1a", "content": "Just the price", "isCorrect": false, "description": "Buyers need more details than just the cost." },
-            { "id": "opt-ld1b", "content": "Details about the item (size, color, condition)", "isCorrect": true, "description": "This helps buyers know exactly what they're getting." },
-            { "id": "opt-ld1c", "content": "Your personal feelings about the item", "isCorrect": false, "description": "While enthusiasm is good, factual details are more important." },
-            { "id": "opt-ld1d", "content": "Any flaws or imperfections", "isCorrect": true, "description": "Being honest builds trust with potential buyers." }
+            {
+              "id": "opt-2a",
+              "content": "Buying stock in just one company.",
+              "isCorrect": false,
+              "description": "Stock funds usually involve many companies."
+            },
+            {
+              "id": "opt-2b",
+              "content": "A way to invest in a collection of many different stocks at once.",
+              "isCorrect": true,
+              "description": "Exactly! It's like buying a whole basket of different company shares."
+            },
+            {
+              "id": "opt-2c",
+              "content": "A type of stock that only rich people can buy.",
+              "isCorrect": false,
+              "description": "Stock funds are generally accessible to everyone."
+            }
           ],
-          "explanation": "Excellent! Including details like size, color, and condition helps buyers make informed decisions. Also, mentioning any flaws builds trust and avoids surprises.",
-          "incorrectExplanation": "Not quite all of these are key. While price is important, buyers need more information to decide if they want to buy.",
-          "helpTips": "Think about what you would want to know if you were buying the item yourself online. Honesty is also key!"
+          "explanation": "Nice one! Stock funds help you diversify, meaning you're not relying on just one company's performance.",
+          "helpTips": "Think of it as spreading your risk – if one company in the fund doesn't do well, the others might still perform okay."
         },
         {
-          "id": "listing-keywords-1",
+          "id": "long-term-investing-q3",
           "type": "scq",
-          "question": "Using relevant keywords in your listing title and description helps...",
+          "question": "For most beginners, is it usually recommended to think of stock investing as a quick way to get rich or a long-term strategy?",
           "options": [
-            { "id": "opt-lk1a", "content": "Make the price go up automatically", "isCorrect": false, "description": "Keywords don't directly affect pricing." },
-            { "id": "opt-lk1b", "content": "Your listing show up when people search for similar items", "isCorrect": true, "description": "Keywords help match your listing with potential buyers' searches." },
-            { "id": "opt-lk1c", "content": "Make your photos look better", "isCorrect": false, "description": "Keywords are text-based, not visual." },
-            { "id": "opt-lk1d", "content": "Guarantee that your item will sell quickly", "isCorrect": false, "description": "While helpful, keywords don't guarantee a sale." }
+            {
+              "id": "opt-3a",
+              "content": "A quick way to get rich.",
+              "isCorrect": false,
+              "description": "Trying to get rich quick in the stock market is usually very risky."
+            },
+            {
+              "id": "opt-3b",
+              "content": "A long-term strategy to grow your money over time.",
+              "isCorrect": true,
+              "description": "That's the common advice! Investing for the long haul can help smooth out the ups and downs."
+            }
           ],
-          "explanation": "That's right! Keywords are like labels that help online marketplaces match your item with what buyers are looking for. The more relevant your keywords, the easier it is for people to find your listing.",
-          "incorrectExplanation": "Not quite. While it's good to have a clear price and nice photos, keywords help people actually find your listing in the first place.",
-          "helpTips": "Think about the words someone would type into a search bar to find what you're selling."
+          "explanation": "You're right! Patience can be key in the stock market. Over the long term, investments have historically tended to grow.",
+          "helpTips": "Think of planting a tree – it takes time to grow big and strong."
         },
         {
-          "id": "listing-condition-match",
-          "type": "match",
-          "question": "Match the description with the correct condition of the item.",
-          "items": [
-            { "id": "item-m1", "content": "Never used, still in original packaging" },
-            { "id": "item-m2", "content": "Used, but looks almost new with no signs of wear" },
-            { "id": "item-m3", "content": "Shows some wear and tear, but still works perfectly" },
-            { "id": "item-m4", "content": "Has significant damage or flaws" }
-          ],
+          "id": "research-q4",
+          "type": "mcq",
+          "question": "Before investing in a specific company's stock, what's a good idea to do?",
           "options": [
-            { "id": "opt-m1", "content": "New" },
-            { "id": "opt-m2", "content": "Like New" },
-            { "id": "opt-m3", "content": "Good" },
-            { "id": "opt-m4", "content": "Poor" }
-          ],
-          "correctAnswers": {
-            "item-m1": "opt-m1",
-            "item-m2": "opt-m2",
-            "item-m3": "opt-m3",
-            "item-m4": "opt-m4"
+            {
+              "id": "opt-4a",
+              "content": "Just pick a company you like.",
+              "isCorrect": false,
+              "description": "While liking a company is okay, it's not enough"},
+              {
+                "id": "opt-4b",
+                "content": "Do some research on the company and its performance.",
+                "isCorrect": true,
+                "description": "Exactly! Understanding the company can help you make a more informed decision."
+              },
+              {
+                "id": "opt-4c",
+                "content": "Ask a stranger online for advice.",
+                "isCorrect": false,
+                "description": "It's better to get information from reliable sources."
+              }
+            ],
+            "explanation": "Great thinking! Doing your homework helps you understand what you're investing in and the potential risks and rewards.",
+            "helpTips": "Look at the company's website, news articles, and financial reports if you can."
           },
-          "explanation": "Perfect matches! Accurately describing the condition of your item helps buyers know what to expect and leads to smoother sales.",
-          "helpTips": "Think about the common terms used to describe how used an item is, from brand new to heavily worn."
-        },
-        {
-          "id": "listing-price-1",
-          "type": "scq",
-          "question": "When deciding on a price for your item, it's a good idea to...",
-          "options": [
-            { "id": "opt-lp2a", "content": "Pick a random number", "isCorrect": false, "description": "This might be too high or too low." },
-            { "id": "opt-lp2b", "content": "See what similar items are selling for", "isCorrect": true, "description": "This helps you set a competitive price." },
-            { "id": "opt-lp2c", "content": "Always price it much higher than others", "isCorrect": false, "description": "This might make it harder to sell." },
-            { "id": "opt-lp2d", "content": "Only consider how much you originally paid", "isCorrect": false, "description": "The current market value matters more." }
-          ],
-          "explanation": "You got it! Researching what similar items are selling for gives you a good idea of a fair and competitive price. This helps attract buyers without undervaluing your item.",
-          "incorrectExplanation": "Not quite. While your original price might be a factor, the current selling price of similar items is more important for attracting buyers.",
-          "helpTips": "Think about what other people are charging for the same or similar things online. This will give you a good starting point."
-        },
-        {
-          "id": "listing-summary-sort",
-          "type": "sort-order",
-          "question": "Put these steps for creating a good online listing in the best order.",
-          "items": [
-            { "id": "item-so1", "content": "Write a detailed description with keywords." },
-            { "id": "item-so2", "content": "Decide on a fair price by researching similar items." },
-            { "id": "item-so3", "content": "Take clear photos in good lighting." },
-            { "id": "item-so4", "content": "Choose the platform where you want to sell." }
-          ],
-          "correctAnswers": ["item-so4", "item-so3", "item-so1", "item-so2"],
-          "explanation": "Great job ordering these! Choosing your platform first helps you tailor your listing. Good photos grab attention, descriptions tell buyers what they need to know, and a fair price helps it sell!",
-          "incorrectExplanation": "Almost there! Think about the first thing you need to do before you can even take a picture or write a description. Then, what makes the item appealing? What information do buyers need next? And finally, how do you make it a good deal?",
-          "helpTips": "What do you need to do before you can even start taking pictures? What makes a listing eye-catching? What information helps people decide to buy? How do you make sure people are willing to pay your price?"
-        }
-      ],
-      "contentBlocks": [
-        {
-          "type": "paragraph",
-          "content": "Think of your online listing as your item's advertisement! Good photos are like the headline, grabbing attention. The description gives all the important details, and the price needs to be right to convince someone to buy."
-        },
-        {
-          "type": "bulletList",
-          "content": [
-            "Use good lighting and clear photos from different angles.",
-            "Be detailed and honest in your descriptions, including keywords.",
-            "Research prices of similar items to set a competitive price.",
-            "Clearly state the condition of your item."
-          ]
-        }
-      ]
-    },
-    {
-      "id": "getting-paid-safely",
-      "title": "Getting Your Money Securely 💰",
-      "description": "Learn about safe ways to receive payments when selling online and how to avoid scams.",
-      "xp": 90,
-      "unlocked": false,
-      "icon": "🔒",
-      "questions": [
-        {
-          "id": "payment-method-1",
-          "type": "mcq",
-          "question": "Which of these are generally considered safe ways to receive payments online?",
-          "options": [
-            { "id": "opt-gp1a", "content": "Cash sent in the mail", "isCorrect": false, "description": "This is risky as cash can get lost or stolen." },
-            { "id": "opt-gp1b", "content": "Online payment platforms (like PayPal or Venmo)", "isCorrect": true, "description": "These offer security and often buyer/seller protection." },
-            { "id": "opt-gp1c", "content": "Personal checks from strangers", "isCorrect": false, "description": "These can bounce or be fraudulent." },
-            { "id": "opt-gp1d", "content": "Bank transfers through reputable services", "isCorrect": true, "description": "These are generally secure, especially through established services." }
-          ],
-          "explanation": "You're right! Online payment platforms and reputable bank transfer services offer security and often have systems in place to protect both buyers and sellers. Avoid sending or receiving cash by mail or accepting personal checks from people you don't know online.",
-          "incorrectExplanation": "Not quite. While some methods might seem easy, they don't offer much protection against fraud or loss. Think about services that have security features built-in.",
-          "helpTips": "Consider how established online businesses usually handle payments. Which methods offer tracking and protection?"
-        },
-        {
-          "id": "payment-scam-1",
-          "type": "scq",
-          "question": "Someone offers to pay you much more than your asking price but asks you to send them back the extra money. This is likely a...",
-          "options": [
-            { "id": "opt-gs1a", "content": "Generous buyer", "isCorrect": false, "description": "It's very unusual for someone to offer more for no reason." },
-            { "id": "opt-gs1b", "content": "Common online practice", "isCorrect": false, "description": "This is not a standard way of doing business online." },
-            { "id": "opt-gs1c", "content": "Scam", "isCorrect": true, "description": "This is a common tactic where the initial payment might be fake or reversed later." },
-            { "id": "opt-gs1d", "content": "Way to build trust", "isCorrect": false, "description": "This action actually raises red flags." }
-          ],
-          "explanation": "Exactly! This is a classic overpayment scam. The initial payment is often fake or will be cancelled, and you'll lose the extra money you sent back.",
-          "incorrectExplanation": "Not quite. While it might seem like a lucky break, this situation is a major warning sign in online selling.",
-          "helpTips": "Think about why someone would offer more money than you're asking. Does it sound too good to be true?"
-        },
-        {
-          "id": "personal-info-1",
-          "type": "scq",
-          "question": "When selling online, you should generally avoid sharing which of the following with buyers?",
-          "options": [
-            { "id": "opt-pi1a", "content": "Your name or username", "isCorrect": false, "description": "This is often necessary for transactions." },
-            { "id": "opt-pi1b", "content": "The name of the item you're selling", "isCorrect": false, "description": "Buyers need to know what they're buying." },
-            { "id": "opt-pi1c", "content": "Your home address or bank account details", "isCorrect": true, "description": "This information can be used for fraudulent purposes." },
-            { "id": "opt-pi1d", "content": "The price of the item", "isCorrect": false, "description": "This is essential for a sale." }
-          ],
-          "explanation": "Correct! Your home address and bank account details are private information that should never be shared with online buyers to protect yourself from potential scams or theft.",
-          "incorrectExplanation": "Not quite. While some information is necessary for a sale, other details can put you at risk. Think about what information is truly needed for the transaction versus what is too personal.",
-          "helpTips": "What information could someone use to harm you or access your money? Keep that private!"
-        },
-        {
-          "id": "meeting-buyers-1",
-          "type": "scq",
-          "question": "If you are selling something locally and need to meet a buyer in person, it's best to...",
-          "options": [
-            { "id": "opt-mb1a", "content": "Meet them alone at your home", "isCorrect": false, "description": "This can be risky for your safety." },
-            { "id": "opt-mb1b", "content": "Meet them in a public place during the day", "isCorrect": true, "description": "This provides a safer environment." },
-            { "id": "opt-mb1c", "content": "Go to their home alone", "isCorrect": false, "description": "This can also be risky." },
-            { "id": "opt-mb1d", "content": "Meet them late at night in a secluded area", "isCorrect": false, "description": "This increases the risk of something going wrong." }
-          ],
-          "explanation": "That's right! Meeting in a public place during the day with a friend or family member present is the safest way to handle local transactions.",
-          "incorrectExplanation": "Not quite. Your safety is important! Think about the safest environment for meeting someone you don't know.",
-          "helpTips": "Where do you feel the most safe when meeting someone new? Bringing a friend is always a good idea too!"
-        },
-        {
-          "id": "payment-confirmation-1",
-          "type": "scq",
-          "question": "Before you ship an item to an online buyer, you should...",
-          "options": [
-            { "id": "opt-pc1a", "content": "Trust their word that they've paid", "isCorrect": false, "description": "It's important to have proof of payment." },
-            { "id": "opt-pc1b", "content": "Ship it immediately to be fast", "isCorrect": false, "description": "Confirming payment first protects you." },
-            { "id": "opt-pc1c", "content": "Wait for confirmation from the payment platform that the funds are received", "isCorrect": true, "description": "This ensures you've actually been paid." },
-            { "id": "opt-pc1d", "content": "Ask for a screenshot of their bank account", "isCorrect": false, "description": "Screenshots can be faked; rely on official confirmations." }
-          ],
-          "explanation": "Correct! Always wait for official confirmation from the payment platform (like PayPal or your bank) that the money has arrived before you send out the item. This protects you from fraudulent buyers.",
-          "incorrectExplanation": "Not quite. It's important to verify that you've actually received the money before sending the item. Don't just take the buyer's word for it.",
-          "helpTips": "How do businesses know they've been paid before they send something? You should do the same!"
-        },
-        {
-          "id": "getting-paid-summary-sort",
-          "type": "sort-order",
-          "question": "Put these steps for a safe online sale in the correct order.",
-          "items": [
-            { "id": "item-gps1", "content": "Ship the item." },
-            { "id": "item-gps2", "content": "List your item with clear photos and descriptions." },
-            { "id": "item-gps3", "content": "Receive confirmation of payment through a secure platform." },
-            { "id": "item-gps4", "content": "Agree on a price with the buyer." }
-          ],
-          "correctAnswers": ["item-gps2", "item-gps4", "item-gps3", "item-gps1"],
-          "explanation": "Great job! Listing comes first to attract buyers, then agreeing on price, followed by confirming payment before shipping. This order helps ensure a safe transaction!",
-          "incorrectExplanation": "Almost there! Think about the logical flow of a sale. What needs to happen before you can agree on a price? What needs to happen before you send the item?",
-          "helpTips": "What's the first thing you need to do to sell something? What comes after finding a buyer? When is it safe to send the item?"
-        }
-      ],
-      "contentBlocks": [
-        {
-          "type": "paragraph",
-          "content": "Getting paid safely is super important when selling online. Using secure payment methods and being aware of common scams can save you a lot of trouble. Always prioritize your safety and be cautious of anything that seems suspicious."
-        },
-        {
-          "type": "bulletList",
-          "content": [
-            "Use secure online payment platforms.",
-            "Be wary of overpayment scams.",
-            "Never share personal financial information.",
-            "Meet local buyers in safe, public places.",
-            "Always confirm payment before shipping."
-          ]
-        }
-      ]
-    }
-  ]
-}
+          {
+            "id": "start-small-q5",
+            "type": "scq",
+            "question": "If you're just starting to invest in stocks, is it generally better to start with a large amount of money or a smaller amount?",
+            "options": [
+              {
+                "id": "opt-5a",
+                "content": "A large amount of money to try and make big returns quickly.",
+                "isCorrect": false,
+                "description": "Starting with a lot of money can be riskier for beginners."
+              },
+              {
+                "id": "opt-5b",
+                "content": "A smaller amount of money to learn and get comfortable with how it works.",
+                "isCorrect": true,
+                "description": "That's usually the smarter approach! You can learn without risking too much."
+              }
+            ],
+            "explanation": "You got it! Starting small allows you to learn the ropes and gain experience without putting a lot of money at risk right away.",
+            "helpTips": "Think of it like learning to ride a bike – you usually start with training wheels before trying big jumps!"
+          }
+        ]
+      }
+    ]
+  }

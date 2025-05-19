@@ -92,36 +92,38 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
   
   // Move to the next question
   // Helper function to unlock the next lesson in sequence
-  const unlockNextLesson = () => {
-    // Local storage key for lesson data
-    const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+  const unlockNextLesson = (): boolean => {
+    // Using only paw-fi-course for consistency
+    const COURSE_STORAGE_KEY = 'paw-fi-course';
     
     try {
-      // Get current lessons data from localStorage
-      const storedData = localStorage.getItem(LESSONS_STORAGE_KEY);
-      if (!storedData) return;
+      // Get course data from localStorage
+      const courseData = localStorage.getItem(COURSE_STORAGE_KEY);
+      if (!courseData) return false;
       
-      // Parse the stored lessons
-      const lessons = JSON.parse(storedData);
-      if (!Array.isArray(lessons) || lessons.length === 0) return;
+      const course = JSON.parse(courseData);
       
-      // Find the current lesson's index
-      const currentLessonIndex = lessons.findIndex(lesson => lesson.id === lessonId);
-      if (currentLessonIndex === -1 || currentLessonIndex === lessons.length - 1) return;
+      if (course && course.lessons && Array.isArray(course.lessons)) {
+        // Find the current lesson's index
+        const currentLessonIndex = course.lessons.findIndex((lesson: any) => lesson.id === lessonId);
+        
+        // If there's a next lesson, unlock it
+        if (currentLessonIndex !== -1 && currentLessonIndex < course.lessons.length - 1) {
+          course.lessons[currentLessonIndex + 1].unlocked = true;
+          
+          // Save updated course data
+          localStorage.setItem(COURSE_STORAGE_KEY, JSON.stringify(course));
+          console.log(`Unlocked next lesson: ${course.lessons[currentLessonIndex + 1].title}`);
+          return true;
+        }
+      }
       
-      // Get the next lesson in sequence
-      const nextLesson = lessons[currentLessonIndex + 1];
-      if (!nextLesson) return;
+      return false;
       
-      // Update the next lesson to be unlocked
-      nextLesson.unlocked = true;
-      
-      // Save the updated lessons back to localStorage
-      localStorage.setItem(LESSONS_STORAGE_KEY, JSON.stringify(lessons));
-      
-      console.log(`Next lesson "${nextLesson.title}" has been unlocked!`);
+      return false;
     } catch (error) {
       console.error('Error unlocking next lesson:', error);
+      return false;
     }
   };
   

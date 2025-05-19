@@ -312,12 +312,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       
       {/* Input area */}
       <div className="bg-white border-t border-gray-200 p-3">
-        <form onSubmit={handleSubmit} className="flex items-end" onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && !isGeneratingLessons) {
-            e.preventDefault();
-            handleSubmit(e);
-          }
-        }}>
+        <form onSubmit={handleSubmit} className="flex items-end">
             <input
               ref={inputRef}
               value={currentMessage}
@@ -325,7 +320,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
               placeholder="Type your message..."
               className="w-full border border-gray-300 rounded-full py-3 px-4 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent overflow-x-hidden"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !isGeneratingLessons) {
                   e.preventDefault();
                   handleSubmit(e);
                 }

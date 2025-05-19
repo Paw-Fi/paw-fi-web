@@ -9,8 +9,7 @@ import gsap from 'gsap';
 import type { Lesson, Course } from '@/types/learning.types';
 import { getAllLessons, getAllCourses } from '@/data/lessons';
 
-// Storage keys
-const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+// Storage key - unified to use only paw-fi-course
 const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 export const Route = createFileRoute('/sabina-learning')({ 
@@ -47,7 +46,7 @@ function LearningPage() {
         }
       } else {
         // Try legacy format (array of lessons)
-        const storedLessonsData = localStorage.getItem(LESSONS_STORAGE_KEY);
+        const storedLessonsData = localStorage.getItem(COURSE_STORAGE_KEY);
         
         if (storedLessonsData) {
           // Parse stored JSON data
@@ -112,7 +111,7 @@ function LearningPage() {
       }
       
       // Store in localStorage
-      localStorage.setItem(LESSONS_STORAGE_KEY, jsonInput);
+      localStorage.setItem(COURSE_STORAGE_KEY, jsonInput);
       
       // Update state
       setLessons(parsedData);
@@ -125,7 +124,7 @@ function LearningPage() {
   
   // Clear localStorage and reset to default lessons
   const handleResetLessons = () => {
-    localStorage.removeItem(LESSONS_STORAGE_KEY);
+    localStorage.removeItem(COURSE_STORAGE_KEY);
     const defaultLessons = getAllLessons();
     setLessons(defaultLessons);
     setJsonInput('');
@@ -164,7 +163,7 @@ function LearningPage() {
       </div>
 
       {/* JSON Import UI - Show if there are no lessons in localStorage */}
-      {!isLoading && localStorage.getItem(LESSONS_STORAGE_KEY) === null && (
+      {!isLoading && localStorage.getItem(COURSE_STORAGE_KEY) === null && (
         <div className="max-w-xl mx-auto mb-8 p-6 bg-white rounded-2xl shadow-md">
           <h2 className="text-lg font-medium mb-4">Import Lesson Data</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -209,7 +208,7 @@ function LearningPage() {
       )}
       
       {/* Control panel if lessons are loaded from localStorage */}
-      {!isLoading && localStorage.getItem(LESSONS_STORAGE_KEY) !== null && (
+      {!isLoading && localStorage.getItem(COURSE_STORAGE_KEY) !== null && (
         <div className="max-w-xl mx-auto mb-6 flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
           <p className="text-sm text-gray-600">
             <span className="font-medium">{lessons.length}</span> lessons loaded from custom data

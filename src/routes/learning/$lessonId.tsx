@@ -129,9 +129,10 @@ function LessonPage() {
       {isSuccess ? (
         <CompletionDisplay
           isOpen={isComplete}
-          onClose={() => handleBack()}
+          onClose={handleBack}
           description="Great job! You've completed this lesson."
           lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
+          lessonId={lesson?.id} // Pass the actual lesson.id, not the URL parameter
           reward={{
             amount: earnedXp,
             unit: "XP",
@@ -154,7 +155,7 @@ function LessonPage() {
         // Try again screen when answers are incorrect
         <CompletionDisplay
           isOpen={isComplete}
-          onClose={() => handleBack()}
+          onClose={handleBack}
           title="Keep Learning"
           description={`Some of your answers were incorrect in Lesson ${lessonId}: ${lesson?.title}.`}
           // No reward since they didn't pass

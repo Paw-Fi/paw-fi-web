@@ -9,7 +9,7 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 import mockLessons from "@/data/mock1.json";
 
 // LocalStorage key for lesson data (must match the one in lessons.ts)
-const LESSONS_STORAGE_KEY = 'paw-fi-lessons';
+const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 export const Route = createFileRoute("/questionnaire")({
   component: Questionnaire,
@@ -27,7 +27,7 @@ function Questionnaire() {
     // Now we just need to store the lessons in localStorage and redirect
     try {
       // Store the mock lessons in localStorage
-      localStorage.setItem(LESSONS_STORAGE_KEY, JSON.stringify(mockLessons));
+      localStorage.setItem(COURSE_STORAGE_KEY, JSON.stringify(mockLessons));
       console.log('Mock lessons stored in localStorage successfully');
       
       // Set redirecting state (first progress was already handled by ChatInterface)

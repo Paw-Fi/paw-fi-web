@@ -3,13 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
-  closestCenter,
+  rectIntersection,
   DndContext,
   KeyboardSensor,
-  PointerSensor,
   useSensor,
   useSensors,
+  MouseSensor,
+  TouchSensor,
+  MeasuringStrategy,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
@@ -38,11 +41,24 @@ function SortableItem({ item, isActive = false }: SortableItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ 
+    id: item.id,
+    // This is critical for smooth animations
+    transition: {
+      duration: 150, // Shorter duration for snappier animations
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)' // Custom easing function for smoother motion
+    }
+  });
 
+  // Fix the style to properly handle transform transitions
   const style = {
+    // Apply transform using CSS custom properties for better performance
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition || 'transform 150ms cubic-bezier(0.25, 1, 0.5, 1)',
+    // Important for z-index stacking during dragging
+    zIndex: isDragging ? 999 : undefined,
+    // This reduces the "stickiness" feeling by minimizing visual weight during drag
+    opacity: isDragging ? 0.8 : 1,
   };
 
   return (
@@ -51,7 +67,7 @@ function SortableItem({ item, isActive = false }: SortableItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={classnames("mb-3 rounded-lg border p-4 transition-all", {
+      className={classnames("mb-3 rounded-lg border p-4 will-change-transform", {
         "border-primary bg-background z-10 shadow-md": isDragging || isActive,
         "hover:border-primary cursor-grab border-gray-200":
           !isDragging && !isActive,
@@ -95,11 +111,18 @@ function SortQuestion({ question, onAnswer, value }: SortQuestionProps) {
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      // Adding activation constraints for better control
+    useSensor(MouseSensor, {
+      // Decrease the activation constraint for smoother starts
       activationConstraint: {
-        // Only start dragging after moving 8px - helps with accidental drags
-        distance: 8,
+        delay: 0,
+        tolerance: 5, // Smaller tolerance for more responsive dragging
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Better touch handling for mobile devices
+      activationConstraint: {
+        delay: 0,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -167,10 +190,19 @@ function SortQuestion({ question, onAnswer, value }: SortQuestionProps) {
     <div className="sort-question">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        // Using rectIntersection for more precise collision detection with vertical lists
+        collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
+        modifiers={[restrictToVerticalAxis]}
+        // Optimize drag animation performance
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.Always,
+          },
+        }}
+        // Enhanced measurement strategy improves animation performance
       >
         <SortableContext
           items={items.map((item) => item.id)}
