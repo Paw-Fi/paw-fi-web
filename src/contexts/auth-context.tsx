@@ -1,8 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+// Extend the Supabase User type to include uid property
+export interface User extends SupabaseUser {
+  uid: string; // Alias for id to maintain compatibility with our conversation service
+}
 
 type AuthContextType = {
   user: User | null;
@@ -20,11 +25,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Helper function to transform SupabaseUser to our extended User type
+  const transformUser = (supabaseUser: SupabaseUser | null): User | null => {
+    if (!supabaseUser) return null;
+    
+    return {
+      ...supabaseUser,
+      uid: supabaseUser.id // Map id to uid for compatibility
+    };
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      setUser(transformUser(session?.user ?? null));
       setIsLoading(false);
     });
 
@@ -32,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        setUser(transformUser(session?.user ?? null));
         setIsLoading(false);
       }
     );

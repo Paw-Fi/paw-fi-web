@@ -39,22 +39,29 @@ const initializeGeminiClient = () => {
 };
 
 // Create a chat session with the Gemini API
-export const createChatSession = (initialPrompt: string) => {
+export const createChatSession = (initialPrompt: string, history?: Array<{role: string, parts: Array<{text: string}>}>) => {
   const genAI = initializeGeminiClient();
   
   // Format the system prompt to ensure it's properly formatted
   const formattedPrompt = formatSystemPrompt(initialPrompt);
   
+  // Prepare the history array
+  let chatHistory = [
+    {
+      role: "user",
+      parts: [{ text: formattedPrompt }],
+    },
+  ];
+  
+  // If history is provided, append it after the system prompt
+  if (history && history.length > 0) {
+    chatHistory = chatHistory.concat(history);
+  }
+  
   // Create a chat session with the Gemini model
   const chat = genAI.chats.create({
     model: "gemini-2.0-flash", // Using the flash model for faster responses
-    // Initialize with system instructions as the first message
-    history: [
-      {
-        role: "user",
-        parts: [{ text: formattedPrompt }],
-      },
-    ],
+    history: chatHistory,
   });
   
   return chat;

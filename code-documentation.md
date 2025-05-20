@@ -432,17 +432,91 @@ The codebase emphasizes component reuse:
 
 ---
 
-## 7. AI Integration
+## 7. Supabase Edge Functions
+
+### `/supabase/functions/chat_sessions/index.ts`
+
+**Purpose:** Edge Function for managing chat sessions (conversations) in the database.
+
+**Key Endpoints:**
+- `GET /chat_sessions`: Retrieves all chat sessions for the authenticated user
+- `GET /chat_sessions/:id`: Retrieves a specific chat session by ID
+- `POST /chat_sessions`: Creates a new chat session
+- `PUT /chat_sessions/:id`: Updates an existing chat session
+- `DELETE /chat_sessions/:id`: Deletes a chat session
+
+**Implementation Details:**
+- Uses Deno runtime environment
+- Implements JWT authentication to verify user identity
+- Applies Row Level Security (RLS) to ensure users can only access their own data
+- Handles error cases with appropriate HTTP status codes
+- Validates input data before performing database operations
+
+**Example Request/Response:**
+```typescript
+// POST /chat_sessions
+// Request Body
+{
+  "session_id": "New Chat",
+  "model": "gemini-pro"
+}
+
+// Response
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_id": "auth-user-id",
+  "session_id": "New Chat",
+  "model": "gemini-pro",
+  "is_active": true,
+  "created_at": "2025-05-20T12:00:00.000Z",
+  "updated_at": "2025-05-20T12:00:00.000Z"
+}
+```
+
+### `/supabase/functions/chat_messages/index.ts`
+
+**Purpose:** Edge Function for managing messages within chat sessions.
+
+**Key Endpoints:**
+- `GET /chat_messages/:conversation_id`: Retrieves all messages for a specific chat session
+- `POST /chat_messages`: Adds a new message to a chat session
+
+**Implementation Details:**
+- Verifies that the user owns the chat session before allowing operations
+- Automatically updates the `updated_at` timestamp of the parent chat session when adding messages
+- Supports both user and assistant message roles
+- Handles metadata for advanced message features
+
+**Example Request/Response:**
+```typescript
+// POST /chat_messages
+// Request Body
+{
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "Hello, how can I help you?",
+  "role": "assistant",
+  "timestamp": 1621512000000
+}
+
+// Response
+{
+  "id": "660f9500-f30c-52e5-b827-557766550000",
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "Hello, how can I help you?",
+  "role": "assistant",
+  "timestamp": 1621512000000,
+  "metadata": null
+}
+```
+
+## 8. AI Integration
 
 ### `/src/services/gemini-service.ts`
 
-**Purpose:** Service for interacting with Google's Gemini API.
+const chatSession = createChatSession(systemPrompt);
 
-**Key Features:**
-- Creates and manages chat sessions with the Gemini API
-- Sends user messages and processes AI responses
-- Extracts and validates JSON lesson data from AI responses
-- Handles error states and provides fallbacks
+// Send a message and get a response
+const response = await sendMessageToGemini(chatSession, userMessage);
 
 **Key Functions:**
 - `createChatSession`: Initializes a new chat session with the Gemini API
@@ -455,6 +529,62 @@ The codebase emphasizes component reuse:
 const chatSession = createChatSession(systemPrompt);
 
 // Send a message and get a response
+const response = await sendMessageToGemini(message, chatSession);
+```
+
+### `/src/services/conversation-service.ts`
+
+**Purpose:** Service for interacting with the chat history backend API.
+
+**Key Types:**
+- `Message`: Interface for chat messages with content, role, and timestamp
+**Key Functions:**
+- `getConversations`: Retrieves all chat sessions for the authenticated user
+- `getConversation`: Retrieves a specific chat session with its messages
+- `createConversation`: Creates a new chat session with optional initial messages
+- `updateConversation`: Updates an existing chat session (title, metadata, etc.)
+- `deleteConversation`: Deletes a chat session and its associated messages
+- `getMessages`: Retrieves all messages for a specific chat session
+- `addMessage`: Adds a new message to a chat session
+
+**Implementation Details:**
+- Uses Supabase client to invoke Edge Functions
+- Implements proper TypeScript interfaces for type safety
+- Handles error cases with appropriate error messages
+- Provides fallback to localStorage for offline access
+- Automatically refreshes JWT tokens when needed
+
+**Usage:**
+```typescript
+// Create a new chat session with an initial message
+const conversation = await createConversation(
+  'New Chat',
+  [{
+    content: 'Hello, how can I help you?',
+    role: 'assistant',
+    timestamp: Date.now()
+  }]
+);
+
+// Add a message to a chat session
+const updatedConversation = await addMessage(
+  conversationId,
+  'I have a question about investing',
+  'user'
+);
+
+// Get all chat sessions for the current user
+const conversations = await getConversations();
+
+// Get all messages for a specific chat session
+const messages = await getMessages(conversationId);
+```
+
+### `/src/services/gemini-service.ts`
+
+const chatSession = createChatSession(systemPrompt);
+
+// Send a message and get a response
 const response = await sendMessageToGemini(chatSession, userMessage);
 
 // Check if the response contains lesson data
@@ -462,7 +592,6 @@ if (response.isComplete && response.generatedLessons) {
   // Process the generated lesson data
   handleLessonData(response.generatedLessons);
 }
-```
 
 ### `/src/utils/prompt-utils.ts`
 
@@ -495,26 +624,42 @@ const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
 
 ### `/src/components/chat/chat-interface.tsx`
 
-**Purpose:** Interactive chat interface that uses the Gemini API with automatic JSON continuation.
+**Purpose:** Interactive chat interface that integrates with Supabase Edge Functions for chat history management and uses the Gemini API for AI responses.
 
 **Key Features:**
 - Real-time conversation with the Gemini AI
+- Complete chat history management using Supabase
+- Conversation selection and creation
+- Offline support with localStorage fallback
+- Authentication integration with conditional UI
 - Detects when to generate personalized lessons
-- Stores generated lesson data in localStorage
-- Displays lesson cards with links to the learning page
-- Automatically handles incomplete JSON responses from the AI
-- Seamlessly merges multiple JSON fragments into a complete response
+- Handles JSON responses for lesson generation
+
+**State Management:**
+- `messages`: Array of chat messages with content, role, and timestamp
+- `isLoading`: Boolean to track when waiting for AI response
+- `error`: Error state for handling API failures
+- `conversations`: List of user's chat sessions
+- `currentConversationId`: ID of the active conversation
+- `inputValue`: Current value of the message input field
+
+**Key Functions:**
+- `getConversations()`: Fetches all chat sessions for the current user
+- `handleSendMessage(message: string)`: Sends a message to the AI and stores it in the database
+- `handleCreateConversation()`: Creates a new chat session
+- `handleSelectConversation(id: string)`: Switches to a different chat session
+- `handleDeleteConversation(id: string)`: Deletes a chat session and its messages
 
 **Implementation Details:**
-
-**JSON Continuation System:**
-- `checkJsonString(str: string)`: Detects if a string is valid JSON and whether it's complete
-  - Checks for unbalanced braces, brackets, and JSON patterns
-  - Returns `{ isJson: boolean, isComplete: boolean }`
-  - Uses sophisticated detection for JSON-like structures
-
-- `continueJsonResponse()`: Handles the automatic continuation of incomplete JSON
-  - Automatically triggered when incomplete JSON is detected
+- Uses React hooks for state management
+- Implements a message input system with validation
+- Handles loading states and error messages
+- Integrates with Supabase authentication for user identification
+- Uses the conversation service to interact with Edge Functions
+- Implements localStorage fallback for offline access
+- Detects and processes JSON responses for lesson generation
+- Supports automatic JSON continuation for large responses
+  - Detects incomplete JSON in responses
   - Sends a "continue" message to the Gemini API
   - Merges JSON fragments with proper formatting
   - Removes intermediate messages from the chat history
@@ -549,7 +694,311 @@ const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
 - When complete JSON is available, it's parsed and displayed as a lesson card
 - The JSON data is stored in localStorage for access in the learning system
 
+## Supabase Implementation
+
+### Database Schema
+
+The application uses Supabase for authentication and data storage. Below are the implementation details for the database schema and related functionality.
+
+#### Table: `users`
+
+**SQL Definition:**
+```sql
+CREATE TABLE public.users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  avatar_url TEXT,
+  email_verified BOOLEAN DEFAULT false
+);
+```
+
+**RLS Policies:**
+```sql
+-- Allow users to read their own data
+CREATE POLICY "Users can read their own data" 
+  ON public.users 
+  FOR SELECT 
+  USING (auth.uid() = id);
+
+-- Allow users to update their own data
+CREATE POLICY "Users can update their own data" 
+  ON public.users 
+  FOR UPDATE 
+  USING (auth.uid() = id);
+
+-- Allow service role to insert new users
+CREATE POLICY "Service role can insert users" 
+  ON public.users 
+  FOR INSERT 
+  TO service_role 
+  WITH CHECK (true);
+```
+
+#### Table: `user_progress`
+
+**SQL Definition:**
+```sql
+CREATE TABLE public.user_progress (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) NOT NULL,
+  lesson_id TEXT NOT NULL,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  score INTEGER DEFAULT 0,
+  xp_earned INTEGER DEFAULT 0,
+  UNIQUE(user_id, lesson_id)
+);
+```
+
+**RLS Policies:**
+```sql
+-- Allow users to read their own progress
+CREATE POLICY "Users can read their own progress" 
+  ON public.user_progress 
+  FOR SELECT 
+  USING (auth.uid() = user_id);
+
+-- Allow users to insert their own progress
+CREATE POLICY "Users can insert their own progress" 
+  ON public.user_progress 
+  FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+```
+
+#### Table: `conversations`
+
+**SQL Definition:**
+```sql
+CREATE TABLE public.conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) NOT NULL,
+  title TEXT NOT NULL DEFAULT 'New Conversation',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
+**RLS Policies:**
+```sql
+-- Allow users to read their own conversations
+CREATE POLICY "Users can read their own conversations" 
+  ON public.conversations 
+  FOR SELECT 
+  USING (auth.uid() = user_id);
+
+-- Allow users to insert their own conversations
+CREATE POLICY "Users can insert their own conversations" 
+  ON public.conversations 
+  FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+-- Allow users to update their own conversations
+CREATE POLICY "Users can update their own conversations" 
+  ON public.conversations 
+  FOR UPDATE 
+  USING (auth.uid() = user_id);
+
+-- Allow users to delete their own conversations
+CREATE POLICY "Users can delete their own conversations" 
+  ON public.conversations 
+  FOR DELETE 
+  USING (auth.uid() = user_id);
+```
+
+#### Table: `messages`
+
+**SQL Definition:**
+```sql
+CREATE TABLE public.messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id UUID REFERENCES public.conversations(id) NOT NULL,
+  content TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  metadata JSONB DEFAULT '{}'::jsonb
+);
+```
+
+**RLS Policies:**
+```sql
+-- Allow users to read messages in their own conversations
+CREATE POLICY "Users can read messages in their conversations" 
+  ON public.messages 
+  FOR SELECT 
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = conversation_id AND c.user_id = auth.uid()
+    )
+  );
+
+-- Allow users to insert messages into their own conversations
+CREATE POLICY "Users can insert messages into their conversations" 
+  ON public.messages 
+  FOR INSERT 
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = conversation_id AND c.user_id = auth.uid()
+    )
+  );
+```
+
+#### Database Triggers
+
+**User Creation Trigger:**
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+### Integration with Frontend
+
+#### `/src/lib/supabase.ts`
+
+**Purpose:** Initializes and exports the Supabase client for use throughout the application.
+
+**Implementation:**
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+#### Data Access Patterns
+
+**User Profile:**
+```typescript
+// Get current user profile
+const { data, error } = await supabase
+  .from('users')
+  .select('*')
+  .eq('id', user.id)
+  .single();
+
+// Update user profile
+const { error } = await supabase
+  .from('users')
+  .update({ full_name: newName, avatar_url: newAvatarUrl })
+  .eq('id', user.id);
+```
+
+**User Progress:**
+```typescript
+// Save lesson progress
+const { error } = await supabase
+  .from('user_progress')
+  .insert({
+    user_id: user.id,
+    lesson_id: lessonId,
+    score: score,
+    xp_earned: xpEarned
+  });
+
+// Get user's completed lessons
+const { data, error } = await supabase
+  .from('user_progress')
+  .select('lesson_id, completed_at, xp_earned')
+  .eq('user_id', user.id);
+```
+
+**Conversations:**
+```typescript
+// Get all conversations for a user
+const { data: conversations, error } = await supabase
+  .from('conversations')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('updated_at', { ascending: false });
+
+// Create a new conversation
+const { data: newConversation, error } = await supabase
+  .from('conversations')
+  .insert({
+    user_id: user.id,
+    title: 'New Conversation'
+  })
+  .select()
+  .single();
+
+// Update conversation title
+const { error } = await supabase
+  .from('conversations')
+  .update({ title: newTitle, updated_at: new Date() })
+  .eq('id', conversationId);
+
+// Delete a conversation
+const { error } = await supabase
+  .from('conversations')
+  .delete()
+  .eq('id', conversationId);
+```
+
+**Messages:**
+```typescript
+// Get all messages for a conversation
+const { data: messages, error } = await supabase
+  .from('messages')
+  .select('*')
+  .eq('conversation_id', conversationId)
+  .order('timestamp', { ascending: true });
+
+// Add a new message to a conversation
+const { data: newMessage, error } = await supabase
+  .from('messages')
+  .insert({
+    conversation_id: conversationId,
+    content: messageContent,
+    role: 'user' // or 'assistant'
+  })
+  .select()
+  .single();
+
+// Update conversation timestamp when adding a message
+const { error: updateError } = await supabase
+  .from('conversations')
+  .update({ updated_at: new Date() })
+  .eq('id', conversationId);
+```
+
 ## Changelog
+
+### 2025-05-20
+- Implemented chat history backend:
+  - Created a dedicated Express/MongoDB backend for storing and retrieving chat history
+  - Implemented RESTful API endpoints for managing conversations
+  - Added conversation service for frontend integration
+  - Updated chat interface to use the conversation service
+  - Added conversation selector UI for switching between conversations
+  - Implemented automatic saving of chat messages to the backend
+  - Added fallback to localStorage for unauthenticated users
+
+- Updated authentication implementation:
+  - Fixed email verification detection in `sign-up-form.tsx` to properly check for `confirmation_sent_at` property
+  - Improved sign-up form UI with better conditional rendering
+  - Moved "Already have an account?" link from register page to sign-up form component
+  - Removed redundant "Go to Login" button from verification screen
+  - Updated profile page layout with improved responsive width
+  - Streamlined navigation flow after authentication to direct users to chat
 
 ### 2025-05-19
 - Added JSON continuation feature documentation

@@ -82,11 +82,13 @@ The authentication system handles user registration, login, and session manageme
 
 The authentication system includes:
 
-- Email verification flow for new user registrations
+- Email verification flow for new user registrations with proper verification detection
+- Improved sign-up form with cleaner UI and better user feedback
 - Conditional UI elements based on authentication state
 - Protected routes for authenticated users only
 - Consistent layout with header visibility control
 - Sign-out functionality accessible from the header
+- Streamlined navigation flow after authentication
 
 ### 3.3. Chat System
 
@@ -524,11 +526,16 @@ const question: ChoiceQuestion = {
 - Integration with Supabase Auth API
 - Email verification flow with confirmation message
 - Error handling and feedback
+- Responsive design with clean UI
 
 **Implementation Details:**
 - Uses the AuthContext for registration functionality
 - Shows a verification message after successful registration
-- Provides a link to the login page for existing users
+- Properly detects verification status using the `confirmation_sent_at` property
+- Conditional rendering of UI elements based on verification state
+- Includes "Already have an account?" link directly in the component
+- Streamlined navigation flow to direct users to the chat page after authentication
+- Simplified verification UI with clear instructions and visual indicators
 
 #### `/src/components/auth/sign-in-form.tsx`
 
@@ -601,14 +608,390 @@ const question: ChoiceQuestion = {
 - `continueJsonResponse()`: Handles the automatic continuation of incomplete JSON
 - `getAIResponse(userMessage: string, addToChat: boolean)`: Enhanced to support JSON continuation
 
-## 14. Changelog
+## 14. Backend Services
+
+### 14.1. Supabase
+
+We use Supabase for authentication and data storage. The Supabase client is initialized in `lib/supabase.ts`.
+
+### 14.2. Chat History Backend
+
+We've implemented a dedicated backend service for storing and retrieving chat history. The backend is built with Express, TypeScript, and MongoDB, providing a RESTful API for managing conversations.
+
+#### 14.2.1. Key Features
+
+- Store and retrieve chat conversations with the Gemini AI
+- Organize conversations by user
+- Add messages to existing conversations
+- Update conversation details
+- Delete conversations
+
+#### 14.2.2. API Endpoints
+
+| Method | Endpoint                      | Description                       |
+|--------|-------------------------------|-----------------------------------|
+| GET    | /api/conversations/user/:userId | Get all conversations for a user  |
+| GET    | /api/conversations/:id        | Get a specific conversation       |
+| POST   | /api/conversations            | Create a new conversation         |
+| PUT    | /api/conversations/:id        | Update an existing conversation   |
+| POST   | /api/conversations/:id/messages | Add a message to a conversation   |
+| DELETE | /api/conversations/:id        | Delete a conversation             |
+
+#### 14.2.3. Integration with Frontend
+
+The frontend interacts with this API using the `conversation-service.ts` service, which provides functions for all the API endpoints. The chat interface has been updated to use this service for storing and retrieving chat history.
+
+#### 14.2.4. Project Structure
+
+```
+paw-fi-be/
+├── src/
+│   ├── config/
+│   │   └── db.ts                 # Database connection
+│   ├── controllers/
+│   │   └── conversationController.ts  # API controllers
+│   ├── models/
+│   │   └── Conversation.ts       # MongoDB models
+│   ├── routes/
+│   │   └── conversationRoutes.ts # API routes
+│   └── server.ts                 # Main server file
+├── .env.example                  # Environment variables template
+├── package.json                  # Dependencies and scripts
+└── tsconfig.json                 # TypeScript configuration
+```
+
+## 15. Database Schema
+
+### 15.1. Supabase Tables
+
+The application uses Supabase as its backend-as-a-service (BaaS) solution. The following tables are defined in the Supabase database:
+
+#### 15.1.1. `users`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key, references auth.users.id |
+| email | text | User's email address |
+| full_name | text | User's full name |
+| created_at | timestamp | When the user record was created |
+| updated_at | timestamp | When the user record was last updated |
+| avatar_url | text | URL to the user's avatar image |
+| email_verified | boolean | Whether the user's email has been verified |
+
+**RLS Policies:**
+- Users can read their own records
+- Users can update their own records
+- Service role can insert new records (triggered by auth sign-up)
+
+#### 15.1.2. `user_progress`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References users.id |
+| lesson_id | text | ID of the completed lesson |
+| completed_at | timestamp | When the lesson was completed |
+| score | integer | Score achieved in the lesson |
+| xp_earned | integer | XP points earned from the lesson |
+
+**RLS Policies:**
+- Users can read their own progress records
+- Users can insert their own progress records
+- Users cannot modify existing progress records
+
+#### 15.1.3. `user_preferences`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References users.id |
+| theme | text | UI theme preference |
+| notification_settings | jsonb | Notification preferences |
+| learning_goals | jsonb | User's learning goals and interests |
+
+**RLS Policies:**
+- Users can read their own preference records
+- Users can update their own preference records
+
+#### 15.1.4. `lessons`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| title | text | Lesson title |
+| description | text | Lesson description |
+| content | jsonb | Lesson content including questions |
+| created_at | timestamp | When the lesson was created |
+| updated_at | timestamp | When the lesson was last updated |
+| category_id | uuid | References categories.id |
+| difficulty | text | Lesson difficulty level |
+| xp_reward | integer | XP points awarded for completion |
+| estimated_time | integer | Estimated completion time in minutes |
+
+**RLS Policies:**
+- All users can read lessons
+- Only admins can create/update lessons
+
+#### 15.1.5. `categories`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| name | text | Category name |
+| description | text | Category description |
+| icon | text | Category icon identifier |
+| created_at | timestamp | When the category was created |
+| parent_id | uuid | References categories.id for hierarchical categories |
+
+**RLS Policies:**
+- All users can read categories
+- Only admins can create/update categories
+
+#### 15.1.6. `badges`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| name | text | Badge name |
+| description | text | Badge description |
+| icon | text | Badge icon URL |
+| requirement | jsonb | Requirements to earn the badge |
+| created_at | timestamp | When the badge was created |
+
+**RLS Policies:**
+- All users can read badges
+- Only admins can create/update badges
+
+#### 15.1.7. `user_badges`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References users.id |
+| badge_id | uuid | References badges.id |
+| earned_at | timestamp | When the badge was earned |
+
+**RLS Policies:**
+- Users can read their own badges
+- System can insert badges for users
+
+#### 15.1.8. `learning_paths`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| title | text | Path title |
+| description | text | Path description |
+| lessons | jsonb | Array of lesson IDs in sequence |
+| created_at | timestamp | When the path was created |
+| updated_at | timestamp | When the path was last updated |
+
+**RLS Policies:**
+- All users can read learning paths
+- Only admins can create/update learning paths
+
+#### 15.1.9. `user_learning_paths`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References users.id |
+| path_id | uuid | References learning_paths.id |
+| progress | jsonb | Progress data for the path |
+| started_at | timestamp | When the user started the path |
+| completed_at | timestamp | When the user completed the path |
+
+**RLS Policies:**
+- Users can read their own learning path progress
+- Users can update their own learning path progress
+
+#### 15.1.10. `chat_sessions`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References users.id |
+| session_id | text | Chat session identifier |
+| model | text | AI model used (e.g., 'gemini-pro') |
+| is_active | boolean | Whether the session is active |
+| created_at | timestamp | When the session was created |
+| updated_at | timestamp | When the session was last updated |
+
+**RLS Policies:**
+- Users can read their own chat sessions
+- Users can create new chat sessions
+- Users can update their own chat sessions
+- Users can delete their own chat sessions
+
+#### 15.1.11. `chat_messages`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| conversation_id | uuid | References chat_sessions.id |
+| content | text | Message content |
+| role | text | Message role ('user' or 'assistant') |
+| timestamp | timestamp | When the message was sent |
+| metadata | jsonb | Additional message metadata |
+
+**RLS Policies:**
+- Users can read messages in their own chat sessions
+- Users can insert messages into their own chat sessions
+
+### 14.2. Authentication Tables
+
+Supabase Auth provides several built-in tables for authentication management:
+
+- `auth.users`: Stores user credentials and authentication details
+- `auth.sessions`: Manages user sessions
+- `auth.refresh_tokens`: Handles token refresh for authenticated sessions
+
+### 14.3. Database Triggers
+
+- `on_auth_user_created`: Creates a new record in the `users` table when a user signs up
+- `on_user_updated`: Updates the `auth.users` metadata when a user updates their profile
+
+## 15. Chat System Architecture
+
+### 15.1. Edge Functions
+
+The chat system uses Supabase Edge Functions to handle chat history management. Edge Functions are serverless functions that run on Supabase's infrastructure, providing a scalable and efficient way to handle backend operations.
+
+#### 15.1.1. `chat_sessions` Edge Function
+
+**Purpose:** Manages chat sessions (conversations) in the database.
+
+**Endpoints:**
+- `GET /chat_sessions`: Retrieves all chat sessions for the authenticated user
+- `GET /chat_sessions/:id`: Retrieves a specific chat session with its messages
+- `POST /chat_sessions`: Creates a new chat session
+- `PUT /chat_sessions/:id`: Updates an existing chat session
+- `DELETE /chat_sessions/:id`: Deletes a chat session
+
+**Implementation Details:**
+- Uses JWT authentication to verify user identity
+- Implements Row Level Security (RLS) to ensure users can only access their own data
+- Handles error cases with appropriate HTTP status codes
+- Validates input data before performing database operations
+
+**Example Usage:**
+```typescript
+// Create a new chat session
+const { data, error } = await supabase.functions.invoke('chat_sessions', {
+  body: {
+    session_id: 'New Chat',
+    model: 'gemini-pro'
+  }
+});
+
+// Get all chat sessions for the current user
+const { data, error } = await supabase.functions.invoke('chat_sessions');
+```
+
+#### 15.1.2. `chat_messages` Edge Function
+
+**Purpose:** Manages messages within chat sessions.
+
+**Endpoints:**
+- `GET /chat_messages/:conversation_id`: Retrieves all messages for a specific chat session
+- `POST /chat_messages`: Adds a new message to a chat session
+
+**Implementation Details:**
+- Verifies that the user owns the chat session before allowing operations
+- Automatically updates the `updated_at` timestamp of the parent chat session when adding messages
+- Supports both user and assistant message roles
+- Handles metadata for advanced message features
+
+**Example Usage:**
+```typescript
+// Add a message to a chat session
+const { data, error } = await supabase.functions.invoke('chat_messages', {
+  body: {
+    conversation_id: 'session-id',
+    content: 'Hello, how can I help you?',
+    role: 'assistant',
+    timestamp: Date.now()
+  }
+});
+
+// Get all messages for a chat session
+const { data, error } = await supabase.functions.invoke('chat_messages', {
+  method: 'GET',
+  query: { conversation_id: 'session-id' }
+});
+```
+
+### 15.2. Frontend Integration
+
+#### 15.2.1. Conversation Service
+
+The `conversation-service.ts` file provides a clean API for interacting with the Edge Functions:
+
+- `getConversations`: Retrieves all chat sessions for the current user
+- `getConversation`: Retrieves a specific chat session with its messages
+- `createConversation`: Creates a new chat session with optional initial messages
+- `updateConversation`: Updates an existing chat session
+- `deleteConversation`: Deletes a chat session
+- `getMessages`: Retrieves all messages for a specific chat session
+- `addMessage`: Adds a new message to a chat session
+
+#### 15.2.2. Chat Interface Component
+
+The `chat-interface.tsx` component provides the user interface for the chat system:
+
+- Displays chat messages with proper formatting and timestamps
+- Handles user input and sends messages to the AI
+- Manages loading states and error handling
+- Provides conversation management (create, switch, delete)
+- Integrates with authentication to show different UI based on user state
+- Implements local storage fallback for offline access
+
+### 15.3. Data Flow
+
+1. **User Authentication**:
+   - User logs in through Supabase Auth
+   - JWT token is stored and used for all subsequent requests
+
+2. **Conversation Management**:
+   - User can create new conversations or select existing ones
+   - Conversations are stored in the `chat_sessions` table
+   - UI displays conversation list with session IDs
+
+3. **Message Exchange**:
+   - User sends a message through the chat interface
+   - Message is sent to the AI service for processing
+   - User message is stored in the `chat_messages` table
+   - AI response is received and stored in the `chat_messages` table
+   - Messages are displayed in the chat interface
+
+4. **Offline Support**:
+   - Messages are also stored in localStorage for offline access
+   - When connection is restored, messages are synchronized with the server
+
+## 16. Changelog
 
 ### 2025-05-20
+- Implemented Supabase Edge Functions for chat history management
+  - Created `chat_sessions` Edge Function for managing conversations
+  - Created `chat_messages` Edge Function for managing messages
+  - Updated database schema to use `chat_sessions` and `chat_messages` tables
+  - Implemented Row Level Security (RLS) for data protection
+  - Added JWT authentication for secure access
+
+- Updated chat interface to use Edge Functions
+  - Refactored conversation service to use the new Edge Functions
+  - Fixed TypeScript types and interfaces for better type safety
+  - Improved error handling and loading states
+  - Added conversation selector UI for switching between conversations
+  - Implemented automatic saving of chat messages to the database
+  - Added localStorage fallback for offline access
+
 - Added authentication integration to the chat interface
   - Implemented conditional UI based on authentication state
   - Added different welcome messages for authenticated/unauthenticated users
   - Disabled input field for unauthenticated users
   - Added sign-in/sign-up buttons for unauthenticated users
+
 - Implemented centralized layout system with PageLayout component
   - Added conditional header visibility based on route
   - Removed duplicate styling from individual pages
