@@ -1,6 +1,6 @@
 import type { Question } from "@/types/learning.types";
 
-// Define all questionnaire questions
+// Define all Chat questions
 export const questions: Question[] = [
     {
       id: 'investingExperience',

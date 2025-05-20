@@ -316,7 +316,7 @@ function HomePage() {
   }, []);
 
   return (
-    <div className="bg-background min-h-screen overflow-x-hidden">
+    <div className="bg-background flex-1 overflow-x-hidden">
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">

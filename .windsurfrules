@@ -10,7 +10,7 @@
     Technical preferences:
     
     - Always use kebab-case for component names (e.g. my-component.tsx)
-    - Favour using React Server Components and Next.js SSR features where possible
+    - Favour using React Server Components and TanStack Router SSR features where possible
     - Minimize the usage of client components ('use client') to small, isolated components
     - Always add loading and error states to data fetching components
     - Implement error handling and error logging

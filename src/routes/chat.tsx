@@ -6,11 +6,11 @@ import catIcon from "@/assets/images/cat.gif";
 // Import the chat interface component
 import { ChatInterface } from "@/components/chat/chat-interface";
 
-export const Route = createFileRoute("/questionnaire")({
-  component: Questionnaire,
+export const Route = createFileRoute("/chat")({
+  component: Chat,
 });
 
-function Questionnaire() {
+function Chat() {
   // This function will be called when the survey is complete
   // It's no longer used for automatic navigation, as the user will click the link in the chat
   const handleSurveyComplete = async (_aiResponse: any) => {
@@ -25,7 +25,7 @@ function Questionnaire() {
   };
 
   return (
-    <div className="h-screen bg-background flex items-center justify-center p-4 md:p-6">
+    <div className="flex items-center justify-center p-4 md:p-6">
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden h-[70vh] flex flex-col">
           {/* Header */}
           <div className="mb-4 flex justify-center items-center">

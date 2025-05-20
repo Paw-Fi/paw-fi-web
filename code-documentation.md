@@ -282,9 +282,9 @@ interface ChoiceQuestionProps {
 - Metadata including question count, duration, and XP value
 - Animation for lesson card entry
 
-### `/src/routes/questionnaire.tsx`
+### `/src/routes/chat.tsx`
 
-**Purpose:** Questionnaire route for personalized recommendations.
+**Purpose:** Chat route for personalized recommendations.
 
 **Implementation:**
 - Uses the chat interface for an interactive experience
@@ -331,9 +331,9 @@ const lesson = getLessonById('lesson-1');
 const lessons = getAllLessons();
 ```
 
-### `/src/data/questionnaire.ts`
+### `/src/data/chat.ts`
 
-**Purpose:** Defines questionnaire questions for user profiling.
+**Purpose:** Defines Chat questions for user profiling.
 
 **Content:**
 - Array of questions using the shared Question type
@@ -341,7 +341,7 @@ const lessons = getAllLessons();
 - Questions focused on financial preferences and goals
 
 **Relationship:**
-- Used by the questionnaire context
+- Used by the Chat context
 - Shared type system with learning questions
 
 ---
@@ -374,9 +374,9 @@ saveToStorage('settings', updatedSettings);
 
 ## 6. Contexts
 
-### `/src/contexts/questionnaire-context.tsx`
+### `/src/contexts/chat-context.tsx`
 
-**Purpose:** Context provider for questionnaire state management.
+**Purpose:** Context provider for Chat state management.
 
 **State Management:**
 - Tracks current step
@@ -387,21 +387,21 @@ saveToStorage('settings', updatedSettings);
 - `nextStep`: Advances to the next question
 - `prevStep`: Returns to the previous question
 - `setAnswer`: Records an answer for a specific question
-- `resetQuestionnaire`: Clears all answers and resets to start
+- `resetChat`: Clears all answers and resets to start
 
 **Usage:**
 ```tsx
 // Provider
-<QuestionnaireProvider>
+<ChatProvider>
   <App />
-</QuestionnaireProvider>
+</chatProvider>
 
 // Consumer
-const { state, nextStep, setAnswer } = useQuestionnaire();
+const { state, nextStep, setAnswer } = useChat();
 ```
 
 **Persistence:**
-- Saves state to localStorage using the 'questionnaire' key
+- Saves state to localStorage using the 'Chat' key
 - Loads previous state on initialization if available
 
 ---
@@ -425,7 +425,7 @@ TanStack Router implementation:
 ### Component Reuse Strategy
 
 The codebase emphasizes component reuse:
-- Shared question components between learning and questionnaire
+- Shared question components between learning and Chat
 - Common validation logic
 - Unified type system
 - Abstract UI components with variants

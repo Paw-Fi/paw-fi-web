@@ -6,7 +6,7 @@ export function LessonNotFound() {
   const navigate = useNavigate();
   
   return (
-    <div className="flex min-h-screen items-center justify-center bg-purple-50 p-4">
+    <div className="flex items-center justify-center p-4">
       <div className="max-w-md rounded-3xl bg-white p-8 text-center shadow-md">
         <h1 className="mb-4 text-xl font-bold">Lesson Not Found</h1>
         <p className="mb-6 text-gray-600">

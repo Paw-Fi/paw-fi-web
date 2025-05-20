@@ -6,7 +6,7 @@ export const Route = createFileRoute('/terms-of-service')({
 
 function TermsOfService() {
   return (
-    <div className="min-h-screen bg-white px-6 py-12 md:px-12 lg:px-24">
+    <div className="flex-1 bg-white px-6 py-12 md:px-12 lg:px-24">
       <div className="mx-auto max-w-4xl">
         <Link 
           to="/" 

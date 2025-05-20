@@ -14,14 +14,24 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as TermsOfServiceImport } from './routes/terms-of-service'
 import { Route as SabinaLearningImport } from './routes/sabina-learning'
 import { Route as ResultsImport } from './routes/results'
-import { Route as QuestionnaireImport } from './routes/questionnaire'
 import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
 import { Route as CookiePolicyImport } from './routes/cookie-policy'
+import { Route as ChatImport } from './routes/chat'
 import { Route as RootImport } from './routes/_root'
+import { Route as RegisterRouteImport } from './routes/register/route'
+import { Route as ProfileRouteImport } from './routes/profile/route'
+import { Route as OnboardingRouteImport } from './routes/onboarding/route'
+import { Route as LoginRouteImport } from './routes/login/route'
+import { Route as DashboardRouteImport } from './routes/dashboard/route'
 import { Route as IndexImport } from './routes/index'
+import { Route as RegisterIndexImport } from './routes/register/index'
+import { Route as ProfileIndexImport } from './routes/profile/index'
+import { Route as OnboardingIndexImport } from './routes/onboarding/index'
+import { Route as LoginIndexImport } from './routes/login/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
 import { Route as FormatIndexImport } from './routes/format/index'
+import { Route as DashboardIndexImport } from './routes/dashboard/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
 import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
@@ -48,12 +58,6 @@ const ResultsRoute = ResultsImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const QuestionnaireRoute = QuestionnaireImport.update({
-  id: '/questionnaire',
-  path: '/questionnaire',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const PrivacyPolicyRoute = PrivacyPolicyImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
@@ -72,8 +76,44 @@ const CookiePolicyRoute = CookiePolicyImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const ChatRoute = ChatImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const RootRoute = RootImport.update({
   id: '/_root',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RegisterRouteRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const ProfileRouteRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const OnboardingRouteRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LoginRouteRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const DashboardRouteRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -81,6 +121,30 @@ const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const RegisterIndexRoute = RegisterIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RegisterRouteRoute,
+} as any)
+
+const ProfileIndexRoute = ProfileIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRouteRoute,
+} as any)
+
+const OnboardingIndexRoute = OnboardingIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const LoginIndexRoute = LoginIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LoginRouteRoute,
 } as any)
 
 const LearningIndexRoute = LearningIndexImport.update({
@@ -93,6 +157,12 @@ const FormatIndexRoute = FormatIndexImport.update({
   id: '/format/',
   path: '/format/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const DashboardIndexRoute = DashboardIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
 } as any)
 
 const AuthorIndexRoute = AuthorIndexImport.update({
@@ -136,11 +206,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/_root': {
       id: '/_root'
       path: ''
       fullPath: ''
       preLoaderRoute: typeof RootImport
+      parentRoute: typeof rootRoute
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatImport
       parentRoute: typeof rootRoute
     }
     '/cookie-policy': {
@@ -162,13 +274,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyImport
-      parentRoute: typeof rootRoute
-    }
-    '/questionnaire': {
-      id: '/questionnaire'
-      path: '/questionnaire'
-      fullPath: '/questionnaire'
-      preLoaderRoute: typeof QuestionnaireImport
       parentRoute: typeof rootRoute
     }
     '/results': {
@@ -220,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorIndexImport
       parentRoute: typeof rootRoute
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/format/': {
       id: '/format/'
       path: '/format'
@@ -234,6 +346,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningIndexImport
       parentRoute: typeof rootRoute
     }
+    '/login/': {
+      id: '/login/'
+      path: '/'
+      fullPath: '/login/'
+      preLoaderRoute: typeof LoginIndexImport
+      parentRoute: typeof LoginRouteImport
+    }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexImport
+      parentRoute: typeof ProfileRouteImport
+    }
+    '/register/': {
+      id: '/register/'
+      path: '/'
+      fullPath: '/register/'
+      preLoaderRoute: typeof RegisterIndexImport
+      parentRoute: typeof RegisterRouteImport
+    }
     '/author/course/$courseId': {
       id: '/author/course/$courseId'
       path: '/author/course/$courseId'
@@ -246,13 +386,78 @@ declare module '@tanstack/react-router' {
 
 // Create and export the route tree
 
+interface DashboardRouteRouteChildren {
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
+interface LoginRouteRouteChildren {
+  LoginIndexRoute: typeof LoginIndexRoute
+}
+
+const LoginRouteRouteChildren: LoginRouteRouteChildren = {
+  LoginIndexRoute: LoginIndexRoute,
+}
+
+const LoginRouteRouteWithChildren = LoginRouteRoute._addFileChildren(
+  LoginRouteRouteChildren,
+)
+
+interface OnboardingRouteRouteChildren {
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+}
+
+const OnboardingRouteRouteChildren: OnboardingRouteRouteChildren = {
+  OnboardingIndexRoute: OnboardingIndexRoute,
+}
+
+const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
+  OnboardingRouteRouteChildren,
+)
+
+interface ProfileRouteRouteChildren {
+  ProfileIndexRoute: typeof ProfileIndexRoute
+}
+
+const ProfileRouteRouteChildren: ProfileRouteRouteChildren = {
+  ProfileIndexRoute: ProfileIndexRoute,
+}
+
+const ProfileRouteRouteWithChildren = ProfileRouteRoute._addFileChildren(
+  ProfileRouteRouteChildren,
+)
+
+interface RegisterRouteRouteChildren {
+  RegisterIndexRoute: typeof RegisterIndexRoute
+}
+
+const RegisterRouteRouteChildren: RegisterRouteRouteChildren = {
+  RegisterIndexRoute: RegisterIndexRoute,
+}
+
+const RegisterRouteRouteWithChildren = RegisterRouteRoute._addFileChildren(
+  RegisterRouteRouteChildren,
+)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/login': typeof LoginRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/profile': typeof ProfileRouteRouteWithChildren
+  '/register': typeof RegisterRouteRouteWithChildren
   '': typeof RootRoute
+  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -260,18 +465,23 @@ export interface FileRoutesByFullPath {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '': typeof RootRoute
+  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -279,19 +489,29 @@ export interface FileRoutesByTo {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
+  '/login': typeof LoginIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/register': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/login': typeof LoginRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/profile': typeof ProfileRouteRouteWithChildren
+  '/register': typeof RegisterRouteRouteWithChildren
   '/_root': typeof RootRoute
+  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/questionnaire': typeof QuestionnaireRoute
   '/results': typeof ResultsRoute
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -299,8 +519,13 @@ export interface FileRoutesById {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author/': typeof AuthorIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/format/': typeof FormatIndexRoute
   '/learning/': typeof LearningIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
 }
 
@@ -308,11 +533,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
     | ''
+    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/questionnaire'
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
@@ -320,17 +550,22 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/dashboard/'
     | '/format'
     | '/learning'
+    | '/login/'
+    | '/onboarding/'
+    | '/profile/'
+    | '/register/'
     | '/author/course/$courseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | ''
+    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/questionnaire'
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
@@ -338,17 +573,27 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/dashboard'
     | '/format'
     | '/learning'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
     | '/author/course/$courseId'
   id:
     | '__root__'
     | '/'
+    | '/dashboard'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
     | '/_root'
+    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/questionnaire'
     | '/results'
     | '/sabina-learning'
     | '/terms-of-service'
@@ -356,19 +601,29 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author/'
+    | '/dashboard/'
     | '/format/'
     | '/learning/'
+    | '/login/'
+    | '/onboarding/'
+    | '/profile/'
+    | '/register/'
     | '/author/course/$courseId'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  LoginRouteRoute: typeof LoginRouteRouteWithChildren
+  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
+  ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
+  RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
   RootRoute: typeof RootRoute
+  ChatRoute: typeof ChatRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
-  QuestionnaireRoute: typeof QuestionnaireRoute
   ResultsRoute: typeof ResultsRoute
   SabinaLearningRoute: typeof SabinaLearningRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
@@ -383,11 +638,16 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  LoginRouteRoute: LoginRouteRouteWithChildren,
+  OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
+  ProfileRouteRoute: ProfileRouteRouteWithChildren,
+  RegisterRouteRoute: RegisterRouteRouteWithChildren,
   RootRoute: RootRoute,
+  ChatRoute: ChatRoute,
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
-  QuestionnaireRoute: QuestionnaireRoute,
   ResultsRoute: ResultsRoute,
   SabinaLearningRoute: SabinaLearningRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
@@ -411,11 +671,16 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/dashboard",
+        "/login",
+        "/onboarding",
+        "/profile",
+        "/register",
         "/_root",
+        "/chat",
         "/cookie-policy",
         "/intro",
         "/privacy-policy",
-        "/questionnaire",
         "/results",
         "/sabina-learning",
         "/terms-of-service",
@@ -431,8 +696,41 @@ export const routeTree = rootRoute
     "/": {
       "filePath": "index.tsx"
     },
+    "/dashboard": {
+      "filePath": "dashboard/route.tsx",
+      "children": [
+        "/dashboard/"
+      ]
+    },
+    "/login": {
+      "filePath": "login/route.tsx",
+      "children": [
+        "/login/"
+      ]
+    },
+    "/onboarding": {
+      "filePath": "onboarding/route.tsx",
+      "children": [
+        "/onboarding/"
+      ]
+    },
+    "/profile": {
+      "filePath": "profile/route.tsx",
+      "children": [
+        "/profile/"
+      ]
+    },
+    "/register": {
+      "filePath": "register/route.tsx",
+      "children": [
+        "/register/"
+      ]
+    },
     "/_root": {
       "filePath": "_root.tsx"
+    },
+    "/chat": {
+      "filePath": "chat.tsx"
     },
     "/cookie-policy": {
       "filePath": "cookie-policy.tsx"
@@ -442,9 +740,6 @@ export const routeTree = rootRoute
     },
     "/privacy-policy": {
       "filePath": "privacy-policy.tsx"
-    },
-    "/questionnaire": {
-      "filePath": "questionnaire.tsx"
     },
     "/results": {
       "filePath": "results.tsx"
@@ -467,11 +762,31 @@ export const routeTree = rootRoute
     "/author/": {
       "filePath": "author/index.tsx"
     },
+    "/dashboard/": {
+      "filePath": "dashboard/index.tsx",
+      "parent": "/dashboard"
+    },
     "/format/": {
       "filePath": "format/index.tsx"
     },
     "/learning/": {
       "filePath": "learning/index.tsx"
+    },
+    "/login/": {
+      "filePath": "login/index.tsx",
+      "parent": "/login"
+    },
+    "/onboarding/": {
+      "filePath": "onboarding/index.tsx",
+      "parent": "/onboarding"
+    },
+    "/profile/": {
+      "filePath": "profile/index.tsx",
+      "parent": "/profile"
+    },
+    "/register/": {
+      "filePath": "register/index.tsx",
+      "parent": "/register"
     },
     "/author/course/$courseId": {
       "filePath": "author/course/$courseId.tsx"

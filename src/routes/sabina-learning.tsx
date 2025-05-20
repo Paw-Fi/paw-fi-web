@@ -153,7 +153,7 @@ function LearningPage() {
   }, [lessons]);
 
   return (  
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="flex-1 bg-background py-12 px-4">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold mb-2">{course?.title}</h1>

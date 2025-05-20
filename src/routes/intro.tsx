@@ -101,7 +101,7 @@ function IntroPage() {
   // Using direct Link components with viewTransition prop
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center">
+    <div className="bg-background flex flex-1 items-center justify-center">
       <div
         className="relative flex w-full max-w-[90vw] lg:max-w-md flex-col gap-4 overflow-hidden rounded-3xl bg-white  shadow-lg lg:h-[30rem] h-[55vh]"
       >
@@ -156,7 +156,7 @@ function IntroPage() {
         {showButton && (
           <div ref={buttonRef} className="flex justify-center">
             <Link
-              to="/questionnaire"
+              to="/chat"
               viewTransition={{ types: ["slide-left"] }}
               className="inline-block rounded-lg bg-[#1b1b1b] px-6 py-3 text-center font-medium text-white hover:opacity-90"
             >

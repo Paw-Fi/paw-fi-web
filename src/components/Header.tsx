@@ -1,18 +1,273 @@
-// import { Link } from '@tanstack/react-router'
+'use client';
+
+import { useState } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function Header() {
-  return (
-    <></>
-    // <header className="p-2 flex gap-2 bg-white text-black justify-between">
-    //   <nav className="flex flex-row">
-    //     <div className="px-2 font-bold">
-    //       <Link to="/">Home</Link>
-    //     </div>
+  const { user, signOut, isLoading } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  const handleSignOut = async () => {
+    try {
+      const result = await signOut();
+      if (result.success) {
+        navigate({ to: '/' });
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
-    //     <div className="px-2 font-bold">
-    //       <Link to="/demo/tanstack-query">TanStack Query</Link>
-    //     </div>
-    //   </nav>
-    // </header>
-  )
+  return (
+    <header className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Logo and main navigation */}
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" className="text-xl font-bold text-primary">Paw-Fi</Link>
+            </div>
+            <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <Link 
+                to="/" 
+                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                activeProps={{
+                  className: "inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-gray-900"
+                }}
+              >
+                Home
+              </Link>
+              <Link 
+                to="/learning" 
+                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                activeProps={{
+                  className: "inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-gray-900"
+                }}
+              >
+                Learning
+              </Link>
+              <Link 
+                to="/chat" 
+                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                activeProps={{
+                  className: "inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-gray-900"
+                }}
+              >
+                AI Chat
+              </Link>
+            </nav>
+          </div>
+
+          {/* User account section */}
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            {isLoading ? (
+              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
+            ) : user ? (
+              <div className="relative">
+                <div>
+                  <button 
+                    type="button"
+                    className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  >
+                    <span className="sr-only">Open user menu</span>
+                    {user.user_metadata?.avatar_url ? (
+                      <img
+                        className="h-8 w-8 rounded-full"
+                        src={user.user_metadata.avatar_url}
+                        alt="User avatar"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
+                        {user.email?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                  </button>
+                </div>
+                {isMenuOpen && (
+                  <div 
+                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    onBlur={() => setIsMenuOpen(false)}
+                  >
+                    <div className="px-4 py-2 text-xs text-gray-500">
+                      Signed in as <span className="font-medium">{user.email}</span>
+                    </div>
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Your Profile
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleSignOut();
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex space-x-4">
+                <Link
+                  to="/login"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-white hover:bg-gray-50"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="-mr-2 flex items-center sm:hidden">
+            <button 
+              type="button" 
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              <span className="sr-only">Open main menu</span>
+              {isMenuOpen ? (
+                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu, show/hide based on menu state */}
+      {isMenuOpen && (
+        <div className="sm:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            <Link
+              to="/"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+              activeProps={{
+                className: "block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary bg-primary/10"
+              }}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/learning"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+              activeProps={{
+                className: "block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary bg-primary/10"
+              }}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Learning
+            </Link>
+            <Link
+              to="/chat"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+              activeProps={{
+                className: "block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary bg-primary/10"
+              }}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              AI Chat
+            </Link>
+          </div>
+          
+          {/* Mobile user menu */}
+          {user ? (
+            <div className="pt-4 pb-3 border-t border-gray-200">
+              <div className="flex items-center px-4">
+                <div className="flex-shrink-0">
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      className="h-10 w-10 rounded-full"
+                      src={user.user_metadata.avatar_url}
+                      alt="User avatar"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center">
+                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <div className="text-base font-medium text-gray-800">
+                    {user.user_metadata?.full_name || 'User'}
+                  </div>
+                  <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1">
+                <Link
+                  to="/profile"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Your Profile
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleSignOut();
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-4 pb-3 border-t border-gray-200">
+              <div className="space-y-1">
+                <Link
+                  to="/login"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/register"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign up
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </header>
+  );
 }

@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import type { Lesson } from "@/types/learning.types";
 import { sendMessageToGemini, createChatSession } from "@/services/gemini-service";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Message {
   content: string;
@@ -19,9 +20,13 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: ChatInterfaceProps) {
+  // Get authentication state
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+
   // State for chat messages
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentMessage, setCurrentMessage] = useState("start");
+  const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Thinking...");
   
@@ -34,8 +39,12 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
   const inputRef = useRef<HTMLInputElement>(null);
   const chatSessionRef = useRef<any>(null);
   
-  // Get AI prompt from environment variable
-  const welcomeMessage = "Hi I'm Paw-FI! I'll help you learn about personal finance. Type 'start' to begin.";
+  // Different welcome messages based on authentication state
+  const authenticatedMessage = "Hi I'm Paw-FI! I'll help you learn about personal finance. Type 'start' to begin.";
+  const unauthenticatedMessage = "Hi I'm Paw-FI! Sign in to start learning about personal finance with me.";
+  
+  // Choose the appropriate welcome message
+  const welcomeMessage = isAuthenticated ? authenticatedMessage : unauthenticatedMessage;
 
   // Initialize chat session
   useEffect(() => {
@@ -700,7 +709,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       
       {/* Input area */}
       <div className="bg-white border-t border-gray-200 p-3">
-        <form onSubmit={handleSubmit} className="flex items-end">
+        {isAuthenticated ? (
+          <form onSubmit={handleSubmit} className="flex items-end">
             <input
               ref={inputRef}
               value={currentMessage}
@@ -714,29 +724,48 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
                 }
               }}
             />
-        
-          <Button
-            type="submit"
-            variant="dark"
-            disabled={!currentMessage.trim() || isLoading}
-            className="ml-2 p-3 rounded-full h-12 w-12 flex items-center justify-center bg-purple-600 hover:bg-purple-700 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          
+            <Button
+              type="submit"
+              variant="dark"
+              disabled={!currentMessage.trim() || isLoading}
+              className="ml-2 p-3 rounded-full h-12 w-12 flex items-center justify-center bg-purple-600 hover:bg-purple-700 transition-colors"
             >
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </Button>
-        </form>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </Button>
+          </form>
+        ) : (
+          <div className="flex flex-col items-center space-y-3 py-2">
+            <p className="text-gray-500 text-sm">Sign in to chat with Paw-Fi</p>
+            <div className="flex space-x-3">
+              <Link
+                to="/login"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/register"
+                className="px-4 py-2 border border-purple-600 text-purple-600 rounded-md hover:bg-purple-50 transition-colors"
+              >
+                Sign Up
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

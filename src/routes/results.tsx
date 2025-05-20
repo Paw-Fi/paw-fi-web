@@ -109,7 +109,7 @@ function Results() {
   return (
     <div
       ref={resultsRef}
-      className="bg-background flex min-h-screen flex-col [view-transition-name:main-content]"
+      className="bg-background flex flex-1 flex-col [view-transition-name:main-content]"
     >
       <div className="m-auto max-h-[95vh] max-w-md w-[95vw] lg:min-w-[40rem] overflow-hidden rounded-3xl bg-white p-6 shadow-lg">
         {/* Header */}

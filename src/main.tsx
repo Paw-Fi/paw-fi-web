@@ -13,7 +13,8 @@ import './lib/gsap-config'
 import { routeTree } from './routeTree.gen'
 
 import reportWebVitals from './reportWebVitals.ts'
-import { QuestionnaireProvider } from './contexts/questionnaire-context.tsx'
+import { ChatProvider } from './contexts/chat-context.tsx'
+import { AuthProvider } from './contexts/auth-context.tsx'
 
 // Create a new router instance
 const router = createRouter({
@@ -58,14 +59,12 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Render the app
-const rootElement = document.getElementById('app')
-if (rootElement && !rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement)
-  root.render(
-    <StrictMode>
-      <TanstackQuery.Provider>
-        <QuestionnaireProvider>
+// Create a wrapper component that includes all providers
+function App() {
+  return (
+    <TanstackQuery.Provider>
+      <AuthProvider>
+        <ChatProvider>
           <ToastContainer 
             position="top-right"
             autoClose={5000}
@@ -79,8 +78,19 @@ if (rootElement && !rootElement.innerHTML) {
             theme="light"
           />
           <RouterProvider router={router} />
-        </QuestionnaireProvider>
-      </TanstackQuery.Provider>
+        </ChatProvider>
+      </AuthProvider>
+    </TanstackQuery.Provider>
+  );
+}
+
+// Render the app
+const rootElement = document.getElementById('app')
+if (rootElement && !rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement)
+  root.render(
+    <StrictMode>
+      <App />
     </StrictMode>,
   )
 }

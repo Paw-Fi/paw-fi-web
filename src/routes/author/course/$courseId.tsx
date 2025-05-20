@@ -250,7 +250,7 @@ function CourseEditorPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -258,7 +258,7 @@ function CourseEditorPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="bg-red-50 p-6 rounded-lg max-w-md w-full">
           <h2 className="text-red-800 text-xl font-semibold mb-2">Error</h2>
           <p className="text-red-700">{error}</p>
@@ -275,7 +275,7 @@ function CourseEditorPage() {
 
   if (!course) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="bg-yellow-50 p-6 rounded-lg max-w-md w-full">
           <h2 className="text-yellow-800 text-xl font-semibold mb-2">Course Not Found</h2>
           <p className="text-yellow-700">The course you're looking for could not be found.</p>

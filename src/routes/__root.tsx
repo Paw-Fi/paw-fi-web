@@ -1,9 +1,7 @@
-import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
+import { createRootRouteWithContext } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import Header from '../components/Header'
-
 import TanstackQueryLayout from '../integrations/tanstack-query/layout'
+import PageLayout from '../components/layout/page-layout'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -13,13 +11,10 @@ interface MyRouterContext {
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   component: () => (
-    <>
-      <Header />
-
-      <Outlet />
+    <div className="flex flex-col h-screen">
+      <PageLayout />
       <TanStackRouterDevtools />
-
       <TanstackQueryLayout />
-    </>
+    </div>
   ),
 })

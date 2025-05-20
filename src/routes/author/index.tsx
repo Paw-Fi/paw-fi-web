@@ -72,7 +72,7 @@ function AuthorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="flex-1 bg-background py-12 px-4">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-3">Course Creator Studio</h1>
