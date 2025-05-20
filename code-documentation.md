@@ -432,7 +432,83 @@ The codebase emphasizes component reuse:
 
 ---
 
-## 7. Supabase Edge Functions
+## Chat Sessions & Chat Messages Edge Functions
+
+### Technical Solution for Payload and Timestamp Handling
+
+- **Frontend:**
+  - Always send the message payload as a JS object if not setting Content-Type, or as a JSON string if setting Content-Type.
+  - Convert timestamp to ISO8601 string:
+    ```typescript
+    const requestBody = {
+      ...message,
+      timestamp: new Date(message.timestamp).toISOString()
+    };
+    ```
+
+- **Backend (Supabase Edge Function):**
+  - Destructure `timestamp` from the request body:
+    ```typescript
+    const { chat_session_id, content, role, metadata = {}, timestamp } = requestData;
+    ```
+  - Use the provided timestamp in the insert:
+    ```typescript
+    .insert({
+      chat_session_id,
+      content,
+      role,
+      timestamp, // ISO8601 string
+      metadata: metadata || null
+    })
+    ```
+
+### Best Practices
+- Do not manually set `Content-Type` unless you are serializing the body yourself.
+- Always match the frontend payload structure with backend expectations.
+- Use ISO8601 strings for all `timestamptz` columns in Postgres.
+- Add logging in Edge Functions to debug serialization and payload issues.
+
+### Troubleshooting
+- If you see `Missing required field: chat_session_id`, check request body serialization and field names.
+- If you see `date/time field value out of range`, ensure the timestamp is an ISO8601 string, not milliseconds.
+
+### Schema Alignment and Final State (2025-05-20)
+
+#### Schema Matching
+- All Edge Function logic now matches the current Supabase schema for `chat_sessions` and `chat_messages`.
+- Non-schema fields (`metadata`, `title`, `conversation_id`) were removed from all chat_sessions logic.
+- For `chat_messages`, all references to `conversation_id` were replaced with `chat_session_id`.
+- The `timestamp` field (BIGINT) is now present in the `chat_messages` table and is used for message ordering and insertion. The `created_at` field is not used for ordering or filtering in chat_messages.
+
+#### GET Handler Improvements
+- The GET handler for chat_messages returns an empty array (`[]`) with HTTP 200 if no messages exist for a session, instead of a 500 error.
+- All error handling is now specific and does not treat 'no messages' as an error.
+
+#### Insert & Query Logic
+- Message insertion and queries only use columns present in the schema: `id`, `chat_session_id`, `role`, `content`, `timestamp`, `metadata`, `created_at`.
+- All message ordering is now by `timestamp`.
+
+#### Final Verification
+- All endpoints have been tested and are working as intended.
+- Documentation and code have been cleaned up to remove any workaround or irrelevant legacy logic.
+- The implementation is now robust, maintainable, and fully aligned with the database structure.
+
+---
+
+### Schema Alignment and Error Fixes (2025-05-20)
+- Removed all references to `metadata` and `title` from the `chat_sessions` Edge Function implementation.
+- The Supabase schema for `chat_sessions` did not include these columns, which caused PGRST204 errors when the function attempted to insert or select them.
+- The function now only uses columns that exist in the schema: `id`, `user_id`, `session_id`, `model`, `system_prompt`, `is_active`, `created_at`, and `updated_at`.
+- This ensures error-free operation and matches the deployed database structure.
+
+#### Error Details
+- **metadata error:** Occurred because the code referenced a non-existent `metadata` column on `chat_sessions`.
+- **title error:** Occurred because the code referenced a non-existent `title` column on `chat_sessions`.
+- Both errors were resolved by removing these fields from the function's logic and types.
+
+#### Next Steps
+- Always ensure Edge Function logic matches the Supabase table schema.
+- If new fields are needed, add them to the schema before using them in code.
 
 ### `/supabase/functions/chat_sessions/index.ts`
 

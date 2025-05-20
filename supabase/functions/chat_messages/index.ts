@@ -6,10 +6,9 @@ console.log(`Function "chat_messages" up and running!`);
 // Define types for our data
 interface Message {
   id?: string;
-  conversation_id: string;
+  chat_session_id: string;
   content: string;
   role: 'user' | 'assistant';
-  timestamp: number;
   metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
@@ -128,41 +127,42 @@ Deno.serve(async (req: Request) => {
     const { method } = req;
     const url = new URL(req.url);
     const path = url.pathname.split('/').filter(Boolean);
-    const conversationId = path[1]; // /chat_messages/:conversation_id
+    const chatSessionId = path[1]; // /chat_messages/:chat_session_id
 
     // Handle different HTTP methods
     switch (method) {
       case 'GET':
-        // Get all messages for a conversation
-        if (!conversationId) {
-          return createErrorResponse(400, 'Conversation ID is required');
+        // Get all messages for a chat_session_id
+        if (!chatSessionId) {
+          return createErrorResponse(400, 'Chat session ID is required');
         }
 
         try {
-          // Verify the user owns this conversation
-          const { data: conversation, error: conversationError } = await supabase
+          // Verify the user owns this chat_session_id
+          const { data: chat_session_id, error: chat_session_idError } = await supabase
             .from('chat_sessions')
             .select('*')
-            .eq('id', conversationId)
+            .eq('id', chatSessionId)
             .eq('user_id', user.id)
             .single();
 
-          if (conversationError || !conversation) {
+          if (chat_session_idError || !chat_session_id) {
             return createErrorResponse(404, 'Conversation not found or access denied');
           }
 
-          // Get the messages for this conversation
+          // Get the messages for this chat_session_id
           const { data: messages, error: messagesError } = await supabase
             .from('chat_messages')
             .select('*')
-            .eq('conversation_id', conversationId)
+            .eq('chat_session_id', chatSessionId)
             .order('timestamp', { ascending: true });
 
           if (messagesError) {
             return createErrorResponse(500, 'Failed to fetch messages', messagesError);
           }
 
-          return new Response(JSON.stringify(messages), {
+          // Always return an array (empty if no messages)
+          return new Response(JSON.stringify(messages ?? []), {
             status: 200,
             headers
           });
@@ -179,7 +179,7 @@ Deno.serve(async (req: Request) => {
         console.log('URL:', req.url);
         console.log('Headers:', Object.fromEntries(req.headers.entries()));
         
-        // Add a message to a conversation
+        // Add a message to a chat_session_id
         let requestData;
         let rawBody: string = '';
         try {
@@ -199,18 +199,30 @@ Deno.serve(async (req: Request) => {
           return createErrorResponse(400, 'Invalid JSON in request body', { rawBody });
         }
         
+        // Extra debug logging for requestData and extracted fields
+        console.log('=== DEBUG: requestData ===', JSON.stringify(requestData, null, 2));
+        // Log all keys in requestData
+        console.log('Keys in requestData:', Object.keys(requestData));
+        // Log all values in requestData
+        Object.entries(requestData).forEach(([k, v]) => console.log(`requestData[${k}] =`, v));
+
         // Extract fields from request data with defaults
         const { 
-          conversation_id, 
+          chat_session_id, 
           content, 
           role, 
-          timestamp = new Date().toISOString(), 
-          metadata = {} 
+          metadata = {},
+          timestamp
         } = requestData;
+        // Log extracted fields
+        console.log('Extracted chat_session_id:', chat_session_id);
+        console.log('Extracted content:', content);
+        console.log('Extracted role:', role);
+        console.log('Extracted metadata:', metadata);
 
         // Check for required fields
-        if (!conversation_id) {
-          return createErrorResponse(400, 'Missing required field: conversation_id');
+        if (!chat_session_id) {
+          return createErrorResponse(400, 'Missing required field: chat_session_id');
         }
         
         if (!content) {
@@ -221,15 +233,15 @@ Deno.serve(async (req: Request) => {
           return createErrorResponse(400, 'Missing required field: role');
         }
 
-        // Verify the user owns this conversation
-        const { data: conversationToAddTo, error: verifyError } = await supabase
+        // Verify the user owns this chat_session_id
+        const { data: chat_session_idToAddTo, error: verifyError } = await supabase
           .from('chat_sessions')
           .select('*')
-          .eq('id', conversation_id)
+          .eq('id', chat_session_id)
           .eq('user_id', user.id)
           .single();
 
-        if (verifyError || !conversationToAddTo) {
+        if (verifyError || !chat_session_idToAddTo) {
           return createErrorResponse(404, 'Conversation not found or access denied');
         }
 
@@ -237,10 +249,10 @@ Deno.serve(async (req: Request) => {
         const { data: newMessage, error: addError } = await supabase
           .from('chat_messages')
           .insert({
-            conversation_id,
+            chat_session_id,
             content,
             role,
-            timestamp: timestamp || new Date().toISOString(),
+            timestamp,
             metadata: metadata || null
           })
           .select()
@@ -250,14 +262,14 @@ Deno.serve(async (req: Request) => {
           return createErrorResponse(500, 'Failed to add message', addError);
         }
 
-        // Update the conversation's updated_at timestamp
+        // Update the chat_session_id's updated_at timestamp
         const { error: updateError } = await supabase
           .from('chat_sessions')
           .update({ updated_at: new Date().toISOString() })
-          .eq('id', conversation_id);
+          .eq('id', chat_session_id);
 
         if (updateError) {
-          console.error('Error updating conversation timestamp:', updateError);
+          console.error('Error updating chat_session_id timestamp:', updateError);
         }
 
         return new Response(JSON.stringify(newMessage), {

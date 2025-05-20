@@ -348,21 +348,6 @@ This documentation follows the codebase structure:
 
 When updating the documentation, add a changelog entry in this format:
 
-```markdown
-## Changelog Entry - YYYY-MM-DD
-
-### Added/Modified/Removed
-- [Component/File Name] - Brief description of change
-- [Component/File Name] - Brief description of change
-
-### Impact Analysis
-- Which components are affected and how
-- Any breaking changes that require attention
-
-### Future Considerations
-- Technical debt or follow-up tasks related to this change
-```
-
 ## 11. Future Enhancements
 
 Potential areas for future development:

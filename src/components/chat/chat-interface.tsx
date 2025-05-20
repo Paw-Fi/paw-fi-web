@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
-import type { Lesson } from "@/types/learning.types";
 import { sendMessageToGemini, createChatSession } from "@/services/gemini-service";
 import { useAuth } from "@/contexts/auth-context";
 // Import conversation service functions
@@ -15,6 +14,7 @@ interface Message {
   content: string;
   role: 'user' | 'assistant';
   timestamp: number;
+  chat_session_id: string;
   metadata?: Record<string, any>;
 }
 
@@ -30,6 +30,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
 
   // State for chat messages
   const [messages, setMessages] = useState<Message[]>([]);
+  // Track when messages are loaded from the backend
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Thinking...");
@@ -54,6 +56,22 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
   // Choose the appropriate welcome message
   const welcomeMessage = isAuthenticated ? authenticatedMessage : unauthenticatedMessage;
 
+  // Auto-add welcome message to current conversation if needed
+  useEffect(() => {
+    if (isAuthenticated && currentConversationId && messagesLoaded && messages.length === 0) {
+      const welcomeMsg: Message = {
+        content: authenticatedMessage,
+        role: 'assistant',
+        timestamp: Date.now(),
+        chat_session_id: currentConversationId
+      };
+      saveMessageToConversation(welcomeMsg).then(() => {
+        setMessages([welcomeMsg]);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, currentConversationId, messagesLoaded, messages.length]);
+
   // Initialize chat session
   useEffect(() => {
     // Create a new chat session with the Gemini API
@@ -77,12 +95,14 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         role: "assistant",
         timestamp: Date.now(),
       }]);
+      setMessagesLoaded(true);
     }
   }, [isAuthenticated, welcomeMessage, messages.length]);
   
   // Load conversation messages when conversation changes
   useEffect(() => {
     if (currentConversationId) {
+      setMessagesLoaded(false); // Reset before loading
       // Save the current conversation ID to localStorage
       localStorage.setItem('paw-fi-current-conversation', currentConversationId);
       loadConversation(currentConversationId);
@@ -223,31 +243,36 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       } else {
         setMessages([]);
       }
+      setMessagesLoaded(true);
     } catch (error) {
       console.error('Error loading conversation:', error);
       setMessages([]);
+      setMessagesLoaded(true);
     }
   };
 
   // Create a new conversation
   const createNewConversation = async (userId: string) => {
     try {
-      const initialMessage: Message = {
-        content: welcomeMessage,
-        role: 'assistant',
-        timestamp: Date.now()
-      };
-      
+      // 1. Create the chat session
       const newConversation = await createConversation(
         supabase,
         userId,
-        `Conversation ${conversations.length + 1}`,
-        [initialMessage]
+        `Conversation ${conversations.length + 1}`
       );
-      
+
+      // 2. Add the welcome message as the first message in chat_messages
+      const initialMessage: Message = {
+        content: welcomeMessage,
+        role: 'assistant',
+        timestamp: Date.now(),
+        chat_session_id: newConversation.id
+      };
+      await addMessage(supabase, initialMessage);
+
       setCurrentConversationId(newConversation.id);
       setMessages([initialMessage]);
-      
+
       // Refresh the conversations list
       loadUserConversations();
     } catch (error) {
@@ -269,7 +294,12 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       }
       
       console.log('Saving message to conversation:', currentConversationId);
-      const savedMessage = await addMessage(supabase, currentConversationId, message);
+      // Ensure chat_session_id is present
+    const messageWithSessionId = {
+      ...message,
+      chat_session_id: currentConversationId
+    };
+    const savedMessage = await addMessage(supabase, messageWithSessionId);
       
       if (!savedMessage) {
         throw new Error('Failed to save message to server');
@@ -367,6 +397,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         content: "Sorry, I encountered an error while processing the data. Please try again.",
         role: "assistant",
         timestamp: Date.now(),
+        chat_session_id: currentConversationId!
       };
       
       setMessages([...messages, errorMessage]);
@@ -392,7 +423,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     const userMessage: Message = {
       content,
       role: 'user',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      chat_session_id: currentConversationId ?? undefined
     };
 
     try {
@@ -424,8 +456,9 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         setCurrentConversationId(newConversation.id);
         conversationId = newConversation.id;
         
-        // Save the message to the new conversation
-        await addMessage(supabase, conversationId, userMessage);
+        // Update the message's chat_session_id to the new conversation's id
+        const userMessageWithSession: Message = { ...userMessage, chat_session_id: newConversation.id };
+        await addMessage(supabase, userMessageWithSession);
         
         // Refresh conversations list
         await loadUserConversations();
@@ -455,7 +488,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         const assistantMessage: Message = {
           content: responseContent,
           role: 'assistant',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          chat_session_id: currentConversationId!
         };
         
         setMessages(prev => [...prev, assistantMessage]);
@@ -475,7 +509,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
           content: 'Sorry, I encountered an error while processing your request. Please try again.',
           role: 'assistant',
           timestamp: Date.now(),
-          metadata: { isError: true }
+          metadata: { isError: true },
+          chat_session_id: currentConversationId!
         };
         
         setMessages(prev => [...prev, errorMessage]);
@@ -512,44 +547,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
 
   return (
     <div className="flex flex-col h-full border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-      {/* Chat header */}
-      <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <img
-            src="/assets/images/paw-fi-logo.png"
-            alt="Paw-Fi Logo"
-            className="h-8 w-8 mr-2"
-          />
-          <h2 className="text-lg font-semibold text-gray-800">Paw-Fi Assistant</h2>
-        </div>
-        {currentConversationId && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteConversation(currentConversationId)}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-1"
-            >
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-            </svg>
-            Delete Chat
-          </Button>
-        )}
-      </div>
-      
+
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
         <div className="space-y-4">
@@ -599,32 +597,6 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         </div>
       </div>
       
-      {/* Conversation selector */}
-      {isAuthenticated && conversations.length > 0 && (
-        <div className="bg-white border-t border-gray-200 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-700">Conversations</h3>
-            <Button 
-              onClick={() => user?.id && createNewConversation(user.id)}
-              variant="outline"
-              className="text-xs py-1 px-2"
-            >
-              New Chat
-            </Button>
-          </div>
-          <div className="flex overflow-x-auto space-x-2 pb-2">
-            {conversations.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => setCurrentConversationId(conv.id)}
-                className={`px-3 py-1 text-sm rounded-full whitespace-nowrap ${currentConversationId === conv.id ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-700 border-gray-200'} border`}
-              >
-                {conv.session_id}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Input area */}
       <div className="bg-white border-t border-gray-200 p-3">

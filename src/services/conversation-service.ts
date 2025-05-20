@@ -1,10 +1,9 @@
-import { supabase } from '@/lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 // Define types for our conversation data
 export interface Message {
   id?: string;
-  conversation_id?: string;
+  chat_session_id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: number;
@@ -158,13 +157,12 @@ export const updateConversation = async (
  */
 export const addMessage = async (
   supabase: SupabaseClient,
-  conversationId: string | null,
-  message: Omit<Message, 'id' | 'conversation_id'>
+  message: Message
 ): Promise<Message | null> => {
   try {
-    // Validate conversationId
-    if (!conversationId) {
-      console.error('Cannot add message: conversationId is null or undefined');
+    // Validate chat_session_id
+    if (!message.chat_session_id) {
+      console.error('Cannot add message: chat_session_id is null or undefined');
       return null;
     }
     
@@ -180,22 +178,24 @@ export const addMessage = async (
     }
     
     // Log the parameters for debugging
-    console.log('Adding message with conversationId:', conversationId);
+    console.log('Adding message with chatSessionId:', message.chat_session_id);
+// Ensure there are no references to conversationId below this point.
     console.log('Message content:', message.content);
     console.log('Message role:', message.role);
     
-    // Create the request body
+    // Prepare the request body
+    // Convert timestamp to ISO string for Postgres timestamptz compatibility
     const requestBody = {
-      conversation_id: conversationId,
-      content: message.content,
-      role: message.role,
-      timestamp: message.timestamp || Date.now(),
-      metadata: message.metadata || {}
+      ...message,
+      timestamp: new Date(message.timestamp).toISOString()
     };
+
+
+    // Remove any lingering references to conversationId. All logic should use chatSessionId only.
     
     // Debug logging
     console.log('=== DEBUG: Sending message ===');
-    console.log('Conversation ID:', conversationId);
+    console.log('Chat Session ID:', message.chat_session_id);
     
     // Get the session token
     const session = (await supabase.auth.getSession()).data.session;
@@ -204,9 +204,9 @@ export const addMessage = async (
     
     // Log the headers that will be sent
     const headers = {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     };
+
     console.log('Headers:', headers);
     
     try {
@@ -214,7 +214,7 @@ export const addMessage = async (
       
       const { data, error } = await supabase.functions.invoke('chat_messages', {
         method: 'POST',
-        body: requestBody,
+        body: JSON.stringify(requestBody),
         headers: headers
       });
       

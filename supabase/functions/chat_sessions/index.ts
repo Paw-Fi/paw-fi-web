@@ -25,8 +25,6 @@ interface ChatSession {
   created_at: string;
   updated_at: string;
   messages?: Message[];
-  title?: string;
-  metadata?: Record<string, unknown>;
 }
 
 interface ErrorResponse {
@@ -180,7 +178,6 @@ async function handleCreateSession(
       session_id?: string;
       model?: string;
       title?: string;
-      metadata?: Record<string, unknown>;
       messages?: Message[];
     }>(req);
 
@@ -194,23 +191,23 @@ async function handleCreateSession(
     const now = new Date().toISOString();
 
     // Create the chat session
-    const { data: newChatSession, error: createError } = await supabase
+    const { data: newChatSession, error: sessionInsertError } = await supabase
       .from('chat_sessions')
-      .insert({
-        user_id: userId,
-        session_id: sessionId,
-        model,
-        is_active: true,
-        title: requestData?.title || `Chat ${new Date().toLocaleString()}`,
-        metadata: requestData?.metadata || {},
-        created_at: now,
-        updated_at: now
-      })
+      .insert([
+        {
+          user_id: userId,
+          session_id: sessionId,
+          model,
+          is_active: true,
+          created_at: now,
+          updated_at: now
+        }
+      ])
       .select()
       .single();
 
-    if (createError) {
-      return createErrorResponse(500, 'Failed to create chat session', createError);
+    if (sessionInsertError) {
+      return createErrorResponse(500, 'Failed to create chat session', sessionInsertError);
     }
 
     // Insert messages into the chat session
