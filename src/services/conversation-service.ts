@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Define types for our conversation data
 export interface AIResponse {
@@ -32,6 +33,70 @@ export interface Conversation {
 /**
  * Get all conversations for a user
  */
+// --- HOOKS ---
+
+export function useConversations(supabase: SupabaseClient) {
+  return useQuery({
+    queryKey: ['conversations'],
+    queryFn: async () => getConversations(supabase),
+  });
+}
+
+export function useConversation(supabase: SupabaseClient, id: string | undefined) {
+  return useQuery({
+    queryKey: ['conversation', id],
+    queryFn: async () => (id ? getConversation(supabase, id) : null),
+    enabled: !!id,
+  });
+}
+
+export function useCreateConversation(supabase: SupabaseClient) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { userId: string; sessionId: string; initialMessages?: Message[] }) =>
+      createConversation(supabase, params.userId, params.sessionId, params.initialMessages),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useUpdateConversation(supabase: SupabaseClient) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { conversationId: string; updates: Partial<Conversation> }) =>
+      updateConversation(supabase, params.conversationId, params.updates),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useAddMessage(supabase: SupabaseClient) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (message: Message) => addMessage(supabase, message),
+    onSuccess: (data, variables) => {
+      if (variables.chat_session_id) {
+        queryClient.invalidateQueries({ queryKey: ['conversation', variables.chat_session_id] });
+      }
+    },
+  });
+}
+
+export function useDeleteConversation(supabase: SupabaseClient) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (conversationId: string) => deleteConversation(supabase, conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+// --- RAW ASYNC FUNCTIONS (for use in hooks only) ---
+
 export const getConversations = async (supabase: SupabaseClient): Promise<Conversation[]> => {
   try {
     const { data, error } = await supabase.functions.invoke('chat_sessions', {

@@ -7,7 +7,7 @@ import gsap from 'gsap';
 
 // Import data from separate data file
 import type { Lesson, Course } from '@/types/learning.types';
-import { getAllLessons, getAllCourses } from '@/data/lessons';
+import { getAllLessons, getAllCourses, getCourseFromLocalStorage } from '@/data/lessons';
 
 // Storage keys - using only one storage key for consistency
 const COURSE_STORAGE_KEY = 'paw-fi-course';
@@ -17,11 +17,8 @@ export const Route = createFileRoute('/learning/')({
 });
 
 function LearningPage() {
-  // State for lessons and courses
-  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
-  const [jsonInput, setJsonInput] = useState('');
-  const [jsonError, setJsonError] = useState('');
+
   const [isLoading, setIsLoading] = useState(true);
   
   // Reference to the container of lesson cards
@@ -32,104 +29,16 @@ function LearningPage() {
     setIsLoading(true);
     
     try {
-      // First try to get course data (new format)
-      const storedCourseData = localStorage.getItem(COURSE_STORAGE_KEY);
-      
-      if (storedCourseData) {
-        // Parse stored JSON data
-        const parsedCourse = JSON.parse(storedCourseData) as Course;
-        
-        // Verify that the parsed data has the expected shape
-        if (parsedCourse && parsedCourse.id && Array.isArray(parsedCourse.lessons)) {
-          setCourse(parsedCourse);
-          setLessons(parsedCourse.lessons);
-        }
-      } else {
-        // Try legacy format (array of lessons)
-        const storedLessonsData = localStorage.getItem(COURSE_STORAGE_KEY);
-        
-        if (storedLessonsData) {
-          // Parse stored JSON data
-          const parsedData = JSON.parse(storedLessonsData) as Lesson[];
-          
-          // Verify that the parsed data is an array and has expected shape
-          if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0]) {
-            setLessons(parsedData);
-          } else {
-            // If data structure is invalid, fall back to default data
-            const defaultLessons = getAllLessons();
-            setLessons(defaultLessons);
-            
-            // Also get the course data
-            const [defaultCourse] = getAllCourses();
-            setCourse(defaultCourse);
-          }
-        } else {
-          // If no data exists in localStorage, use default data
-          const defaultLessons = getAllLessons();
-          setLessons(defaultLessons);
-          
-          // Also get the course data
-          const [defaultCourse] = getAllCourses();
-          setCourse(defaultCourse);
-        }
+      const course = getCourseFromLocalStorage();
+      if (course) {
+        setCourse(course);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-      // Use default data as fallback
-      const defaultLessons = getAllLessons();
-      setLessons(defaultLessons);
-      
-      // Also get the course data
-      const [defaultCourse] = getAllCourses();
-      setCourse(defaultCourse);
+      console.error('Error loading data:', error);    
     } finally {
       setIsLoading(false);
     }
-  }, []);
-  
-  // Handle JSON import
-  const handleJsonImport = () => {
-    try {
-      setJsonError('');
-      
-      // Parse the input JSON
-      const parsedData = JSON.parse(jsonInput) as Lesson[];
-      
-      // Validate data structure
-      if (!Array.isArray(parsedData)) {
-        throw new Error('Imported data must be an array of lessons');
-      }
-      
-      if (parsedData.length === 0) {
-        throw new Error('No lessons found in imported data');
-      }
-      
-      // Basic validation of lesson structure
-      if (!parsedData[0].id || !parsedData[0].title || !Array.isArray(parsedData[0].questions)) {
-        throw new Error('Invalid lesson structure in imported data');
-      }
-      
-      // Store in localStorage
-      localStorage.setItem(COURSE_STORAGE_KEY, jsonInput);
-      
-      // Update state
-      setLessons(parsedData);
-      setJsonInput('');
-    } catch (error) {
-      console.error('Error importing JSON:', error);
-      setJsonError(error instanceof Error ? error.message : 'Invalid JSON format');
-    }
-  };
-  
-  // Clear localStorage and reset to default lessons
-  const handleResetLessons = () => {
-    localStorage.removeItem(COURSE_STORAGE_KEY);
-    const defaultLessons = getAllLessons();
-    setLessons(defaultLessons);
-    setJsonInput('');
-    setJsonError('');
-  };
+  }, []);  
   
   // Use GSAP for animations
   useGSAP(() => {
@@ -150,7 +59,7 @@ function LearningPage() {
       stagger: 0.15, // time between each card animation
       ease: 'power2.out'
     });
-  }, [lessons]);
+  }, [course?.lessons]);
 
   return (  
     <div className="py-12 px-4">
@@ -171,7 +80,7 @@ function LearningPage() {
       ) : (
         /* Main content - Lesson cards in single column */
         <div ref={lessonCardsRef} className="max-w-xl mx-auto space-y-6">
-          {lessons.length === 0 ? (
+          {!course||course?.lessons.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-2xl shadow-md">
               <p className="text-gray-600 mb-4">No lessons available. Chat with our AI to generate personalized lessons.</p>
               <Link
@@ -185,7 +94,7 @@ function LearningPage() {
               </Link>
             </div>
           ) : (
-            lessons.map((lesson: Lesson) => (
+            course?.lessons.map((lesson: Lesson) => (
               lesson.unlocked ? (
                 <Link
                   key={lesson.id}

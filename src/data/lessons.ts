@@ -7,7 +7,7 @@ import sabinaLessons from "./sabina-mock.json";
 const COURSE_STORAGE_KEY = 'paw-fi-course';
 
 // Helper function to get course from localStorage
-function getCourseFromLocalStorage(): Course | null {
+export function getCourseFromLocalStorage(): Course | null {
   try {
     const storedData = localStorage.getItem(COURSE_STORAGE_KEY);
     if (storedData) {
@@ -100,3 +100,8 @@ export function getAllLessons(): Lesson[] {
   // Otherwise fallback to mock data's lessons
   return mockCourse.lessons;
 }
+
+export function storeCourse(course: Course) {  
+    localStorage.setItem(COURSE_STORAGE_KEY, JSON.stringify(course));  
+}
+  
