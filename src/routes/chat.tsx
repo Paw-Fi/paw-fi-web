@@ -26,7 +26,7 @@ function Chat() {
 
   return (
     <div className="flex items-center justify-center p-4 md:p-6">
-      <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden h-[70vh] flex flex-col">
+      <div className=" w-[95vw] lg:w-[45rem] max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden h-[70vh] flex flex-col">
           {/* Header */}
           <div className="mb-4 flex justify-center items-center">
             <img src={catIcon} alt="PawFi Cat" className="h-16 w-16" />

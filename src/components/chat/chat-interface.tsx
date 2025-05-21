@@ -35,15 +35,7 @@ interface Message {
   metadata?: Record<string, any>;
 }
 
-interface ChatInterfaceProps {
-  onCompleteSurvey: (generatedLessons: any) => void;
-  onGeneratingStateChange?: (isGenerating: boolean, progress: number) => void;
-}
-
-export function ChatInterface({
-  onCompleteSurvey,
-  onGeneratingStateChange,
-}: ChatInterfaceProps) {
+export function ChatInterface() {
   // Get authentication state
   const { user } = useAuth();
   const isAuthenticated = !!user;
@@ -51,6 +43,7 @@ export function ChatInterface({
 
   // UI state for chat input, loading, etc.
   const [currentMessage, setCurrentMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Thinking...");
 
@@ -92,14 +85,13 @@ export function ChatInterface({
     ? authenticatedMessage
     : unauthenticatedMessage;
 
-  // Auto-add welcome message to current conversation if needed
+      // Auto-add welcome message to current conversation if needed
   useEffect(() => {
     if (
-      isAuthenticated &&
-      currentConversationId &&
-      currentConversation &&
-      Array.isArray(currentConversation.messages) &&
-      currentConversation.messages.length === 0
+      currentConversationId&&
+      currentConversation && 
+      currentConversation.messages?.length === 0 
+      &&messages.length === 0
     ) {
       const welcomeMsg: Message = {
         content: authenticatedMessage,
@@ -109,31 +101,30 @@ export function ChatInterface({
       };
       addMessageMutation.mutate(welcomeMsg);
     }
-  }, [
-    isAuthenticated,
-    currentConversationId,
-    currentConversation,
-    addMessageMutation,
-    authenticatedMessage,
+  }, [ 
+    currentConversation,   
   ]);
+
+  useEffect(() => {
+    if(currentConversation?.messages?.length){
+      setMessages(currentConversation.messages);
+    }
+  }, [currentConversation]);
 
   // Load user's conversations when authenticated
   // Show welcome message if not authenticated
-  const messages = useMemo(() => {
+ useEffect(() => {
     if (!isAuthenticated) {
-      return [
+      setMessages([
         {
           content: welcomeMessage,
           role: "assistant",
           timestamp: Date.now(),
+          chat_session_id: "",
         },
-      ];
-    }
-    if (currentConversation && Array.isArray(currentConversation.messages)) {
-      return currentConversation.messages;
-    }
-    return [];
-  }, [isAuthenticated, welcomeMessage, currentConversation]);
+      ]);
+    }  
+  }, [isAuthenticated]);
 
   // Load conversation messages when conversation changes
   // Save current conversation ID to localStorage when it changes

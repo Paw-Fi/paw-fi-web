@@ -248,48 +248,28 @@ export const addMessage = async (
       return null;
     }
     
-    // Log the parameters for debugging
-    console.log('Adding message with chatSessionId:', message.chat_session_id);
-// Ensure there are no references to conversationId below this point.
-    console.log('Message content:', message.content);
-    console.log('Message role:', message.role);
-    
-    // Prepare the request body
     // Convert timestamp to ISO string for Postgres timestamptz compatibility
     const requestBody = {
       ...message,
       timestamp: new Date(message.timestamp).toISOString()
     };
 
-
-    // Remove any lingering references to conversationId. All logic should use chatSessionId only.
-    
-    // Debug logging
-    console.log('=== DEBUG: Sending message ===');
-    console.log('Chat Session ID:', message.chat_session_id);
-    
-    // Get the session token
+    // Get the session token for authorization
     const session = (await supabase.auth.getSession()).data.session;
     const token = session?.access_token;
-    console.log('Auth Token Present:', !!token);
     
-    // Log the headers that will be sent
+    // Set up headers with authorization token
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-
-    console.log('Headers:', headers);
     
     try {
-      console.log('Sending request to chat_messages function with body:', JSON.stringify(requestBody, null, 2));
-      
       const { data, error } = await supabase.functions.invoke('chat_messages', {
         method: 'POST',
         body: JSON.stringify(requestBody),
         headers: headers
       });
       
-      console.log('Response received:', { data, error });
       
       if (error) {
         console.error('Error response from server:', error);
