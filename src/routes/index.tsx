@@ -1,16 +1,16 @@
 "use client";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useRef, useState, useLayoutEffect, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 // Import GSAP with plugins already registered
-import { gsap } from "@/lib/gsap-config";
+import { gsap, ScrollTrigger } from "@/lib/gsap-config";
 import { Button } from "@/components/ui/button";
-import catIcon from "@/assets/images/ani_transparent.gif";
-import catPig from "@/assets/images/lessons/cat-pig.svg";
-import catCoin from "@/assets/images/lessons/cat-coin.svg";
-import catCash from "@/assets/images/lessons/cat-cashbag.svg";
-import waveBackground from "@/assets/images/wave.svg";
+import catIcon from "@/assets/images/index/pawfi-banner.png";
+import catPig from "@/assets/images/index/pawfi-banner3.png";
+import catCoin from "@/assets/images/icon.svg";
+import catCash from "@/assets/images/index/pawfi-banner2.png";
+import waveBackground from "@/assets/images/index/homepage-bg.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartLine,
@@ -47,21 +47,40 @@ function FeatureCard({
 
   useGSAP(
     () => {
-      gsap.from(cardRef.current, {
-        opacity: 0,
-        y: 30,
-        scale: 0.95,
-        duration: 0.7,
-        delay: animationDelay,
-        ease: "back.out(1.7)",
-        scrollTrigger: {
-          trigger: cardRef.current,
-          start: "top bottom-=100",
-          toggleActions: "play none none reverse",
-        },
-      });
+      if (cardRef.current) {
+        // Direct DOM manipulation approach - set initial state
+        gsap.set(cardRef.current, {
+          opacity: 0,
+          y: 30,
+          scale: 0.95
+        });
+        
+        // Create a simple IntersectionObserver to trigger the animation
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              // When card comes into view, animate it
+              gsap.to(cardRef.current, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.7,
+                delay: animationDelay,
+                ease: "back.out(1.7)"
+              });
+              // Only need to observe once
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        
+        observer.observe(cardRef.current);
+        
+        return () => observer.disconnect();
+      }
     },
-    { scope: cardRef },
+    { scope: cardRef, dependencies: [] },
   );
 
   return (
@@ -86,62 +105,82 @@ function WaitlistForm() {
 
   useGSAP(
     () => {
-      gsap.from(formRef.current, {
-        opacity: 0,
-        y: 50,
-        duration: 0.8,
-        scrollTrigger: {
-          trigger: formRef.current,
-          start: "top bottom-=150",
-          toggleActions: "play none none reverse",
-        },
-      });
+      if (formRef.current) {
+        // Direct DOM manipulation approach - set initial state
+        gsap.set(formRef.current, {
+          opacity: 0,
+          y: 50
+        });
+        
+        // Create a simple IntersectionObserver to trigger the animation
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              // When form comes into view, animate it
+              gsap.to(formRef.current, {
+                opacity: 1,
+                y: 0,
+                duration: 0.8,
+                ease: "power3.out"
+              });
+              // Only need to observe once
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        
+        observer.observe(formRef.current);
+        
+        return () => observer.disconnect();
+      }
     },
-    { scope: formRef },
+    { scope: formRef, dependencies: [] },
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    window.open("https://discord.gg/bWbNbd3q", "_blank");
 
-    if (email) {
-      setIsSubmitting(true);
+    // if (email) {
+    //   setIsSubmitting(true);
 
-      try {
-        const { data, error } = await supabase
-          .from("waiting-list")
-          .insert([{ email }]);
+    //   try {
+    //     const { data, error } = await supabase
+    //       .from("waiting-list")
+    //       .insert([{ email }]);
 
-        if (error) throw error;
+    //     if (error) throw error;
 
-        console.log("Email submitted successfully:", data);
-        setSubmitted(true);
+    //     console.log("Email submitted successfully:", data);
+    //     setSubmitted(true);
 
-        // Show success toast notification
-        toast.success("Thanks for joining our waitlist!", {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+    //     // Show success toast notification
+    //     toast.success("Thanks for joining our waitlist!", {
+    //       position: "top-right",
+    //       autoClose: 5000,
+    //       hideProgressBar: false,
+    //       closeOnClick: true,
+    //       pauseOnHover: true,
+    //       draggable: true,
+    //     });
      
-      } catch (error) {
-        console.error("Error submitting email:", error);
+    //   } catch (error) {
+    //     console.error("Error submitting email:", error);
 
-        // Show error toast notification
-        toast.error("Oops! Something went wrong. Please try again.", {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    //     // Show error toast notification
+    //     toast.error("Oops! Something went wrong. Please try again.", {
+    //       position: "top-right",
+    //       autoClose: 5000,
+    //       hideProgressBar: false,
+    //       closeOnClick: true,
+    //       pauseOnHover: true,
+    //       draggable: true,
+    //     });
+    //   } finally {
+    //     setIsSubmitting(false);
+    //   }
+    // }
   };
 
   return (
@@ -158,15 +197,7 @@ function WaitlistForm() {
           <form
             onSubmit={handleSubmit}
           >
-            <div className="mx-auto flex max-w-md flex-col gap-3 md:flex-row">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-grow rounded-lg border px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-purple-500"
-                placeholder="Your email address"
-                required
-              />
+            <div className="mx-auto flex max-w-md flex-col gap-3 md:flex-row">              
               <Button
                 type="submit"
                 className="rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700"
@@ -199,6 +230,8 @@ function WaitlistForm() {
 }
 
 function HomePage() {
+  // Force GSAP's ScrollTrigger to refresh when this component mounts
+  gsap.registerPlugin(ScrollTrigger);
   const headerRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const missionRef = useRef<HTMLDivElement>(null);
@@ -207,7 +240,86 @@ function HomePage() {
 
   // ScrollTrigger is already registered globally
 
-  // Initial animations when page loads
+  // Completely remove dependency on ScrollTrigger for sections and use IntersectionObserver directly
+  useEffect(() => {
+    // Kill any existing ScrollTriggers to avoid conflicts
+    ScrollTrigger.getAll().forEach(st => st.kill());
+    
+    // Set initial states for all animated elements
+    gsap.set(".features-title", { opacity: 0, y: 30 });
+    gsap.set(missionRef.current, { opacity: 0, y: 50 });
+    gsap.set(".learning-title", { opacity: 0, y: 30 });
+    gsap.set(".learning-image", { opacity: 0, scale: 0.8 });
+    gsap.set(".learning-step", { opacity: 0, x: -30 });
+    
+    // Create animation functions
+    const animateFeatures = () => {
+      gsap.to(".features-title", {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power3.out"
+      });
+    };
+    
+    const animateMission = () => {
+      gsap.to(missionRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power3.out"
+      });
+    };
+    
+    const animateLearning = () => {
+      const tl = gsap.timeline();
+      tl.to(".learning-title", { opacity: 1, y: 0, duration: 0.6 })
+        .to(".learning-image", { opacity: 1, scale: 1, duration: 0.8 }, "-=0.3")
+        .to(".learning-step", {
+          opacity: 1,
+          x: 0,
+          stagger: 0.2,
+          duration: 0.5
+        }, "-=0.5");
+    };
+    
+    // Use IntersectionObserver to trigger animations when elements come into view
+    const featuresObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        animateFeatures();
+        featuresObserver.disconnect();
+      }
+    }, { threshold: 0.1 });
+    
+    const missionObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        animateMission();
+        missionObserver.disconnect();
+      }
+    }, { threshold: 0.1 });
+    
+    const learningObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        animateLearning();
+        learningObserver.disconnect();
+      }
+    }, { threshold: 0.1 });
+    
+    // Observe the trigger elements
+    if (featuresRef.current) featuresObserver.observe(featuresRef.current);
+    if (missionRef.current) missionObserver.observe(missionRef.current);
+    if (learningSectionRef.current) learningObserver.observe(learningSectionRef.current);
+    
+    return () => {
+      // Clean up
+      featuresObserver.disconnect();
+      missionObserver.disconnect();
+      learningObserver.disconnect();
+      ScrollTrigger.getAll().forEach(st => st.kill());
+    };
+  }, []);
+
+  // Initial animations for hero section only - these work fine
   useGSAP(() => {
     const tl = gsap.timeline();
 
@@ -262,57 +374,34 @@ function HomePage() {
       yoyo: true,
       ease: "sine.inOut",
     });
-
-    // Scroll-triggered animations for the features section header
-    gsap.from(".features-title", {
-      opacity: 0,
-      y: 30,
-      duration: 0.8,
-      scrollTrigger: {
-        trigger: featuresRef.current,
-        start: "top bottom-=100",
-        toggleActions: "play none none reverse",
-      },
-    });
-
-    // Animation for the mission section
-    gsap.from(missionRef.current, {
-      opacity: 0,
-      y: 50,
-      duration: 0.8,
-      scrollTrigger: {
-        trigger: missionRef.current,
-        start: "top bottom-=100",
-        toggleActions: "play none none reverse",
-      },
-    });
-
-    // Animate learning section
-    const learningSectionTL = gsap.timeline({
-      scrollTrigger: {
-        trigger: learningSectionRef.current,
-        start: "top bottom-=150",
-        toggleActions: "play none none reverse",
-      },
-    });
-
-    learningSectionTL
-      .from(".learning-title", { opacity: 0, y: 30, duration: 0.6 })
-      .from(
-        ".learning-image",
-        { opacity: 0, scale: 0.8, duration: 0.8 },
-        "-=0.3",
-      )
-      .from(
-        ".learning-step",
-        {
-          opacity: 0,
-          x: -30,
-          stagger: 0.2,
-          duration: 0.5,
-        },
-        "-=0.5",
-      );
+  }, { dependencies: [] });
+  
+  // Register a scroll listener to force check visibility of elements as fallback
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get all elements with animations
+      const elements = document.querySelectorAll('.learning-step, .features-title, .learning-title, .learning-image');
+      
+      elements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        // If element is in viewport and has opacity 0, make it visible
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          const opacity = window.getComputedStyle(el).opacity;
+          if (parseFloat(opacity) === 0) {
+            gsap.to(el, { opacity: 1, y: 0, x: 0, scale: 1, duration: 0.5 });
+          }
+        }
+      });
+    };
+    
+    // Add scroll listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Initial check
+    setTimeout(handleScroll, 200);
+    setTimeout(handleScroll, 1000); // Another check after a delay
+    
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
@@ -362,7 +451,7 @@ function HomePage() {
                   Try Demo
                 </Button>
               </Link>
-              <a href="#waitlist">
+              <a href="https://discord.gg/bWbNbd3q">
                 <Button
                   variant="outline"
                   className="w-full rounded-lg border-purple-600 px-8 py-3 font-medium text-purple-600 hover:bg-purple-50 sm:w-auto"
@@ -593,7 +682,7 @@ function HomePage() {
                 </a>
               </li>
               <li>
-                <a href="#waitlist" className="text-gray-400 hover:text-white">
+                <a href="https://discord.gg/bWbNbd3q" className="text-gray-400 hover:text-white">
                   Join Waitlist
                 </a>
               </li>
