@@ -11,22 +11,10 @@ export const Route = createFileRoute("/chat")({
 });
 
 function Chat() {
-  // This function will be called when the survey is complete
-  // It's no longer used for automatic navigation, as the user will click the link in the chat
-  const handleSurveyComplete = async (_aiResponse: any) => {
-    console.log('Survey complete');
-    // No automatic navigation - user will click the link in the chat interface
-  };
-  
-  // This function is kept for compatibility with the ChatInterface component
-  // but we don't need to do anything with the state anymore
-  const handleGeneratingStateChange = (isGenerating: boolean, progress: number) => {
-    console.log(`Generation state: ${isGenerating ? 'generating' : 'idle'}, progress: ${progress}%`);
-  };
 
   return (
     <div className="flex items-center justify-center p-4 md:p-6">
-      <div className=" w-[95vw] lg:w-[45rem] max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden h-[70vh] flex flex-col">
+      <div className=" w-[95vw] lg:w-[55rem] bg-white rounded-xl shadow-lg overflow-hidden h-[80vh] flex flex-col">
           {/* Header */}
           <div className="mb-4 flex justify-center items-center">
             <img src={catIcon} alt="PawFi Cat" className="h-16 w-16" />
@@ -44,8 +32,7 @@ function Chat() {
           
           {/* Chat interface - always shown */}
           <ChatInterface 
-            onCompleteSurvey={handleSurveyComplete}
-            onGeneratingStateChange={handleGeneratingStateChange} 
+           
           />
       </div>
     </div>

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Define types for our conversation data
 export interface AIResponse {
-  content: string;
+  response: string;
   isComplete: boolean;
   generatedLessons?: any;
 }
