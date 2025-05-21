@@ -1,6 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
 // Define types for our conversation data
+export interface AIResponse {
+  content: string;
+  isComplete: boolean;
+  generatedLessons?: any;
+}
+
 export interface Message {
   id?: string;
   chat_session_id: string;
@@ -235,6 +241,31 @@ export const addMessage = async (
     return null;
   }
 };
+
+/**
+ * Call Supabase Edge Function for AI chat
+ */
+export async function getAIResponseFromEdge(
+  supabase: SupabaseClient,
+  prompt: string,
+  history: any[]
+): Promise<AIResponse> {
+  try {
+    console.log('Sending request to chat_stream function with body:', { message: prompt, history });
+    const { data, error } = await supabase.functions.invoke('chat_stream', {
+      method: 'POST',
+      body: { message: prompt, history }
+      // Supabase will handle JSON serialization and headers automatically
+    });
+    if (error) throw error;
+    return data as AIResponse;
+  } catch (error: any) {
+    return {
+      content: error.message || "Unknown error",
+      isComplete: false,
+    };
+  }
+}
 
 /**
  * Delete a conversation

@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
-import { sendMessageToGemini, createChatSession } from "@/services/gemini-service";
+import { Card } from "@/components/ui/card";
+
 import { useAuth } from "@/contexts/auth-context";
-// Import conversation service functions
-import { getConversations, getConversation, createConversation, addMessage, deleteConversation, updateConversation } from '@/services/conversation-service';
+import { getAIResponseFromEdge } from '@/services/conversation-service';
 import { supabase } from '@/lib/supabase';
+// Import conversation service functions
+import { getConversations, getConversation, createConversation, addMessage, deleteConversation } from '@/services/conversation-service';
 
 interface Message {
   content: string;
@@ -35,10 +37,6 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
   const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Thinking...");
-  
-  // State for JSON continuation
-  const [incompleteJson, setIncompleteJson] = useState<string | null>(null);
-  const [waitingForContinuation, setWaitingForContinuation] = useState(false);
   
   // State for conversation management
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -72,16 +70,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, currentConversationId, messagesLoaded, messages.length]);
 
-  // Initialize chat session
-  useEffect(() => {
-    // Create a new chat session with the Gemini API
-    const aiPrompt = import.meta.env.VITE_AI_PROMPT || "Hi I'm Paw-FI! I'll help you learn about personal finance. What topics interest you most?";
-    chatSessionRef.current = createChatSession(aiPrompt);
-    
-    return () => {
-      // Clean up any resources if needed in the future
-    };
-  }, []);
+
 
   // Load user's conversations when authenticated
   useEffect(() => {
@@ -115,12 +104,8 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
   }, [messages]);
 
   // Function to check if a string might be JSON and if it's complete
-  const checkJsonString = (str: string) => {
-    // Check if the string looks like it might be JSON
-    if (!str.trim().startsWith('{') && !str.trim().startsWith('[')) {
-      return { isJson: false, isComplete: true };
-    }
-    
+  const checkJsonString = (str: unknown): { isJson: boolean, isComplete: boolean } => {
+    if (typeof str !== 'string') return { isJson: false, isComplete: true };
     try {
       JSON.parse(str);
       return { isJson: true, isComplete: true };
@@ -130,82 +115,6 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
     }
   };
 
-  // Process generated lessons and store in localStorage
-  const startLessonGeneration = (lessonData: any) => {
-    try {
-      // Notify parent component about the lesson generation
-      if (onGeneratingStateChange) {
-        onGeneratingStateChange(true, 0);
-      }
-      
-      // Process the lesson data
-      const lessons = Array.isArray(lessonData) ? lessonData : [lessonData];
-      
-      // Store the lessons in localStorage
-      localStorage.setItem('paw-fi-generated-lessons', JSON.stringify(lessons));
-      
-      // Notify the parent component that the survey is complete
-      onCompleteSurvey(lessons);
-      
-      // Update the UI to show generation is complete
-      if (onGeneratingStateChange) {
-        onGeneratingStateChange(false, 100);
-      }
-    } catch (error) {
-      console.error('Error processing lesson data:', error);
-      
-      // Notify the parent component about the error
-      if (onGeneratingStateChange) {
-        onGeneratingStateChange(false, 0);
-      }
-    }
-  };
-
-  // Define the response type for the AI response
-  interface AIResponse {
-    content: string;
-    isComplete: boolean;
-    generatedLessons?: any;
-  }
-
-  // This function sends a message to the Gemini API and gets a response
-  const getAIResponse = async (userMessage: string, addToChat = true): Promise<AIResponse | string> => {
-    try {
-      // Use the chat session to send the message and get a response
-      const response = await sendMessageToGemini(chatSessionRef.current, userMessage);
-      
-      // Check if the response contains JSON
-      const { isJson, isComplete } = checkJsonString(response);
-      
-      // If it's JSON and it looks like a lesson plan, process it
-      if (isJson && isComplete && response.includes('"title"') && response.includes('"content"')) {
-        try {
-          const jsonData = JSON.parse(response);
-          return {
-            content: response,
-            isComplete: true,
-            generatedLessons: jsonData
-          };
-        } catch (e) {
-          // If JSON parsing fails, just return the text
-          console.error('Error parsing JSON response:', e);
-        }
-      }
-      
-      return {
-        content: response,
-        isComplete: isJson ? isComplete : true
-      };
-    } catch (error) {
-      console.error('Error getting AI response:', error);
-      return {
-        content: "I'm sorry, I encountered an error. Please try again.",
-        isComplete: true
-      };
-    }
-  };
-
-  // Load user's conversations
   const loadUserConversations = async () => {
     try {
       const userConversations = await getConversations(supabase);
@@ -323,93 +232,6 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       throw error; // Re-throw the error to be handled by the caller
     }
   };
-  
-  // Update the conversation in the backend
-  const updateConversationInBackend = async () => {
-    if (isAuthenticated && currentConversationId) {
-      try {
-        await loadUserConversations();
-      } catch (error) {
-        console.error('Error refreshing conversations:', error);
-      }
-    }
-  };
-
-  // Function to handle continuing JSON response
-  const continueJsonResponse = async () => {
-    if (!incompleteJson) return;
-    
-    setWaitingForContinuation(false);
-    setIsLoading(true);
-    setLoadingMessage("Getting the rest of the data...");
-    
-    try {
-      // Get the continuation without adding the "continue" message to the chat
-      const response = await sendMessageToGemini(chatSessionRef.current, "Please continue the JSON response", false);
-      
-      // Combine the incomplete JSON with the continuation
-      const combinedJson = incompleteJson + response;
-      
-      // Check if the combined JSON is now complete
-      const { isJson, isComplete } = checkJsonString(combinedJson);
-      
-      if (isJson && isComplete) {
-        // If it's complete, add it to the chat
-        const assistantMessage: Message = {
-          content: combinedJson,
-          role: "assistant",
-          timestamp: Date.now(),
-        };
-        
-        const updatedMessages = [...messages, assistantMessage];
-        setMessages(updatedMessages);
-        
-        // Save the message to the conversation
-        if (isAuthenticated && currentConversationId) {
-          await saveMessageToConversation(assistantMessage);
-        } else {
-          // Fallback to localStorage for unauthenticated users
-          localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-        }
-        
-        // Reset the incomplete JSON state
-        setIncompleteJson(null);
-        
-        // Check if it's a lesson plan
-        if (combinedJson.includes('"title"') && combinedJson.includes('"content"')) {
-          try {
-            const jsonData = JSON.parse(combinedJson);
-            startLessonGeneration(jsonData);
-          } catch (e) {
-            console.error('Error parsing combined JSON:', e);
-          }
-        }
-      } else {
-        // If it's still incomplete, update the incomplete JSON state
-        setIncompleteJson(combinedJson);
-        setWaitingForContinuation(true);
-      }
-    } catch (error) {
-      console.error('Error continuing JSON response:', error);
-      
-      // Add error message to chat
-      const errorMessage: Message = {
-        content: "Sorry, I encountered an error while processing the data. Please try again.",
-        role: "assistant",
-        timestamp: Date.now(),
-        chat_session_id: currentConversationId!
-      };
-      
-      setMessages([...messages, errorMessage]);
-      
-      // Reset the incomplete JSON state
-      setIncompleteJson(null);
-      setWaitingForContinuation(false);
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage("Thinking...");
-    }
-  };
 
   // Format timestamp
   const formatTime = (timestamp: number) => {
@@ -417,6 +239,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
   };
 
   const handleSendMessage = async (content: string) => {
+    console.log('Sending message:', content)
     if (!content.trim() || isLoading) return;
     
     // Create the user message object
@@ -424,7 +247,7 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
       content,
       role: 'user',
       timestamp: Date.now(),
-      chat_session_id: currentConversationId ?? undefined
+      chat_session_id: currentConversationId!
     };
 
     try {
@@ -448,10 +271,9 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
         const newConversation = await createConversation(
           supabase,
           user.id,
-          `Conversation ${new Date().toLocaleString()}`,
-          [userMessage]
+          `Conversation ${conversations.length + 1}`
         );
-        
+
         console.log('New conversation created:', newConversation.id);
         setCurrentConversationId(newConversation.id);
         conversationId = newConversation.id;
@@ -473,16 +295,46 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
 
       // Get AI response
       try {
-        const aiResponse = await getAIResponse(content);
+        // Remove all leading non-user messages
+        let filteredMessages = updatedMessages;
+        while (
+          filteredMessages.length > 0 &&
+          filteredMessages[0].role !== 'user'
+        ) {
+          filteredMessages = filteredMessages.slice(1);
+        }
+        // Log the filtered history for debugging
+        console.log('Filtered chat history sent to Gemini:', filteredMessages);
+        // If there are no user messages, abort and show error
+        if (filteredMessages.length === 0 || filteredMessages[0].role !== 'user') {
+          setMessages(prev => [
+            ...prev,
+            {
+              content: 'Please type a message to start the conversation.',
+              role: 'assistant',
+              timestamp: Date.now(),
+              chat_session_id: currentConversationId!,
+              metadata: { isError: true }
+            }
+          ]);
+          setIsLoading(false);
+          return;
+        }
+        // Format for Gemini (convert 'assistant' role to 'model')
+        const geminiHistory = filteredMessages.map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : msg.role,
+          parts: [{ text: msg.content }]
+        }));
+        const aiResponse = await getAIResponseFromEdge(supabase, content, geminiHistory);
         
         if (!aiResponse) {
           throw new Error('No response from AI');
         }
         
         // Ensure we have a string content
-        const responseContent = typeof aiResponse === 'string' 
-          ? aiResponse 
-          : aiResponse.content || 'No response content';
+        const responseContent = typeof aiResponse === 'string'
+          ? aiResponse
+          : aiResponse.response || aiResponse.content || 'No response content';
         
         // Add the AI response to the UI
         const assistantMessage: Message = {
@@ -566,7 +418,51 @@ export function ChatInterface({ onCompleteSurvey, onGeneratingStateChange }: Cha
                 }`}
               >
                 <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                  {/* Render a Card if content contains a JSON block */}
+                  {(() => {
+                    // Robustly extract the first valid JSON object from the message
+                    function extractFirstJson(text: string): { json: any; start: number; end: number } | null {
+                      // 1. Try to extract the first ```json ... ``` code block
+                      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
+                      const jsonBlockMatch = text.match(jsonBlockRegex);
+                      if (jsonBlockMatch && jsonBlockMatch[1]) {
+                        try {
+                          const code = jsonBlockMatch[1].trim();
+                          const json = JSON.parse(code);
+                          const idx = text.indexOf(jsonBlockMatch[0]);
+                          return { json, start: idx, end: idx + jsonBlockMatch[0].length };
+                        } catch (err) {
+                          console.warn('Could not parse JSON from code block:', jsonBlockMatch[1].substring(0, 100), err);
+                        }
+                      }
+                      // 2. Fallback: Try to find the first {...} that parses
+                      const curlyBlockRegex = /\{[\s\S]*\}/g;
+                      let match: RegExpExecArray | null;
+                      while ((match = curlyBlockRegex.exec(text)) !== null) {
+                        try {
+                          const json = JSON.parse(match[0]);
+                          return { json, start: match.index, end: match.index + match[0].length };
+                        } catch (err) {
+                          // Skip malformed JSON blocks
+                          continue;
+                        }
+                      }
+                      return null;
+                    }
+                    const found = extractFirstJson(message.content);
+                    if (found) {
+                      const { json, start, end } = found;
+                      const intro = message.content.slice(0, start).trim();
+                      const outro = message.content.slice(end).trim();
+                      return <>
+                        {intro && <div className="mb-2"><ReactMarkdown>{intro}</ReactMarkdown></div>}
+                        <Card title={json.title || ''} description={json.description || ''} lessonCount={Array.isArray(json.lessons) ? json.lessons.length : 0} />
+                        {outro && <div className="mt-2"><ReactMarkdown>{outro}</ReactMarkdown></div>}
+                      </>;
+                    }
+                    // Fallback: just render markdown (never show JSON as plain text)
+                    return <ReactMarkdown>{message.content.replace(/```json[\s\S]*?```/gi, '').replace(/```[\s\S]*?```/gi, '').replace(/\{[\s\S]*\}/g, '')}</ReactMarkdown>;
+                  })()}
                 </div>
                 <div
                   className={`text-xs mt-1 text-right ${
