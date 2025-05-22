@@ -11,11 +11,12 @@ interface ImageChoiceQuestionProps {
   value?: string;
 }
 
-export function ImageChoiceQuestion({
-  question,
-  onAnswer,
-  value,
-}: ImageChoiceQuestionProps) {
+export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQuestionProps) {
+  const options=question.options  || question.imageOptions
+  if (!options || !Array.isArray(options)) {
+    return <div className="text-red-500">No image options available.</div>;
+  }
+
   const [selectedOption, setSelectedOption] = useState<string | null>(
     value || null,
   );
@@ -36,7 +37,7 @@ export function ImageChoiceQuestion({
           "grid-cols-1 md:grid-cols-2": itemsPerRow === 2,
         })}
       >
-        {question.options.map((option) => (
+        {options.map((option) => (
           <div
             key={option.id}
             className={classnames(

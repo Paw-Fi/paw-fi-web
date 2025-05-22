@@ -1,32 +1,32 @@
 "use client";
 
-import { createFileRoute } from "@tanstack/react-router";
-import { getLessonById } from "@/data/lessons";
+import { ActionButtons } from "@/components/learning/action-buttons";
+import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
+import { HelpTips } from "@/components/learning/help-tips";
+import { useLesson } from "@/components/learning/hooks/use-lesson";
+import { LessonBackButton } from "@/components/learning/lesson-back-button";
+import { LessonNotFound } from "@/components/learning/lesson-not-found";
+import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
+import { QuestionContent } from "@/components/learning/question-content";
+import { QuestionHeader } from "@/components/learning/question-header";
+import { getLessonById } from "@/data/lessons";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
 import catPig from "@/assets/images/lessons/cat-pig.svg";
 
-// Import the extracted components
-import { LessonNotFound } from "@/components/learning/lesson-not-found";
-import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
-import { LessonBackButton } from "@/components/learning/lesson-back-button";
-import { QuestionHeader } from "@/components/learning/question-header";
-import { QuestionContent } from "@/components/learning/question-content";
-import { AnswerFeedback } from "@/components/learning/answer-feedback";
-import { ActionButtons } from "@/components/learning/action-buttons";
-import { HelpTips } from "@/components/learning/help-tips";
-import { useLesson } from "@/components/learning/hooks/use-lesson";
-
-export const Route = createFileRoute("/learning/$lessonId")({
+export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
   component: LessonPage,
 });
 
 const catIcons=[catBottle,catCash,catCoin,catPig]
 
 function LessonPage() {
-  const { lessonId } = Route.useParams();
+  const { courseId, lessonId } = useParams({ from: '/learning/$courseId/lesson/$lessonId' });
+  console.log(courseId)
+  console.log(lessonId)
   
   // Get lesson data from our data file
   const lesson = getLessonById(lessonId);
@@ -57,6 +57,7 @@ function LessonPage() {
     showFeedback
   } = useLesson({
     lessonId,
+    courseId,
     questions: lesson.questions,
     unlocked: lesson.unlocked,
     xp: lesson.xp
@@ -133,6 +134,7 @@ function LessonPage() {
           description="Great job! You've completed this lesson."
           lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
           lessonId={lesson?.id} // Pass the actual lesson.id, not the URL parameter
+          courseId={courseId}
           reward={{
             amount: earnedXp,
             unit: "XP",
@@ -172,3 +174,4 @@ function LessonPage() {
 }
 
 export default LessonPage;
+

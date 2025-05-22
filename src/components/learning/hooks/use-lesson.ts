@@ -1,19 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Question } from "@/types/learning.types";
+import type { Course, Question } from "@/types/learning.types";
 import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { unlockNextLesson } from "./unlock-next-lesson";
 
 interface UseLessonProps {
   lessonId: string;
+  courseId: string;
   questions: Question[];
   unlocked: boolean;
   xp: number;
 }
 
-export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps) {
+export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLessonProps) {
+
   const navigate = useNavigate();
+  const router = useRouter();
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isComplete, setIsComplete] = useState(false);
@@ -89,44 +94,7 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
       }, 1000);
     }
   };
-  
-  // Move to the next question
-  // Helper function to unlock the next lesson in sequence
-  const unlockNextLesson = (): boolean => {
-    // Using only paw-fi-course for consistency
-    const COURSE_STORAGE_KEY = 'paw-fi-course';
-    
-    try {
-      // Get course data from localStorage
-      const courseData = localStorage.getItem(COURSE_STORAGE_KEY);
-      if (!courseData) return false;
-      
-      const course = JSON.parse(courseData);
-      
-      if (course && course.lessons && Array.isArray(course.lessons)) {
-        // Find the current lesson's index
-        const currentLessonIndex = course.lessons.findIndex((lesson: any) => lesson.id === lessonId);
-        
-        // If there's a next lesson, unlock it
-        if (currentLessonIndex !== -1 && currentLessonIndex < course.lessons.length - 1) {
-          course.lessons[currentLessonIndex + 1].unlocked = true;
-          
-          // Save updated course data
-          localStorage.setItem(COURSE_STORAGE_KEY, JSON.stringify(course));
-          console.log(`Unlocked next lesson: ${course.lessons[currentLessonIndex + 1].title}`);
-          return true;
-        }
-      }
-      
-      return false;
-      
-      return false;
-    } catch (error) {
-      console.error('Error unlocking next lesson:', error);
-      return false;
-    }
-  };
-  
+
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Move to the next question
@@ -142,7 +110,7 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
       if (allCorrect) {
         setEarnedXp(xp);
         // If all answers are correct, unlock the next lesson
-        unlockNextLesson();
+        unlockNextLesson(lessonId,courseId);
       } else {
         // Partial XP based on number of correct answers
         const correctCount = questions.filter((q) => 
@@ -160,7 +128,7 @@ export function useLesson({ lessonId, questions, unlocked, xp }: UseLessonProps)
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     } else {
-      navigate({ to: "/learning" });
+      router.history.back()
     }
   };
 

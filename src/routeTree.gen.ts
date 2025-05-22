@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as TermsOfServiceImport } from './routes/terms-of-service'
-import { Route as SabinaLearningImport } from './routes/sabina-learning'
 import { Route as ResultsImport } from './routes/results'
 import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
@@ -34,7 +33,6 @@ import { Route as FormatIndexImport } from './routes/format/index'
 import { Route as DashboardIndexImport } from './routes/dashboard/index'
 import { Route as CalculatorsIndexImport } from './routes/calculators/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
-import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
 import { Route as CalculatorsSavingGoalsCalculatorImport } from './routes/calculators/saving-goals-calculator'
 import { Route as CalculatorsRetirementCalculatorImport } from './routes/calculators/retirement-calculator'
@@ -43,19 +41,15 @@ import { Route as CalculatorsInvestmentCalculatorImport } from './routes/calcula
 import { Route as CalculatorsCompoundCalculatorImport } from './routes/calculators/compound-calculator'
 import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculators/auto-loan-calculator'
 import { Route as AuthorImportImport } from './routes/author/import'
+import { Route as LearningCourseIdIndexImport } from './routes/learning/$courseId/index'
 import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
+import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning/$courseId/lesson/$lessonId'
 
 // Create/Update Routes
 
 const TermsOfServiceRoute = TermsOfServiceImport.update({
   id: '/terms-of-service',
   path: '/terms-of-service',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const SabinaLearningRoute = SabinaLearningImport.update({
-  id: '/sabina-learning',
-  path: '/sabina-learning',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -184,12 +178,6 @@ const AuthorIndexRoute = AuthorIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const LearningLessonIdRoute = LearningLessonIdImport.update({
-  id: '/learning/$lessonId',
-  path: '/learning/$lessonId',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const DemoTanstackQueryRoute = DemoTanstackQueryImport.update({
   id: '/demo/tanstack-query',
   path: '/demo/tanstack-query',
@@ -244,11 +232,24 @@ const AuthorImportRoute = AuthorImportImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const LearningCourseIdIndexRoute = LearningCourseIdIndexImport.update({
+  id: '/learning/$courseId/',
+  path: '/learning/$courseId/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
   id: '/author/course/$courseId',
   path: '/author/course/$courseId',
   getParentRoute: () => rootRoute,
 } as any)
+
+const LearningCourseIdLessonLessonIdRoute =
+  LearningCourseIdLessonLessonIdImport.update({
+    id: '/learning/$courseId/lesson/$lessonId',
+    path: '/learning/$courseId/lesson/$lessonId',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 // Populate the FileRoutesByPath interface
 
@@ -338,13 +339,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsImport
       parentRoute: typeof rootRoute
     }
-    '/sabina-learning': {
-      id: '/sabina-learning'
-      path: '/sabina-learning'
-      fullPath: '/sabina-learning'
-      preLoaderRoute: typeof SabinaLearningImport
-      parentRoute: typeof rootRoute
-    }
     '/terms-of-service': {
       id: '/terms-of-service'
       path: '/terms-of-service'
@@ -406,13 +400,6 @@ declare module '@tanstack/react-router' {
       path: '/demo/tanstack-query'
       fullPath: '/demo/tanstack-query'
       preLoaderRoute: typeof DemoTanstackQueryImport
-      parentRoute: typeof rootRoute
-    }
-    '/learning/$lessonId': {
-      id: '/learning/$lessonId'
-      path: '/learning/$lessonId'
-      fullPath: '/learning/$lessonId'
-      preLoaderRoute: typeof LearningLessonIdImport
       parentRoute: typeof rootRoute
     }
     '/author/': {
@@ -483,6 +470,20 @@ declare module '@tanstack/react-router' {
       path: '/author/course/$courseId'
       fullPath: '/author/course/$courseId'
       preLoaderRoute: typeof AuthorCourseCourseIdImport
+      parentRoute: typeof rootRoute
+    }
+    '/learning/$courseId/': {
+      id: '/learning/$courseId/'
+      path: '/learning/$courseId'
+      fullPath: '/learning/$courseId'
+      preLoaderRoute: typeof LearningCourseIdIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/learning/$courseId/lesson/$lessonId': {
+      id: '/learning/$courseId/lesson/$lessonId'
+      path: '/learning/$courseId/lesson/$lessonId'
+      fullPath: '/learning/$courseId/lesson/$lessonId'
+      preLoaderRoute: typeof LearningCourseIdLessonLessonIdImport
       parentRoute: typeof rootRoute
     }
   }
@@ -563,7 +564,6 @@ export interface FileRoutesByFullPath {
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/results': typeof ResultsRoute
-  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -573,7 +573,6 @@ export interface FileRoutesByFullPath {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -584,6 +583,8 @@ export interface FileRoutesByFullPath {
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
+  '/learning/$courseId': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -594,7 +595,6 @@ export interface FileRoutesByTo {
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/results': typeof ResultsRoute
-  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -604,7 +604,6 @@ export interface FileRoutesByTo {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -615,6 +614,8 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileIndexRoute
   '/register': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
+  '/learning/$courseId': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
 
 export interface FileRoutesById {
@@ -631,7 +632,6 @@ export interface FileRoutesById {
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/results': typeof ResultsRoute
-  '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -641,7 +641,6 @@ export interface FileRoutesById {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author/': typeof AuthorIndexRoute
   '/calculators/': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -652,6 +651,8 @@ export interface FileRoutesById {
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
+  '/learning/$courseId/': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
 
 export interface FileRouteTypes {
@@ -669,7 +670,6 @@ export interface FileRouteTypes {
     | '/intro'
     | '/privacy-policy'
     | '/results'
-    | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -679,7 +679,6 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
-    | '/learning/$lessonId'
     | '/author'
     | '/calculators'
     | '/dashboard/'
@@ -690,6 +689,8 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/register/'
     | '/author/course/$courseId'
+    | '/learning/$courseId'
+    | '/learning/$courseId/lesson/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -699,7 +700,6 @@ export interface FileRouteTypes {
     | '/intro'
     | '/privacy-policy'
     | '/results'
-    | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -709,7 +709,6 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
-    | '/learning/$lessonId'
     | '/author'
     | '/calculators'
     | '/dashboard'
@@ -720,6 +719,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/author/course/$courseId'
+    | '/learning/$courseId'
+    | '/learning/$courseId/lesson/$lessonId'
   id:
     | '__root__'
     | '/'
@@ -734,7 +735,6 @@ export interface FileRouteTypes {
     | '/intro'
     | '/privacy-policy'
     | '/results'
-    | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -744,7 +744,6 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
-    | '/learning/$lessonId'
     | '/author/'
     | '/calculators/'
     | '/dashboard/'
@@ -755,6 +754,8 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/register/'
     | '/author/course/$courseId'
+    | '/learning/$courseId/'
+    | '/learning/$courseId/lesson/$lessonId'
   fileRoutesById: FileRoutesById
 }
 
@@ -771,7 +772,6 @@ export interface RootRouteChildren {
   IntroRoute: typeof IntroRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ResultsRoute: typeof ResultsRoute
-  SabinaLearningRoute: typeof SabinaLearningRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
   CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
@@ -781,12 +781,13 @@ export interface RootRouteChildren {
   CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
   CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
-  LearningLessonIdRoute: typeof LearningLessonIdRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
   CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
+  LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
+  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -802,7 +803,6 @@ const rootRouteChildren: RootRouteChildren = {
   IntroRoute: IntroRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ResultsRoute: ResultsRoute,
-  SabinaLearningRoute: SabinaLearningRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,
   CalculatorsAutoLoanCalculatorRoute: CalculatorsAutoLoanCalculatorRoute,
@@ -812,12 +812,13 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorsRetirementCalculatorRoute: CalculatorsRetirementCalculatorRoute,
   CalculatorsSavingGoalsCalculatorRoute: CalculatorsSavingGoalsCalculatorRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
-  LearningLessonIdRoute: LearningLessonIdRoute,
   AuthorIndexRoute: AuthorIndexRoute,
   CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
+  LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
+  LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -842,7 +843,6 @@ export const routeTree = rootRoute
         "/intro",
         "/privacy-policy",
         "/results",
-        "/sabina-learning",
         "/terms-of-service",
         "/author/import",
         "/calculators/auto-loan-calculator",
@@ -852,12 +852,13 @@ export const routeTree = rootRoute
         "/calculators/retirement-calculator",
         "/calculators/saving-goals-calculator",
         "/demo/tanstack-query",
-        "/learning/$lessonId",
         "/author/",
         "/calculators/",
         "/format/",
         "/learning/",
-        "/author/course/$courseId"
+        "/author/course/$courseId",
+        "/learning/$courseId/",
+        "/learning/$courseId/lesson/$lessonId"
       ]
     },
     "/": {
@@ -911,9 +912,6 @@ export const routeTree = rootRoute
     "/results": {
       "filePath": "results.tsx"
     },
-    "/sabina-learning": {
-      "filePath": "sabina-learning.tsx"
-    },
     "/terms-of-service": {
       "filePath": "terms-of-service.tsx"
     },
@@ -940,9 +938,6 @@ export const routeTree = rootRoute
     },
     "/demo/tanstack-query": {
       "filePath": "demo.tanstack-query.tsx"
-    },
-    "/learning/$lessonId": {
-      "filePath": "learning/$lessonId.tsx"
     },
     "/author/": {
       "filePath": "author/index.tsx"
@@ -978,6 +973,12 @@ export const routeTree = rootRoute
     },
     "/author/course/$courseId": {
       "filePath": "author/course/$courseId.tsx"
+    },
+    "/learning/$courseId/": {
+      "filePath": "learning/$courseId/index.tsx"
+    },
+    "/learning/$courseId/lesson/$lessonId": {
+      "filePath": "learning/$courseId/lesson/$lessonId.tsx"
     }
   }
 }

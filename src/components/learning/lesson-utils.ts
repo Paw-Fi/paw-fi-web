@@ -50,7 +50,8 @@ export function isAnswerCorrect(question: Question, answer: any): boolean {
     case "scq":
     case "image-choice":
       // For single choice, find the correct option
-      const correctOption = question.options?.find((opt: any) => opt.isCorrect === true);
+      const options=question.options || question.imageOptions
+      const correctOption = options?.find((opt: any) => opt.isCorrect === true);
       if (!correctOption) {
         return false;
       }

@@ -15,3 +15,7 @@ firebase-debug.log
 package-lock.json
 
 public/PawFi-Pitch.mp4
+
+.env.development
+
+.env.production

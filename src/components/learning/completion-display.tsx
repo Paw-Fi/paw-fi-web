@@ -15,6 +15,7 @@ interface CompletionDisplayProps {
   description: string;
   lessonTitle?: string; // The completed lesson title
   lessonId?: string; // Added explicit lessonId prop for direct access
+  courseId?: string; // <-- add courseId as a prop
   reward?: {
     amount: number;
     unit: string;
@@ -43,6 +44,7 @@ export function CompletionDisplay({
   description,
   lessonTitle,
   lessonId, // Add the direct lessonId parameter
+  courseId, // Add courseId as a prop
   reward,
   rewardsProgress,
   nextSteps,
@@ -426,15 +428,12 @@ export function CompletionDisplay({
         ) : (
           <Button
             onClick={(e) => {
-              // Prevent event propagation
               e.stopPropagation();
               e.preventDefault();
-              
               // If this is a success completion and we have the lessonId, unlock next lesson
               if (isSuccess && lessonId) {
-                // Use our extracted unlockNextLesson function with the direct lessonId
                 console.log('Attempting to unlock next lesson with ID:', lessonId);
-                const unlocked = unlockNextLesson(lessonId);
+                const unlocked = unlockNextLesson(lessonId, courseId);
                 if (unlocked) {
                   console.log('Successfully unlocked next lesson');
                 } else {
@@ -446,9 +445,8 @@ export function CompletionDisplay({
               
               // Use immediate navigation to avoid background help tips interference
               if (actionText === "Continue Learning") {
-                window.location.href = "/learning";
+                window.location.href =  `/learning/${courseId}`;
               } else {
-                // Use normal onClose for other action texts
                 onClose();
               }
             }}
