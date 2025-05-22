@@ -55,8 +55,15 @@ function handleScroll() {
   function scrollToBottom() {
     if (chatContainerRef.current) {
       const container = chatContainerRef.current;
-      container.scrollTop = container.scrollHeight;
+      // Use smooth scrolling behavior
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
     }
+    
+    // Also ensure the messagesEndRef is scrolled into view smoothly
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }
 
   const { 
@@ -132,68 +139,67 @@ function handleScroll() {
   useEffect(() => {
     if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
       setLoadingMessage("Crafting your personalized financial lessons... 📚");
-    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 10) {
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 15) {
       setLoadingMessage("Building knowledge blocks just for you! Almost there... 🧩");
-    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 25) {
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 30) {
       setLoadingMessage("Creating something special! Your financial wisdom is on the way... ✨");
     }
+    else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 45) {
+      setLoadingMessage("Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱");
+    }   
   }, [loadingDuration]);
 
   // Effect for setting initial messages (welcome or from conversation)
+  // Utility: deduplicate array of messages by role, content, and timestamp (rounded to nearest second)
+  function dedupeMessages(messages: Message[]): Message[] {
+    const seen = new Set<string>();
+    return messages.filter(msg => {
+      // Round timestamp to nearest second for deduplication
+      const roundedTimestamp = Math.round(msg.timestamp / 1000);
+      const key = `${msg.role}|${msg.content}|${roundedTimestamp}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  // Helper: checks if two messages are 'the same' (role, content, timestamp rounded to 1s)
+  function areMessagesSimilar(a: Message, b: Message) {
+    return (
+      a.role === b.role &&
+      a.content === b.content &&
+      Math.round(a.timestamp / 1000) === Math.round(b.timestamp / 1000)
+    );
+  }
+
   useEffect(() => {
     if (isAuthenticated && currentConversationId && currentConversation) {
       if (currentConversation.messages && currentConversation.messages.length > 0) {
-        // Use a Map to deduplicate messages by a unique identifier
-        const messageMap = new Map<string, Message>();
-        
-        // First add server messages to the map
+        // Merge server and local messages, then deduplicate
         const serverMsgs = currentConversation.messages ?? [];
-        serverMsgs.forEach(msg => {
-          const key = `${msg.timestamp}-${msg.role}`;
-          messageMap.set(key, msg);
-        });
-        
-        // Only add local messages if they don't already exist in the map
-        // This prevents duplicates that might have different object references but same data
-        messages.forEach(localMsg => {
-          const key = `${localMsg.timestamp}-${localMsg.role}`;
-          if (!messageMap.has(key)) {
-            messageMap.set(key, localMsg);
-          }
-        });
-        
-        // Convert map values to array and sort by timestamp
-        const merged = Array.from(messageMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-        
-        // Only update state if the content is actually different to avoid re-renders
-        if (merged.length !== messages.length || !areMessagesEqual(merged, messages)) {
-          console.log('Updating messages state with merged messages');
+        const merged = dedupeMessages([...serverMsgs, ...messages]);
+        merged.sort((a, b) => a.timestamp - b.timestamp);
+        // Only update if different
+        if (merged.length !== messages.length || !areMessagesArraySimilar(merged, messages)) {
           setMessages(merged);
         }
       }
     }
   }, [
-    isAuthenticated, 
-    currentConversationId, 
-    currentConversation, 
-    isConversationsLoading, // Added to avoid premature welcome message if conversations are still loading
-    // messages dependency removed to prevent infinite loops
+    isAuthenticated,
+    currentConversationId,
+    currentConversation,
+    isConversationsLoading,
   ]);
-  
-  // Helper function to compare message arrays
-  const areMessagesEqual = (arr1: Message[], arr2: Message[]): boolean => {
+
+  // Helper: compare arrays of messages for similarity
+  function areMessagesArraySimilar(arr1: Message[], arr2: Message[]): boolean {
     if (arr1.length !== arr2.length) return false;
-    
     for (let i = 0; i < arr1.length; i++) {
-      if (arr1[i].timestamp !== arr2[i].timestamp || 
-          arr1[i].role !== arr2[i].role || 
-          arr1[i].content !== arr2[i].content) {
-        return false;
-      }
+      if (!areMessagesSimilar(arr1[i], arr2[i])) return false;
     }
-    
     return true;
-  };
+  }
 
   // Persist currentConversationId to localStorage
   useEffect(() => {
@@ -340,14 +346,10 @@ function handleScroll() {
     // Immediately add user message to UI for instant feedback
     // First check if this message already exists to prevent duplicates
     setMessages((prevMessages) => {
-      // Check if this exact message already exists
-      const messageExists = prevMessages.some(
-        msg => msg.timestamp === userMessage.timestamp && 
-               msg.role === userMessage.role && 
-               msg.content === userMessage.content
-      );
-      
-      return messageExists ? prevMessages : [...prevMessages, userMessage];
+      // Add and deduplicate
+      const next = dedupeMessages([...prevMessages, userMessage]);
+      next.sort((a, b) => a.timestamp - b.timestamp);
+      return next;
     });
 
     if (!currentConversationId) {
@@ -407,14 +409,10 @@ function handleScroll() {
           chat_session_id: currentConversationId,
         };
         setMessages((prevMessages) => {
-          // Check if this exact message already exists
-          const messageExists = prevMessages.some(
-            msg => msg.timestamp === assistantMessage.timestamp && 
-                   msg.role === assistantMessage.role && 
-                   msg.content === assistantMessage.content
-          );
-          
-          return messageExists ? prevMessages : [...prevMessages, assistantMessage];
+          // Add and deduplicate
+          const next = dedupeMessages([...prevMessages, assistantMessage]);
+          next.sort((a, b) => a.timestamp - b.timestamp);
+          return next;
         });
         setIsLoading(false); // Hide loading as soon as response is rendered
         
@@ -434,15 +432,11 @@ function handleScroll() {
         metadata: { isError: true },
       };
       setMessages((prevMessages) => {
-    // Check if this exact error message already exists
-    const messageExists = prevMessages.some(
-      msg => msg.timestamp === errorMessage.timestamp && 
-             msg.role === errorMessage.role && 
-             msg.content === errorMessage.content
-    );
-    
-    return messageExists ? prevMessages : [...prevMessages, errorMessage];
-  });
+        // Add and deduplicate
+        const next = dedupeMessages([...prevMessages, errorMessage]);
+        next.sort((a, b) => a.timestamp - b.timestamp);
+        return next;
+      });
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
