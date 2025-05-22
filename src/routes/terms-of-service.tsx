@@ -22,12 +22,12 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">1. Acceptance of Terms</h2>
           <p>
-            By accessing or using Paw-Fi's services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+            By accessing or using PawFi's services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">2. Description of Service</h2>
           <p>
-            Paw-Fi provides an educational platform designed to help users learn financial concepts in an engaging way. Our services may include interactive lessons, quizzes, and personalized learning paths.
+            PawFi provides an educational platform designed to help users learn financial concepts in an engaging way. Our services may include interactive lessons, quizzes, and personalized learning paths.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">3. User Accounts</h2>
@@ -49,7 +49,7 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">5. Intellectual Property</h2>
           <p>
-            All content on Paw-Fi, including text, graphics, logos, and software, is the property of Paw-Fi or its content suppliers and is protected by copyright and other intellectual property laws.
+            All content on PawFi, including text, graphics, logos, and software, is the property of PawFi or its content suppliers and is protected by copyright and other intellectual property laws.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">6. Disclaimer of Warranties</h2>
@@ -59,12 +59,12 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">7. Limitation of Liability</h2>
           <p>
-            Paw-Fi shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
+            PawFi shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">8. Educational Content Disclaimer</h2>
           <p>
-            The educational content provided by Paw-Fi is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
+            The educational content provided by PawFi is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">9. Modification of Terms</h2>
@@ -74,7 +74,7 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">10. Governing Law</h2>
           <p>
-            These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which Paw-Fi operates, without regard to its conflict of law provisions.
+            These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which PawFi operates, without regard to its conflict of law provisions.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">11. Contact Information</h2>

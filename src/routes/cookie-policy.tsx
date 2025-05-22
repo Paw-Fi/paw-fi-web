@@ -27,7 +27,7 @@ function CookiePolicy() {
           
           <h2 className="mt-8 text-2xl font-semibold">2. How We Use Cookies</h2>
           <p>
-            Paw-Fi uses cookies for several purposes, including:
+            PawFi uses cookies for several purposes, including:
           </p>
           <ul className="list-disc pl-8">
             <li><strong>Essential cookies:</strong> These are necessary for the website to function properly.</li>

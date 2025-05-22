@@ -33,7 +33,7 @@ export function ChatInterface() {
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Paw-Fi is thinking...");
+  const [loadingMessage, setLoadingMessage] = useState("PawFi is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -107,9 +107,9 @@ export function ChatInterface() {
   const addMessageMutation = useAddMessage(supabase);
 
   const authenticatedMessage =
-    "Hi I'm Paw-Fi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
+    "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
   const unauthenticatedMessage =
-    "Hi I'm Paw-Fi! Sign in to start learning about personal finance with me.";
+    "Hi I'm PawFi! Sign in to start learning about personal finance with me.";
   const baseWelcomeMessage = isAuthenticated
     ? authenticatedMessage
     : unauthenticatedMessage;
@@ -276,7 +276,7 @@ export function ChatInterface() {
         setMessages([userMessage]); // Show user message immediately
         setCurrentMessage("");
         inputRef.current?.focus();
-        // setLoadingMessage("Paw-Fi is thinking..."); // Set by getAIResponseFromEdge call
+        // setLoadingMessage("PawFi is thinking..."); // Set by getAIResponseFromEdge call
 
         await addMessageMutation.mutateAsync(userMessage); // Save user message
 
@@ -343,7 +343,7 @@ export function ChatInterface() {
       });
     } finally {
       setIsLoading(false);
-      setLoadingMessage("Paw-Fi is thinking...");
+      setLoadingMessage("PawFi is thinking...");
       setLoadingDuration(0);
 
       // Clear the loading timer
@@ -393,7 +393,7 @@ export function ChatInterface() {
     setTimeout(() => scrollToBottom(), 50);
 
     setIsLoading(true);
-    setLoadingMessage("Paw-Fi is thinking...");
+    setLoadingMessage("PawFi is thinking...");
     setLoadingDuration(0);
 
     // Clear any existing timer
@@ -467,7 +467,7 @@ export function ChatInterface() {
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
-      setLoadingMessage("Paw-Fi is thinking...");
+      setLoadingMessage("PawFi is thinking...");
       setLoadingDuration(0);
 
       // Clear the loading timer
@@ -671,7 +671,7 @@ export function ChatInterface() {
           ) : (
             <div className="flex flex-col items-center space-y-3 py-4">
               <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Sign in to chat with Paw-Fi and explore personal finance.
+                Sign in to chat with PawFi and explore personal finance.
               </p>
               <div className="flex items-center space-x-3">
                 <Link

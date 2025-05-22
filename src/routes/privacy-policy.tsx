@@ -22,7 +22,7 @@ function PrivacyPolicy() {
           
           <h2 className="mt-8 text-2xl font-semibold">1. Introduction</h2>
           <p>
-            Welcome to Paw-Fi's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
+            Welcome to PawFi's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">2. Information We Collect</h2>

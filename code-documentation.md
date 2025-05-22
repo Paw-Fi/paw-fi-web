@@ -44,9 +44,9 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
- Paw-Fi Codebase Documentation
+ PawFi Codebase Documentation
 
-This document provides a detailed file-by-file breakdown of the Paw-Fi codebase to complement the main documentation.md file. Use this as a reference for understanding specific implementation details.
+This document provides a detailed file-by-file breakdown of the PawFi codebase to complement the main documentation.md file. Use this as a reference for understanding specific implementation details.
 
 # Code Documentation: Chart Components
 

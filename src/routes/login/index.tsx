@@ -9,7 +9,7 @@ export function Login() {
   return (
     <div className="flex flex-col items-center justify-center px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Paw-Fi</h1>
+        <h1 className="text-3xl font-bold text-primary mb-2">PawFi</h1>
         <p className="text-gray-600">Sign in to continue your financial learning journey</p>
       </div>
       

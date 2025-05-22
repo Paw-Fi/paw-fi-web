@@ -1,15 +1,15 @@
 "use client";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState, useLayoutEffect, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 // Import GSAP with plugins already registered
 import { gsap, ScrollTrigger } from "@/lib/gsap-config";
 import { Button } from "@/components/ui/button";
-import catIcon from "@/assets/images/index/pawfi-banner.png";
-import catPig from "@/assets/images/index/pawfi-banner3.png";
+import banner from "@/assets/images/index/pawfi-banner.png";
+import banner3 from "@/assets/images/index/pawfi-banner3.png";
 import catCoin from "@/assets/images/icon.svg";
-import catCash from "@/assets/images/index/pawfi-banner2.png";
+import banner2 from "@/assets/images/index/pawfi-banner2.png";
 import waveBackground from "@/assets/images/index/homepage-bg.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,6 +25,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { PopularCalculators } from "@/components/home/popular-calculators";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -191,7 +192,7 @@ function WaitlistForm() {
             Join our Waitlist
           </h3>
           <p className="mb-6 text-center text-gray-700">
-            Be the first to know when Paw-Fi launches!
+            Be the first to know when PawFi launches!
           </p>
 
           <form
@@ -221,7 +222,7 @@ function WaitlistForm() {
           </div>
           <h3 className="mb-3 text-2xl font-bold">You're on the list!</h3>
           <p className="max-w-md text-lg text-gray-700">
-            We'll notify you when Paw-Fi is ready for you to explore.
+            We'll notify you when PawFi is ready for you to explore.
           </p>
         </div>
       )}
@@ -409,8 +410,8 @@ function HomePage() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">
-          <img src={catCoin} alt="Paw-Fi" className="h-10 w-10" />
-          <span className="ml-2 text-xl font-bold">Paw-Fi</span>
+          <img src={catCoin} alt="PawFi" className="h-10 w-10" />
+          <span className="ml-2 text-xl font-bold">PawFi</span>
         </div>
         <div className="flex items-center gap-4">
           <Link
@@ -442,7 +443,7 @@ function HomePage() {
               <span className="text-purple-600">shouldn't be</span> boring
             </h1>
             <p className="hero-subtitle mb-8 text-xl text-gray-700">
-              Join Paw-Fi, the playful financial literacy app that makes
+              Join PawFi, the playful financial literacy app that makes
               learning about money fun and accessible for everyone.
             </p>
             <div className="hero-cta flex flex-col gap-4 sm:flex-row">
@@ -464,9 +465,9 @@ function HomePage() {
           <div className="relative z-20 flex justify-center lg:justify-end">
             <img
               ref={catRef}
-              src={catIcon}
-              alt="Paw-Fi Cat"
-              className="w-64 md:w-80"
+              src={banner}
+              alt="PawFi Cat"
+              className="w-72 md:w-96"
             />
           </div>
         </div>
@@ -539,16 +540,17 @@ function HomePage() {
         <div className="mx-auto max-w-4xl text-center">
           <h2 className="mb-8 text-3xl font-bold md:text-4xl">Our Mission</h2>
           <p className="mb-12 text-xl text-gray-700">
-            At Paw-Fi, we believe everyone deserves access to financial
+            At PawFi, we believe everyone deserves access to financial
             education that's engaging, approachable, and actually fun. We're on
             a mission to help you build confidence with money through playful,
             interactive learning.
           </p>
           <div className="flex justify-center">
-            <img src={catPig} alt="Cat with Piggy Bank" className="w-48" />
+            <img src={banner3} alt="Cat with Piggy Bank" className="w-56" />
           </div>
         </div>
       </section>
+
 
       {/* How It Works Section */}
       <section
@@ -558,7 +560,7 @@ function HomePage() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
           <div>
             <h2 className="learning-title mb-10 text-3xl font-bold md:text-4xl">
-              How Paw-Fi Works
+              How PawFi Works
             </h2>
 
             <div className="space-y-8">
@@ -634,8 +636,8 @@ function HomePage() {
 
           <div className="flex justify-center">
             <img
-              className="learning-image rounded-xl shadow-lg"
-              src={catCash}
+              className="learning-image w-44 md:w-80"
+              src={banner2}
               alt="Learning process"
             />
           </div>
@@ -654,8 +656,8 @@ function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center">
-              <img src={catCoin} alt="Paw-Fi" className="h-8 w-8" />
-              <span className="ml-2 text-xl font-bold">Paw-Fi</span>
+              <img src={catCoin} alt="PawFi" className="h-8 w-8" />
+              <span className="ml-2 text-xl font-bold">PawFi</span>
             </div>
             <p className="text-gray-400">
               Making financial education accessible, engaging, and fun for
@@ -713,7 +715,7 @@ function HomePage() {
           <div>
             <h3 className="mb-4 text-lg font-bold">Connect</h3>
             <p className="mb-4 text-gray-400">
-              Stay up to date with the latest from Paw-Fi.
+              Stay up to date with the latest from PawFi.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white">
@@ -759,7 +761,7 @@ function HomePage() {
         </div>
 
         <div className="mx-auto mt-12 max-w-7xl border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p>© {new Date().getFullYear()} Paw-Fi. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} PawFi. All rights reserved.</p>
         </div>
       </footer>
     </div>

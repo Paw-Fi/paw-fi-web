@@ -50,7 +50,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
- Paw-Fi Web Application Documentation
+ PawFi Web Application Documentation
 
 # Calculator Charting & Visualization
 
@@ -158,7 +158,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  1. Project Overview
 
-Paw-Fi is an educational web application focused on teaching personal finance and investment concepts. The application features:
+PawFi is an educational web application focused on teaching personal finance and investment concepts. The application features:
 
 - Interactive learning modules with various question types
 - Progressive lesson unlocking system
@@ -9965,7 +9965,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13. Detailed Code Documentation
 
-This section provides a detailed file-by-file breakdown of the Paw-Fi codebase. Use this as a reference for understanding specific implementation details.
+This section provides a detailed file-by-file breakdown of the PawFi codebase. Use this as a reference for understanding specific implementation details.
 
 # Calculator Charting & Visualization
 
