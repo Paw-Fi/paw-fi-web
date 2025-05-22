@@ -1,14 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { useAuth } from '@/contexts/auth-context';
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useAuth } from "@/contexts/auth-context";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faTableCells, faSignOut, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { gsap } from "gsap";
 
 export default function Header() {
   const { user, signOut, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  
+
+  useEffect(() => {
+    if (dropdownRef.current) {
+      if (isMenuOpen) {
+        gsap.fromTo(
+          dropdownRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power2.out" }
+        );
+      } else {
+        gsap.to(dropdownRef.current, { opacity: 0, y: -10, scale: 0.95, duration: 0.3, ease: "power2.out" });
+      }
+    }
+  }, [isMenuOpen]);
+
   const handleSignOut = async () => {
     try {
       const result = await signOut();
@@ -75,45 +93,36 @@ export default function Header() {
               <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
             ) : user ? (
               <div className="relative">
-                <div>
-                  <button 
-                    type="button"
-                    className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    {user.user_metadata?.avatar_url ? (
-                      <img
-                        className="h-8 w-8 rounded-full"
-                        src={user.user_metadata.avatar_url}
-                        alt="User avatar"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
-                        {user.email?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                    )}
-                  </button>
-                </div>
+                <button 
+                  type="button"
+                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  aria-expanded={isMenuOpen}
+                  aria-haspopup="true"
+                >
+                  <span className="sr-only">Open user menu</span>
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      className="h-8 w-8 rounded-full"
+                      src={user.user_metadata.avatar_url}
+                      alt="User avatar"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
+                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </button>
                 {isMenuOpen && (
                   <div 
-                    className="origin-top-right absolute right-0 mt-2 w-64 rounded-xl shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden transition-all duration-200 ease-in-out"
+                    ref={dropdownRef}
+                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 focus:outline-none z-50 origin-top-right"
                     onBlur={() => setIsMenuOpen(false)}
                   >
                     {/* User info section */}
                     <div className="px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex items-center space-x-3">
-                        {user.user_metadata?.avatar_url ? (
-                          <img
-                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm"
-                            src={user.user_metadata.avatar_url}
-                            alt="User avatar"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm border-2 border-white">
-                            {user.email?.charAt(0).toUpperCase() || 'U'}
-                          </div>
-                        )}
+                        
                         <div>
                           <p className="text-sm font-medium text-gray-800 dark:text-white">
                             {user.user_metadata?.full_name || 'User'}
@@ -132,9 +141,11 @@ export default function Header() {
                         className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
+                        <FontAwesomeIcon 
+                          icon={faUser} 
+                          className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" 
+                          fixedWidth 
+                        />
                         Your Profile
                       </Link>
                       <Link
@@ -142,9 +153,11 @@ export default function Header() {
                         className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
+                        <FontAwesomeIcon 
+                          icon={faTableCells} 
+                          className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" 
+                          fixedWidth 
+                        />
                         Dashboard
                       </Link>
                       <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
@@ -155,9 +168,11 @@ export default function Header() {
                           handleSignOut();
                         }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 2a1 1 0 00-1 1v1a1 1 0 002 0V6a1 1 0 00-1-1zm-3 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1zm6 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1zm-3 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+                        <FontAwesomeIcon 
+                          icon={faSignOut} 
+                          className="h-4 w-4 mr-3" 
+                          fixedWidth 
+                        />
                         Sign out
                       </button>
                     </div>

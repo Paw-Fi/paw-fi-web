@@ -24,7 +24,7 @@ interface Message {
   chat_session_id: string;
   metadata?: Record<string, any>;
 }
-
+const MAX_TIME_TO_SHOW_LOADING = 3;
 export function ChatInterface() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -34,6 +34,8 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Paw-Fi is thinking...");
+  const [loadingDuration, setLoadingDuration] = useState(0);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,118 +118,82 @@ function handleScroll() {
     }
   }, [isConversationsLoading, isConversationLoading]);
 
-  // // Robust JSON extractor for chat messages
-  // function extractFirstJson(
-  //   text: string,
-  // ): { json: any; start: number; end: number } | null {
-  //   // 1. Try to extract the first ```json ... ``` code block
-  //   const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
-  //   const jsonBlockMatch = text.match(jsonBlockRegex);
-  //   if (jsonBlockMatch && jsonBlockMatch[1]) {
-  //     try {
-  //       const code = jsonBlockMatch[1].trim();
-  //       const json = JSON.parse(code);
-  //       const idx = text.indexOf(jsonBlockMatch[0]);
-  //       return {
-  //         json,
-  //         start: idx,
-  //         end: idx + jsonBlockMatch[0].length,
-  //       };
-  //     } catch (err) {
-  //       console.warn(
-  //         "Could not parse JSON from code block:",
-  //         jsonBlockMatch[1].substring(0, 100),
-  //         err,
-  //       );
-  //     }
-  //   }
-  //   // 2. Fallback: Try to find the first {...} that parses
-  //   const curlyBlockRegex = /\{[\s\S]*\}/g;
-  //   let match: RegExpExecArray | null;
-  //   while ((match = curlyBlockRegex.exec(text)) !== null) {
-  //     try {
-  //       const json = JSON.parse(match[0]);
-  //       return {
-  //         json,
-  //         start: match.index,
-  //         end: match.index + match[0].length,
-  //       };
-  //     } catch (err) {
-  //       continue;
-  //     }
-  //   }
-  //   return null;
-  // }
+  // Effect for cleanup
+  useEffect(() => {
+    return () => {
+      // Clear any timers when component unmounts
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Effect to update loading message based on duration
+  useEffect(() => {
+    if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
+      setLoadingMessage("Crafting your personalized financial lessons... 📚");
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 10) {
+      setLoadingMessage("Building knowledge blocks just for you! Almost there... 🧩");
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 25) {
+      setLoadingMessage("Creating something special! Your financial wisdom is on the way... ✨");
+    }
+  }, [loadingDuration]);
 
   // Effect for setting initial messages (welcome or from conversation)
   useEffect(() => {
-    if (!isAuthenticated && messages.length === 0) {
-      setMessages([
-        {
-          content: unauthenticatedMessage,
-          role: "assistant",
-          timestamp: Date.now(),
-          chat_session_id: "unauthenticated-welcome",
-        },
-      ]);
-    } else if (isAuthenticated && currentConversationId && currentConversation) {
+    if (isAuthenticated && currentConversationId && currentConversation) {
       if (currentConversation.messages && currentConversation.messages.length > 0) {
-        // Merge and deduplicate local and server messages by timestamp+role
+        // Use a Map to deduplicate messages by a unique identifier
+        const messageMap = new Map<string, Message>();
+        
+        // First add server messages to the map
         const serverMsgs = currentConversation.messages ?? [];
-        const merged: Message[] = [...serverMsgs];
+        serverMsgs.forEach(msg => {
+          const key = `${msg.timestamp}-${msg.role}`;
+          messageMap.set(key, msg);
+        });
+        
+        // Only add local messages if they don't already exist in the map
+        // This prevents duplicates that might have different object references but same data
         messages.forEach(localMsg => {
-          if (!serverMsgs.some(s => s.timestamp === localMsg.timestamp && s.role === localMsg.role)) {
-            merged.push(localMsg);
+          const key = `${localMsg.timestamp}-${localMsg.role}`;
+          if (!messageMap.has(key)) {
+            messageMap.set(key, localMsg);
           }
         });
-        // Sort by timestamp ascending
-        merged.sort((a, b) => a.timestamp - b.timestamp);
-        // Only update if different (by length or last message)
-        const isDifferent =
-          merged.length !== messages.length ||
-          (merged.length > 0 && messages.length > 0 &&
-            (merged[merged.length - 1].timestamp !== messages[messages.length - 1].timestamp ||
-             merged[merged.length - 1].role !== messages[messages.length - 1].role));
-        if (isDifferent) {
+        
+        // Convert map values to array and sort by timestamp
+        const merged = Array.from(messageMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Only update state if the content is actually different to avoid re-renders
+        if (merged.length !== messages.length || !areMessagesEqual(merged, messages)) {
+          console.log('Updating messages state with merged messages');
           setMessages(merged);
         }
-      } else if (messages.length === 0) { // Only add welcome if truly no messages yet
-        const welcomeMsg: Message = {
-          content: authenticatedMessage,
-          role: "assistant",
-          timestamp: Date.now(),
-          chat_session_id: currentConversationId,
-        };
-        // Add to local state immediately for responsiveness
-        setMessages([welcomeMsg]);
-        // Persist to DB, but don't block UI
-        addMessageMutation.mutate(welcomeMsg, {
-          onError: (error) => console.error("Failed to save welcome message:", error),
-          // No need to refetch here as we've updated local state
-        });
       }
-    } else if (isAuthenticated && !currentConversationId && !isConversationsLoading && messages.length === 0) {
-      // If authenticated, no current conv ID, not loading conversations, and no messages yet
-      // This implies there are no conversations at all. Show a generic welcome.
-      setMessages([
-        {
-          content: authenticatedMessage,
-          role: "assistant",
-          timestamp: Date.now(),
-          chat_session_id: "initial-auth-welcome",
-        },
-      ]);
     }
   }, [
     isAuthenticated, 
     currentConversationId, 
     currentConversation, 
     isConversationsLoading, // Added to avoid premature welcome message if conversations are still loading
-    addMessageMutation, // Dependency for addMessageMutation.mutate
-    authenticatedMessage, // Dependency for authenticatedMessage
-    unauthenticatedMessage, // Dependency for unauthenticatedMessage
-    // messages.length removed to prevent loop when welcome message is added
+    // messages dependency removed to prevent infinite loops
   ]);
+  
+  // Helper function to compare message arrays
+  const areMessagesEqual = (arr1: Message[], arr2: Message[]): boolean => {
+    if (arr1.length !== arr2.length) return false;
+    
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i].timestamp !== arr2[i].timestamp || 
+          arr1[i].role !== arr2[i].role || 
+          arr1[i].content !== arr2[i].content) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
 
   // Persist currentConversationId to localStorage
   useEffect(() => {
@@ -253,6 +219,17 @@ function handleScroll() {
   const handleCreateConversationAndSendMessage = async (userId: string, firstMessageContent: string) => {
     setIsLoading(true);
     setLoadingMessage("Starting new conversation...");
+    setLoadingDuration(0);
+    
+    // Clear any existing timer
+    if (loadingTimerRef.current) {
+      clearInterval(loadingTimerRef.current);
+    }
+    
+    // Start a new timer to track loading duration
+    loadingTimerRef.current = setInterval(() => {
+      setLoadingDuration(prev => prev + 1);
+    }, 1000);
     try {
       const newConversationTitle = `Chat ${new Date().toLocaleString()}`;
       const newConvData = await createConversationMutation.mutateAsync({ userId, title: newConversationTitle });
@@ -276,7 +253,7 @@ function handleScroll() {
         await addMessageMutation.mutateAsync(userMessage); // Save user message
 
         // Get AI response for the first message
-        const stream = await getAIResponseFromEdge(newConvId, [userMessage]); // Pass only user message for context
+        const stream = await getAIResponseFromEdge(supabase,newConvId, [userMessage]); // Pass only user message for context
         let assistantResponse = "";
         const assistantMessageId = `assistant-${Date.now()}`;
         
@@ -320,10 +297,27 @@ function handleScroll() {
         chat_session_id: currentConversationId || "error-conv",
          metadata: { isError: true },
       };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => {
+    // Check if this exact error message already exists
+    const messageExists = prev.some(
+      msg => msg.timestamp === errorMsg.timestamp && 
+             msg.role === errorMsg.role && 
+             msg.content === errorMsg.content
+    );
+    
+    return messageExists ? prev : [...prev, errorMsg];
+  });
     } finally {
       setIsLoading(false);
       setLoadingMessage("Paw-Fi is thinking...");
+      setLoadingDuration(0);
+      
+      // Clear the loading timer
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+      
       inputRef.current?.focus();
     }
   };
@@ -344,7 +338,18 @@ function handleScroll() {
     };
 
     // Immediately add user message to UI for instant feedback
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    // First check if this message already exists to prevent duplicates
+    setMessages((prevMessages) => {
+      // Check if this exact message already exists
+      const messageExists = prevMessages.some(
+        msg => msg.timestamp === userMessage.timestamp && 
+               msg.role === userMessage.role && 
+               msg.content === userMessage.content
+      );
+      
+      return messageExists ? prevMessages : [...prevMessages, userMessage];
+    });
+
     if (!currentConversationId) {
       // If no current conversation, create one and then send the message
       await handleCreateConversationAndSendMessage(user.id, content);
@@ -359,6 +364,17 @@ function handleScroll() {
     
     setIsLoading(true);
     setLoadingMessage("Paw-Fi is thinking...");
+    setLoadingDuration(0);
+    
+    // Clear any existing timer
+    if (loadingTimerRef.current) {
+      clearInterval(loadingTimerRef.current);
+    }
+    
+    // Start a new timer to track loading duration
+    loadingTimerRef.current = setInterval(() => {
+      setLoadingDuration(prev => prev + 1);
+    }, 1000);
 
     try {
       // Save user message to database
@@ -383,18 +399,27 @@ function handleScroll() {
           contextMessages
         );
         
-        // Add the assistant response to UI only when available
-        const finalAssistantMessage: Message = {
+        // Add the assistant response to the messages
+        const assistantMessage: Message = {
           content: response.response || "I'm sorry, I couldn't generate a response.",
           role: "assistant",
           timestamp: Date.now(), 
           chat_session_id: currentConversationId,
         };
-        setMessages((prevMessages) => [...prevMessages, finalAssistantMessage]);
+        setMessages((prevMessages) => {
+          // Check if this exact message already exists
+          const messageExists = prevMessages.some(
+            msg => msg.timestamp === assistantMessage.timestamp && 
+                   msg.role === assistantMessage.role && 
+                   msg.content === assistantMessage.content
+          );
+          
+          return messageExists ? prevMessages : [...prevMessages, assistantMessage];
+        });
         setIsLoading(false); // Hide loading as soon as response is rendered
         
         // Save assistant message to database
-        await addMessageMutation.mutateAsync(finalAssistantMessage);
+        await addMessageMutation.mutateAsync(assistantMessage);
       } catch (aiError) {
         console.error("Error getting AI response:", aiError);
         throw aiError; // Propagate to outer catch block
@@ -408,11 +433,28 @@ function handleScroll() {
         chat_session_id: currentConversationId,
         metadata: { isError: true },
       };
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      setMessages((prevMessages) => {
+    // Check if this exact error message already exists
+    const messageExists = prevMessages.some(
+      msg => msg.timestamp === errorMessage.timestamp && 
+             msg.role === errorMessage.role && 
+             msg.content === errorMessage.content
+    );
+    
+    return messageExists ? prevMessages : [...prevMessages, errorMessage];
+  });
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
-      setLoadingMessage("Paw-Fi is thinking..."); 
+      setLoadingMessage("Paw-Fi is thinking...");
+      setLoadingDuration(0);
+      
+      // Clear the loading timer
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+      
       inputRef.current?.focus();
       refetchConversation();
       // Final scroll to bottom
@@ -487,27 +529,37 @@ function handleScroll() {
             </div>
           )}
 
-          {messages.map((msg, idx) => (
-            <ChatMessageItem
-              key={msg.timestamp + '-' + idx}
-              message={msg}
-              formatTime={formatTime}
-              extractFirstJson={extractFirstJson}
-              storeCourse={storeCourse}
-              navigate={navigate}
-            />
-          ))}
+          {messages.map((msg) => {
+            // Create a more unique key using content hash to help React identify unique messages
+            const contentHash = msg.content.length > 0 ? 
+              msg.content.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) & 0xFFFFFFFF, 0) : 0;
+            
+            return (
+              <ChatMessageItem
+                key={`${msg.timestamp}-${msg.role}-${contentHash}`}
+                message={msg}
+                formatTime={formatTime}
+                extractFirstJson={extractFirstJson}
+                storeCourse={storeCourse}
+                navigate={navigate}
+              />
+            );
+          })}
 
           <div ref={messagesEndRef} id="messages-end-ref" style={{ height: '1px', float: 'left', clear: 'both' }} />
 
-          {isLoading && messages.length > 0 && !messages[messages.length-1]?.metadata?.isStreaming && (
+          {isLoading && messages.length > 0 && !messages[messages.length-1]?.metadata?.isStreaming && (      
              <div className="flex justify-start pt-2">
-              <div className="max-w-[80%] rounded-lg border border-gray-200/80 bg-white dark:bg-gray-800 dark:border-gray-700 p-3 shadow-sm">
-                <div className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">{loadingMessage}</div>
-                <div className="flex items-center space-x-1.5">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400"></div>
+              <div className="max-w-[80%] rounded-lg border border-gray-200/80 bg-white dark:bg-gray-800 dark:border-gray-700 p-3 shadow-sm transition-all duration-300 ease-in-out">
+                <div className="mb-2 text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center">
+                  <span className={`mr-2 ${loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? 'text-purple-500 dark:text-purple-400' : ''}`}>{loadingMessage}</span>
+                 
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90 [animation-delay:-0.3s]"></div>
+                  <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90 [animation-delay:-0.15s]"></div>
+                  <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90"></div>
+                
                 </div>
               </div>
             </div>
