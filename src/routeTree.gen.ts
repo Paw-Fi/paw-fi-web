@@ -32,9 +32,16 @@ import { Route as LoginIndexImport } from './routes/login/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
 import { Route as FormatIndexImport } from './routes/format/index'
 import { Route as DashboardIndexImport } from './routes/dashboard/index'
+import { Route as CalculatorsIndexImport } from './routes/calculators/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
 import { Route as LearningLessonIdImport } from './routes/learning/$lessonId'
 import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
+import { Route as CalculatorsSavingGoalsCalculatorImport } from './routes/calculators/saving-goals-calculator'
+import { Route as CalculatorsRetirementCalculatorImport } from './routes/calculators/retirement-calculator'
+import { Route as CalculatorsMortgageCalculatorImport } from './routes/calculators/mortgage-calculator'
+import { Route as CalculatorsInvestmentCalculatorImport } from './routes/calculators/investment-calculator'
+import { Route as CalculatorsCompoundCalculatorImport } from './routes/calculators/compound-calculator'
+import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculators/auto-loan-calculator'
 import { Route as AuthorImportImport } from './routes/author/import'
 import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
 
@@ -165,6 +172,12 @@ const DashboardIndexRoute = DashboardIndexImport.update({
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
+const CalculatorsIndexRoute = CalculatorsIndexImport.update({
+  id: '/calculators/',
+  path: '/calculators/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AuthorIndexRoute = AuthorIndexImport.update({
   id: '/author/',
   path: '/author/',
@@ -182,6 +195,48 @@ const DemoTanstackQueryRoute = DemoTanstackQueryImport.update({
   path: '/demo/tanstack-query',
   getParentRoute: () => rootRoute,
 } as any)
+
+const CalculatorsSavingGoalsCalculatorRoute =
+  CalculatorsSavingGoalsCalculatorImport.update({
+    id: '/calculators/saving-goals-calculator',
+    path: '/calculators/saving-goals-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const CalculatorsRetirementCalculatorRoute =
+  CalculatorsRetirementCalculatorImport.update({
+    id: '/calculators/retirement-calculator',
+    path: '/calculators/retirement-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const CalculatorsMortgageCalculatorRoute =
+  CalculatorsMortgageCalculatorImport.update({
+    id: '/calculators/mortgage-calculator',
+    path: '/calculators/mortgage-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const CalculatorsInvestmentCalculatorRoute =
+  CalculatorsInvestmentCalculatorImport.update({
+    id: '/calculators/investment-calculator',
+    path: '/calculators/investment-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const CalculatorsCompoundCalculatorRoute =
+  CalculatorsCompoundCalculatorImport.update({
+    id: '/calculators/compound-calculator',
+    path: '/calculators/compound-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const CalculatorsAutoLoanCalculatorRoute =
+  CalculatorsAutoLoanCalculatorImport.update({
+    id: '/calculators/auto-loan-calculator',
+    path: '/calculators/auto-loan-calculator',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const AuthorImportRoute = AuthorImportImport.update({
   id: '/author/import',
@@ -304,6 +359,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorImportImport
       parentRoute: typeof rootRoute
     }
+    '/calculators/auto-loan-calculator': {
+      id: '/calculators/auto-loan-calculator'
+      path: '/calculators/auto-loan-calculator'
+      fullPath: '/calculators/auto-loan-calculator'
+      preLoaderRoute: typeof CalculatorsAutoLoanCalculatorImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/compound-calculator': {
+      id: '/calculators/compound-calculator'
+      path: '/calculators/compound-calculator'
+      fullPath: '/calculators/compound-calculator'
+      preLoaderRoute: typeof CalculatorsCompoundCalculatorImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/investment-calculator': {
+      id: '/calculators/investment-calculator'
+      path: '/calculators/investment-calculator'
+      fullPath: '/calculators/investment-calculator'
+      preLoaderRoute: typeof CalculatorsInvestmentCalculatorImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/mortgage-calculator': {
+      id: '/calculators/mortgage-calculator'
+      path: '/calculators/mortgage-calculator'
+      fullPath: '/calculators/mortgage-calculator'
+      preLoaderRoute: typeof CalculatorsMortgageCalculatorImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/retirement-calculator': {
+      id: '/calculators/retirement-calculator'
+      path: '/calculators/retirement-calculator'
+      fullPath: '/calculators/retirement-calculator'
+      preLoaderRoute: typeof CalculatorsRetirementCalculatorImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/saving-goals-calculator': {
+      id: '/calculators/saving-goals-calculator'
+      path: '/calculators/saving-goals-calculator'
+      fullPath: '/calculators/saving-goals-calculator'
+      preLoaderRoute: typeof CalculatorsSavingGoalsCalculatorImport
+      parentRoute: typeof rootRoute
+    }
     '/demo/tanstack-query': {
       id: '/demo/tanstack-query'
       path: '/demo/tanstack-query'
@@ -323,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/author'
       fullPath: '/author'
       preLoaderRoute: typeof AuthorIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/calculators/': {
+      id: '/calculators/'
+      path: '/calculators'
+      fullPath: '/calculators'
+      preLoaderRoute: typeof CalculatorsIndexImport
       parentRoute: typeof rootRoute
     }
     '/dashboard/': {
@@ -462,9 +566,16 @@ export interface FileRoutesByFullPath {
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/calculators': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
@@ -486,9 +597,16 @@ export interface FileRoutesByTo {
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author': typeof AuthorIndexRoute
+  '/calculators': typeof CalculatorsIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
@@ -516,9 +634,16 @@ export interface FileRoutesById {
   '/sabina-learning': typeof SabinaLearningRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/learning/$lessonId': typeof LearningLessonIdRoute
   '/author/': typeof AuthorIndexRoute
+  '/calculators/': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/format/': typeof FormatIndexRoute
   '/learning/': typeof LearningIndexRoute
@@ -547,9 +672,16 @@ export interface FileRouteTypes {
     | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/calculators'
     | '/dashboard/'
     | '/format'
     | '/learning'
@@ -570,9 +702,16 @@ export interface FileRouteTypes {
     | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author'
+    | '/calculators'
     | '/dashboard'
     | '/format'
     | '/learning'
@@ -598,9 +737,16 @@ export interface FileRouteTypes {
     | '/sabina-learning'
     | '/terms-of-service'
     | '/author/import'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
     | '/demo/tanstack-query'
     | '/learning/$lessonId'
     | '/author/'
+    | '/calculators/'
     | '/dashboard/'
     | '/format/'
     | '/learning/'
@@ -628,9 +774,16 @@ export interface RootRouteChildren {
   SabinaLearningRoute: typeof SabinaLearningRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
+  CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
+  CalculatorsCompoundCalculatorRoute: typeof CalculatorsCompoundCalculatorRoute
+  CalculatorsInvestmentCalculatorRoute: typeof CalculatorsInvestmentCalculatorRoute
+  CalculatorsMortgageCalculatorRoute: typeof CalculatorsMortgageCalculatorRoute
+  CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
+  CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   LearningLessonIdRoute: typeof LearningLessonIdRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
+  CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
@@ -652,9 +805,16 @@ const rootRouteChildren: RootRouteChildren = {
   SabinaLearningRoute: SabinaLearningRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,
+  CalculatorsAutoLoanCalculatorRoute: CalculatorsAutoLoanCalculatorRoute,
+  CalculatorsCompoundCalculatorRoute: CalculatorsCompoundCalculatorRoute,
+  CalculatorsInvestmentCalculatorRoute: CalculatorsInvestmentCalculatorRoute,
+  CalculatorsMortgageCalculatorRoute: CalculatorsMortgageCalculatorRoute,
+  CalculatorsRetirementCalculatorRoute: CalculatorsRetirementCalculatorRoute,
+  CalculatorsSavingGoalsCalculatorRoute: CalculatorsSavingGoalsCalculatorRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   LearningLessonIdRoute: LearningLessonIdRoute,
   AuthorIndexRoute: AuthorIndexRoute,
+  CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
@@ -685,9 +845,16 @@ export const routeTree = rootRoute
         "/sabina-learning",
         "/terms-of-service",
         "/author/import",
+        "/calculators/auto-loan-calculator",
+        "/calculators/compound-calculator",
+        "/calculators/investment-calculator",
+        "/calculators/mortgage-calculator",
+        "/calculators/retirement-calculator",
+        "/calculators/saving-goals-calculator",
         "/demo/tanstack-query",
         "/learning/$lessonId",
         "/author/",
+        "/calculators/",
         "/format/",
         "/learning/",
         "/author/course/$courseId"
@@ -753,6 +920,24 @@ export const routeTree = rootRoute
     "/author/import": {
       "filePath": "author/import.tsx"
     },
+    "/calculators/auto-loan-calculator": {
+      "filePath": "calculators/auto-loan-calculator.tsx"
+    },
+    "/calculators/compound-calculator": {
+      "filePath": "calculators/compound-calculator.tsx"
+    },
+    "/calculators/investment-calculator": {
+      "filePath": "calculators/investment-calculator.tsx"
+    },
+    "/calculators/mortgage-calculator": {
+      "filePath": "calculators/mortgage-calculator.tsx"
+    },
+    "/calculators/retirement-calculator": {
+      "filePath": "calculators/retirement-calculator.tsx"
+    },
+    "/calculators/saving-goals-calculator": {
+      "filePath": "calculators/saving-goals-calculator.tsx"
+    },
     "/demo/tanstack-query": {
       "filePath": "demo.tanstack-query.tsx"
     },
@@ -761,6 +946,9 @@ export const routeTree = rootRoute
     },
     "/author/": {
       "filePath": "author/index.tsx"
+    },
+    "/calculators/": {
+      "filePath": "calculators/index.tsx"
     },
     "/dashboard/": {
       "filePath": "dashboard/index.tsx",

@@ -172,7 +172,25 @@ function handleScroll() {
       ]);
     } else if (isAuthenticated && currentConversationId && currentConversation) {
       if (currentConversation.messages && currentConversation.messages.length > 0) {
-        setMessages(currentConversation.messages);
+        // Merge and deduplicate local and server messages by timestamp+role
+        const serverMsgs = currentConversation.messages ?? [];
+        const merged: Message[] = [...serverMsgs];
+        messages.forEach(localMsg => {
+          if (!serverMsgs.some(s => s.timestamp === localMsg.timestamp && s.role === localMsg.role)) {
+            merged.push(localMsg);
+          }
+        });
+        // Sort by timestamp ascending
+        merged.sort((a, b) => a.timestamp - b.timestamp);
+        // Only update if different (by length or last message)
+        const isDifferent =
+          merged.length !== messages.length ||
+          (merged.length > 0 && messages.length > 0 &&
+            (merged[merged.length - 1].timestamp !== messages[messages.length - 1].timestamp ||
+             merged[merged.length - 1].role !== messages[messages.length - 1].role));
+        if (isDifferent) {
+          setMessages(merged);
+        }
       } else if (messages.length === 0) { // Only add welcome if truly no messages yet
         const welcomeMsg: Message = {
           content: authenticatedMessage,
@@ -189,16 +207,16 @@ function handleScroll() {
         });
       }
     } else if (isAuthenticated && !currentConversationId && !isConversationsLoading && messages.length === 0) {
-        // If authenticated, no current conv ID, not loading conversations, and no messages yet
-        // This implies there are no conversations at all. Show a generic welcome.
-        setMessages([
-            {
-                content: authenticatedMessage,
-                role: "assistant",
-                timestamp: Date.now(),
-                chat_session_id: "initial-auth-welcome",
-            },
-        ]);
+      // If authenticated, no current conv ID, not loading conversations, and no messages yet
+      // This implies there are no conversations at all. Show a generic welcome.
+      setMessages([
+        {
+          content: authenticatedMessage,
+          role: "assistant",
+          timestamp: Date.now(),
+          chat_session_id: "initial-auth-welcome",
+        },
+      ]);
     }
   }, [
     isAuthenticated, 
@@ -210,7 +228,7 @@ function handleScroll() {
     unauthenticatedMessage, // Dependency for unauthenticatedMessage
     // messages.length removed to prevent loop when welcome message is added
   ]);
-  
+
   // Persist currentConversationId to localStorage
   useEffect(() => {
     if (currentConversationId && typeof window !== 'undefined') {
@@ -231,7 +249,6 @@ function handleScroll() {
       }
     }
   }, [messages, isLoading]);
-
 
   const handleCreateConversationAndSendMessage = async (userId: string, firstMessageContent: string) => {
     setIsLoading(true);
@@ -263,32 +280,23 @@ function handleScroll() {
         let assistantResponse = "";
         const assistantMessageId = `assistant-${Date.now()}`;
         
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            content: "",
-            role: "assistant",
-            timestamp: Date.now(),
-            chat_session_id: newConvId,
-            metadata: { id: assistantMessageId, isStreaming: true },
-          },
-        ]);
-
         for await (const chunk of stream) {
           assistantResponse += chunk;
           setMessages((prevMessages) =>
-            prevMessages.map((msg) =>
-              msg.metadata?.id === assistantMessageId
-                ? { ...msg, content: assistantResponse, metadata: { ...msg.metadata, isStreaming: true } }
-                : msg
-            )
+            [...prevMessages, {
+              content: assistantResponse,
+              role: "assistant",
+              timestamp: Date.now(), 
+              chat_session_id: newConvId,
+              metadata: { id: assistantMessageId, isStreaming: true },
+            }]
           );
         }
         
         const finalAssistantMessage: Message = {
           content: assistantResponse,
           role: "assistant",
-          timestamp: Date.now(),
+          timestamp: Date.now(), 
           chat_session_id: newConvId,
           metadata: { id: assistantMessageId, isStreaming: false },
         };
@@ -320,7 +328,6 @@ function handleScroll() {
     }
   };
 
-
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
     if (!isAuthenticated || !user?.id) {
@@ -328,12 +335,7 @@ function handleScroll() {
       return;
     }
 
-    if (!currentConversationId) {
-      // If no current conversation, create one and then send the message
-      await handleCreateConversationAndSendMessage(user.id, content);
-      return;
-    }
-
+    // Construct user message first
     const userMessage: Message = {
       content,
       role: "user",
@@ -343,6 +345,12 @@ function handleScroll() {
 
     // Immediately add user message to UI for instant feedback
     setMessages((prevMessages) => [...prevMessages, userMessage]);
+    if (!currentConversationId) {
+      // If no current conversation, create one and then send the message
+      await handleCreateConversationAndSendMessage(user.id, content);
+      return;
+    }
+
     setCurrentMessage("");
     inputRef.current?.focus();
     
@@ -356,27 +364,17 @@ function handleScroll() {
       // Save user message to database
       await addMessageMutation.mutateAsync(userMessage);
       
-      // Prepare assistant message placeholder
-      const assistantMessageId = `assistant-${Date.now()}`;
-      const assistantMessage: Message = {
-        content: "", 
-        role: "assistant",
-        timestamp: Date.now(), 
-        chat_session_id: currentConversationId,
-        metadata: { id: assistantMessageId, isStreaming: true },
-      };
-      
-      // Add placeholder for assistant response
-      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      
       // Get response from AI
       try {
         // Format messages for the API
-        const contextMessages = messages.map(msg => ({
+        // Use the latest messages including the just-sent user message
+        const contextMessages = [
+          ...messages,
+          userMessage
+        ].map(msg => ({
           role: msg.role,
           content: msg.content
         }));
-        contextMessages.push({ role: "user", content });
         
         // Call the AI service
         const response = await getAIResponseFromEdge(
@@ -385,23 +383,15 @@ function handleScroll() {
           contextMessages
         );
         
-        // Update with the response
+        // Add the assistant response to UI only when available
         const finalAssistantMessage: Message = {
           content: response.response || "I'm sorry, I couldn't generate a response.",
           role: "assistant",
           timestamp: Date.now(), 
           chat_session_id: currentConversationId,
-          metadata: { id: assistantMessageId, isStreaming: false }, 
         };
-        
-        // Update UI with final message
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.metadata?.id === assistantMessageId
-              ? finalAssistantMessage
-              : msg
-          )
-        );
+        setMessages((prevMessages) => [...prevMessages, finalAssistantMessage]);
+        setIsLoading(false); // Hide loading as soon as response is rendered
         
         // Save assistant message to database
         await addMessageMutation.mutateAsync(finalAssistantMessage);
@@ -526,7 +516,7 @@ function handleScroll() {
       </div>
 
       <div className="border-t border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-        <div className="mx-auto max-w-3xl p-3 md:p-4">
+        <div className="mx-auto w-full p-3 md:p-4">
           {isAuthenticated ? (
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <input

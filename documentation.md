@@ -1,6 +1,162 @@
-# Paw-Fi Web Application Documentation
+# Calculator Charting & Visualization
 
-## 1. Project Overview
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Paw-Fi Web Application Documentation
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 1. Project Overview
 
 Paw-Fi is an educational web application focused on teaching personal finance and investment concepts. The application features:
 
@@ -15,32 +171,1176 @@ Paw-Fi is an educational web application focused on teaching personal finance an
 
 The application is built with TypeScript, React, Tailwind CSS, and TanStack Router. It leverages modern UI patterns, GSAP animations, and a component-based architecture for an engaging user experience.
 
-## 2. Project Structure
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 2. Project Structure
 
 The project follows a modular structure organized into the following key directories:
 
 ```
 /src
-  /assets       # Static assets like images
-  /components   # Reusable UI components
-  /contexts     # React contexts for state management
-  /data         # Mock data and data access functions
-  /integrations # Third-party service integrations
-  /lib          # Core library functions
-  /routes       # Application routes
-  /services     # Service layer
-  /styles       # Global styles
-  /types        # TypeScript type definitions
-  /utils        # Utility functions
+  /assets       # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
 ```
 
-## 3. Core Features
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Static assets like images
+  /components   # Calculator Charting & Visualization
 
-### 3.1. Learning System
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Reusable UI components
+  /contexts     # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ React contexts for state management
+  /data         # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Mock data and data access functions
+  /integrations # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Third-party service integrations
+  /lib          # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Core library functions
+  /routes       # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Application routes
+  /services     # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Service layer
+  /styles       # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Global styles
+  /types        # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ TypeScript type definitions
+  /utils        # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Utility functions
+```
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3. Core Features
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.1. Learning System
 
 The learning system is the primary feature of the application, providing an interactive educational experience through structured lessons and quizzes.
 
-#### 3.1.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.1.1. Key Components
 
 - `LearningPage` (`/routes/sabina-learning.tsx`): Main page displaying available lessons
 - `Lesson` (`/routes/learning/$lessonId.tsx`): Individual lesson with interactive questions
@@ -50,7 +1350,215 @@ The learning system is the primary feature of the application, providing an inte
 - `unlock-next-lesson.ts`: Function to unlock sequential lessons
 - `MermaidRenderer.tsx`: Component for rendering diagram syntax as SVG
 
-#### 3.1.2. Data Model
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.1.2. Data Model
 
 Lessons follow a structured data model defined in `/types/learning.types.ts`:
 
@@ -58,7 +1566,215 @@ Lessons follow a structured data model defined in `/types/learning.types.ts`:
 - `Question`: Base type for all question types with shared properties
 - Specialized question types (ChoiceQuestion, SortQuestion, etc.) with type guards
 
-#### 3.1.3. Progression System
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.1.3. Progression System
 
 The application implements a progression system that:
 
@@ -67,18 +1783,590 @@ The application implements a progression system that:
 - Unlocks subsequent lessons upon completion
 - Persists progress in localStorage
 
-### 3.2. Authentication System
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.2. Authentication System
 
 The authentication system handles user registration, login, and session management throughout the application.
 
-#### 3.2.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.2.1. Key Components
 
 - `AuthProvider` (`/contexts/auth-context.tsx`): Context provider for authentication state
 - `SignInForm` (`/components/auth/sign-in-form.tsx`): Login form with validation
 - `SignUpForm` (`/components/auth/sign-up-form.tsx`): Registration form with email verification
 - `PageLayout` (`/components/layout/page-layout.tsx`): Layout component that handles header visibility based on authentication
 
-#### 3.2.2. Implementation Notes
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.2.2. Implementation Notes
 
 The authentication system includes:
 
@@ -90,17 +2378,589 @@ The authentication system includes:
 - Sign-out functionality accessible from the header
 - Streamlined navigation flow after authentication
 
-### 3.3. Chat System
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3. Chat System
 
 The Chat system collects user preferences and information to personalize the learning experience.
 
-#### 3.3.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3.1. Key Components
 
 - `ChatProvider` (`/contexts/chat-context.tsx`): Context provider for Chat state
 - `ChatRoute` (`/routes/chat.tsx`): Main Chat UI
 - `ChatInterface` (`/components/chat/chat-interface.tsx`): AI-assisted chat for personalized recommendations
 
-#### 3.3.2. Authentication Integration
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3.2. Authentication Integration
 
 The Chat interface has been updated to integrate with the authentication system:
 
@@ -109,7 +2969,215 @@ The Chat interface has been updated to integrate with the authentication system:
 - Displays sign-in and sign-up buttons for unauthenticated users
 - Provides a seamless path to authentication from the chat interface
 
-#### 3.3.3. Implementation Notes
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3.3. Implementation Notes
 
 The Chat system has been refactored to reuse components from the learning system, eliminating code duplication. This includes:
 
@@ -120,25 +3188,857 @@ The Chat system has been refactored to reuse components from the learning system
 - Real-time progress indicators for course generation
 - Automatic JSON continuation for handling large AI responses
 
-### 3.3. Drag-and-Drop Categorization
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3. Drag-and-Drop Categorization
 
 The application includes a drag-and-drop system for categorization questions using the dnd-kit library.
 
-#### 3.3.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3.1. Key Components
 
 - `DragOverlay`, `Draggable`, `Droppable` (`/components/learning/dnd/*`)
 - `SortCategoriesQuestion` (`/components/learning/question-types/sort-categories-question.tsx`)
 
-#### 3.3.2. Features
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.3.2. Features
 
 - Item dragging between categories
 - Visual feedback during dragging
 - Empty state indicators for categories
 - Mobile and desktop support
 
-## 4. UI Components
+# Calculator Charting & Visualization
 
-### 4.1. Question Types
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 4. UI Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 4.1. Question Types
 
 The application supports multiple question types:
 
@@ -168,7 +4068,163 @@ The application supports multiple question types:
    - Text field with validation
    - Support for prefixes/suffixes
 
-### 4.2. Helper Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 4.2. Helper Components
 
 - `MermaidRenderer`: Renders Mermaid diagram syntax as SVG
 - `ActionButtons`: Navigation buttons for lessons
@@ -176,22 +4232,594 @@ The application supports multiple question types:
 - `CompletionDisplay`: End-of-lesson completion modal with animations
 - `LessonProgressBar`: Visual indicator of lesson progress
 
-## 5. State Management & Routing
+# Calculator Charting & Visualization
 
-### 5.1. Local Storage
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 5. State Management & Routing
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 5.1. Local Storage
 
 The application uses localStorage for persistence:
 
 - `paw-fi-course`: Stores course and lesson data including completion status
 - `Chat`: Stores Chat responses
 
-### 5.2. React Hooks and Context
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 5.2. React Hooks and Context
 
 - `useLesson`: Custom hook for lesson state management
 - `ChatContext`: Context provider for Chat state
 - `useChat`: Hook for accessing Chat context
 
-### 5.3. Routing Implementation
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 5.3. Routing Implementation
 
 The application uses TanStack Router (formerly React Router) for routing:
 
@@ -200,7 +4828,111 @@ The application uses TanStack Router (formerly React Router) for routing:
 - Programmatic navigation with `useNavigate`
 - Route protection for locked lessons
 
-## 6. Animation and Interactions
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 6. Animation and Interactions
 
 The application uses GSAP for animations:
 
@@ -208,33 +4940,1021 @@ The application uses GSAP for animations:
 - Confetti effects on lesson completion
 - Transition animations between questions
 
-## 7. Recent Improvements
+# Calculator Charting & Visualization
 
-### 7.1. Mermaid Diagram Rendering
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 7. Recent Improvements
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 7.1. Mermaid Diagram Rendering
 
 - Implemented proper rendering of Mermaid diagrams using the Mermaid API
 - Added loading states and error handling for diagrams
 
-### 7.2. Question Validation
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 7.2. Question Validation
 
 - Fixed parameter mismatch in image-choice-question component
 - Corrected validation logic in areAllAnswersCorrect function
 
-### 7.3. Chat Refactoring
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 7.3. Chat Refactoring
 
 - Eliminated code duplication by reusing learning components
 - Implemented TypeScript interfaces and type guards for safe mapping
 - Created adapter functions to transform data formats
 
-### 7.4. Drag-and-Drop Improvements
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 7.4. Drag-and-Drop Improvements
 
 - Refactored from SortableContext to direct Draggable/Droppable approach
 - Fixed performance issues with useRef
 - Improved styling and visual feedback
 
-## 8. Development Guidelines
+# Calculator Charting & Visualization
 
-### 8.1. Adding New Question Types
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 8. Development Guidelines
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 8.1. Adding New Question Types
 
 To add a new question type:
 
@@ -243,16 +5963,432 @@ To add a new question type:
 3. Implement a type guard function
 4. Update the question content renderer to support the new type
 
-### 8.2. Creating Lessons
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 8.2. Creating Lessons
 
 Lessons can be created by:
 
 1. Adding new lesson data to the mock data files
 2. Using the author import functionality to import JSON-formatted lessons
 
-## 9. Technical Implementation Details
+# Calculator Charting & Visualization
 
-### 9.1. Question Validation Logic
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 9. Technical Implementation Details
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 9.1. Question Validation Logic
 
 The question validation system (`lesson-utils.ts`) implements sophisticated logic for each question type:
 
@@ -263,7 +6399,163 @@ The question validation system (`lesson-utils.ts`) implements sophisticated logi
 - **Matrix Rating Questions**: Compares user ratings with expected ratings
 - **Text Input Questions**: Performs pattern matching, case sensitivity checks, and validates against possible answers
 
-### 9.2. Animation Implementation
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 9.2. Animation Implementation
 
 The application uses GSAP for animations:
 - Spring-based transitions for UI elements
@@ -271,7 +6563,163 @@ The application uses GSAP for animations:
 - Sequential animation of modal content
 - Cat mascot animations throughout the learning experience
 
-### 9.3. Data Persistence Strategy
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 9.3. Data Persistence Strategy
 
 The application stores data in localStorage with a unified approach:
 - `paw-fi-course`: Single storage key for all course data
@@ -279,17 +6727,589 @@ The application stores data in localStorage with a unified approach:
 - Automatic unlocking of lessons based on completion
 - XP reward tracking
 
-### 3.4. JSON Continuation Feature
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.4. JSON Continuation Feature
 
 The application implements an automatic JSON continuation mechanism to handle large JSON responses from the Gemini API that may be truncated due to token limitations.
 
-#### 3.4.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.4.1. Key Components
 
 - `ChatInterface` (`/components/chat/chat-interface.tsx`): Manages the chat UI and JSON continuation
 - `continueJsonResponse` function: Handles the automatic continuation process
 - `checkJsonString` function: Detects incomplete JSON and validates structure
 
-#### 3.4.2. Implementation Details
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.4.2. Implementation Details
 
 - **Automatic Detection**: The system automatically detects when a JSON response from the AI is incomplete
 - **Background Continuation**: When incomplete JSON is detected, the system automatically sends a "continue" message to the API
@@ -298,7 +7318,215 @@ The application implements an automatic JSON continuation mechanism to handle la
 - **Format Support**: Handles both single lesson format and complete course format with multiple lessons
 - **Loading Indicators**: Shows loading animation while retrieving the rest of the data
 
-#### 3.4.3. Technical Implementation
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 3.4.3. Technical Implementation
 
 - Uses a timeout-based approach to automatically trigger continuation requests
 - Implements smart JSON merging logic to handle formatting issues between fragments
@@ -306,13 +7534,481 @@ The application implements an automatic JSON continuation mechanism to handle la
 - Enhanced JSON validation to detect both single lesson and course data structures
 - Recursive continuation for handling particularly large JSON responses
 
-## 10. Documentation Maintenance Guidelines
+# Calculator Charting & Visualization
 
-### 10.1. How to Update This Documentation
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 10. Documentation Maintenance Guidelines
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 10.1. How to Update This Documentation
 
 This documentation should be updated whenever changes are made to the codebase. Follow these guidelines to maintain documentation quality:
 
-#### For New Components or Files
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ For New Components or Files
 
 1. Add a new subsection in the appropriate section describing the component/file
 2. Include:
@@ -322,7 +8018,215 @@ This documentation should be updated whenever changes are made to the codebase. 
    - Relationships with other components
    - Any important implementation details
 
-#### For Modified Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ For Modified Components
 
 1. Update the relevant documentation section
 2. Add a note in the "Recent Improvements" section with:
@@ -331,24 +8235,700 @@ This documentation should be updated whenever changes are made to the codebase. 
    - Reason for changes
    - Impact on related components
 
-#### For Refactoring/Restructuring
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ For Refactoring/Restructuring
 
 1. Update the project structure section if folder organization changes
 2. Update component relationships in the relevant sections
 3. Document any migration steps or breaking changes
 
-#### Documentation Structure
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Documentation Structure
 
 This documentation follows the codebase structure:
 - Each major directory (`components`, `routes`, etc.) has a corresponding section
 - Components are grouped by their functional relationship
 - Types and interfaces are documented with their usage patterns
 
-### 10.2. Changelog Template
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 10.2. Changelog Template
 
 When updating the documentation, add a changelog entry in this format:
 
-## 11. Future Enhancements
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 11. Future Enhancements
 
 Potential areas for future development:
 
@@ -360,24 +8940,908 @@ Potential areas for future development:
 - Social sharing of achievements
 - Expanded course catalog with advanced financial topics
 
-## 12. Layout System
+# Calculator Charting & Visualization
 
-### 12.1. Page Layout Component
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 12. Layout System
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 12.1. Page Layout Component
 
 The application uses a centralized layout system to maintain consistent styling and header visibility across pages.
 
-#### 12.1.1. Key Components
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 12.1.1. Key Components
 
 - `PageLayout` (`/components/layout/page-layout.tsx`): Wrapper component for all pages except the home page
 
-#### 12.1.2. Implementation Details
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 12.1.2. Implementation Details
 
 - Uses TanStack Router's location state to detect the current path
 - Conditionally renders the header based on the current route
 - Applies consistent flex-1 and bg-background styling to all pages
 - Eliminates duplicate styling code across individual page components
 
-#### 12.1.3. Usage
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 12.1.3. Usage
 
 The PageLayout is applied at the root route level in `__root.tsx`, ensuring all child routes inherit the layout:
 
@@ -395,13 +9859,481 @@ export const Route = createRootRoute({
 });
 ```
 
-## 13. Detailed Code Documentation
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13. Detailed Code Documentation
 
 This section provides a detailed file-by-file breakdown of the Paw-Fi codebase. Use this as a reference for understanding specific implementation details.
 
-### 13.1. Types
+# Calculator Charting & Visualization
 
-#### `/src/types/learning.types.ts`
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13.1. Types
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/types/learning.types.ts`
 
 This file defines all TypeScript interfaces and types for the learning system.
 
@@ -435,11 +10367,635 @@ const question: ChoiceQuestion = {
 };
 ```
 
-### 13.2. Components
+# Calculator Charting & Visualization
 
-#### Learning Components
+## Chart.js Integration
 
-##### `/src/components/learning/MermaidRenderer.tsx`
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13.2. Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Learning Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/learning/MermaidRenderer.tsx`
 
 **Purpose:** Renders Mermaid diagram syntax as SVG visualizations.
 
@@ -453,7 +11009,267 @@ const question: ChoiceQuestion = {
 <MermaidRenderer content="graph TD; A-->B;" />
 ```
 
-##### `/src/components/learning/hooks/use-lesson.ts`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/learning/hooks/use-lesson.ts`
 
 **Purpose:** Custom hook for lesson state management.
 
@@ -466,7 +11282,267 @@ const question: ChoiceQuestion = {
 - Unlocks next lessons upon completion
 - Calculates earned XP based on performance
 
-##### `/src/components/learning/lesson-utils.ts`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/learning/lesson-utils.ts`
 
 **Purpose:** Core validation functions for question answers.
 
@@ -475,9 +11551,477 @@ const question: ChoiceQuestion = {
 - `isAnswerCorrect`: Validates a specific answer for any question type
 - `isCurrentQuestionAnswered`: Checks if the current question has been answered
 
-#### UI Components
+# Calculator Charting & Visualization
 
-##### `/src/components/ui/button.tsx`
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ UI Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/ui/button.tsx`
 
 **Purpose:** Reusable button component with various styles.
 
@@ -490,7 +12034,267 @@ const question: ChoiceQuestion = {
 **Sizes:**
 - `sm`, `md`, `lg`
 
-##### `/src/components/ui/modal.tsx`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/ui/modal.tsx`
 
 **Purpose:** Reusable modal dialog component.
 
@@ -500,9 +12304,373 @@ const question: ChoiceQuestion = {
 - Animation using GSAP
 - Accessibility features
 
-### 13.3. Authentication Components
+# Calculator Charting & Visualization
 
-#### `/src/components/auth/sign-up-form.tsx`
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13.3. Authentication Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/auth/sign-up-form.tsx`
 
 **Purpose:** Registration form with email verification.
 
@@ -522,7 +12690,215 @@ const question: ChoiceQuestion = {
 - Streamlined navigation flow to direct users to the chat page after authentication
 - Simplified verification UI with clear instructions and visual indicators
 
-#### `/src/components/auth/sign-in-form.tsx`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/auth/sign-in-form.tsx`
 
 **Purpose:** Login form with validation.
 
@@ -537,7 +12913,215 @@ const question: ChoiceQuestion = {
 - Provides a link to the registration page for new users
 - Handles various authentication error states
 
-#### `/src/contexts/auth-context.tsx`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/contexts/auth-context.tsx`
 
 **Purpose:** Context provider for authentication state.
 
@@ -552,9 +13136,373 @@ const question: ChoiceQuestion = {
 - Maintains user state across the application
 - Provides authentication methods to components via context
 
-### 13.4. Layout Components
+# Calculator Charting & Visualization
 
-#### `/src/components/layout/page-layout.tsx`
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13.4. Layout Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/layout/page-layout.tsx`
 
 **Purpose:** Centralized layout component for consistent page structure.
 
@@ -568,9 +13516,373 @@ const question: ChoiceQuestion = {
 - Renders the header on all pages except the home page
 - Applies consistent flex-1 and bg-background styling to all pages
 
-### 13.5. Chat Components
+# Calculator Charting & Visualization
 
-#### `/src/components/chat/chat-interface.tsx`
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 13.5. Chat Components
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ `/src/components/chat/chat-interface.tsx`
 
 **Purpose:** Interactive chat interface that uses the Gemini API with automatic JSON continuation.
 
@@ -593,17 +13905,641 @@ const question: ChoiceQuestion = {
 - `continueJsonResponse()`: Handles the automatic continuation of incomplete JSON
 - `getAIResponse(userMessage: string, addToChat: boolean)`: Enhanced to support JSON continuation
 
-## 14. Backend Services
+# Calculator Charting & Visualization
 
-### 14.1. Supabase
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14. Backend Services
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.1. Supabase
 
 We use Supabase for authentication and data storage. The Supabase client is initialized in `lib/supabase.ts`.
 
-### 14.2. Chat History Backend
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2. Chat History Backend
 
 We've implemented a dedicated backend service for storing and retrieving chat history. The backend is built with Express, TypeScript, and MongoDB, providing a RESTful API for managing conversations.
 
-#### 14.2.1. Key Features
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2.1. Key Features
 
 - Store and retrieve chat conversations with the Gemini AI
 - Organize conversations by user
@@ -611,7 +14547,215 @@ We've implemented a dedicated backend service for storing and retrieving chat hi
 - Update conversation details
 - Delete conversations
 
-#### 14.2.2. API Endpoints
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2.2. API Endpoints
 
 | Method | Endpoint                      | Description                       |
 |--------|-------------------------------|-----------------------------------|
@@ -622,36 +14766,1336 @@ We've implemented a dedicated backend service for storing and retrieving chat hi
 | POST   | /api/conversations/:id/messages | Add a message to a conversation   |
 | DELETE | /api/conversations/:id        | Delete a conversation             |
 
-#### 14.2.3. Integration with Frontend
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2.3. Integration with Frontend
 
 The frontend interacts with this API using the `conversation-service.ts` service, which provides functions for all the API endpoints. The chat interface has been updated to use this service for storing and retrieving chat history.
 
-#### 14.2.4. Project Structure
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2.4. Project Structure
 
 ```
 paw-fi-be/
 ├── src/
 │   ├── config/
-│   │   └── db.ts                 # Database connection
-│   ├── controllers/
-│   │   └── conversationController.ts  # API controllers
-│   ├── models/
-│   │   └── Conversation.ts       # MongoDB models
-│   ├── routes/
-│   │   └── conversationRoutes.ts # API routes
-│   └── server.ts                 # Main server file
-├── .env.example                  # Environment variables template
-├── package.json                  # Dependencies and scripts
-└── tsconfig.json                 # TypeScript configuration
+│   │   └── db.ts                 # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
 ```
 
-## 15. Database Schema
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Database connection
+│   ├── controllers/
+│   │   └── conversationController.ts  # Calculator Charting & Visualization
 
-### 15.1. Supabase Tables
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ API controllers
+│   ├── models/
+│   │   └── Conversation.ts       # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ MongoDB models
+│   ├── routes/
+│   │   └── conversationRoutes.ts # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ API routes
+│   └── server.ts                 # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Main server file
+├── .env.example                  # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Environment variables template
+├── package.json                  # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ Dependencies and scripts
+└── tsconfig.json                 # Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ TypeScript configuration
+```
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15. Database Schema
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1. Supabase Tables
 
 The application uses Supabase as its backend-as-a-service (BaaS) solution. The following tables are defined in the Supabase database:
 
-#### 15.1.1. `users`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.1. `users`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -668,7 +16112,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can update their own records
 - Service role can insert new records (triggered by auth sign-up)
 
-#### 15.1.2. `user_progress`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.2. `user_progress`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -684,7 +16336,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can insert their own progress records
 - Users cannot modify existing progress records
 
-#### 15.1.3. `user_preferences`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.3. `user_preferences`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -698,7 +16558,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can read their own preference records
 - Users can update their own preference records
 
-#### 15.1.4. `lessons`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.4. `lessons`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -717,7 +16785,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - All users can read lessons
 - Only admins can create/update lessons
 
-#### 15.1.5. `categories`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.5. `categories`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -732,7 +17008,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - All users can read categories
 - Only admins can create/update categories
 
-#### 15.1.6. `badges`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.6. `badges`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -747,7 +17231,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - All users can read badges
 - Only admins can create/update badges
 
-#### 15.1.7. `user_badges`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.7. `user_badges`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -760,7 +17452,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can read their own badges
 - System can insert badges for users
 
-#### 15.1.8. `learning_paths`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.8. `learning_paths`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -775,7 +17675,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - All users can read learning paths
 - Only admins can create/update learning paths
 
-#### 15.1.9. `user_learning_paths`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.9. `user_learning_paths`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -790,7 +17898,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can read their own learning path progress
 - Users can update their own learning path progress
 
-#### 15.1.10. `chat_sessions`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.10. `chat_sessions`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -808,7 +18124,215 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can update their own chat sessions
 - Users can delete their own chat sessions
 
-#### 15.1.11. `chat_messages`
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.11. `chat_messages`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -823,7 +18347,163 @@ The application uses Supabase as its backend-as-a-service (BaaS) solution. The f
 - Users can read messages in their own chat sessions
 - Users can insert messages into their own chat sessions
 
-### 14.2. Authentication Tables
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.2. Authentication Tables
 
 Supabase Auth provides several built-in tables for authentication management:
 
@@ -831,18 +18511,642 @@ Supabase Auth provides several built-in tables for authentication management:
 - `auth.sessions`: Manages user sessions
 - `auth.refresh_tokens`: Handles token refresh for authenticated sessions
 
-### 14.3. Database Triggers
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 14.3. Database Triggers
 
 - `on_auth_user_created`: Creates a new record in the `users` table when a user signs up
 - `on_user_updated`: Updates the `auth.users` metadata when a user updates their profile
 
-## 15. Chat System Architecture
+# Calculator Charting & Visualization
 
-### 15.1. Edge Functions
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15. Chat System Architecture
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1. Edge Functions
 
 The chat system uses Supabase Edge Functions to handle chat history management. Edge Functions are serverless functions that run on Supabase's infrastructure, providing a scalable and efficient way to handle backend operations.
 
-#### 15.1.1. `chat_sessions` Edge Function
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.1. `chat_sessions` Edge Function
 
 **Purpose:** Manages chat sessions (conversations) in the database.
 
@@ -873,7 +19177,215 @@ const { data, error } = await supabase.functions.invoke('chat_sessions', {
 const { data, error } = await supabase.functions.invoke('chat_sessions');
 ```
 
-#### 15.1.2. `chat_messages` Edge Function
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.1.2. `chat_messages` Edge Function
 
 **Purpose:** Manages messages within chat sessions.
 
@@ -906,9 +19418,373 @@ const { data, error } = await supabase.functions.invoke('chat_messages', {
 });
 ```
 
-### 15.2. Frontend Integration
+# Calculator Charting & Visualization
 
-#### 15.2.1. Conversation Service
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.2. Frontend Integration
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.2.1. Conversation Service
 
 The `conversation-service.ts` file provides a clean API for interacting with the Edge Functions:
 
@@ -920,7 +19796,215 @@ The `conversation-service.ts` file provides a clean API for interacting with the
 - `getMessages`: Retrieves all messages for a specific chat session
 - `addMessage`: Adds a new message to a chat session
 
-#### 15.2.2. Chat Interface Component
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.2.2. Chat Interface Component
 
 The `chat-interface.tsx` component provides the user interface for the chat system:
 
@@ -931,7 +20015,163 @@ The `chat-interface.tsx` component provides the user interface for the chat syst
 - Integrates with authentication to show different UI based on user state
 - Implements local storage fallback for offline access
 
-### 15.3. Data Flow
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 15.3. Data Flow
 
 1. **User Authentication**:
    - User logs in through Supabase Auth
@@ -953,9 +20193,269 @@ The `chat-interface.tsx` component provides the user interface for the chat syst
    - Messages are also stored in localStorage for offline access
    - When connection is restored, messages are synchronized with the server
 
-## 16. Changelog
+# Calculator Charting & Visualization
 
-### 2025-05-20
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 16. Changelog
+
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+# Calculator Charting & Visualization
+
+## Chart.js Integration
+
+This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2](https://react-chartjs-2.js.org/) for all financial visualizations, including:
+- Pie charts for payment breakdowns
+- Line charts for amortization trends
+
+## Chart Components
+
+### PieChart
+- Located at: `/src/components/ui/pie-chart.tsx`
+- Props:
+  - `labels: string[]` — Section labels
+  - `data: number[]` — Section values
+  - `backgroundColor?: string[]` — Colors
+  - `borderColor?: string[]` — Border colors
+  - `title?: string` — Chart title
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+### LineChart
+- Located at: `/src/components/ui/line-chart.tsx`
+- Props:
+  - `labels: string[]` — X axis (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessible: ARIA labels, visually hidden descriptions, responsive container
+
+## Accessibility & Responsiveness
+- All charts have `aria-label`, `role="img"`, and screen reader descriptions
+- Colors and fonts meet accessibility standards
+- Charts are fully responsive and mobile-friendly
+
+## Example Usage
+```tsx
+<PieChart
+  labels={["Principal & Interest", "Property Tax"]}
+  data={[1200, 200]}
+  title="Monthly Payment Breakdown"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [10000, 9500, 9000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Loan Balance Over Time"
+/>
+```
+
+## Migration Note
+- All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
+ 2025-05-20
 - Implemented Supabase Edge Functions for chat history management
   - Created `chat_sessions` Edge Function for managing conversations
   - Created `chat_messages` Edge Function for managing messages

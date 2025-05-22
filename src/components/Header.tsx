@@ -57,6 +57,15 @@ export default function Header() {
               >
                 AI Chat
               </Link>
+              <Link 
+                to="/calculators" 
+                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                activeProps={{
+                  className: "inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-gray-900"
+                }}
+              >
+                Calculators
+              </Link>
             </nav>
           </div>
 
@@ -88,35 +97,70 @@ export default function Header() {
                 </div>
                 {isMenuOpen && (
                   <div 
-                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    className="origin-top-right absolute right-0 mt-2 w-64 rounded-xl shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden transition-all duration-200 ease-in-out"
                     onBlur={() => setIsMenuOpen(false)}
                   >
-                    <div className="px-4 py-2 text-xs text-gray-500">
-                      Signed in as <span className="font-medium">{user.email}</span>
+                    {/* User info section */}
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center space-x-3">
+                        {user.user_metadata?.avatar_url ? (
+                          <img
+                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm"
+                            src={user.user_metadata.avatar_url}
+                            alt="User avatar"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm border-2 border-white">
+                            {user.email?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 dark:text-white">
+                            {user.user_metadata?.full_name || 'User'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Your Profile
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        handleSignOut();
-                      }}
-                    >
-                      Sign out
-                    </button>
+                    
+                    {/* Menu items */}
+                    <div className="py-1">
+                      <Link
+                        to="/profile"
+                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                        Your Profile
+                      </Link>
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        Dashboard
+                      </Link>
+                      <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                      <button
+                        className="flex items-center w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          handleSignOut();
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 2a1 1 0 00-1 1v1a1 1 0 002 0V6a1 1 0 00-1-1zm-3 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1zm6 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1zm-3 3a1 1 0 00-1 1v1a1 1 0 002 0v-1a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Sign out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -193,6 +237,16 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               AI Chat
+            </Link>
+            <Link
+              to="/calculators"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+              activeProps={{
+                className: "block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary bg-primary/10"
+              }}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Calculators
             </Link>
           </div>
           

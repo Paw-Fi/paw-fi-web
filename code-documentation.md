@@ -1,21 +1,665 @@
-# Paw-Fi Codebase Documentation
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Paw-Fi Codebase Documentation
 
 This document provides a detailed file-by-file breakdown of the Paw-Fi codebase to complement the main documentation.md file. Use this as a reference for understanding specific implementation details.
 
-## Table of Contents
+# Code Documentation: Chart Components
 
-1. [Types](#1-types)
-2. [Components](#2-components)
-3. [Routes](#3-routes)
-4. [Data Management](#4-data-management)
-5. [Utilities](#5-utilities)
-6. [Contexts](#6-contexts)
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Table of Contents
+
+1. [Types](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+1-types)
+2. [Components](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+2-components)
+3. [Routes](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+3-routes)
+4. [Data Management](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+4-data-management)
+5. [Utilities](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+5-utilities)
+6. [Contexts](# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+6-contexts)
 
 ---
 
-## 1. Types
+# Code Documentation: Chart Components
 
-### `/src/types/learning.types.ts`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 1. Types
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/types/learning.types.ts`
 
 This file defines all TypeScript interfaces and types for the learning system.
 
@@ -51,11 +695,425 @@ const question: ChoiceQuestion = {
 
 ---
 
-## 2. Components
+# Code Documentation: Chart Components
 
-### Learning Components
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
 
-#### `/src/components/learning/MermaidRenderer.tsx`
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 2. Components
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Learning Components
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/MermaidRenderer.tsx`
 
 **Purpose:** Renders Mermaid diagram syntax as SVG visualizations.
 
@@ -69,7 +1127,191 @@ const question: ChoiceQuestion = {
 <MermaidRenderer content="graph TD; A-->B;" />
 ```
 
-#### `/src/components/learning/completion-display.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/completion-display.tsx`
 
 **Purpose:** Modal shown when a lesson is completed.
 
@@ -90,7 +1332,191 @@ const question: ChoiceQuestion = {
 - Handles various states (success/failure)
 - Manages progression through the learning system
 
-#### `/src/components/learning/hooks/use-lesson.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/hooks/use-lesson.ts`
 
 **Purpose:** Custom hook for lesson state management.
 
@@ -123,7 +1549,191 @@ const {
 - Uses validation functions from `lesson-utils.ts`
 - Interacts with localStorage for persistence
 
-#### `/src/components/learning/hooks/unlock-next-lesson.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/hooks/unlock-next-lesson.ts`
 
 **Purpose:** Utility function to unlock the next lesson in sequence.
 
@@ -139,7 +1749,191 @@ const {
 unlockNextLesson(lessonId);
 ```
 
-#### `/src/components/learning/lesson-utils.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/lesson-utils.ts`
 
 **Purpose:** Core validation functions for question answers.
 
@@ -164,7 +1958,191 @@ const isCorrect = isAnswerCorrect(question, userAnswer);
 const passedLesson = areAllAnswersCorrect(questions, allAnswers);
 ```
 
-#### `/src/components/learning/question-types/choice-question.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/learning/question-types/choice-question.tsx`
 
 **Purpose:** Component for rendering and handling single and multiple choice questions.
 
@@ -192,9 +2170,331 @@ interface ChoiceQuestionProps {
 />
 ```
 
-### UI Components
+# Code Documentation: Chart Components
 
-#### `/src/components/ui/button.tsx`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ UI Components
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/ui/button.tsx`
 
 **Purpose:** Reusable button component with variants.
 
@@ -213,7 +2513,191 @@ interface ChoiceQuestionProps {
 </Button>
 ```
 
-#### `/src/components/ui/modal.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/ui/modal.tsx`
 
 **Purpose:** Reusable modal dialog component.
 
@@ -236,9 +2720,239 @@ interface ChoiceQuestionProps {
 
 ---
 
-## 3. Routes
+# Code Documentation: Chart Components
 
-### `/src/routes/learning/$lessonId.tsx`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 3. Routes
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/routes/learning/$lessonId.tsx`
 
 **Purpose:** Route component for a specific lesson.
 
@@ -262,7 +2976,145 @@ interface ChoiceQuestionProps {
 - Accessed via URL `/learning/[lessonId]`
 - Handles all interactions for a specific lesson
 
-### `/src/routes/sabina-learning.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/routes/sabina-learning.tsx`
 
 **Purpose:** Main learning page displaying available lessons.
 
@@ -282,7 +3134,145 @@ interface ChoiceQuestionProps {
 - Metadata including question count, duration, and XP value
 - Animation for lesson card entry
 
-### `/src/routes/chat.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/routes/chat.tsx`
 
 **Purpose:** Chat route for personalized recommendations.
 
@@ -304,9 +3294,239 @@ interface ChoiceQuestionProps {
 
 ---
 
-## 4. Data Management
+# Code Documentation: Chart Components
 
-### `/src/data/lessons.ts`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 4. Data Management
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/data/lessons.ts`
 
 **Purpose:** Provides data access functions for lessons and courses.
 
@@ -331,7 +3551,145 @@ const lesson = getLessonById('lesson-1');
 const lessons = getAllLessons();
 ```
 
-### `/src/data/chat.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/data/chat.ts`
 
 **Purpose:** Defines Chat questions for user profiling.
 
@@ -346,9 +3704,239 @@ const lessons = getAllLessons();
 
 ---
 
-## 5. Utilities
+# Code Documentation: Chart Components
 
-### `/src/utils/storage.ts`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 5. Utilities
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/utils/storage.ts`
 
 **Purpose:** Utilities for localStorage access.
 
@@ -372,9 +3960,239 @@ saveToStorage('settings', updatedSettings);
 
 ---
 
-## 6. Contexts
+# Code Documentation: Chart Components
 
-### `/src/contexts/chat-context.tsx`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 6. Contexts
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/contexts/chat-context.tsx`
 
 **Purpose:** Context provider for Chat state management.
 
@@ -406,23 +4224,529 @@ const { state, nextStep, setAnswer } = useChat();
 
 ---
 
-## Implementation Notes
+# Code Documentation: Chart Components
 
-### Storage Architecture
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Implementation Notes
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Storage Architecture
 
 The application uses a unified storage approach:
 - `paw-fi-course`: Single key for all course and lesson data
 - Structured as a course object containing lessons array
 - Progress tracking stored within this structure
 
-### Routing Pattern
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Routing Pattern
 
 TanStack Router implementation:
 - File-based routing with `createFileRoute`
 - Dynamic routes using parameters (e.g., `$lessonId`)
 - Route components defined inline with route configuration
 
-### Component Reuse Strategy
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Component Reuse Strategy
 
 The codebase emphasizes component reuse:
 - Shared question components between learning and Chat
@@ -432,9 +4756,239 @@ The codebase emphasizes component reuse:
 
 ---
 
-## Chat Sessions & Chat Messages Edge Functions
+# Code Documentation: Chart Components
 
-### Technical Solution for Payload and Timestamp Handling
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Chat Sessions & Chat Messages Edge Functions
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Technical Solution for Payload and Timestamp Handling
 
 - **Frontend:**
   - Always send the message payload as a JS object if not setting Content-Type, or as a JSON string if setting Content-Type.
@@ -462,55 +5016,1849 @@ The codebase emphasizes component reuse:
     })
     ```
 
-### Best Practices
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Best Practices
 - Do not manually set `Content-Type` unless you are serializing the body yourself.
 - Always match the frontend payload structure with backend expectations.
 - Use ISO8601 strings for all `timestamptz` columns in Postgres.
 - Add logging in Edge Functions to debug serialization and payload issues.
 
-### Troubleshooting
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Troubleshooting
 - If you see `Missing required field: chat_session_id`, check request body serialization and field names.
 - If you see `date/time field value out of range`, ensure the timestamp is an ISO8601 string, not milliseconds.
 
-### Schema Alignment and Final State (2025-05-20)
+# Code Documentation: Chart Components
 
-#### Schema Matching
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Schema Alignment and Final State (2025-05-20)
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Schema Matching
 - All Edge Function logic now matches the current Supabase schema for `chat_sessions` and `chat_messages`.
 - Non-schema fields (`metadata`, `title`, `conversation_id`) were removed from all chat_sessions logic.
 - For `chat_messages`, all references to `conversation_id` were replaced with `chat_session_id`.
 - The `timestamp` field (BIGINT) is now present in the `chat_messages` table and is used for message ordering and insertion. The `created_at` field is not used for ordering or filtering in chat_messages.
 
-#### GET Handler Improvements
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ GET Handler Improvements
 - The GET handler for chat_messages returns an empty array (`[]`) with HTTP 200 if no messages exist for a session, instead of a 500 error.
 - All error handling is now specific and does not treat 'no messages' as an error.
 
-#### Insert & Query Logic
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Insert & Query Logic
 - Message insertion and queries only use columns present in the schema: `id`, `chat_session_id`, `role`, `content`, `timestamp`, `metadata`, `created_at`.
 - All message ordering is now by `timestamp`.
 
-#### Final Verification
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Final Verification
 - All endpoints have been tested and are working as intended.
 - Documentation and code have been cleaned up to remove any workaround or irrelevant legacy logic.
 - The implementation is now robust, maintainable, and fully aligned with the database structure.
 
 ---
 
-### Schema Alignment and Error Fixes (2025-05-20)
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Schema Alignment and Error Fixes (2025-05-20)
 - Removed all references to `metadata` and `title` from the `chat_sessions` Edge Function implementation.
 - The Supabase schema for `chat_sessions` did not include these columns, which caused PGRST204 errors when the function attempted to insert or select them.
 - The function now only uses columns that exist in the schema: `id`, `user_id`, `session_id`, `model`, `system_prompt`, `is_active`, `created_at`, and `updated_at`.
 - This ensures error-free operation and matches the deployed database structure.
 
-#### Error Details
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Error Details
 - **metadata error:** Occurred because the code referenced a non-existent `metadata` column on `chat_sessions`.
 - **title error:** Occurred because the code referenced a non-existent `title` column on `chat_sessions`.
 - Both errors were resolved by removing these fields from the function's logic and types.
 
-#### Next Steps
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Next Steps
 - Always ensure Edge Function logic matches the Supabase table schema.
 - If new fields are needed, add them to the schema before using them in code.
 
-### `/supabase/functions/chat_sessions/index.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/supabase/functions/chat_sessions/index.ts`
 
 **Purpose:** Edge Function for managing chat sessions (conversations) in the database.
 
@@ -549,7 +6897,145 @@ The codebase emphasizes component reuse:
 }
 ```
 
-### `/supabase/functions/chat_messages/index.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/supabase/functions/chat_messages/index.ts`
 
 **Purpose:** Edge Function for managing messages within chat sessions.
 
@@ -585,9 +7071,239 @@ The codebase emphasizes component reuse:
 }
 ```
 
-## 8. AI Integration
+# Code Documentation: Chart Components
 
-### `/src/services/gemini-service.ts`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 8. AI Integration
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/services/gemini-service.ts`
 
 const chatSession = createChatSession(systemPrompt);
 
@@ -608,7 +7324,145 @@ const chatSession = createChatSession(systemPrompt);
 const response = await sendMessageToGemini(message, chatSession);
 ```
 
-### `/src/services/conversation-service.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/services/conversation-service.ts`
 
 **Purpose:** Service for interacting with the chat history backend API.
 
@@ -656,7 +7510,145 @@ const conversations = await getConversations();
 const messages = await getMessages(conversationId);
 ```
 
-### `/src/services/gemini-service.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/services/gemini-service.ts`
 
 const chatSession = createChatSession(systemPrompt);
 
@@ -669,7 +7661,145 @@ if (response.isComplete && response.generatedLessons) {
   handleLessonData(response.generatedLessons);
 }
 
-### `/src/utils/prompt-utils.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/utils/prompt-utils.ts`
 
 **Purpose:** Utilities for working with AI prompts and responses.
 
@@ -684,7 +7814,145 @@ if (response.isComplete && response.generatedLessons) {
 - Handles edge cases like code blocks and single-quoted JSON
 - Provides robust error handling for JSON parsing
 
-### `/src/utils/gemini-prompts.ts`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/utils/gemini-prompts.ts`
 
 **Purpose:** Specialized prompts for the Gemini API.
 
@@ -698,7 +7966,145 @@ if (response.isComplete && response.generatedLessons) {
 const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
 ```
 
-### `/src/components/chat/chat-interface.tsx`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/components/chat/chat-interface.tsx`
 
 **Purpose:** Interactive chat interface that integrates with Supabase Edge Functions for chat history management and uses the Gemini API for AI responses.
 
@@ -770,13 +8176,427 @@ const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
 - When complete JSON is available, it's parsed and displayed as a lesson card
 - The JSON data is stored in localStorage for access in the learning system
 
-## Supabase Implementation
+# Code Documentation: Chart Components
 
-### Database Schema
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Supabase Implementation
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Database Schema
 
 The application uses Supabase for authentication and data storage. Below are the implementation details for the database schema and related functionality.
 
-#### Table: `users`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Table: `users`
 
 **SQL Definition:**
 ```sql
@@ -813,7 +8633,191 @@ CREATE POLICY "Service role can insert users"
   WITH CHECK (true);
 ```
 
-#### Table: `user_progress`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Table: `user_progress`
 
 **SQL Definition:**
 ```sql
@@ -843,7 +8847,191 @@ CREATE POLICY "Users can insert their own progress"
   WITH CHECK (auth.uid() = user_id);
 ```
 
-#### Table: `conversations`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Table: `conversations`
 
 **SQL Definition:**
 ```sql
@@ -883,7 +9071,191 @@ CREATE POLICY "Users can delete their own conversations"
   USING (auth.uid() = user_id);
 ```
 
-#### Table: `messages`
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Table: `messages`
 
 **SQL Definition:**
 ```sql
@@ -922,7 +9294,191 @@ CREATE POLICY "Users can insert messages into their conversations"
   );
 ```
 
-#### Database Triggers
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Database Triggers
 
 **User Creation Trigger:**
 ```sql
@@ -940,9 +9496,331 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-### Integration with Frontend
+# Code Documentation: Chart Components
 
-#### `/src/lib/supabase.ts`
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Integration with Frontend
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ `/src/lib/supabase.ts`
 
 **Purpose:** Initializes and exports the Supabase client for use throughout the application.
 
@@ -960,7 +9838,191 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
-#### Data Access Patterns
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Data Access Patterns
 
 **User Profile:**
 ```typescript
@@ -1056,9 +10118,239 @@ const { error: updateError } = await supabase
   .eq('id', conversationId);
 ```
 
-## Changelog
+# Code Documentation: Chart Components
 
-### 2025-05-20
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ Changelog
+
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 2025-05-20
 - Implemented chat history backend:
   - Created a dedicated Express/MongoDB backend for storing and retrieving chat history
   - Implemented RESTful API endpoints for managing conversations
@@ -1076,7 +10368,145 @@ const { error: updateError } = await supabase
   - Updated profile page layout with improved responsive width
   - Streamlined navigation flow after authentication to direct users to chat
 
-### 2025-05-19
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 2025-05-19
 - Added JSON continuation feature documentation
   - Detailed implementation of automatic JSON continuation in `chat-interface.tsx`
   - Documented the JSON detection and validation system
@@ -1084,7 +10514,145 @@ const { error: updateError } = await supabase
   - Added information about handling both single lesson and course formats
   - Documented the recursive continuation approach for large JSON responses
 
-### 2025-05-18
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+# Code Documentation: Chart Components
+
+## PieChart (`/src/components/ui/pie-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — labels for each section
+  - `data: number[]` — values for each section
+  - `backgroundColor?: string[]` — fill colors
+  - `borderColor?: string[]` — border colors
+  - `title?: string` — chart title
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-xs`, adapts to parent
+
+## LineChart (`/src/components/ui/line-chart.tsx`)
+- Built with Chart.js via react-chartjs-2
+- Props:
+  - `labels: string[]` — x-axis labels (e.g., months)
+  - `datasets: { label, data, borderColor, backgroundColor, fill? }[]`
+  - `title?: string`
+- Accessibility: ARIA label, visually hidden description, role="img"
+- Responsive: `w-full`, `max-w-2xl`, adapts to parent
+
+## Integration Example
+```tsx
+import { PieChart } from '../ui/pie-chart';
+import { LineChart } from '../ui/line-chart';
+
+<PieChart
+  labels={["Principal", "Interest"]}
+  data={[100000, 50000]}
+  title="Total Payment Distribution"
+/>
+
+<LineChart
+  labels={["M1", "M2", "M3"]}
+  datasets={[
+    { label: "Balance", data: [100000, 99500, 99000], borderColor: "#36a2eb", backgroundColor: "#36a2eb22" }
+  ]}
+  title="Amortization Trend"
+/>
+```
+
+## Accessibility Notes
+- All charts have ARIA labels and visually hidden descriptions for screen readers.
+- Colors and fonts are chosen for high contrast and clarity.
+- Chart containers are fully responsive and mobile-friendly.
+ 2025-05-18
 - Initial comprehensive code documentation
 - Added file-by-file breakdown
 - Included usage examples for key components
