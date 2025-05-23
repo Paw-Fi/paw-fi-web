@@ -24,7 +24,7 @@ interface Message {
   chat_session_id: string;
   metadata?: Record<string, any>;
 }
-const MAX_TIME_TO_SHOW_LOADING = 5;
+const MAX_TIME_TO_SHOW_LOADING = 8;
 export function ChatInterface() {
   const navigate = useNavigate();
   const { user } = useAuth();
