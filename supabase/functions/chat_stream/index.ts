@@ -167,53 +167,64 @@ serve(async (req: Request): Promise<Response> => {
       cleanedResponse = cleanedResponse.substring(0, firstJsonStart) + jsonStartMarker + restOfString;
     }
     
-    let stringToParseForJson = cleanedResponse; // Start with the full cleaned response
     const markdownJsonPrefix = "```json";
     const markdownSuffix = "```";
-
-    // Check if the cleanedResponse (after AI multi-turn and initial ```json cleanup)
-    // starts with the markdown prefix. If so, extract the content.
     const trimmedCleanedResponse = cleanedResponse.trim();
-    if (trimmedCleanedResponse.startsWith(markdownJsonPrefix)) {
-        const firstPrefixIndex = cleanedResponse.indexOf(markdownJsonPrefix); // Use original cleanedResponse for accurate indexing
-        // Content after the first "```json"
-        let potentialJsonContent = cleanedResponse.substring(firstPrefixIndex + markdownJsonPrefix.length);
-        
-        // Find the last "```" to ensure we get everything even if JSON itself contains "```"
-        const lastSuffixIndex = potentialJsonContent.lastIndexOf(markdownSuffix);
-        
-        if (lastSuffixIndex !== -1) {
-            // Found a closing fence, take content between the first prefix and last suffix
-            stringToParseForJson = potentialJsonContent.substring(0, lastSuffixIndex);
-        } else {
-            // No closing fence found after the opening one, or it's part of the content.
-            // Assume the rest of the string is the content to parse.
-            stringToParseForJson = potentialJsonContent;
-        }
-    } 
-    // If no ```json prefix was found in trimmedCleanedResponse, stringToParseForJson remains `cleanedResponse`.
-    // This handles cases where AI might send raw JSON without fences.
-
+    
+    // Check if the response looks like it contains JSON (either with markdown fences or starts with a curly brace)
+    const hasJsonMarkdown = trimmedCleanedResponse.includes(markdownJsonPrefix);
+    const looksLikeRawJson = trimmedCleanedResponse.startsWith('{') && trimmedCleanedResponse.endsWith('}');
+    
+    // If it doesn't look like JSON at all, just return the response as-is
+    if (!hasJsonMarkdown && !looksLikeRawJson) {
+      return new Response(JSON.stringify({ response: cleanedResponse }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+    
+    // Extract JSON content if markdown fences are present
+    let stringToParseForJson = cleanedResponse; // Start with the full cleaned response
+    
+    if (hasJsonMarkdown) {
+      const firstPrefixIndex = cleanedResponse.indexOf(markdownJsonPrefix);
+      // Content after the first "```json"
+      let potentialJsonContent = cleanedResponse.substring(firstPrefixIndex + markdownJsonPrefix.length);
+      
+      // Find the last "```" to ensure we get everything even if JSON itself contains "```"
+      const lastSuffixIndex = potentialJsonContent.lastIndexOf(markdownSuffix);
+      
+      if (lastSuffixIndex !== -1) {
+        // Found a closing fence, take content between the first prefix and last suffix
+        stringToParseForJson = potentialJsonContent.substring(0, lastSuffixIndex);
+      } else {
+        // No closing fence found after the opening one, or it's part of the content.
+        // Assume the rest of the string is the content to parse.
+        stringToParseForJson = potentialJsonContent;
+      }
+    } else if (looksLikeRawJson) {
+      // It's raw JSON without markdown fences
+      stringToParseForJson = trimmedCleanedResponse;
+    }
+    
     stringToParseForJson = stringToParseForJson.trim();
-
+    
     if (!stringToParseForJson) {
       console.warn("JSON string to parse is empty after stripping fences and trimming. Original cleanedResponse:", cleanedResponse);
-      return new Response(JSON.stringify({ error: "Extracted JSON content for parsing is empty.", rawResponse: cleanedResponse }), {
-        status: 400, 
+      return new Response(JSON.stringify({ response: cleanedResponse }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
+    
     try {
-      // Step 1: Parse the (potentially broken/incomplete) JSON string using partial-json
+      // Only try to parse if it looks like JSON
       const parsedJsonObject = parse(stringToParseForJson);
-
-      // Step 2: Stringify the now valid JavaScript object back to a well-formed JSON string
+      
+      // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
-
-      // Step 3: Always wrap the valid, well-formed JSON string with markdown fences for the client response
+      
+      // Always wrap the valid, well-formed JSON string with markdown fences for the client response
       const finalContentForClientResponse = `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`;
-
+      
       return new Response(JSON.stringify({ response: finalContentForClientResponse }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });

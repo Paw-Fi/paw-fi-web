@@ -36,6 +36,8 @@ export function ChatInterface() {
   const [loadingMessage, setLoadingMessage] = useState("PawFi is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +111,7 @@ export function ChatInterface() {
   const authenticatedMessage =
     "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
   const unauthenticatedMessage =
-    "Hi I'm PawFi! Sign in to start learning about personal finance with me.";
+    "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything. You can continue as a guest, but signing up is free and lets you save your progress.";
   const baseWelcomeMessage = isAuthenticated
     ? authenticatedMessage
     : unauthenticatedMessage;
@@ -120,8 +122,21 @@ export function ChatInterface() {
     const timeoutId = setTimeout(() => {
       scrollToBottom();
     }, 100);
+
+    // Check for lesson JSON in the latest message if user is not authenticated
+    if (!isAuthenticated && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant') {
+        const extractedJson = extractFirstJson(lastMessage.content);
+        if (extractedJson?.json && extractedJson.json.type === 'lesson') {
+          setPendingLessonJson(extractedJson.json);
+          setShowSignupPrompt(true);
+        }
+      }
+    }
+
     return () => clearTimeout(timeoutId);
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isAuthenticated]);
 
   // Always scroll to bottom when the component mounts (page reload)
   useEffect(() => {

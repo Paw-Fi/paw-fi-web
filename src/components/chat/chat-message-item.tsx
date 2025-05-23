@@ -30,9 +30,9 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 }) => {
   const isUser = message.role === "user";
   const alignment = isUser ? "justify-end" : "justify-start";
-  const bgColor = isUser ? "bg-purple-600" : "bg-white";
+  const bgColor = isUser ? "bg-primary" : "bg-white";
   const textColor = isUser ? "text-white" : "text-gray-800";
-  const borderColor = isUser ? "border-purple-600" : "border-gray-200";
+  const borderColor = isUser ? "border-primary" : "border-gray-200";
 
   // Use extractFirstJson to find JSON and split intro/outro
   const found = extractFirstJson(message.content);

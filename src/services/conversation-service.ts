@@ -35,18 +35,19 @@ export interface Conversation {
  */
 // --- HOOKS ---
 
-export function useConversations(supabase: SupabaseClient) {
+export function useConversations(supabase: SupabaseClient, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['conversations'],
     queryFn: async () => getConversations(supabase),
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 }
 
-export function useConversation(supabase: SupabaseClient, id: string | undefined) {
+export function useConversation(supabase: SupabaseClient, id: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['conversation', id],
     queryFn: async () => (id ? getConversation(supabase, id) : null),
-    enabled: !!id,
+    enabled: (options?.enabled !== undefined ? options.enabled : true) && !!id,
   });
 }
 
