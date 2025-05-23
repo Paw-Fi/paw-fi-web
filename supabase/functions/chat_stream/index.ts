@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
+import { parse } from "https://esm.sh/partial-json@0.1.7";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
@@ -166,11 +167,81 @@ serve(async (req: Request): Promise<Response> => {
       cleanedResponse = cleanedResponse.substring(0, firstJsonStart) + jsonStartMarker + restOfString;
     }
     
-    return new Response(JSON.stringify({ response: cleanedResponse }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    let stringToParseForJson = cleanedResponse; // Start with the full cleaned response
+    const markdownJsonPrefix = "```json";
+    const markdownSuffix = "```";
+
+    // Check if the cleanedResponse (after AI multi-turn and initial ```json cleanup)
+    // starts with the markdown prefix. If so, extract the content.
+    const trimmedCleanedResponse = cleanedResponse.trim();
+    if (trimmedCleanedResponse.startsWith(markdownJsonPrefix)) {
+        const firstPrefixIndex = cleanedResponse.indexOf(markdownJsonPrefix); // Use original cleanedResponse for accurate indexing
+        // Content after the first "```json"
+        let potentialJsonContent = cleanedResponse.substring(firstPrefixIndex + markdownJsonPrefix.length);
+        
+        // Find the last "```" to ensure we get everything even if JSON itself contains "```"
+        const lastSuffixIndex = potentialJsonContent.lastIndexOf(markdownSuffix);
+        
+        if (lastSuffixIndex !== -1) {
+            // Found a closing fence, take content between the first prefix and last suffix
+            stringToParseForJson = potentialJsonContent.substring(0, lastSuffixIndex);
+        } else {
+            // No closing fence found after the opening one, or it's part of the content.
+            // Assume the rest of the string is the content to parse.
+            stringToParseForJson = potentialJsonContent;
+        }
+    } 
+    // If no ```json prefix was found in trimmedCleanedResponse, stringToParseForJson remains `cleanedResponse`.
+    // This handles cases where AI might send raw JSON without fences.
+
+    stringToParseForJson = stringToParseForJson.trim();
+
+    if (!stringToParseForJson) {
+      console.warn("JSON string to parse is empty after stripping fences and trimming. Original cleanedResponse:", cleanedResponse);
+      return new Response(JSON.stringify({ error: "Extracted JSON content for parsing is empty.", rawResponse: cleanedResponse }), {
+        status: 400, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    try {
+      // Step 1: Parse the (potentially broken/incomplete) JSON string using partial-json
+      const parsedJsonObject = parse(stringToParseForJson);
+
+      // Step 2: Stringify the now valid JavaScript object back to a well-formed JSON string
+      const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
+
+      // Step 3: Always wrap the valid, well-formed JSON string with markdown fences for the client response
+      const finalContentForClientResponse = `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`;
+
+      return new Response(JSON.stringify({ response: finalContentForClientResponse }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    } catch (parseError) {
+      const errorMessage = parseError instanceof Error ? parseError.message : "Unknown parsing error";
+      console.error("Failed to parse JSON string with partial-json. Error:", errorMessage);
+      if (parseError instanceof Error && parseError.stack) {
+        console.error("Stack trace:", parseError.stack);
+      }
+      console.error("Original cleanedResponse from AI (multi-turn, pre-stripping):", cleanedResponse);
+      console.error("String attempted for parsing (after stripping fences):", `"${stringToParseForJson}"`);
+      return new Response(JSON.stringify({ 
+        error: "Failed to process or parse JSON content from AI response", 
+        details: errorMessage,
+        attemptedJsonStringAfterStripping: stringToParseForJson,
+        rawAiResponse: cleanedResponse
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Internal Server Error", details: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
+    console.error("Internal Server Error:", errorMessage);
+    if (error instanceof Error && error.stack) {
+      console.error("Stack trace:", error.stack);
+    }
+    return new Response(JSON.stringify({ error: "Internal Server Error", details: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
