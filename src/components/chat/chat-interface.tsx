@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import type { FormEvent } from "react"; // For verbatimModuleSyntax
-import { Link } from "@tanstack/react-router";
 import {
   useConversations,
   useConversation,
@@ -10,6 +9,13 @@ import {
   useAddMessage,
 } from "@/services/conversation-service";
 import { Button } from "@/components/ui/button";
+import {
+  getConversations,
+  createConversation,
+  getConversation,
+  addMessage,
+  type Message as ServiceMessage,
+} from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatMessageItem } from "./chat-message-item";
 import { storeCourse } from "@/data/lessons";
@@ -26,12 +32,76 @@ interface Message {
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
 export function ChatInterface() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const isAuthenticated = !!user;
+  // --- Guest Conversation Utilities ---
+  function getGuestSessionId(): string {
+    if (typeof window === "undefined") return "";
+    let id = localStorage.getItem("paw-fi-guest-session-id");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("paw-fi-guest-session-id", id);
+    }
+    return id;
+  }
+  function guestMessagesKey() {
+    return `paw-fi-guest-messages-${getGuestSessionId()}`;
+  }
+  function loadGuestMessages(): Message[] {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem(guestMessagesKey());
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  function saveGuestMessages(msgs: Message[]) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(guestMessagesKey(), JSON.stringify(msgs));
+  }
+  function clearGuestMessages() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(guestMessagesKey());
+  }
 
+  function acquireMergeLock(): boolean {
+    if (typeof window === "undefined") return false;
+    const lockKey = "paw-fi-chat-merge-lock";
+    const now = Date.now();
+    const lockVal = localStorage.getItem(lockKey);
+    if (lockVal && now - parseInt(lockVal, 10) < 10000) return false; // 10s lock
+    localStorage.setItem(lockKey, now.toString());
+    return true;
+  }
+  function releaseMergeLock() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("paw-fi-chat-merge-lock");
+  }
+  const navigate = useNavigate();
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  // Track guest messages separately for merging
+  const [guestMessages, setGuestMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+  // Track merge state to avoid duplicate merges
+  const [hasMergedGuest, setHasMergedGuest] = useState(false);
+  // Track if a guest-to-auth merge is in progress
+  const [isMergingGuestToAuth, setIsMergingGuestToAuth] = useState(false);
+
+  // Helper: Only clear guest messages after merged messages are fetched and displayed
+  useEffect(() => {
+    if (
+      isMergingGuestToAuth &&
+      messages.length > 0 &&
+      guestMessages.length > 0
+    ) {
+      // Merge is complete and merged messages are now displayed, safe to clear guest messages
+      clearGuestMessages();
+      setGuestMessages([]);
+      setIsMergingGuestToAuth(false);
+    }
+  }, [isMergingGuestToAuth, messages, guestMessages]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("PawFi is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
@@ -105,6 +175,13 @@ export function ChatInterface() {
     [currentConversationData],
   );
 
+  // Ensure messages state is set from Supabase for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && currentConversationData?.messages) {
+      setMessages(currentConversationData.messages);
+    }
+  }, [isAuthenticated, currentConversationData]);
+
   const createConversationMutation = useCreateConversation(supabase);
   const addMessageMutation = useAddMessage(supabase);
 
@@ -126,17 +203,89 @@ export function ChatInterface() {
     // Check for lesson JSON in the latest message if user is not authenticated
     if (!isAuthenticated && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant') {
+      if (lastMessage.role === "assistant") {
         const extractedJson = extractFirstJson(lastMessage.content);
-        if (extractedJson?.json && extractedJson.json.type === 'lesson') {
+        if (extractedJson?.json && extractedJson.json.type === "lesson") {
           setPendingLessonJson(extractedJson.json);
           setShowSignupPrompt(true);
         }
       }
     }
-
     return () => clearTimeout(timeoutId);
   }, [messages, isLoading, isAuthenticated]);
+
+  // --- Guest/Authenticated Merge Effect ---
+  useEffect(() => {
+    if (isAuthenticated && !hasMergedGuest) {
+      const guestMsgs = loadGuestMessages();
+      if (guestMsgs.length === 0) {
+        setHasMergedGuest(true);
+        setIsMergingGuestToAuth(false);
+        return;
+      }
+      if (!acquireMergeLock()) return;
+      setIsMergingGuestToAuth(true);
+      (async () => {
+        try {
+          // Use service functions for all Supabase operations
+          const conversations = await getConversations(supabase);
+          let session = conversations.find(
+            (c: { user_id: string; id: string }) => c.user_id === user.id,
+          );
+          let sessionId = session?.id;
+          if (!sessionId) {
+            // Create new session with a new session id (reuse guest session id for continuity)
+            sessionId = getGuestSessionId();
+            const created = await createConversation(
+              supabase,
+              user.id,
+              sessionId,
+              [],
+            );
+            sessionId = created.id;
+          }
+          // Fetch all existing messages for deduplication
+          const conversation = await getConversation(supabase, sessionId);
+          const existingMsgs = conversation.messages || [];
+          // Deduplicate guest messages
+          const deduped = guestMsgs.filter(
+            (m: ServiceMessage) =>
+              !existingMsgs.some(
+                (em: ServiceMessage) =>
+                  em.role === m.role &&
+                  em.content === m.content &&
+                  Math.abs(em.timestamp - m.timestamp) < 2000, // 2s window
+              ),
+          );
+          // Insert deduped guest messages
+          for (const msg of deduped) {
+            await addMessage(supabase, {
+              ...msg,
+              chat_session_id: sessionId,
+            });
+          }
+          // Wait for the refetch to complete before clearing guest state
+          await refetchConversations();
+          await refetchConversation();
+          clearGuestMessages();
+          setGuestMessages([]);
+          setHasMergedGuest(true);
+          setIsMergingGuestToAuth(false);
+          releaseMergeLock();
+        } catch (err) {
+          // Fail silently
+          setIsMergingGuestToAuth(false);
+          releaseMergeLock();
+        }
+      })();
+    }
+  }, [
+    isAuthenticated,
+    hasMergedGuest,
+    user,
+    refetchConversations,
+    refetchConversation,
+  ]);
 
   // Always scroll to bottom when the component mounts (page reload)
   useEffect(() => {
@@ -200,26 +349,19 @@ export function ChatInterface() {
     });
   }
 
-  // Helper: checks if two messages are 'the same' (role, content, timestamp rounded to 1s)
-  function areMessagesSimilar(a: Message, b: Message) {
-    return (
-      a.role === b.role &&
-      a.content === b.content &&
-      Math.round(a.timestamp / 1000) === Math.round(b.timestamp / 1000)
-    );
-  }
-
-  useEffect(() => {
-    if (isAuthenticated && messages.length === 0 && currentConversation) {
-      setMessages(currentConversation.messages ?? []);
-    }
-  }, [isAuthenticated, currentConversation]);
-
-  // Helper: compare arrays of messages for similarity
-  function areMessagesArraySimilar(arr1: Message[], arr2: Message[]): boolean {
+  // Helper: Compare two arrays of messages for shallow equality
+  function areMessagesSimilar(arr1: Message[], arr2: Message[]): boolean {
     if (arr1.length !== arr2.length) return false;
     for (let i = 0; i < arr1.length; i++) {
-      if (!areMessagesSimilar(arr1[i], arr2[i])) return false;
+      const a = arr1[i];
+      const b = arr2[i];
+      if (
+        a.role !== b.role ||
+        a.content !== b.content ||
+        Math.round(a.timestamp / 1000) !== Math.round(b.timestamp / 1000)
+      ) {
+        return false;
+      }
     }
     return true;
   }
@@ -374,6 +516,92 @@ export function ChatInterface() {
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
     if (!isAuthenticated || !user?.id) {
+      // --- Guest Flow ---
+      const guestId = getGuestSessionId();
+      const userMessage: Message = {
+        content,
+        role: "user",
+        timestamp: Date.now(),
+        chat_session_id: guestId,
+      };
+      // Add to UI and guest state
+      setMessages((prev) => {
+        const next = dedupeMessages([...prev, userMessage]);
+        next.sort((a, b) => a.timestamp - b.timestamp);
+        saveGuestMessages(next);
+        setGuestMessages(next);
+        return next;
+      });
+      setCurrentMessage("");
+      inputRef.current?.focus();
+      setTimeout(() => scrollToBottom(), 50);
+      setIsLoading(true);
+      setLoadingMessage("PawFi is thinking...");
+      setLoadingDuration(0);
+      if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
+      loadingTimerRef.current = setInterval(
+        () => setLoadingDuration((prev) => prev + 1),
+        1000,
+      );
+      try {
+        // Call AI API as usual
+        const contextMessages = [...messages, userMessage].map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+        const response = await getAIResponseFromEdge(
+          supabase,
+          content,
+          contextMessages,
+        );
+        const assistantMessage: Message = {
+          content:
+            response.response || "I'm sorry, I couldn't generate a response.",
+          role: "assistant",
+          timestamp: Date.now(),
+          chat_session_id: guestId,
+        };
+        setMessages((prev) => {
+          const next = dedupeMessages([...prev, assistantMessage]);
+          next.sort((a, b) => a.timestamp - b.timestamp);
+          saveGuestMessages(next);
+          setGuestMessages(next);
+          return next;
+        });
+        setIsLoading(false);
+        // If lesson JSON, prompt for signup handled in effect
+      } catch (error) {
+        const errorMessage: Message = {
+          content:
+            "Sorry, I had trouble connecting. Please check your connection or try again.",
+          role: "assistant",
+          timestamp: Date.now(),
+          chat_session_id: guestId,
+          metadata: { isError: true },
+        };
+        setMessages((prev) => {
+          const next = dedupeMessages([...prev, errorMessage]);
+          next.sort((a, b) => a.timestamp - b.timestamp);
+          saveGuestMessages(next);
+          setGuestMessages(next);
+          return next;
+        });
+      } finally {
+        setIsLoading(false);
+        setLoadingMessage("PawFi is thinking...");
+        setLoadingDuration(0);
+        if (loadingTimerRef.current) {
+          clearInterval(loadingTimerRef.current);
+          loadingTimerRef.current = null;
+        }
+        inputRef.current?.focus();
+        setTimeout(() => scrollToBottom(), 100);
+      }
+      return;
+    }
+    // --- Authenticated Flow ---
+    if (!content.trim()) return;
+    if (!isAuthenticated || !user?.id) {
       console.log("User not authenticated. Cannot send message.");
       return;
     }
@@ -456,7 +684,6 @@ export function ChatInterface() {
           return next;
         });
         setIsLoading(false); // Hide loading as soon as response is rendered
-
         // Save assistant message to database
         await addMessageMutation.mutateAsync(assistantMessage);
       } catch (aiError) {
@@ -540,6 +767,21 @@ export function ChatInterface() {
     }
   };
 
+  const isBackendProcessing = useMemo(
+    () =>
+      (isMergingGuestToAuth ||
+        isConversationsLoading ||
+        (currentConversationId && isConversationLoading)) &&
+      messages.length === 0,
+    [
+      isMergingGuestToAuth,
+      isConversationsLoading,
+      currentConversationId,
+      isConversationLoading,
+      messages,
+    ],
+  );
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 shadow-lg dark:bg-gray-900">
       <div
@@ -549,31 +791,32 @@ export function ChatInterface() {
         onScroll={handleScroll}
       >
         <div className="mx-auto space-y-3 pb-8">
-          {(isConversationsLoading ||
-            (currentConversationId && isConversationLoading)) &&
-            messages.length === 0 && (
-              <div className="space-y-4 pt-6">
-                {[1, 2, 3].map((i) => (
+          {isBackendProcessing && (
+            <div className="space-y-4 pt-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className={`flex animate-pulse ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+                >
                   <div
-                    key={i}
-                    className={`flex animate-pulse ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+                    className={`w-3/5 rounded-lg p-3 ${i % 2 === 0 ? "bg-purple-200 dark:bg-purple-700" : "bg-gray-200 dark:bg-gray-700"}`}
                   >
                     <div
-                      className={`w-3/5 rounded-lg p-3 ${i % 2 === 0 ? "bg-purple-200 dark:bg-purple-700" : "bg-gray-200 dark:bg-gray-700"}`}
-                    >
-                      <div
-                        className={`mb-1.5 h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-3/4`}
-                      ></div>
-                      <div
-                        className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-full`}
-                      ></div>
-                    </div>
+                      className={`mb-1.5 h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-3/4`}
+                    ></div>
+                    <div
+                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-full`}
+                    ></div>
+                    <div
+                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-full`}
+                    ></div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {!isConversationsLoading && !isConversationLoading && !isLoading && (
+          {!isBackendProcessing && (
             <div className="text-center text-gray-400 dark:text-gray-500">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -631,15 +874,15 @@ export function ChatInterface() {
                 <div className="max-w-[80%] rounded-lg border border-gray-200/80 bg-white p-3 shadow-sm transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800">
                   <div className="mb-2 flex items-center text-sm font-medium text-gray-600 dark:text-gray-300">
                     <span
-                      className={`mr-2 ${loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? "text-purple-500 dark:text-purple-400" : ""}`}
+                      className={`mr-2 ${loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? "text-primary dark:text-primary" : ""}`}
                     >
                       {loadingMessage}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90 [animation-delay:-0.3s]"></div>
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90 [animation-delay:-0.15s]"></div>
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-purple-500 opacity-90"></div>
+                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90 [animation-delay:-0.3s]"></div>
+                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90 [animation-delay:-0.15s]"></div>
+                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90"></div>
                   </div>
                 </div>
               </div>
@@ -647,9 +890,9 @@ export function ChatInterface() {
         </div>
       </div>
 
-      <div className="border-t border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-        <div className="mx-auto w-full p-3 md:p-4">
-          {isAuthenticated ? (
+      {!isBackendProcessing && (
+        <div className="border-t border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+          <div className="mx-auto w-full p-3 md:p-4">
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <input
                 ref={inputRef}
@@ -683,29 +926,9 @@ export function ChatInterface() {
                 <span className="sr-only">Send message</span>
               </Button>
             </form>
-          ) : (
-            <div className="flex flex-col items-center space-y-3 py-4">
-              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Sign in to chat with PawFi and explore personal finance.
-              </p>
-              <div className="flex items-center space-x-3">
-                <Link
-                  to="/login"
-                  className="rounded-md bg-purple-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="rounded-md border border-purple-600 px-5 py-2.5 text-sm font-medium text-purple-700 shadow-sm transition-colors hover:bg-purple-50 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:border-purple-500 dark:text-purple-400 dark:hover:bg-purple-700 dark:hover:text-white"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
       <div ref={messagesEndRef} />
     </div>
   );
