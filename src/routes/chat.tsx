@@ -13,7 +13,7 @@ export const Route = createFileRoute("/chat")({
 function Chat() {
   return (
     <div className="flex items-center justify-center p-4 md:p-6">
-      <div className="flex h-[calc(100vh-6rem)] w-[95vw] flex-col overflow-hidden rounded-xl bg-white shadow-lg lg:h-[85vh] lg:w-[55rem]">
+      <div className="flex h-[calc(100vh-6rem)] w-[95vw] flex-col overflow-hidden rounded-xl bg-white shadow-lg lg:h-[calc(100vh-8rem)]  lg:w-[55rem]">
         {/* Header */}
         <div className="mt-2 mb-2 flex items-center justify-center">
           <img
