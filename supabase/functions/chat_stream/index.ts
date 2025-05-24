@@ -222,9 +222,21 @@ serve(async (req: Request): Promise<Response> => {
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
       
-      // Always wrap the valid, well-formed JSON string with markdown fences for the client response
-      const finalContentForClientResponse = `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`;
-      
+      // Preserve preamble and epilogue text from the original response
+      let preamble = "";
+      let epilogue = "";
+      if (hasJsonMarkdown) {
+        const preambleMatch = cleanedResponse.split(markdownJsonPrefix)[0];
+        preamble = preambleMatch.trim();
+        // Find epilogue after the last closing markdown fence
+        const lastSuffixIndex = cleanedResponse.lastIndexOf(markdownSuffix);
+        if (lastSuffixIndex !== -1 && lastSuffixIndex + markdownSuffix.length < cleanedResponse.length) {
+          epilogue = cleanedResponse.slice(lastSuffixIndex + markdownSuffix.length).trim();
+        }
+      }
+      // Reconstruct the response with preamble, sanitized JSON, and epilogue
+      const fullMessageParts = [preamble, `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`, epilogue].filter(Boolean);
+      const finalContentForClientResponse = fullMessageParts.join("\n\n");
       return new Response(JSON.stringify({ response: finalContentForClientResponse }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
