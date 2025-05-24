@@ -42,7 +42,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     const outro = message.content.slice(end).trim();
     return (
       <div className={`flex ${alignment} mb-3`}>
-        <div className={`max-w-[80%] rounded-lg border ${borderColor} ${bgColor} p-3 shadow-sm`}>
+        <div className={`max-w-[90%] lg:max-w-[80%] rounded-lg border ${borderColor} ${bgColor} p-3 shadow-sm`}>
           {intro && (
             <div className={`prose prose-sm ${textColor} mb-2`}>
               <ReactMarkdown>{intro}</ReactMarkdown>

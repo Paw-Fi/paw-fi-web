@@ -802,11 +802,11 @@ export function ChatInterface() {
     <div className={`flex flex-1 flex-col overflow-hidden bg-gray-50 shadow-lg dark:bg-gray-900 ${shouldPromptRegister ? 'pointer-events-none select-none opacity-80' : ''}`}>
       <div
         ref={chatContainerRef}
-        className="h-full flex-1 overflow-y-scroll p-4 md:p-6"
+        className="h-full flex-1 overflow-y-scroll p-2 md:p-6"
         id="chat-messages-container"
         onScroll={handleScroll}
       >
-        <div className="mx-auto space-y-3 pb-8">
+        <div className="mx-auto">
           {isBackendProcessing && (
             <div className="space-y-4 pt-6">
               {[1, 2, 3, 4].map((i) => (

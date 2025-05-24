@@ -14,7 +14,7 @@ export function CourseCard({ title, description, lessonCount, className, onClick
     >
       <div className="flex items-start justify-between">
         <h2 className="text-lg font-semibold mb-2 text-gray-800">{title}</h2>
-        <div className="bg-primary/10 text-primary px-3 py-1 text-xs font-medium rounded-full">
+        <div className="bg-primary/10 text-primary px-3 py-1 text-xs font-medium rounded-full text-nowrap">
           {lessonCount} {lessonCount === 1 ? 'Lesson' : 'Lessons'}
         </div>
       </div>
