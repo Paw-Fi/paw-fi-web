@@ -31,7 +31,13 @@ interface Message {
   metadata?: Record<string, any>;
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
+import { Modal } from "../ui/modal";
+import { Link } from "@tanstack/react-router";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
+
 export function ChatInterface() {
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   // --- Guest Conversation Utilities ---
   function getGuestSessionId(): string {
     if (typeof window === "undefined") return "";
@@ -170,28 +176,26 @@ export function ChatInterface() {
     refetch: refetchConversation,
   } = useConversation(supabase, currentConversationId);
 
-  const currentConversation = useMemo(
-    () => currentConversationData,
-    [currentConversationData],
-  );
-
-  // Ensure messages state is set from Supabase for authenticated users
+  // Only sync messages from Supabase on initial load or when switching conversations
+  const hasInitializedMessages = useRef<string | null>(null);
   useEffect(() => {
-    if (isAuthenticated && currentConversationData?.messages) {
+    if (
+      isAuthenticated &&
+      currentConversationId &&
+      currentConversationData?.messages &&
+      hasInitializedMessages.current !== currentConversationId
+    ) {
       setMessages(currentConversationData.messages);
+      hasInitializedMessages.current = currentConversationId;
     }
-  }, [isAuthenticated, currentConversationData]);
+  }, [isAuthenticated, currentConversationId, currentConversationData]);
 
   const createConversationMutation = useCreateConversation(supabase);
   const addMessageMutation = useAddMessage(supabase);
 
   const authenticatedMessage =
     "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
-  const unauthenticatedMessage =
-    "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything. You can continue as a guest, but signing up is free and lets you save your progress.";
-  const baseWelcomeMessage = isAuthenticated
-    ? authenticatedMessage
-    : unauthenticatedMessage;
+  const baseWelcomeMessage = authenticatedMessage;
 
   // Scroll to bottom on mount and whenever messages change or loading state changes
   useEffect(() => {
@@ -514,6 +518,7 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string) => {
+    setIsSendingMessage(true);
     if (!content.trim()) return;
     if (!isAuthenticated || !user?.id) {
       // --- Guest Flow ---
@@ -669,7 +674,7 @@ export function ChatInterface() {
           contextMessages,
         );
 
-        // Add the assistant response to the messages
+        // Add the assistant response to the messages (optimistic update)
         const assistantMessage: Message = {
           content:
             response.response || "I'm sorry, I couldn't generate a response.",
@@ -684,8 +689,10 @@ export function ChatInterface() {
           return next;
         });
         setIsLoading(false); // Hide loading as soon as response is rendered
-        // Save assistant message to database
+        setTimeout(() => scrollToBottom(), 100);
+        // Save assistant message to database (do not refetch after)
         await addMessageMutation.mutateAsync(assistantMessage);
+        setIsSendingMessage(false);
       } catch (aiError) {
         console.error("Error getting AI response:", aiError);
         throw aiError; // Propagate to outer catch block
@@ -706,6 +713,8 @@ export function ChatInterface() {
         next.sort((a, b) => a.timestamp - b.timestamp);
         return next;
       });
+      setIsSendingMessage(false);
+
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
@@ -782,8 +791,13 @@ export function ChatInterface() {
     ],
   );
 
+  // Registration prompt logic
+  const lastMsg = messages[messages.length - 1];
+  const shouldPromptRegister =
+    lastMsg?.content?.includes('```json') && !isAuthenticated;
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 shadow-lg dark:bg-gray-900">
+    <div className={`flex flex-1 flex-col overflow-hidden bg-gray-50 shadow-lg dark:bg-gray-900 ${shouldPromptRegister ? 'pointer-events-none select-none opacity-80' : ''}`}>
       <div
         ref={chatContainerRef}
         className="h-full flex-1 overflow-y-scroll p-4 md:p-6"
@@ -802,13 +816,13 @@ export function ChatInterface() {
                     className={`w-3/5 rounded-lg p-3 ${i % 2 === 0 ? "bg-purple-200 dark:bg-purple-700" : "bg-gray-200 dark:bg-gray-700"}`}
                   >
                     <div
-                      className={`mb-1.5 h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-3/4`}
+                      className={`mb-1.5 h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-3/4`}
                     ></div>
                     <div
-                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-full`}
+                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-full`}
                     ></div>
                     <div
-                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-purple-600" : "bg-gray-300 dark:bg-gray-600"} w-full`}
+                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-full`}
                     ></div>
                   </div>
                 </div>
@@ -867,11 +881,45 @@ export function ChatInterface() {
             style={{ height: "1px", float: "left", clear: "both" }}
           />
 
+          {/* Modal overlay for registration prompt using reusable Modal */}
+          <Modal
+            isOpen={shouldPromptRegister}
+            onClose={() => {}}
+            disableOverlayClick={true}
+            overlayClassName="bg-black/40"
+            contentClassName="relative flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900 rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
+          >
+            <div className="flex flex-col items-center w-full">
+    <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
+    <FontAwesomeIcon icon={faGraduationCap} className="text-white text-3xl" />
+  </div>
+  <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">Your personalized lesson is ready!</h2>
+  <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
+    Register a free account to view this personalized lesson and access more features.
+  </p>
+    <div className="mb-8 w-full max-w-md mx-auto bg-white/80 dark:bg-gray-800/80 rounded-2xl border border-primary/20 shadow-lg px-6 py-4 flex flex-col gap-2 backdrop-blur-sm">
+    <ul className="text-gray-700 dark:text-gray-200 text-base list-disc pl-5 space-y-2">
+      <li><span className="font-semibold text-primary">Access</span> your saved chats and history on any device</li>
+      <li><span className="font-semibold text-primary">Get unlimited</span> personalized lessons and financial tools</li>
+      <li><span className="font-semibold text-primary">We respect your privacy</span>—no spam, ever</li>
+    </ul>
+  </div>
+  <div className="w-full flex flex-col gap-2">
+    <Link to="/register" className="w-full">
+      <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
+        Register for Free
+      </Button>
+    </Link>
+  </div>
+</div>
+
+          </Modal>
+
           {isLoading &&
             messages.length > 0 &&
             !messages[messages.length - 1]?.metadata?.isStreaming && (
               <div className="flex justify-start pt-2">
-                <div className="max-w-[80%] rounded-lg border border-gray-200/80 bg-white p-3 shadow-sm transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800">
+                <div className="max-w-[80%] h-20 rounded-lg border border-gray-200/80 bg-white p-3 shadow-sm transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800">
                   <div className="mb-2 flex items-center text-sm font-medium text-gray-600 dark:text-gray-300">
                     <span
                       className={`mr-2 ${loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? "text-primary dark:text-primary" : ""}`}
@@ -898,8 +946,8 @@ export function ChatInterface() {
                 ref={inputRef}
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="w-full flex-grow resize-none overflow-y-hidden rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                placeholder={shouldPromptRegister ? "Register to continue..." : "Type your message..."}
+                className="w-full flex-grow resize-none overflow-y-hidden rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -911,7 +959,7 @@ export function ChatInterface() {
                 type="submit"
                 variant="primary"
                 disabled={!currentMessage.trim() || isLoading}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 p-0 text-white transition-all duration-150 ease-in-out hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:hover:bg-gray-300 dark:disabled:bg-gray-600 dark:disabled:hover:bg-gray-600"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-white transition-all duration-150 ease-in-out hover:bg-primary/80 focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 disabled:bg-gray-300 disabled:hover:bg-gray-300 dark:disabled:bg-gray-600 dark:disabled:hover:bg-gray-600"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
