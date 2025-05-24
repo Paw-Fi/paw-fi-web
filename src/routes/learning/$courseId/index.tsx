@@ -7,6 +7,8 @@ import gsap from 'gsap';
 import type { Course, Lesson } from '@/types/learning.types';
 import { COURSES_STORAGE_KEY } from '@/data/lessons';
 import { sanitizeCourse } from '@/utils/sanitize-course';
+import { LessonBackButton } from '@/components/learning/lesson-back-button';
+import { useNavigate } from '@tanstack/react-router';
 
 export const Route = createFileRoute("/learning/$courseId/")({
   component: CourseDetailPage,
@@ -55,8 +57,14 @@ export default function CourseDetailPage() {
     });
   }, [course]);
 
+  const navigate = useNavigate();
+
   return (
     <div className="py-12 px-4">
+      <div className="mb-4 lg:mb-0">
+
+            <LessonBackButton onBack={() => navigate({ to: "/learning" })} />
+      </div>
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold mb-2">{course?.title}</h1>
         <p className="text-gray-600 max-w-md mx-auto">{course?.description}</p>

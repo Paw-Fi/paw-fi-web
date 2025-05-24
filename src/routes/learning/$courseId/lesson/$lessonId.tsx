@@ -65,7 +65,7 @@ function LessonPage() {
 
   return (
     <div className="bg-background flex flex-1 flex-col px-4 py-8 lg:flex-row">
-      <div className="top-1 left-0 flex flex-1 flex-col">
+      <div className="mb-4 lg:mb-0 flex flex-1 flex-col lg:mr-4">
         {/* Back button and progress indicator */}
         <LessonBackButton onBack={handleBack} />
       </div>

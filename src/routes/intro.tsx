@@ -103,7 +103,7 @@ function IntroPage() {
   return (
     <div className="bg-background flex flex-1 items-center justify-center">
       <div
-        className="relative flex w-full max-w-[90vw] lg:max-w-md flex-col gap-4 overflow-hidden rounded-3xl bg-white  shadow-lg lg:h-[30rem] h-[55vh]"
+        className="relative flex w-full max-w-[90vw] lg:max-w-md flex-col gap-4 overflow-hidden rounded-3xl bg-white  shadow-lg lg:min-h-[33rem] min-h-[34rem]"
       >
         <img src={waveBackground} alt="Wave Background" className="absolute top-0 left-0 w-full" />
        <div className="absolute top-0 left-0 w-full h-full px-4 py-6 flex items-center justify-center flex-col">

@@ -16,7 +16,7 @@ export function PageLayout() {
   
   // For all other pages, apply the layout with header
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen w-screen ">
       <Header />
       <main className="flex-1 bg-background flex flex-col justify-center items-center">
         <Outlet />

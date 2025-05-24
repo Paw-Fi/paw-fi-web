@@ -809,7 +809,7 @@ export function ChatInterface() {
         <div className="mx-auto">
           {isBackendProcessing && (
             <div className="space-y-4 pt-6">
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4,5].map((i) => (
                 <div
                   key={i}
                   className={`flex animate-pulse ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
@@ -822,10 +822,7 @@ export function ChatInterface() {
                     ></div>
                     <div
                       className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-full`}
-                    ></div>
-                    <div
-                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-full`}
-                    ></div>
+                    ></div>                 
                   </div>
                 </div>
               ))}
