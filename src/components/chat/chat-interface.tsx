@@ -35,6 +35,7 @@ import { Modal } from "../ui/modal";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
+import { sanitizeCourse } from "@/utils/sanitize-course";
 
 export function ChatInterface() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -750,8 +751,9 @@ export function ChatInterface() {
       try {
         const code = jsonBlockMatch[1].trim();
         const json = JSON.parse(code);
+        const sanitized = sanitizeCourse(json);
         const idx = text.indexOf(jsonBlockMatch[0]);
-        return { json, start: idx, end: idx + jsonBlockMatch[0].length };
+        return { json: sanitized, start: idx, end: idx + jsonBlockMatch[0].length };
       } catch (err) {
         /* Fall through */
       }

@@ -6,6 +6,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import type { Course, Lesson } from '@/types/learning.types';
 import { COURSES_STORAGE_KEY } from '@/data/lessons';
+import { sanitizeCourse } from '@/utils/sanitize-course';
 
 export const Route = createFileRoute("/learning/$courseId/")({
   component: CourseDetailPage,
@@ -26,7 +27,12 @@ export default function CourseDetailPage() {
       if (stored) {
         const courses: Course[] = JSON.parse(stored);
         const found = courses.find((c) => c.id === courseId);
-        setCourse(found || null);
+        if (found) {
+          const sanitized = sanitizeCourse(found);
+          setCourse(sanitized);
+        } else {
+          setCourse(null);
+        }
       }
     } catch (error) {
       console.error('Error loading course:', error);
