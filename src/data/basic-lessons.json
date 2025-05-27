@@ -1,0 +1,2683 @@
+{
+    "id": "guide-to-investing",
+    "title": "Your Investing Adventure: A Beginner's Guide!",
+    "description": "Unlock the secrets of smart money moves! This course is your friendly guide to understanding how to grow your wealth, manage risks, and decode financial markets, step by step.",
+    "lessons": [
+      {
+        "id": "L1-beginners-guide-investing-concepts",
+        "title": "Beginner's Guide to Investing: Key Concepts Explained",
+        "description": "Ever wonder how your money can grow? This lesson dives into the fundamental ideas of saving versus investing, helping you understand how to make your money work for you.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "🌱",
+        "questions": [
+          {
+            "id": "q1-sort-categories-saving-investing",
+            "type": "sort-categories",
+            "question": "Which actions are about 'Saving' and which are about 'Investing'? Drag each one into the correct category!",
+            "explanation": "Fantastic! You've got the hang of it. Saving is all about keeping your money super safe and accessible, often for short-term goals or emergencies. Investing, on the other hand, is about putting your money to work in hopes of growing it over time, even with a bit more risk. Both are super important for your financial journey!",
+            "incorrectExplanation": "Not quite! It's easy to mix them up. Remember, saving is usually for safety and quick access (like a piggy bank or emergency fund)[cite: 3, 4], while investing means taking a bit more risk in hopes of bigger growth (like buying stocks or crypto)[cite: 2, 5]. Keep practicing!",
+            "hint": "Think about how much risk is involved and whether the goal is safety or growth.",
+            "helpTips": "Saving is like putting money in a safe box for later; investing is like planting a seed hoping it grows into a big tree. One is about security, the other about growth potential.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Before we dive deeper, let's understand two super important concepts: 'Saving' and 'Investing'. They might sound similar, but they have different goals and different levels of risk."
+              },
+              {
+                "type": "paragraph",
+                "content": "Saving is typically about keeping your money safe for short-term goals or emergencies. Think of it as putting money in a secure place where it's easy to get when you need it[cite: 4]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Investing, on the other hand, is about putting your money into assets that you hope will grow in value over time. This usually comes with a bit more risk, but also the potential for bigger returns[cite: 5]."
+              }
+            ],
+            "imagePrompt": "graph LR; A[Money Management] --> B{Saving}; A --> C{Investing}; B --> D[Low Risk]; B --> E[Guaranteed Returns]; C --> F[Higher Risk]; C --> G[Uncertain Returns];",
+            "caption": "A simple comparison between the characteristics of Saving and Investing.",
+            "items": [
+              { "id": "item-1", "content": "Buying an index fund" },
+              { "id": "item-2", "content": "Putting money in a piggy bank" },
+              { "id": "item-3", "content": "Setting aside an emergency fund" },
+              { "id": "item-4", "content": "Buying cryptocurrency" }
+            ],
+            "categories": [
+              { "id": "category-1", "content": "Investing" },
+              { "id": "category-2", "content": "Saving" }
+            ],
+            "correctAnswers": {
+              "category-1": ["item-1", "item-4"],
+              "category-2": ["item-2", "item-3"]
+            }
+          },
+          {
+            "id": "q2-sort-categories-risk-loss",
+            "type": "sort-categories",
+            "question": "Can you sort these descriptions into 'Risk' (something that might happen) or 'Loss' (something that has already happened)?",
+            "explanation": "You're a pro! Understanding the difference between risk and actual loss is key in investing. Risk is all about the *potential* for something uncertain to happen to your investment's value[cite: 6, 7]. A loss is when that uncertainty turns into a *realized* decrease in your investment's value[cite: 7]. This helps you manage expectations and make informed decisions!",
+            "incorrectExplanation": "Close one! It's a common confusion. Remember, 'risk' is about the *potential* for something bad to happen in the future, like the uncertainty of an investment's value[cite: 6, 7]. 'Loss' is when that bad thing *has already happened*, and your investment's value has gone down[cite: 7]. Keep these clear in your mind!",
+            "hint": "Think about whether the event has already occurred or is still a possibility.",
+            "helpTips": "Risk is a future possibility, a 'what if'. Loss is a past event, a 'what happened'. Knowing the difference helps you stay calm during market ups and downs.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In the world of investing, you'll often hear about 'risk' and 'loss'. While they're related, they mean different things."
+              },
+              {
+                "type": "paragraph",
+                "content": "Risk is about the possibility of something uncertain happening, like your investment's value going up or down. It's a future possibility[cite: 6, 7]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Loss, on the other hand, is when your investment's value has actually decreased, meaning it's already happened[cite: 7]."
+              }
+            ],
+            "imagePrompt": "table: What is it?, Timing: Risk, Loss \n What is it?, Potential for loss, Actual loss \n Timing, Future possibility, Past or realized",
+            "caption": "A quick look at the differences between Risk and Loss.",
+            "items": [
+              { "id": "item-1", "content": "Has not occurred" },
+              { "id": "item-2", "content": "Uncertainty in an investment’s value" },
+              { "id": "item-3", "content": "Has occurred" },
+              { "id": "item-4", "content": "Realized investment’s value below its previously had" }
+            ],
+            "categories": [
+              { "id": "category-1", "content": "Risk" },
+              { "id": "category-2", "content": "Loss" }
+            ],
+            "correctAnswers": {
+              "category-1": ["item-1", "item-2"],
+              "category-2": ["item-3", "item-4"]
+            }
+          },
+          {
+            "id": "q3-matrix-rating-investment-risk",
+            "type": "matrix-rating",
+            "question": "How risky are these different types of investments? Drag each item into the 'Low', 'Medium', or 'High Risk' bins.",
+            "explanation": "Excellent! You've got a good grasp on investment risk. Savings accounts are generally low risk because your capital is protected[cite: 4]. Government bonds are also typically low, as they're backed by the government's credit. Real estate can be medium, depending on the market. Single tech stocks and cryptocurrency are usually high risk due to their volatility[cite: 5]. Understanding risk helps you decide where to put your money!",
+            "incorrectExplanation": "Almost there! Risk levels vary greatly. Savings accounts and government bonds are typically considered low risk[cite: 4]. Real estate can be medium. Single stocks and especially cryptocurrency can be very high risk because their values can change a lot[cite: 5]. Balancing risk is super important!",
+            "hint": "Think about how much a sudden change in the market could affect the value of each investment.",
+            "helpTips": "Higher potential returns often come with higher risk – balancing is key! [cite: 8] Generally, if something sounds too good to be true, it might carry more risk.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Every investment comes with some level of risk. Understanding this risk is crucial for making smart decisions about where to put your money. Let's explore how risky different investments can be."
+              }
+            ],
+            "rows": [
+              { "id": "gov-bond", "content": "Government bond" },
+              { "id": "real-estate", "content": "Real estate" },
+              { "id": "tech-stock", "content": "Single tech stock" },
+              { "id": "savings-account", "content": "Savings account" }
+            ],
+            "columns": [
+              { "id": "low-risk", "content": "Low", "color": "green" },
+              { "id": "medium-risk", "content": "Medium", "color": "orange" },
+              { "id": "high-risk", "content": "High", "color": "red" }
+            ],
+            "correctAnswers": {
+              "gov-bond": "low-risk",
+              "real-estate": "medium-risk",
+              "tech-stock": "high-risk",
+              "savings-account": "low-risk"
+            }
+          },
+          {
+            "id": "q4-scq-diversification",
+            "type": "scq",
+            "question": "Which option represents a 'better' portfolio in terms of diversification?",
+            "explanation": "You got it! Diversification is like having a variety of snacks instead of just one type. If you only have tech stocks, and the tech market drops, your whole portfolio takes a hit. But if you have a mix of tech, healthcare, real estate, and bonds, a dip in one area won't sink your whole ship! It's a smart way to protect your money.",
+            "incorrectExplanation": "Almost! Putting all your money into one type of investment can be risky. If that one area performs poorly, your entire portfolio could suffer. Diversification means spreading your investments across different types to reduce risk. Think about not putting all your eggs in one basket!",
+            "hint": "Consider the saying: 'Don't put all your eggs in one basket!'",
+            "helpTips": "Diversification means you don't put all your eggs in one basket – it helps protect your money if one area drops. [cite: 9] Spreading out your investments can help reduce overall risk.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Imagine you're building a tower. If you only use one type of block, it might fall easily. But if you use different shapes and sizes, it's much stronger! The same goes for investing, and it's called 'diversification'."
+              },
+              {
+                "type": "paragraph",
+                "content": "Diversification is the strategy of spreading your investments across different assets to reduce risk. The idea is that if one investment performs poorly, others might perform well, balancing things out[cite: 9]."
+              }
+            ],
+            "imagePrompt": "pie title Portfolio Diversification \"Tech Stocks\": 100",
+            "caption": "Option 1: A portfolio concentrated in only Tech Stocks.",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Only Tech Stocks",
+                "isCorrect": false,
+                "description": "This approach concentrates investments in a single sector, increasing risk."
+              },
+              {
+                "id": "opt-2",
+                "content": "Tech, Healthcare, Real Estate, Bonds",
+                "isCorrect": true,
+                "description": "This approach diversifies investments across multiple sectors and asset classes, reducing overall risk."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-broker-dealer",
+            "type": "scq",
+            "question": "You are an active stock investor. Recently, you purchased 100 shares of Apple through a financial firm[cite: 10, 11]. A few days later, you bought another 100 shares of Microsoft directly from the same firm’s own inventory[cite: 12]. Which of the following best describes the role of the firm in these two transactions?",
+            "explanation": "Spot on! When you bought Apple shares *through* the firm, they acted as a **Broker**[cite: 16]. This means they executed your order in the open market on your behalf. When you bought Microsoft shares *directly from their own inventory*, the firm acted as a **Dealer**[cite: 17]. They were selling their own stock to you. Knowing the difference helps you understand how financial firms operate!",
+            "incorrectExplanation": "Not quite! This can be a tricky distinction. When a firm acts *on your behalf* to buy shares in the market (like with Apple), they're a **Broker**[cite: 16]. When they sell you shares *from their own holdings* (like with Microsoft), they're acting as a **Dealer**[cite: 17]. Keep practicing!",
+            "hint": "Think about whether the firm is acting as an agent for you or selling something it owns.",
+            "helpTips": "A Broker connects you to the market. A Dealer sells directly from their own 'store' of investments. It's about who owns the asset at the time of the transaction.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In financial markets, firms can play different roles when you buy or sell investments. Two common roles are 'Broker' and 'Dealer'[cite: 10]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Broker** acts as an agent for you. They execute your orders in the market and help you buy or sell investments from other investors[cite: 16]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Dealer**, on the other hand, buys and sells securities from their own inventory. When you buy from a dealer, you're buying directly from them, not from another investor through them[cite: 17]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The firm acted as a Broker in both transactions",
+                "isCorrect": false,
+                "description": "This option is incorrect because the firm played two different roles based on how the shares were acquired."
+              },
+              {
+                "id": "opt-b",
+                "content": "The firm acted as a Dealer in both transactions",
+                "isCorrect": false,
+                "description": "This option is incorrect as the firm acted as a broker in the first transaction, not a dealer."
+              },
+              {
+                "id": "opt-c",
+                "content": "The firm was a Broker for the Apple purchase and a Dealer for the Microsoft purchase",
+                "isCorrect": true,
+                "description": "When the firm executes an order on your behalf in the open market, it acts as a Broker. When it sells from its own inventory, it acts as a Dealer."
+              },
+              {
+                "id": "opt-d",
+                "content": "The firm was a Dealer for the Apple purchase and a Broker for the Microsoft purchase",
+                "isCorrect": false,
+                "description": "This option reverses the correct roles of the firm in the two transactions."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-primary-secondary-market",
+            "type": "scq",
+            "question": "You bought new shares of a tech company during its IPO[cite: 19]. A few months later, you sold the shares to another investor on the stock market[cite: 20]. Which market were you in for each trade?",
+            "explanation": "You've got it! Buying shares during an **IPO** (Initial Public Offering) means you're buying directly from the company itself, which happens in the **Primary Market**[cite: 23]. When you later sell those shares to another investor on the stock market, that transaction takes place in the **Secondary Market**[cite: 24]. Understanding these markets helps you navigate stock trading!",
+            "incorrectExplanation": "Not quite! The key is who you're buying from or selling to. An IPO is always in the **Primary Market** because you're getting shares directly from the company[cite: 23]. Selling shares to *another investor* on an exchange is the definition of the **Secondary Market**[cite: 24]. Keep these distinct!",
+            "hint": "Think about whether you're buying from the company directly or from another investor.",
+            "helpTips": "Primary Market is like buying a brand new car directly from the dealership. Secondary Market is like buying a used car from another person.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When companies want to raise money by selling shares, they do so in different 'markets'. The two main types are the Primary Market and the Secondary Market[cite: 19]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The **Primary Market** is where new securities are issued and sold for the first time. This is where an IPO (Initial Public Offering) happens – you buy shares directly from the company[cite: 23]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The **Secondary Market** is where existing securities are traded between investors. When you buy or sell shares on a stock exchange, you're usually in the secondary market[cite: 24]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Bought in the Secondary Market, sold in the Primary Market",
+                "isCorrect": false,
+                "description": "This option reverses the correct market types for the two transactions."
+              },
+              {
+                "id": "opt-b",
+                "content": "Bought in the Primary Market, sold in the Secondary Market",
+                "isCorrect": true,
+                "description": "Buying during an IPO is a primary market transaction, and selling existing shares on an exchange is a secondary market transaction."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both trades were in the Primary Market",
+                "isCorrect": false,
+                "description": "This option is incorrect because the second transaction occurred in the secondary market."
+              },
+              {
+                "id": "opt-d",
+                "content": "Both trades were in the Secondary Market",
+                "isCorrect": false,
+                "description": "This option is incorrect because the initial purchase was in the primary market."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L2-behavioral-finance-emotions",
+        "title": "Behavioral Finance: How Emotions Affect Investment Choices",
+        "description": "Our brains can play tricks on us when it comes to money! Discover common mental shortcuts and biases that can influence your investment decisions, and learn how to make smarter choices.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "🧠",
+        "questions": [
+          {
+            "id": "q1-scq-loss-aversion-gain",
+            "type": "scq",
+            "question": "Imagine you're offered two choices: Option A: a 100&dollar; chance to gain &dollar;1,000[cite: 25]; or Option B: a 50&dollar; chance to gain &dollar;2,000, and a 50&dollar; chance to gain &dollar;0[cite: 26]. Which option do you prefer?",
+            "explanation": "Great job! If you chose Option A, you're likely risk-averse when it comes to gains. This is very common, as people often prefer a guaranteed smaller gain over a riskier, potentially larger gain. It's a fascinating insight into how our minds handle certainty!",
+            "incorrectExplanation": "Interesting choice! If you chose Option B, you're showing some risk-seeking tendencies when it comes to gains. While there's a chance for a bigger payoff, there's also a chance for nothing. Most people tend to avoid this kind of risk when a sure gain is available.",
+            "hint": "Consider if you prefer a sure thing or a chance at more, even with a risk of nothing.",
+            "helpTips": "When dealing with gains, many people tend to be risk-averse, preferring a sure thing over a gamble. Think about what feels more 'safe' to you.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Our emotions and thinking patterns can really influence our money decisions. One common idea in behavioral finance is 'Loss Aversion'. It means we really, really don't like losing money, sometimes even more than we like gaining it[cite: 25]."
+              },
+              {
+                "type": "scenario",
+                "content": [
+                  "Let's play a little game to see how you think about risk and reward."
+                ]
+              }
+            ],
+            "options": [
+              { "id": "opt-a", "content": "A: risk averse", "isCorrect": true, "description": "This choice indicates a preference for a certain outcome over a probabilistic one, demonstrating risk aversion in the domain of gains." },
+              { "id": "opt-b", "content": "B: risk seeking", "isCorrect": false, "description": "This choice suggests a willingness to take on more risk for a potentially higher reward, indicating risk-seeking behavior in the domain of gains." },
+              { "id": "opt-c", "content": "Same: risk neutral", "isCorrect": false, "description": "This choice would imply indifference between the certain and uncertain outcomes, which is less common for most individuals in the domain of gains." }
+            ]
+          },
+          {
+            "id": "q2-scq-loss-aversion-loss",
+            "type": "scq",
+            "question": "Now, imagine you're faced with two choices where you might lose money: Option A: a 100&dollar; chance to loss &dollar;1,000[cite: 28]; or Option B: a 50&dollar; chance to lose &dollar;2,000, and a 50&dollar; chance to lose &dollar;0[cite: 29]. Which option do you prefer?",
+            "explanation": "Excellent! If you chose Option B, you're demonstrating risk-seeking behavior when it comes to losses. This is a classic example of loss aversion: people often prefer a gamble that might avoid a loss entirely, even if the potential loss is larger, over a guaranteed smaller loss. It's how our brains try to escape negative outcomes!",
+            "incorrectExplanation": "Interesting! If you chose Option A, you're showing risk-aversion even when facing a loss. While it's a guaranteed loss, it's also a smaller one. Many people would rather take a chance on avoiding the loss completely, even if it means risking a bigger loss, which is characteristic of loss aversion.",
+            "hint": "Consider if you prefer a sure loss or a chance to avoid any loss, even if it means risking a bigger loss.",
+            "helpTips": "When faced with losses, people often become risk-seeking, hoping to avoid any loss. This is the opposite of how we usually act with gains!",
+            "contentBlocks": [
+              {
+                "type": "scenario",
+                "content": [
+                  "Let's try another scenario, this time with potential losses."
+                ]
+              }
+            ],
+            "options": [
+              { "id": "opt-a", "content": "A: risk averse", "isCorrect": false, "description": "This choice indicates a preference for a certain loss over a probabilistic one, which is less typical for individuals exhibiting loss aversion in the domain of losses." },
+              { "id": "opt-b", "content": "B: risk seeking", "isCorrect": true, "description": "This choice indicates a willingness to take on more risk to potentially avoid a loss entirely, demonstrating risk-seeking behavior in the domain of losses." },
+              { "id": "opt-c", "content": "Same: risk neutral", "isCorrect": false, "description": "This choice would imply indifference between the certain and uncertain outcomes, which is less common for most individuals when facing losses." }
+            ]
+          },
+          {
+            "id": "q3-scq-loss-aversion-conclusion",
+            "type": "scq",
+            "question": "If you chose Option A in the first problem (gain) and Option B in the second problem (loss), what common behavioral bias does this suggest?",
+            "explanation": "You've got it! If you prefer a guaranteed gain over a risky one, but you prefer a risky gamble to avoid a guaranteed loss, you're showing **Loss Aversion**[cite: 30]. This bias means we tend to dislike losing something more than we like gaining an equivalent amount. It's a powerful force in our financial decisions!",
+            "incorrectExplanation": "Not quite! This pattern—being risk-averse for gains but risk-seeking for losses—is the classic definition of **Loss Aversion**[cite: 30]. It highlights how strong the feeling of potential loss can be, making us take risks we might otherwise avoid. Keep that in mind for your own investing!",
+            "hint": "Consider the idea that people feel the pain of a loss more intensely than the pleasure of an equivalent gain.",
+            "helpTips": "Loss Aversion is a cognitive bias where the pain of losing is psychologically more powerful than the pleasure of gaining. It often leads us to avoid losses even if it means missing out on gains.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "The way we choose between gains and losses can reveal a lot about our decision-making. There's a common psychological bias called 'Loss Aversion'[cite: 30]."
+              }
+            ],
+            "options": [
+              { "id": "opt-1", "content": "Confirmation Bias", "isCorrect": false, "description": "Confirmation bias involves seeking information that confirms existing beliefs, which is not directly related to the pattern of choices in gains vs. losses." },
+              { "id": "opt-2", "content": "Overconfidence Bias", "isCorrect": false, "description": "Overconfidence bias involves overestimating one's abilities or knowledge, which does not explain the shift in risk preference between gains and losses." },
+              { "id": "opt-3", "content": "Loss Aversion", "isCorrect": true, "description": "Loss aversion describes the tendency to prefer avoiding losses over acquiring equivalent gains, often leading to risk-averse behavior for gains and risk-seeking behavior for losses." },
+              { "id": "opt-4", "content": "Self-Control Bias", "isCorrect": false, "description": "Self-control bias relates to a lack of discipline in pursuing long-term goals over immediate gratification, which is distinct from the pattern of choices in gains vs. losses." }
+            ]
+          },
+          {
+            "id": "q4-scq-confirmation-bias-investing",
+            "type": "scq",
+            "question": "Suppose you are an investor who believes a stock is a great buy. Will you only read positive news or analysis, ignoring warning signs or negative reports?",
+            "explanation": "That's a classic example of **Confirmation Bias**! [cite: 32, 33] When we have a strong belief, our brains love to find evidence that supports it and tend to overlook anything that contradicts it. Being aware of this bias helps you seek out a balanced view before making investment decisions!",
+            "incorrectExplanation": "If you found yourself only looking at positive news, that's exactly what **Confirmation Bias** is[cite: 32, 33]! Our brains often gravitate towards information that confirms what we already believe, making it harder to see the full picture. It's a common mental trap!",
+            "hint": "Think about whether you're open to all information, or just the information that supports what you already think.",
+            "helpTips": "Confirmation Bias is like having a filter in your brain that only lets in information that agrees with your existing ideas. To combat it, actively seek out opposing viewpoints!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Have you ever noticed that you tend to pay more attention to things that agree with what you already think? This is a very common mental shortcut called **Confirmation Bias**[cite: 31, 33]."
+              },
+              {
+                "type": "paragraph",
+                "content": "It's the tendency to search for, interpret, favor, and recall information in a way that confirms one's pre-existing beliefs or hypotheses[cite: 33]. This can be a big pitfall in investing because it might stop you from seeing important warning signs."
+              }
+            ],
+            "options": [
+              { "id": "opt-yes", "content": "Yes: Confirmation Bias", "isCorrect": true, "description": "This indicates a tendency to favor information that confirms existing beliefs while ignoring contradictory evidence." },
+              { "id": "opt-no", "content": "No: no bias", "isCorrect": false, "description": "This would suggest an unbiased approach to information gathering, which is difficult for humans to maintain consistently." }
+            ]
+          },
+          {
+            "id": "q5-scq-confirmation-bias-hiring",
+            "type": "scq",
+            "question": "Suppose you are a hiring manager who forms a positive impression of a candidate early on. Will you overlook red flags in their resume or interview and hire them?",
+            "explanation": "Absolutely! That's another perfect example of **Confirmation Bias**[cite: 32, 33]. Once we form an initial positive impression, we might unconsciously seek out information that supports that impression and downplay anything negative. It's a reminder that even in daily life, our biases can affect our judgments!",
+            "incorrectExplanation": "If you said 'Yes', you're right on the money for **Confirmation Bias**[cite: 32, 33]! It's super common to selectively focus on information that confirms our initial thoughts. Being aware of this helps you make more objective decisions, whether in hiring or investing.",
+            "hint": "Think about whether your initial impression might make you less critical of new information.",
+            "helpTips": "Confirmation bias isn't just about investing; it affects how we see people and situations too. Always try to consider all sides of the story!",
+            "contentBlocks": [],
+            "options": [
+              { "id": "opt-yes", "content": "Yes: Confirmation Bias", "isCorrect": true, "description": "This demonstrates a selective focus on information that supports a pre-existing positive impression, ignoring contradictory evidence." },
+              { "id": "opt-no", "content": "No: no bias", "isCorrect": false, "description": "This would indicate an unbiased and objective evaluation of the candidate, which is ideal but challenging to achieve consistently." }
+            ]
+          },
+          {
+            "id": "q6-scq-overconfidence-bias",
+            "type": "scq",
+            "question": "Suppose you think you have a strong understanding of tech stocks. Will you pour a large portion of your portfolio into a few high-risk startups?",
+            "explanation": "If you said 'Yes', that's **Overconfidence Bias** in action! [cite: 34, 35] It's when we believe we're smarter or more knowledgeable than we actually are, especially in complex areas like investing. This can lead to taking on too much risk, so it's a great bias to be aware of!",
+            "incorrectExplanation": "If you answered 'Yes', you're identifying **Overconfidence Bias**[cite: 34, 35]! It's a common trap where people overestimate their skills or knowledge, leading them to take on risks they might not fully understand. Staying humble is a good strategy in investing!",
+            "hint": "Think about whether believing you're an expert might lead you to take bigger risks.",
+            "helpTips": "Overconfidence can make you think you know more than you do, leading to risky decisions. Always double-check your assumptions and consider other perspectives.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Another common behavioral bias is called **Overconfidence Bias**[cite: 34]. This happens when people overestimate their own abilities, knowledge, or judgment. It's especially common in situations that are complex or have uncertain outcomes, like investing or predicting the future[cite: 35]."
+              },
+              {
+                "type": "paragraph",
+                "content": "In investing, overconfidence can lead to taking on too much risk or trading too frequently, believing you can 'beat the market'."
+              }
+            ],
+            "options": [
+              { "id": "opt-yes", "content": "Yes: Overconfidence", "isCorrect": true, "description": "This demonstrates overestimation of one's own investment abilities, leading to disproportionately risky investment decisions." },
+              { "id": "opt-no", "content": "No: no bias", "isCorrect": false, "description": "This would indicate a realistic assessment of one's capabilities and a cautious approach to investment, avoiding overconfidence." }
+            ]
+          },
+          {
+            "id": "q7-scq-self-control-bias",
+            "type": "scq",
+            "question": "Suppose you set a goal to contribute &dollar;500 per month to a retirement account[cite: 36]. But each month, you spend the money on vacations or gadgets instead — consistently delaying your savings goal[cite: 37]. What behavioral bias does this demonstrate?",
+            "explanation": "That's it! This is a classic example of **Self-Control Bias**[cite: 38]. It happens when we struggle to stick to our long-term plans because we're tempted by immediate rewards. Saving for the future often means giving up something fun now, which can be tough! Recognizing this bias is the first step to overcoming it.",
+            "incorrectExplanation": "If you said 'Yes', you're pinpointing **Self-Control Bias**[cite: 38]! It's a common struggle where we prioritize immediate gratification over our future financial well-being. Knowing this bias exists helps us put strategies in place to stick to our saving goals!",
+            "hint": "Think about the struggle between enjoying something now versus saving for something later.",
+            "helpTips": "Self-control bias is about the battle between your 'present self' and your 'future self'. Strategies like automating savings can help you beat this bias!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Saving money can be hard, even when we know it's good for us! This struggle often points to **Self-Control Bias**[cite: 38]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Self-control bias occurs when individuals fail to act in their long-term best interest due to a lack of discipline or willpower, often favoring immediate gratification over future benefits[cite: 38]."
+              }
+            ],
+            "options": [
+              { "id": "opt-yes", "content": "Yes: Self-Control Bias", "isCorrect": true, "description": "This scenario directly illustrates a failure to adhere to long-term financial goals due to a preference for immediate consumption, which is characteristic of self-control bias." },
+              { "id": "opt-no", "content": "No: no bias", "isCorrect": false, "description": "This would imply a consistent adherence to long-term savings goals despite temptations for immediate spending." }
+            ]
+          },
+          {
+            "id": "q8-scq-gamblers-fallacy",
+            "type": "scq",
+            "question": "If a coin lands on 'heads' five times in a row, do you think 'tails is due' on the next flip?",
+            "explanation": "If you answered 'Yes', you're experiencing the **Gambler’s Fallacy**! [cite: 39, 40] This bias is the mistaken belief that past random events affect future ones. Each coin flip is independent – the coin has no memory! Understanding this helps you avoid making irrational decisions based on streaks.",
+            "incorrectExplanation": "If you said 'Yes', you're falling for the **Gambler’s Fallacy**[cite: 39, 40]! It's a common error in thinking where we believe that a random event is 'due' to happen after a series of other outcomes. But in truly random events, past results don't influence future ones. Every flip is a fresh start!",
+            "hint": "Think about whether a coin 'remembers' what it did last time.",
+            "helpTips": "The Gambler’s Fallacy is the mistaken belief that past random events affect future ones. Remember, for truly random events, each occurrence is independent!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Sometimes our brains try to find patterns where there are none, especially in random events. This can lead to a bias known as the **Gambler’s Fallacy**[cite: 39, 40]."
+              },
+              {
+                "type": "paragraph",
+                "content": "It's the mistaken belief that if something has happened more frequently than normal over a period, it will happen less frequently in the future, or vice versa[cite: 40]. This is common in gambling, but it can also subtly affect investment decisions."
+              }
+            ],
+            "options": [
+              { "id": "opt-yes", "content": "Yes: Gambler’s Fallacy", "isCorrect": true, "description": "This indicates the mistaken belief that past random events influence future ones, a characteristic of the Gambler's Fallacy." },
+              { "id": "opt-no", "content": "No: no bias", "isCorrect": false, "description": "This would suggest an understanding that random events are independent and past outcomes do not affect future probabilities." }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L3-money-market-explained",
+        "title": "Money Market Essentials: T-Bills, Repos, and Short-Term Instruments",
+        "description": "Dive into the world of short-term borrowing and lending. Learn about the 'money market' and key instruments like T-bills and repos that keep the financial system running smoothly.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "💸",
+        "questions": [
+          {
+            "id": "q1-scq-t-bill-non-competitive-bid",
+            "type": "scq",
+            "question": "Your friend is participating in a U.S. Treasury bill (T-bill) auction for the first time[cite: 41]. He says, “I don’t really understand interest rates, I’ll just go ahead and buy!” So, he submits a non-competitive bid[cite: 43]. What is the main advantage of doing this?",
+            "explanation": "You're spot on! The main advantage of a **non-competitive bid** in a T-bill auction is that your friend is **guaranteed to receive an allocation**[cite: 45, 46]. This is super helpful for new investors because they don't have to worry about picking the right yield. They just agree to accept the market-determined rate. It's a straightforward way to get involved!",
+            "incorrectExplanation": "Not quite! While competitive bids involve setting a yield, a non-competitive bid is specifically designed for ease of access[cite: 48]. The key benefit of a non-competitive bid is the guarantee of receiving the securities, even if you don't set the yield yourself[cite: 46, 47].",
+            "hint": "Think about the 'guarantee' aspect for new investors who aren't trying to outsmart the market.",
+            "helpTips": "Non-competitive bids are for investors who want to participate without having to guess the exact interest rate. It's a 'set it and forget it' way to buy T-bills.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Treasury bills, or T-bills, are short-term debt securities issued by the U.S. government. They are considered very safe investments. When you buy a T-bill, you're essentially lending money to the government for a short period."
+              },
+              {
+                "type": "paragraph",
+                "content": "T-bills are sold through a process called an auction. Investors can submit two types of bids: competitive and non-competitive[cite: 48]."
+              }
+            ],
+            "imagePrompt": "graph TD; A[T-Bill Auction] --> B{Competitive Bid}; A --> C{Non-Competitive Bid}; B --> D[Set Your Own Yield]; B --> E[May or May Not Receive]; C --> F[Accept Market Yield]; C --> G[Guaranteed Allocation];",
+            "caption": "A look at the two types of bids in a T-bill auction.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "He can set his own yield, offering more flexibility",
+                "isCorrect": false,
+                "description": "This describes a competitive bid, not a non-competitive bid."
+              },
+              {
+                "id": "opt-b",
+                "content": "He might get a lower price",
+                "isCorrect": false,
+                "description": "The price is determined by the auction, and a non-competitive bid accepts the market yield."
+              },
+              {
+                "id": "opt-c",
+                "content": "He is guaranteed to receive an allocation, regardless of the auction outcome",
+                "isCorrect": true,
+                "description": "This is the primary advantage of a non-competitive bid; the investor agrees to accept the market yield and is guaranteed to receive the securities."
+              },
+              {
+                "id": "opt-d",
+                "content": "He is participating in a stock auction, so it doesn’t affect bond prices",
+                "isCorrect": false,
+                "description": "T-bill auctions are for bonds (debt securities), not stocks, and the bid type affects the allocation process."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-repo-agreement",
+            "type": "scq",
+            "question": "You are working for a bank, and your manager asks you to explain 'repo' transactions[cite: 49]. You tell them that a repo is:",
+            "explanation": "Perfect! A **Repurchase Agreement (Repo)** is exactly what you described: a short-term agreement where securities are sold with a promise to buy them back later[cite: 51, 52]. Banks and other financial institutions use repos as a way to borrow or lend money for very short periods, usually overnight. It's a key part of how banks manage their short-term cash needs!",
+            "incorrectExplanation": "Not quite! A repo is a very specific type of short-term agreement. It's not a long-term loan, nor is it about buying stocks with borrowed money or real estate[cite: 52]. The key is the 'sell with agreement to repurchase' part for short-term funding. Keep that in mind!",
+            "hint": "Think about how banks can get very short-term funding using securities.",
+            "helpTips": "A repo is essentially a short-term, collateralized loan. One party sells securities (like bonds) to another with the agreement to buy them back at a slightly higher price later.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In the world of finance, especially for banks, there's a common way to borrow or lend money for very short periods, sometimes even just overnight. This is called a **Repurchase Agreement**, or 'Repo' for short[cite: 49]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "A long-term loan where the bank lends money to customers",
+                "isCorrect": false,
+                "description": "Repos are typically very short-term, not long-term, and are often between financial institutions."
+              },
+              {
+                "id": "opt-b",
+                "content": "A short-term agreement where securities are sold with an agreement to buy them back later",
+                "isCorrect": true,
+                "description": "This accurately describes a repurchase agreement, where securities act as collateral for a short-term loan."
+              },
+              {
+                "id": "opt-c",
+                "content": "A method of buying stocks with borrowed money",
+                "isCorrect": false,
+                "description": "This describes buying on margin, which is different from a repo."
+              },
+              {
+                "id": "opt-d",
+                "content": "A type of loan backed by real estate",
+                "isCorrect": false,
+                "description": "This describes a mortgage or real estate-backed loan, not a repo."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-commercial-paper-vs-corporate-bonds",
+            "type": "scq",
+            "question": "You are the company’s finance manager, and the company is facing a 2-month cash shortfall[cite: 53]. You decide to issue Commercial Paper. Your boss asks, “Isn’t this basically the same as issuing corporate bonds?” [cite: 54] What should you say?",
+            "explanation": "You're absolutely right! You should say, \"Not exactly — Commercial Paper is short-term and usually unsecured\"[cite: 56]. This is a crucial distinction. Corporate bonds are typically long-term debt, while commercial paper is specifically designed for very short-term funding needs (like your 2-month shortfall) and is generally unsecured, meaning it's not backed by specific assets[cite: 57]. Great job explaining the difference!",
+            "incorrectExplanation": "Not quite! While both are ways for companies to raise money, they are distinct. Commercial Paper is specifically designed for short-term borrowing, often for working capital needs, and is generally unsecured[cite: 57]. Corporate bonds, on the other hand, are long-term debt instruments. Knowing the right tool for the job is key!",
+            "hint": "Think about the duration of the funding and whether it's backed by collateral.",
+            "helpTips": "Commercial Paper is like a very short-term IOU from a company, usually for a few months. Corporate bonds are more like long-term loans that companies take out for years.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Companies often need to borrow money to operate or grow. They can do this in various ways, two of which are issuing 'Commercial Paper' and 'Corporate Bonds'[cite: 53]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Commercial Paper** is a short-term debt instrument, typically issued by large corporations to finance short-term liabilities like inventory and payroll. It's usually unsecured, meaning it's not backed by any specific assets[cite: 57]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Corporate Bonds** are long-term debt instruments that companies issue to raise capital, usually for longer-term projects or expansions. They can be secured or unsecured."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Yes, essentially the same — both are financing methods",
+                "isCorrect": false,
+                "description": "While both are financing methods, their characteristics (term, security) are distinct."
+              },
+              {
+                "id": "opt-b",
+                "content": "Not exactly — Commercial Paper is short-term and usually unsecured",
+                "isCorrect": true,
+                "description": "This accurately highlights the key differences in term and security between Commercial Paper and corporate bonds."
+              },
+              {
+                "id": "opt-c",
+                "content": "No — Commercial Paper cannot be used for operating expenses",
+                "isCorrect": false,
+                "description": "Commercial Paper is often used to finance short-term operating expenses."
+              },
+              {
+                "id": "opt-d",
+                "content": "Yes — it’s just a different name",
+                "isCorrect": false,
+                "description": "This is incorrect as there are significant differences in their structure and purpose."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-negotiable-cd-access",
+            "type": "scq",
+            "question": "An investor of Negotiable CDs can:",
+            "explanation": "You're correct! The key feature of a **Negotiable Certificate of Deposit (CD)** is that it can be **sold to another investor on the secondary market**[cite: 58, 62]. This means you don't have to wait until the maturity date to get your money back; you can sell it if you need the cash sooner[cite: 63, 64]. This flexibility is why it's 'negotiable'!",
+            "incorrectExplanation": "Not quite! While a regular CD might lock up your money, a *negotiable* CD offers flexibility. The 'negotiable' part means it can be bought and sold before maturity[cite: 62, 63]. You can't just transfer it to a savings account or expect higher interest that way, but you can definitely sell it if needed[cite: 64].",
+            "hint": "The word 'negotiable' hints at its tradability.",
+            "helpTips": "Negotiable CDs are different from regular CDs because you can sell them to someone else if you need your money before the maturity date. It's like a special pass to get your cash earlier!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Certificates of Deposit (CDs) are savings certificates that hold a fixed amount of money for a fixed period of time, and in return, you get a fixed interest rate. However, there are different types of CDs."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Negotiable Certificate of Deposit** is a special type of CD that can be bought and sold in the secondary market before its maturity date[cite: 62]. This gives investors more flexibility compared to traditional CDs."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "sell the CD to another investor on the secondary market and receive the cash immediately.",
+                "isCorrect": true,
+                "description": "A Negotiable CD is tradable in the secondary market, allowing early liquidity."
+              },
+              {
+                "id": "opt-b",
+                "content": "only withdraw the money at the maturity date, with no option for early access.",
+                "isCorrect": false,
+                "description": "This describes a non-negotiable CD, not a negotiable one."
+              },
+              {
+                "id": "opt-c",
+                "content": "only get the interest if he holds the CD for the full 12 months.",
+                "isCorrect": false,
+                "description": "Interest accrues, and while selling early might affect total return, it doesn't mean no interest is earned if held for a period."
+              },
+              {
+                "id": "opt-d",
+                "content": "transfer the CD to a savings account, where it will earn higher interest.",
+                "isCorrect": false,
+                "description": "CDs are separate instruments and cannot be simply transferred to a savings account in this manner for higher interest."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-libor-meaning",
+            "type": "scq",
+            "question": "What does LIBOR stand for?",
+            "explanation": "Fantastic! LIBOR stands for **London Interbank Offered Rate**[cite: 66]. It was a very important benchmark rate that major banks used to lend money to each other in London[cite: 67]. While it's being phased out, understanding what it was helps you grasp how global finance used to work!",
+            "incorrectExplanation": "Almost! The correct answer is **London Interbank Offered Rate**[cite: 66]. It refers to the rate at which banks in London would lend to each other[cite: 67]. It's a bit of a mouthful, but knowing what it stands for is a good step in understanding global finance!",
+            "hint": "Think about banks lending to each other in a major financial city.",
+            "helpTips": "LIBOR was a key 'reference rate' for many financial products worldwide, like a speedometer for the cost of borrowing between banks.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "You might have heard the term LIBOR (London Interbank Offered Rate)[cite: 65]. For many years, it was a very important benchmark in global finance. It's the interest rate at which major global banks lend to one another in the London interbank market[cite: 67]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "London International Bank Official Rate",
+                "isCorrect": false,
+                "description": "This option is similar but contains a different word ('International' instead of 'Interbank') and 'Official' instead of 'Offered'."
+              },
+              {
+                "id": "opt-b",
+                "content": "London Interbank Offered Rate",
+                "isCorrect": true,
+                "description": "This is the correct acronym for LIBOR, representing the rate banks offer to lend to each other in the London market."
+              },
+              {
+                "id": "opt-c",
+                "content": "Loan Interest Benchmark On Rate",
+                "isCorrect": false,
+                "description": "This is a plausible-sounding but incorrect expansion of the acronym."
+              },
+              {
+                "id": "opt-d",
+                "content": "Lending Institution Base Operating Rate",
+                "isCorrect": false,
+                "description": "This is another plausible-sounding but incorrect expansion of the acronym."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L4-bond-market-explained",
+        "title": "Bond Market Explained: Credit, Yields, and Investment Strategies",
+        "description": "Unravel the mysteries of bonds! This lesson explains how bonds work, how their prices are set, and what factors like credit ratings and interest rates influence their value.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "📜",
+        "questions": [
+          {
+            "id": "q1-scq-what-is-a-bond",
+            "type": "scq",
+            "question": "You buy a bond for &dollar;1,000[cite: 69]. Every year, it pays you a fixed interest, and at the end of its term, it returns your &dollar;1,000[cite: 70]. What does this bond actually represent?",
+            "explanation": "Spot on! This is the core idea of a bond: you are essentially **lending money** to a government or a company[cite: 71, 72]. In return for your loan, they promise to pay you regular interest payments and give you your original money back at the end of the loan term. It's like being the bank!",
+            "incorrectExplanation": "Not quite! While investing can feel like guessing sometimes, a bond is very specific. It's not borrowing money, nor is it a lottery ticket or a donation[cite: 71, 72]. When you buy a bond, you're becoming a lender, expecting your money back plus interest.",
+            "hint": "Think about whether you are giving money or taking money, and whether you expect it back with extra.",
+            "helpTips": "Buying a bond is like giving a loan. The issuer (government or company) promises to pay you back, plus interest, over time. It's a way for them to borrow money and for you to earn a steady income.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you hear about 'bonds', it might sound complicated, but the basic idea is actually quite simple. Imagine someone needs to borrow money, and you're willing to lend it to them."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **bond** is essentially a loan you make to a government or a corporation. In return, they promise to pay you back the original amount (the principal) on a specific date, and they'll also pay you regular interest payments along the way[cite: 71, 72]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "You lend money to someone, and they pay you interest every year",
+                "isCorrect": true,
+                "description": "This accurately describes the role of a bond investor as a lender, receiving interest payments and the principal back."
+              },
+              {
+                "id": "opt-b",
+                "content": "You borrow money from someone, and pay them interest every year",
+                "isCorrect": false,
+                "description": "This describes being a borrower, not a bond investor."
+              },
+              {
+                "id": "opt-c",
+                "content": "You bought a lottery ticket, waiting for the result",
+                "isCorrect": false,
+                "description": "A bond is a debt instrument with defined terms, not a speculative lottery ticket."
+              },
+              {
+                "id": "opt-d",
+                "content": "You donated money and expect nothing in return",
+                "isCorrect": false,
+                "description": "A bond is an investment with expected returns, not a donation."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-credit-rating-purpose",
+            "type": "scq",
+            "question": "Which of the following best describes the purpose of a credit rating?",
+            "explanation": "You nailed it! A credit rating is like a financial report card[cite: 74]. It helps you judge **how likely someone (or a company or government) is to repay their debt**[cite: 73]. A higher rating means lower risk and often lower interest rates for the borrower, while a lower rating means higher risk and higher interest rates for lenders[cite: 74, 75]. It's super important for making informed lending or investing decisions!",
+            "incorrectExplanation": "Not quite! While credit ratings are about money, they don't tell you how much money someone *has*, nor are they about friendship[cite: 73]. Their core purpose is to tell you how reliable a borrower is at paying back their loans[cite: 74, 75]. Keep that in mind when looking at investments!",
+            "hint": "Think about what lenders want to know before giving money.",
+            "helpTips": "A credit rating is like a 'risk score' for borrowers. The better the score, the safer the loan is perceived to be, and the cheaper it is for the borrower to get money.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Just like people have credit scores, companies and governments also have 'credit ratings'. These ratings are super important for investors who are thinking about buying bonds[cite: 73]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **credit rating** is an assessment of the creditworthiness of a borrower, like a company or government. It helps investors understand the likelihood that the borrower will repay their debt[cite: 73, 74]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "A credit rating tells you how much money a person has",
+                "isCorrect": false,
+                "description": "Credit ratings assess repayment likelihood, not total wealth."
+              },
+              {
+                "id": "opt-b",
+                "content": "A credit rating helps you judge how likely someone is to repay their debt",
+                "isCorrect": true,
+                "description": "This accurately describes the primary purpose of a credit rating."
+              },
+              {
+                "id": "opt-c",
+                "content": "A credit rating decides whether someone is your friend",
+                "isCorrect": false,
+                "description": "Credit ratings are financial assessments, not social indicators."
+              },
+              {
+                "id": "opt-d",
+                "content": "A credit rating is only used to make a company’s name sound better",
+                "isCorrect": false,
+                "description": "While a good rating is positive, its primary purpose is risk assessment for lenders."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-zero-coupon-bond",
+            "type": "scq",
+            "question": "Which of the following best explains the characteristic of a zero-coupon bond?",
+            "explanation": "You've got it! A **zero-coupon bond** is a special kind of bond that **doesn't pay interest regularly, but instead, it's sold at a discount**[cite: 77, 78]. Your return comes from the bond slowly increasing in value until it reaches its full face value at maturity. So, you buy it cheap and get the full amount back later!",
+            "incorrectExplanation": "Not quite! A zero-coupon bond is definitely a real bond, not a scam! [cite: 78] The trick is that it *doesn't* pay regular interest. Instead, you buy it at a lower price than its face value, and when it matures, you get the full face value back. The difference is your 'interest'!",
+            "hint": "Think about how it's 'zero coupon' – no regular payments – and how you still make money.",
+            "helpTips": "Zero-coupon bonds are for investors who want to receive all their interest and principal at once, at the very end. You buy them at a discount and get the full amount at maturity.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Most bonds pay you regular interest payments, but there's a unique type called a **zero-coupon bond**[cite: 76]. As the name suggests, it doesn't pay you any interest ('coupons') during its lifetime."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "has no principal and only pays interest",
+                "isCorrect": false,
+                "description": "This is incorrect; it has a principal, and its return comes from the price difference, not regular interest."
+              },
+              {
+                "id": "opt-b",
+                "content": "does not pay interest but is sold at a discount, with the return coming from the increase in principal",
+                "isCorrect": true,
+                "description": "This accurately describes a zero-coupon bond, which is bought below its face value and matures at its face value."
+              },
+              {
+                "id": "opt-c",
+                "content": "pays interest every year but does not repay the principal at the end",
+                "isCorrect": false,
+                "description": "This is incorrect; it repays principal, but does not pay annual interest."
+              },
+              {
+                "id": "opt-d",
+                "content": "is not a real bond; it's a magic scam",
+                "isCorrect": false,
+                "description": "This is incorrect; zero-coupon bonds are legitimate financial instruments."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-coupon-bond",
+            "type": "scq",
+            "question": "You buy a coupon bond that pays you &dollar;50 in interest every year, and after 5 years, it will return your &dollar;1,000 principal[cite: 79]. What does this bond represent?",
+            "explanation": "Exactly! This is a perfect description of a **coupon bond**[cite: 80, 81]. You get regular interest payments (the 'coupons') throughout the bond's life, and then you get your original investment back at the end. It's a steady way to earn income from your investments!",
+            "incorrectExplanation": "Not quite! The key here is the 'coupon' part. A coupon bond is designed to give you regular payments, like that &dollar;50 each year[cite: 81]. You definitely get your principal back too, but the regular interest is what makes it a coupon bond. Don't miss out on those payments!",
+            "hint": "The term 'coupon' refers to regular interest payments.",
+            "helpTips": "Think of coupon bonds as traditional loans where you receive regular payments (like interest) and then get your full loan amount back at the end.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Unlike zero-coupon bonds, most bonds are **coupon bonds**. These bonds pay you regular interest payments, often every six months or once a year, and then return your original investment at maturity[cite: 79]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "You receive &dollar;50 each year as interest, and after 5 years, you get back the &dollar;1,000 principal",
+                "isCorrect": true,
+                "description": "This correctly describes the characteristics of a coupon bond, with periodic interest payments and principal repayment at maturity."
+              },
+              {
+                "id": "opt-b",
+                "content": "You receive &dollar;50 each year as the price of the bond",
+                "isCorrect": false,
+                "description": "The &dollar;50 is the interest payment, not the price of the bond."
+              },
+              {
+                "id": "opt-c",
+                "content": "You will not receive any interest, but you will get back the &dollar;1,000 principal after 5 years",
+                "isCorrect": false,
+                "description": "This describes a zero-coupon bond, not a coupon bond."
+              },
+              {
+                "id": "opt-d",
+                "content": "You will only get back the &dollar;1,000 principal and will not receive any interest",
+                "isCorrect": false,
+                "description": "This describes a zero-coupon bond, and implies no interest, which is incorrect for a coupon bond."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-government-vs-corporate-bonds",
+            "type": "scq",
+            "question": "Which of the following most accurately describes the difference between government bonds and corporate bonds?",
+            "explanation": "Fantastic! You're absolutely right: **Corporate bonds usually offer higher interest, but the risk is also greater**[cite: 83]. Government bonds are typically seen as safer because governments are generally more likely to repay their debts[cite: 84]. Companies, however, can face more financial ups and downs, so they offer higher interest to attract investors for that extra risk[cite: 85]. It's all about balancing risk and reward!",
+            "incorrectExplanation": "Not quite! The relationship between risk and return is key here. Government bonds are generally considered *less risky* than corporate bonds because they're backed by the government's stability[cite: 84]. To compensate for their higher risk, corporate bonds often *do* offer higher interest rates[cite: 85]. Remember: higher risk, usually higher potential reward!",
+            "hint": "Think about which entity (government or company) is generally considered more stable and reliable.",
+            "helpTips": "Government bonds are like the 'safe' option, often with lower returns. Corporate bonds are a bit more 'adventurous' – more risk, but potentially more reward. It's a trade-off!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Bonds are issued by different entities, most commonly governments and corporations. The type of issuer affects the bond's risk and the interest rate it offers[cite: 82]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Government bonds** are debt securities issued by a national government. They are generally considered very low-risk because they are backed by the taxing power of the government[cite: 84]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Corporate bonds** are debt securities issued by companies. Their risk depends on the financial health of the issuing company. Generally, they carry higher risk than government bonds[cite: 84]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Government bonds are always riskier than corporate bonds",
+                "isCorrect": false,
+                "description": "This is incorrect; government bonds are generally considered less risky due to government backing."
+              },
+              {
+                "id": "opt-b",
+                "content": "Corporate bonds usually offer higher interest, but the risk is also greater",
+                "isCorrect": true,
+                "description": "This accurately describes the risk-reward trade-off: higher risk from corporations is compensated by higher potential returns."
+              },
+              {
+                "id": "opt-c",
+                "content": "Government bonds do not pay interest",
+                "isCorrect": false,
+                "description": "Government bonds do pay interest (except for zero-coupon ones, which is a specific type)."
+              },
+              {
+                "id": "opt-d",
+                "content": "Corporate bonds are always safer than government bonds",
+                "isCorrect": false,
+                "description": "This is incorrect; corporate bonds typically carry higher risk than government bonds."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-bid-ask-price-bond-market",
+            "type": "scq",
+            "question": "Which of the following most accurately explains the difference between the Bid Price and Ask Price in the bond market?",
+            "explanation": "You're spot on! The most accurate explanation is that the **Bid Price is always lower than the Ask Price, and the Ask Price is always higher than the Bid Price**[cite: 87, 88]. The Bid Price is what buyers are willing to pay, and the Ask Price is what sellers are willing to accept[cite: 89]. The difference between them is called the 'spread', and it's how market makers earn their living[cite: 90]. Great job understanding market dynamics!",
+            "incorrectExplanation": "Not quite! The relationship between Bid and Ask is fundamental. The **Bid Price** is what a buyer is willing to offer, and the **Ask Price** is what a seller is willing to accept[cite: 89]. Typically, the ask price is always *higher* than the bid price, creating a small difference or 'spread'[cite: 90].",
+            "hint": "Think about it from the perspective of a buyer vs. a seller. Who wants a lower price, and who wants a higher price?",
+            "helpTips": "Imagine you're buying a used game. The 'Bid' is what you offer, and the 'Ask' is what the seller wants. You'll always offer less than they want, so Bid < Ask.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you're looking to buy or sell bonds (or stocks, or anything in a market!), you'll often see two prices: the 'Bid Price' and the 'Ask Price'[cite: 86]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The **Bid Price** is the highest price a buyer is currently willing to pay for a security[cite: 89]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The **Ask Price** (also called the 'offer price') is the lowest price a seller is currently willing to accept for a security[cite: 89]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The Bid Price is the price at which you are willing to sell the bond, and the Ask Price is the price at which you are willing to buy the bond",
+                "isCorrect": false,
+                "description": "This reverses the typical roles; bid is for buying (by a market maker) and ask is for selling (by a market maker)."
+              },
+              {
+                "id": "opt-b",
+                "content": "The Bid Price is always higher than the Ask Price, and the Ask Price is always lower than the Bid Price",
+                "isCorrect": false,
+                "description": "This statement is the opposite of the correct relationship between bid and ask prices."
+              },
+              {
+                "id": "opt-c",
+                "content": "The Bid Price is always lower than the Ask Price, and the Ask Price is always higher than the Bid Price",
+                "isCorrect": true,
+                "description": "This correctly describes the typical relationship, where the ask price is always higher than the bid price, forming the bid-ask spread."
+              },
+              {
+                "id": "opt-d",
+                "content": "The Bid Price and Ask Price are the same, there is no difference between them",
+                "isCorrect": false,
+                "description": "This is incorrect; there is almost always a difference between bid and ask prices in an active market."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L5-equity-market-overview",
+        "title": "Equity Market Overview: Stocks, IPOs, and Investor Rights",
+        "description": "Step into the exciting world of stocks! Learn about common and preferred shares, how companies go public, and the different ways you can buy and sell stocks in the market.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "📈",
+        "questions": [
+          {
+            "id": "q1-scq-common-vs-preferred-equity",
+            "type": "scq",
+            "question": "You and your friends invested in a new coffee shop[cite: 92]. You put in money and became a “partner shareholder,” which gives you voting rights and a share of the profits[cite: 93]. However, you only get leftover profits after the debts and preferred shareholders are paid[cite: 94]. What type of equity do you hold?",
+            "explanation": "You nailed it! With **voting rights** and the understanding that you get paid *after* preferred shareholders and debt holders, you definitely hold **Common Equity**[cite: 96, 97]. Common stockholders are the true owners, taking on more risk but also having the potential for higher rewards and a say in the company's direction! Great job identifying your role!",
+            "incorrectExplanation": "Not quite! The key features here are voting rights and the fact that you're last in line for profits after preferred shareholders[cite: 96, 97]. This describes **Common Equity**. Preferred shareholders don't usually have voting rights, and debt is something the company owes, not an ownership stake.",
+            "hint": "Think about who gets to vote and who gets paid first if the company makes money (or if it's winding down).",
+            "helpTips": "Common equity holders are the 'bosses' (voting rights!) but they also get paid last. Preferred equity holders get paid before common, but usually don't vote.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you invest in a company by buying its stock, you're buying 'equity'. There are usually two main types of equity: Common Equity and Preferred Equity[cite: 91]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Common Equity** (or common stock) usually comes with voting rights, meaning you can have a say in how the company is run. However, if the company goes out of business, common shareholders are usually the last to get paid[cite: 96]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Preferred Equity** (or preferred stock) generally doesn't come with voting rights, but preferred shareholders usually receive fixed dividend payments and get paid before common shareholders if the company liquidates."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Debt",
+                "isCorrect": false,
+                "description": "Debt represents borrowed money, not an ownership stake like equity."
+              },
+              {
+                "id": "opt-b",
+                "content": "Preferred Equity",
+                "isCorrect": false,
+                "description": "Preferred equity typically does not have voting rights and usually receives preferential treatment in payouts compared to common equity."
+              },
+              {
+                "id": "opt-c",
+                "content": "Common Equity",
+                "isCorrect": true,
+                "description": "Common equity provides voting rights and participation in profits, but with a subordinate claim to assets in liquidation, consistent with the scenario."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-cash-vs-stock-dividends",
+            "type": "scq",
+            "question": "You invested in a company called \"Paw-fi.\" The company gave you &dollar;10 in cash for each share you owned[cite: 99]. Later, the company gave you 10 new shares instead of cash[cite: 100]. What type of dividends did you receive?",
+            "explanation": "You're spot on! The first dividend was definitely a **Cash Dividend** because you received actual money[cite: 102]. The second one, where you got extra shares instead of cash, was a **Stock Dividend**[cite: 103]. Companies use both ways to reward shareholders, and knowing the difference helps you understand your returns!",
+            "incorrectExplanation": "Not quite! This is a common mix-up. When a company gives you *money*, that's a **Cash Dividend**[cite: 102]. When they give you *more shares* of their stock, that's a **Stock Dividend**[cite: 103]. Both are forms of dividends, but they work differently!",
+            "hint": "Think about whether you received money or additional shares.",
+            "helpTips": "Cash dividends put money directly in your pocket. Stock dividends give you more ownership in the company, which might grow in value over time.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When a company makes a profit, it can choose to share some of that profit with its shareholders through 'dividends'. Dividends can come in different forms[cite: 98]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Cash Dividend** is when a company pays out a portion of its earnings directly in cash to its shareholders[cite: 102]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Stock Dividend** is when a company distributes additional shares of its own stock to existing shareholders, instead of cash[cite: 103]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "First is stock dividend, second is cash dividend",
+                "isCorrect": false,
+                "description": "This option incorrectly reverses the types of dividends received."
+              },
+              {
+                "id": "opt-b",
+                "content": "First is cash dividend, second is stock dividend",
+                "isCorrect": true,
+                "description": "Receiving cash is a cash dividend, and receiving additional shares is a stock dividend."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both are stock dividends",
+                "isCorrect": false,
+                "description": "This is incorrect as the first dividend was cash."
+              },
+              {
+                "id": "opt-d",
+                "content": "Both are cash dividends",
+                "isCorrect": false,
+                "description": "This is incorrect as the second dividend was in shares."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-firm-commitment-vs-best-effort",
+            "type": "scq",
+            "question": "Paw-Fi wants to raise money by selling stocks[cite: 104]. In the first method, the underwriter buys all the stocks and sells them to investors[cite: 105]. In the second method, the underwriter tries to sell the stocks, but if any are left unsold, Paw-Fi takes the risk[cite: 106]. Which option describes these methods correctly?",
+            "explanation": "You're spot on! The first method is a **Firm Commitment Offering**[cite: 108, 109]. This is where the underwriter takes on the risk by buying all the stocks from the company. The second method is a **Best Effort Offering**[cite: 108, 110, 111], where the underwriter just tries their best to sell, and the company keeps the risk of unsold shares. Knowing these differences is key to understanding how companies raise capital!",
+            "incorrectExplanation": "Not quite! These are two distinct ways companies issue stock. In a **Firm Commitment** deal, the underwriter guarantees to buy all the shares[cite: 109]. In a **Best Effort** deal, they only promise to try to sell them, and the company bears the risk of unsold shares[cite: 110, 111]. The risk allocation is the big difference!",
+            "hint": "Think about which party (the underwriter or the company) takes on the risk of unsold shares.",
+            "helpTips": "Firm Commitment: The underwriter is 'firm' about buying all shares. Best Effort: The underwriter just gives their 'best effort' to sell.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When a company wants to sell new stocks to the public, they often work with an investment bank called an 'underwriter'. Underwriters help companies sell their shares, but there are different types of agreements[cite: 104]."
+              },
+              {
+                "type": "paragraph",
+                "content": "In a **Firm Commitment Offering**, the underwriter agrees to buy *all* the shares from the company and then sells them to investors. The underwriter takes on the risk of not being able to sell all the shares[cite: 109]."
+              },
+              {
+                "type": "paragraph",
+                "content": "In a **Best Effort Offering**, the underwriter doesn't guarantee to sell all the shares. They simply agree to use their 'best efforts' to sell as many as they can. If shares are unsold, the company keeps the risk[cite: 110, 111]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The first is Best Effort Offering, the second is Firm Commitment Offering",
+                "isCorrect": false,
+                "description": "This option incorrectly reverses the descriptions of the two offering types."
+              },
+              {
+                "id": "opt-b",
+                "content": "The first is Firm Commitment Offering, the second is Best Effort Offering",
+                "isCorrect": true,
+                "description": "Firm commitment involves the underwriter buying all shares, while best effort means they try to sell but don't guarantee it."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both are Firm Commitment Offerings",
+                "isCorrect": false,
+                "description": "This is incorrect as the second method describes a best effort offering."
+              },
+              {
+                "id": "opt-d",
+                "content": "Both are Best Effort Offerings",
+                "isCorrect": false,
+                "description": "This is incorrect as the first method describes a firm commitment offering."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-ipo-impact",
+            "type": "scq",
+            "question": "Paw-Fi is preparing for an IPO (Initial Public Offering) to raise funds by selling stocks to the public[cite: 112]. Which of the following most accurately describes the impact of an IPO?",
+            "explanation": "You're exactly right! After an IPO, a company's stocks become publicly traded, and it faces more regulation and shareholder requirements[cite: 115, 119]. Going public means a lot more transparency and accountability, which is a big change from being a private company. Great job understanding the implications!",
+            "incorrectExplanation": "Not quite! An IPO is actually the opposite of becoming private[cite: 114]. After an IPO, a company's stock becomes publicly traded[cite: 115]. This also means more rules, more oversight, and greater responsibility to shareholders[cite: 119]. It's a big step for a company!",
+            "hint": "Think about what 'going public' really means for a company and its responsibilities.",
+            "helpTips": "An IPO is like a company's debut on the big stage! It gains access to a lot of money, but it also means more eyes (and rules) on how it operates.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "An **Initial Public Offering (IPO)** is a big moment for a company. It's when a private company first offers its shares to the public on a stock exchange[cite: 112]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "After the IPO, the company will become a private company, and the stocks will no longer be publicly traded.",
+                "isCorrect": false,
+                "description": "An IPO transforms a private company into a public one, making its stocks publicly traded."
+              },
+              {
+                "id": "opt-b",
+                "content": "After the IPO, the company's stocks will be publicly traded, and it will face more regulation and shareholder requirements.",
+                "isCorrect": true,
+                "description": "This accurately describes the consequences of an IPO: public trading, increased regulation, and greater accountability to shareholders."
+              },
+              {
+                "id": "opt-c",
+                "content": "After the IPO, the company doesn't need to manage finances; all the funds will be managed by the underwriters.",
+                "isCorrect": false,
+                "description": "The company remains responsible for its financial management, though underwriters assist with the IPO process."
+              },
+              {
+                "id": "opt-d",
+                "content": "After the IPO, the company will lose control and can no longer make decisions.",
+                "isCorrect": false,
+                "description": "While management faces new oversight, the company's existing leadership generally retains control over operational decisions."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-market-vs-limit-orders",
+            "type": "scq",
+            "question": "You can use market order or limit order to buy a stock[cite: 120]. Which of the following is true?",
+            "explanation": "You've got it! A **market order guarantees execution but not the price**[cite: 122, 124]. This means your order will definitely go through, but the price you pay might be slightly different from what you saw, especially in fast-moving markets. On the other hand, a limit order guarantees your price but might not get executed at all[cite: 125]. It's a key choice for investors!",
+            "incorrectExplanation": "Not quite! This is a crucial distinction in trading. A **market order** prioritizes getting the trade done immediately, so it guarantees *execution*, but the price can fluctuate[cite: 124]. A **limit order** prioritizes the price you want, so it guarantees the *price*, but there's no guarantee it will actually be executed[cite: 125]. Keep practicing!",
+            "hint": "Think about which type of order prioritizes speed versus price control.",
+            "helpTips": "Market Order: 'Buy it now, whatever the price!' Limit Order: 'Buy it only if the price is X or better.'",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you want to buy or sell stocks, you place an 'order' with your broker. The two most common types of orders are a Market Order and a Limit Order[cite: 120]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Market Order** is an order to buy or sell a security immediately at the best available current price[cite: 124]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Limit Order** is an order to buy or sell a security at a specific price or better. The order will only be executed if the market price reaches the specified limit price[cite: 125]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "A market order guarantees both the price and execution.",
+                "isCorrect": false,
+                "description": "A market order guarantees execution but does not guarantee the price."
+              },
+              {
+                "id": "opt-b",
+                "content": "A limit order guarantees both the price and execution.",
+                "isCorrect": false,
+                "description": "A limit order guarantees the price but does not guarantee execution."
+              },
+              {
+                "id": "opt-c",
+                "content": "A market order guarantees execution but not the price.",
+                "isCorrect": true,
+                "description": "This accurately describes a market order, which prioritizes immediate execution at the prevailing market price."
+              },
+              {
+                "id": "opt-d",
+                "content": "A limit order guarantees execution but not the price.",
+                "isCorrect": false,
+                "description": "This incorrectly describes a limit order; it guarantees price but not execution."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-value-weighted-index",
+            "type": "scq",
+            "question": "Which of the following is not a value-weighted index?",
+            "explanation": "You're absolutely right! The **DJIA (Dow Jones Industrial Average)** is a price-weighted index[cite: 127, 128]. This means that stocks with higher share prices have a greater impact on the index's value. In contrast, the S&P 500, NASDAQ Composite, and Nikkei 225 are value-weighted, where larger companies (by market capitalization) have a bigger influence[cite: 129]. Great job distinguishing them!",
+            "incorrectExplanation": "Not quite! The **DJIA** is the odd one out here[cite: 127]. It's a *price-weighted* index, meaning companies with higher stock prices have more sway, regardless of their total market value[cite: 128]. The others are *value-weighted*, where a company's market size dictates its influence[cite: 129]. It's an important detail in understanding how indexes work!",
+            "hint": "Think about which index is famous for simply adding up stock prices, rather than considering company size.",
+            "helpTips": "Price-weighted indexes are influenced more by the cost of a single share. Value-weighted indexes are influenced more by the total size of the company (price x number of shares).",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Stock market indexes are like benchmarks that help us understand how the overall market or a specific sector is performing. They combine the prices of many stocks into one number. However, they're calculated in different ways[cite: 126]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Price-Weighted Index** gives more weight to stocks with higher share prices. The Dow Jones Industrial Average (DJIA) is a prime example[cite: 128]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Value-Weighted Index** (or market-capitalization-weighted index) gives more weight to companies with larger total market values (stock price multiplied by the number of shares outstanding). Examples include the S&P 500 and NASDAQ Composite[cite: 129]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "S&P 500.",
+                "isCorrect": false,
+                "description": "The S&P 500 is a value-weighted index."
+              },
+              {
+                "id": "opt-b",
+                "content": "NASDAQ Composite.",
+                "isCorrect": false,
+                "description": "The NASDAQ Composite is a value-weighted index."
+              },
+              {
+                "id": "opt-c",
+                "content": "Nikkei 225.",
+                "isCorrect": false,
+                "description": "The Nikkei 225 is a value-weighted index."
+              },
+              {
+                "id": "opt-d",
+                "content": "DJIA.",
+                "isCorrect": true,
+                "description": "The DJIA (Dow Jones Industrial Average) is a price-weighted index, not a value-weighted index."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L6-derivatives-market-simple",
+        "title": "Derivatives Market: Futures, Options, and Swaps Made Simple",
+        "description": "Uncover the exciting world of derivatives! This lesson demystifies financial instruments like futures, options, and swaps, showing you how they get their value and how they can be used.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "🔗",
+        "questions": [
+          {
+            "id": "q1-scq-what-are-derivatives",
+            "type": "scq",
+            "question": "Which of the following financial instruments derives its value from the price movement of another asset?",
+            "explanation": "You're absolutely right! A **Futures Contract** is a perfect example of a derivative[cite: 132]. Its value isn't based on its own inherent worth, but rather on the expected future price of something else, like oil, gold, or a stock index. Derivatives are fascinating tools in finance!",
+            "incorrectExplanation": "Not quite! While stocks, savings bonds, and checking accounts have their own values, a **Futures Contract** is different. It's a type of 'derivative' because its value is *derived* from something else, like the price of an underlying commodity or currency[cite: 132]. Think of it as a financial 'mirror'!",
+            "hint": "Think about which instrument gets its price 'from' something else, rather than having its own direct value.",
+            "helpTips": "Derivatives are like contracts that get their 'power' from another asset. They don't have value on their own, but become valuable because of what the underlying asset does.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In finance, some instruments don't have value on their own, but their value comes from, or is 'derived' from, the price of something else. These are called **Derivatives**[cite: 130]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A derivative is a financial contract that gets its value from an underlying asset, group of assets, or benchmark. Instead of trading the asset itself, you trade a contract that relates to it."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Stock",
+                "isCorrect": false,
+                "description": "A stock represents ownership in a company and has its own inherent value, not derived from another asset."
+              },
+              {
+                "id": "opt-b",
+                "content": "Futures Contract",
+                "isCorrect": true,
+                "description": "A futures contract is a derivative whose value is based on the future price of an underlying asset."
+              },
+              {
+                "id": "opt-c",
+                "content": "Savings Bond",
+                "isCorrect": false,
+                "description": "A savings bond is a debt instrument with its own principal and interest value, not derived from another asset's price movement."
+              },
+              {
+                "id": "opt-d",
+                "content": "Checking Account",
+                "isCorrect": false,
+                "description": "A checking account holds cash and does not derive its value from another asset."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-forward-contracts-profit",
+            "type": "scq",
+            "question": "Suppose you are a purchasing manager at a coffee company[cite: 133]. To lock in future costs, you sign a forward contract with a supplier to buy coffee beans in 6 months at &dollar;3 per pound[cite: 134]. Six months later, the market price is &dollar;4 per pound[cite: 135]. What is your position?",
+            "explanation": "You're absolutely right! You would **gain &dollar;1 per pound**[cite: 136]. By locking in the price at &dollar;3 with your forward contract, you get to buy the coffee beans cheaper than the current market price of &dollar;4. Forward contracts are great for reducing price uncertainty for businesses!",
+            "incorrectExplanation": "Not quite! This is the power of a forward contract. Because you locked in the price at &dollar;3 per pound, you get to buy it for that amount, even if the market price is higher[cite: 137, 138]. So, you *save* &dollar;1 per pound compared to the market. That's a gain for your company!",
+            "hint": "Think about whether you're buying at a lower or higher price than the current market.",
+            "helpTips": "A forward contract means you've agreed on a price now for something you'll buy or sell later. If the market price moves in your favor, you 'win'!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Businesses often need to buy or sell goods in the future, and they might want to protect themselves from price changes. This is where **Forward Contracts** come in[cite: 133]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A forward contract is a customized agreement between two parties to buy or sell an asset at a specified price on a future date. They are private agreements and not traded on exchanges[cite: 137]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "I lose &dollar;1 per pound",
+                "isCorrect": false,
+                "description": "This is incorrect; you gain because you are buying at a lower agreed price than the market price."
+              },
+              {
+                "id": "opt-b",
+                "content": "I gain &dollar;1 per pound",
+                "isCorrect": true,
+                "description": "By buying at &dollar;3 when the market price is &dollar;4, you effectively save &dollar;1 per pound, which is a gain."
+              },
+              {
+                "id": "opt-c",
+                "content": "No impact, the price is the same",
+                "isCorrect": false,
+                "description": "The market price changed, creating an impact based on the fixed contract price."
+              },
+              {
+                "id": "opt-d",
+                "content": "The contract is void and the trade happens at the market price",
+                "isCorrect": false,
+                "description": "Forward contracts are binding obligations; they are not voided due to market price changes."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-futures-vs-forward-contracts",
+            "type": "scq",
+            "question": "Which one is more likely to have a set price and be traded on an exchange?",
+            "explanation": "That's correct! A **Futures Contract** is standardized and traded on an exchange, which means it has a set price and clear rules[cite: 139, 140]. **Forward Contracts**, on the other hand, are private, customized agreements between two parties and are not traded on exchanges[cite: 141]. This difference in standardization and trading venue is key!",
+            "incorrectExplanation": "Not quite! While both deal with future transactions, the main difference is their structure. **Futures Contracts** are standardized and traded on public exchanges, meaning they have a set price and are easy to trade[cite: 140]. **Forward Contracts** are private and customized, with more flexibility but less liquidity[cite: 141].",
+            "hint": "Think about which one you'd see on a public market and which is a private deal.",
+            "helpTips": "Futures are like 'ready-made' contracts you can buy and sell easily. Forwards are 'custom-made' contracts that you agree on directly with someone else.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Both Forward Contracts and Futures Contracts allow you to agree to buy or sell an asset at a future date at a set price. However, they have some important differences[cite: 139]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Futures Contract",
+                "isCorrect": true,
+                "description": "Futures contracts are standardized and traded on exchanges with set prices and clear rules."
+              },
+              {
+                "id": "opt-b",
+                "content": "Forward Contract",
+                "isCorrect": false,
+                "description": "Forward contracts are customized, private agreements and are not typically traded on exchanges."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both are traded privately",
+                "isCorrect": false,
+                "description": "Only forward contracts are traded privately; futures are exchange-traded."
+              },
+              {
+                "id": "opt-d",
+                "content": "Neither has a fixed price",
+                "isCorrect": false,
+                "description": "Both types of contracts specify a fixed price for the future transaction."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-interest-rate-swaps",
+            "type": "scq",
+            "question": "Investor A believes that interest rates will rise in 3 months, while Investor B believes that interest rates will fall in 3 months[cite: 142]. What kind of swap should they enter into?",
+            "explanation": "You're spot on! They should enter into an **Interest Rate Swap**[cite: 143, 144]. This allows them to exchange interest payments. Investor A might pay a fixed rate and receive a floating rate, while Investor B does the opposite. It's a clever way for them to manage their risk based on their differing views on future interest rates!",
+            "incorrectExplanation": "Not quite! When the opposing views are specifically about interest rates, the perfect tool is an **Interest Rate Swap**[cite: 143, 144]. This allows them to exchange different types of interest payments (like fixed for floating) to manage their risk. The other swap types deal with different underlying assets.",
+            "hint": "Focus on the type of 'risk' they want to manage – it's about interest rates.",
+            "helpTips": "An interest rate swap is like trading one type of interest payment for another. If you think rates will go up, you might want to pay a fixed rate and receive a floating rate, and vice versa.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Sometimes, investors or companies have different ideas about where interest rates are headed. One might think rates will go up, while another thinks they'll go down. They can use a 'swap' to manage this[cite: 142]."
+              },
+              {
+                "type": "paragraph",
+                "content": "An **Interest Rate Swap** is a derivative contract where two parties agree to exchange future interest payments based on a specified principal amount. This allows them to manage their exposure to changing interest rates[cite: 143, 144]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Currency Swap",
+                "isCorrect": false,
+                "description": "A currency swap involves exchanging principal and/or interest payments in different currencies."
+              },
+              {
+                "id": "opt-b",
+                "content": "Interest Rate Swap",
+                "isCorrect": true,
+                "description": "An interest rate swap is designed for parties with differing views on interest rate movements to exchange payments."
+              },
+              {
+                "id": "opt-c",
+                "content": "Commodity Swap",
+                "isCorrect": false,
+                "description": "A commodity swap involves exchanging payments based on the price of a commodity, not interest rates."
+              },
+              {
+                "id": "opt-d",
+                "content": "Stock Swap",
+                "isCorrect": false,
+                "description": "A stock swap typically involves exchanging shares of one company for shares of another."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-call-options-profit",
+            "type": "scq",
+            "question": "Suppose you buy a call option for a stock with a strike price of &dollar;50[cite: 145]. The stock price rises to &dollar;60[cite: 146]. What should you do to make a profit?",
+            "explanation": "You're spot on! To make a profit, you should **Exercise the call option and buy the stock at &dollar;50**[cite: 147]. A call option gives you the *right* to buy the stock at your agreed-upon strike price. Since the market price is now higher, you can buy it cheaply at &dollar;50 and then immediately sell it at &dollar;60 for a nice &dollar;10 profit per share! That's how call options work!",
+            "incorrectExplanation": "Not quite! The power of a call option comes when the stock price goes *above* your strike price. If the stock is at &dollar;60 and your strike is &dollar;50, you have the right to buy it for less than it's worth[cite: 147]. Exercising the option means you buy it at &dollar;50 and can then sell it for &dollar;60 for a profit. Don't let it expire!",
+            "hint": "A call option gives you the right to *buy* at a certain price. If the market price is higher, that's a good deal!",
+            "helpTips": "Think of a call option like a 'buy-low' coupon. If the item's market price goes up, your coupon becomes valuable because you can buy it cheaper than everyone else.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Options are financial contracts that give the buyer the *right*, but not the obligation, to buy or sell an underlying asset at a specific price (the 'strike price') on or before a certain date. There are two main types: Call Options and Put Options[cite: 145]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A **Call Option** gives the holder the right to *buy* an asset at the strike price. Investors buy call options when they believe the price of the underlying asset will increase."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Sell the call option for a loss",
+                "isCorrect": false,
+                "description": "The option would be in profit, not a loss, so selling for a loss is not the optimal strategy."
+              },
+              {
+                "id": "opt-b",
+                "content": "Exercise the call option and buy the stock at &dollar;50",
+                "isCorrect": true,
+                "description": "Exercising allows buying at the lower strike price, enabling immediate profit by selling at the higher market price."
+              },
+              {
+                "id": "opt-c",
+                "content": "Let the option expire",
+                "isCorrect": false,
+                "description": "Letting a profitable option expire means losing the potential gain."
+              },
+              {
+                "id": "opt-d",
+                "content": "Sell the stock at the market price of &dollar;60",
+                "isCorrect": false,
+                "description": "You don't own the stock yet; you only have the *right* to buy it. You first need to exercise the option."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-put-options-purpose",
+            "type": "scq",
+            "question": "What is the main purpose of buying a put option?",
+            "explanation": "You're exactly right! The main purpose of buying a **put option** is to **protect against a potential decline in the stock price**[cite: 149, 150, 151]. Think of it like insurance for your stocks! If the stock price falls, your put option gains value, helping to offset the losses on your actual stock. It's a smart way to manage risk!",
+            "incorrectExplanation": "Not quite! While call options are for betting on price increases, put options are designed for the opposite. Their main job is to act as a shield against a falling stock price[cite: 151]. They give you the right to *sell* at a specific price, which is valuable if the market price drops. Keep practicing!",
+            "hint": "Think of a put option as a form of 'insurance' for your investments.",
+            "helpTips": "A put option is like a 'sell-high' coupon. If the market price goes down, your coupon allows you to sell at a higher, pre-agreed price, limiting your loss.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "The other main type of option is a **Put Option**. It works differently from a call option, and it's used for a different purpose[cite: 149]."
+              },
+              {
+                "type": "paragraph",
+                "content": "A put option gives the holder the right to *sell* an asset at the strike price. Investors buy put options when they believe the price of the underlying asset will decrease, or to protect existing investments from a price drop[cite: 151]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "To bet that the stock price will go up",
+                "isCorrect": false,
+                "description": "This is the purpose of a call option, not a put option."
+              },
+              {
+                "id": "opt-b",
+                "content": "To earn dividends on the stock",
+                "isCorrect": false,
+                "description": "Options generally do not directly provide dividend income."
+              },
+              {
+                "id": "opt-c",
+                "content": "To protect against a potential decline in the stock price",
+                "isCorrect": true,
+                "description": "This is the primary use of a put option, providing downside protection."
+              },
+              {
+                "id": "opt-d",
+                "content": "To gain ownership of the stock immediately",
+                "isCorrect": false,
+                "description": "Options provide the right to buy/sell, not immediate ownership."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L7-time-value-of-money",
+        "title": "Time Value of Money: How Interest and Value Change Over Time",
+        "description": "Discover why a dollar today is worth more than a dollar tomorrow! This lesson explains the magic of interest, compounding, and how to compare money across different points in time.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "⏳",
+        "questions": [
+          {
+            "id": "q1-scq-interest-rates-assured-returns",
+            "type": "scq",
+            "question": "Interest rates can not be thought of in the following way:",
+            "explanation": "You're spot on! Interest rates **cannot be considered assured rates of return**[cite: 153, 154]. While they represent a potential return, especially for very safe investments like government bonds, there's always some level of risk or uncertainty involved in real-world investing. Interest rates can, however, be thought of as required rates of return, discount rates, or opportunity costs[cite: 155, 156]. Great job distinguishing!",
+            "incorrectExplanation": "Not quite! This is a subtle but important point. While interest rates *represent* returns, they are generally not *assured*[cite: 154]. Investing always carries some risk, even if small. However, they *can* be thought of as required rates of return, discount rates, or opportunity costs[cite: 155, 156].",
+            "hint": "Think about whether any investment return is truly guaranteed.",
+            "helpTips": "Even the safest investments carry some small risk. No investment return is ever 100% 'assured' in every situation, even if it feels very likely.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Interest rates are a fundamental concept in finance. They are essentially the cost of borrowing money or the return you get for lending money. While they seem straightforward, there are a few ways to think about them[cite: 152]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Interest rates can be seen as required rates of return (what an investor expects to earn), discount rates (used to calculate present value), or opportunity costs (what you give up by choosing one investment over another)[cite: 155, 156]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "they can be considered required rates of return.",
+                "isCorrect": false,
+                "description": "Interest rates can be thought of as required rates of return."
+              },
+              {
+                "id": "opt-b",
+                "content": "interest rates can be considered discount rates.",
+                "isCorrect": false,
+                "description": "Interest rates can be thought of as discount rates."
+              },
+              {
+                "id": "opt-c",
+                "content": "interest rates can be considered opportunity costs",
+                "isCorrect": false,
+                "description": "Interest rates can be thought of as opportunity costs."
+              },
+              {
+                "id": "opt-d",
+                "content": "they can be considered assured rates of return.",
+                "isCorrect": true,
+                "description": "Interest rates are not always assured, as investments carry varying levels of risk."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-interest-rate-component",
+            "type": "scq",
+            "question": "Which of the following is NOT part of the Interest Rate Component?",
+            "explanation": "You're absolutely correct! **Temperature – how warm or cold the weather is** [cite: 158] has absolutely no impact on interest rates! Interest rates are influenced by things like the risk-free rate, the length of time of the investment, and the level of risk involved[cite: 159, 160]. Great job identifying the irrelevant factor!",
+            "incorrectExplanation": "Not quite! While risk, time, and the risk-free rate are all crucial factors that influence interest rates[cite: 159, 160], the weather (temperature) has no bearing on them[cite: 158]. It's a bit of a trick question to make sure you're focusing on the true economic drivers!",
+            "hint": "Think about factors that financially impact a loan or investment, not unrelated environmental factors.",
+            "helpTips": "Interest rates are influenced by how long you lend money, how safe it is, and the basic return you could get on a 'risk-free' investment. The weather forecast isn't on the list!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "What makes up an interest rate? It's not just a single number; it's influenced by several key components that reflect the economic landscape and the nature of the investment[cite: 157]."
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  "**Rf (Risk-free rate)**: The theoretical rate of return of an investment with zero risk. Think of it as the base rate you can get on the safest possible investment[cite: 159].",
+                  "**Time**: The longer you lend money, generally the more interest you expect, because your money is tied up for longer[cite: 159].",
+                  "**Risk**: The higher the chance that you might not get your money back, the higher the interest rate lenders will demand to compensate for that risk[cite: 160]."
+                ]
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Rf – risk-free rate",
+                "isCorrect": false,
+                "description": "The risk-free rate is a core component of interest rates."
+              },
+              {
+                "id": "opt-b",
+                "content": "Time – the length of time you keep the money invested or borrowed",
+                "isCorrect": false,
+                "description": "Time is a significant factor affecting interest rates."
+              },
+              {
+                "id": "opt-c",
+                "content": "Risk – the level of risk involved in the investment or loan",
+                "isCorrect": false,
+                "description": "Risk is a crucial determinant of interest rates; higher risk typically means higher rates."
+              },
+              {
+                "id": "opt-d",
+                "content": "Temperature – how warm or cold the weather is",
+                "isCorrect": true,
+                "description": "Temperature has no economic or financial bearing on interest rates."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-simple-vs-compound-interest",
+            "type": "scq",
+            "question": "You put &dollar;1,000 in the bank for 3 years[cite: 161]. Bank A gives 5&dollar; simple interest each year[cite: 162]. Bank B gives 5&dollar; compound interest, once a year[cite: 162]. Which bank gives you more money after 3 years?",
+            "explanation": "You're spot on! **Bank B – compound interest is better**[cite: 163]. With simple interest, you only earn interest on your original &dollar;1,000. But with compound interest, you earn interest on your original &dollar;1,000 *and* on the interest you've already earned! It's like a snowball rolling downhill, getting bigger and bigger. That's the magic of compounding!",
+            "incorrectExplanation": "Not quite! While simple interest is easy to calculate, compound interest is the real winner in the long run[cite: 163]. Compound interest means your interest also earns interest, leading to much faster growth. It's often called the 'eighth wonder of the world' for a reason!",
+            "hint": "Think about which method allows your earned interest to start earning interest too.",
+            "helpTips": "Compound interest is when your money grows 'interest on interest'. It's super powerful for long-term saving and investing!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Understanding how interest is calculated is key to knowing how your money grows. The two main ways are 'simple interest' and 'compound interest'[cite: 161]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Simple Interest** means you only earn interest on the original amount of money you put in."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Compound Interest** means you earn interest not only on your original money but also on the interest that has already been added to your account. It's like interest earning interest!"
+              }
+            ],
+            "imagePrompt": "graph TD; A[Initial Investment] --> B{Simple Interest}; A --> C{Compound Interest}; B --> D[Interest on Principal Only]; C --> E[Interest on Principal + Previous Interest]; E --> F[Faster Growth Over Time];",
+            "caption": "A comparison of how simple and compound interest grow your money.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Bank A – simple interest is better",
+                "isCorrect": false,
+                "description": "Simple interest calculates interest only on the principal amount, leading to slower growth."
+              },
+              {
+                "id": "opt-b",
+                "content": "Bank B – compound interest is better",
+                "isCorrect": true,
+                "description": "Compound interest earns interest on both the principal and accumulated interest, resulting in faster growth over time."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both banks give the same amount",
+                "isCorrect": false,
+                "description": "This is incorrect; compound interest yields more than simple interest over the same period at the same rate."
+              },
+              {
+                "id": "opt-d",
+                "content": "You will lose money in both banks",
+                "isCorrect": false,
+                "description": "Both banks will provide a return on the investment, not a loss."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-future-vs-present-value",
+            "type": "scq",
+            "question": "Which statement is TRUE about Future Value and Present Value?",
+            "explanation": "Excellent! You're absolutely right: **Future Value is money you will get later, after it earns interest**[cite: 165]. Present Value is how much a future amount of money is worth *today*[cite: 166]. Understanding these concepts is fundamental to making smart financial decisions, like saving for retirement or evaluating investments!",
+            "incorrectExplanation": "Not quite! It's easy to mix these up. **Future Value** is about how much your money will grow to *in the future*[cite: 165, 166]. **Present Value** is about figuring out what a future amount of money is worth *right now*[cite: 166]. Remember, money today is generally worth more than the same amount in the future because it can earn interest!",
+            "hint": "Think about 'future' meaning later, and 'present' meaning now.",
+            "helpTips": "Future Value (FV) is like looking ahead to see how big your money will be. Present Value (PV) is like bringing future money back to today to see its worth.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "The **Time Value of Money (TVM)** is a core concept in finance. It simply means that a dollar today is worth more than a dollar tomorrow[cite: 164]. This is because money you have today can be invested and earn a return, growing into a larger amount in the future."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Future Value (FV)** is the value of an asset or cash at a specified date in the future[cite: 165, 166]. It's about how much your money will be worth after it has grown with interest."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Present Value (PV)** is the current value of a future sum of money or stream of cash flows, discounted at a specified rate of return[cite: 166]. It's about what that future money is worth to you today."
+              }
+            ],
+            "imagePrompt": "graph LR; A[Money Today (PV)] -- Earns Interest --> B[More Money Tomorrow (FV)];",
+            "caption": "The core idea of Present Value growing into Future Value.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Future Value is how much money is worth today",
+                "isCorrect": false,
+                "description": "This describes Present Value, not Future Value."
+              },
+              {
+                "id": "opt-b",
+                "content": "Present Value is how much money you will have in the future",
+                "isCorrect": false,
+                "description": "This describes Future Value, not Present Value."
+              },
+              {
+                "id": "opt-c",
+                "content": "Future Value is money you will get later, after it earns interest",
+                "isCorrect": true,
+                "description": "This accurately defines Future Value as the worth of money at a future date after accruing interest."
+              },
+              {
+                "id": "opt-d",
+                "content": "Present Value is always more than Future Value",
+                "isCorrect": false,
+                "description": "This is incorrect; Present Value is typically less than Future Value due to the time value of money."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-what-is-annuity",
+            "type": "scq",
+            "question": "Which of the following best describes an annuity?",
+            "explanation": "Exactly! An annuity is best described as **a series of equal payments made regularly over time**[cite: 167, 168]. Think of it like receiving a fixed amount of money every month from a pension, or making regular payments on a loan. It's about predictable, recurring cash flows, which are super important in financial planning!",
+            "incorrectExplanation": "Not quite! While annuities are about money over time, they aren't just one-time payments or specific types of loans or savings accounts[cite: 168]. The key is the *series of equal payments* that happen regularly. Think of it as a steady stream of income or outflows.",
+            "hint": "Focus on the idea of 'regular, equal payments'.",
+            "helpTips": "An annuity is like a financial conveyor belt, delivering the same amount of money at regular intervals, whether you're receiving it or paying it.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In financial planning, especially for retirement, you might hear about something called an **annuity**[cite: 167]. At its core, an annuity is a financial product that pays out a fixed stream of payments to an individual, typically for a certain period or until death."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "A one-time payment you receive after 10 years",
+                "isCorrect": false,
+                "description": "An annuity involves a series of payments, not a single payment."
+              },
+              {
+                "id": "opt-b",
+                "content": "A type of loan you pay back every month",
+                "isCorrect": false,
+                "description": "While loan payments can be an annuity, an annuity itself is the series of payments, not exclusively a loan type."
+              },
+              {
+                "id": "opt-c",
+                "content": "A series of equal payments made regularly over time",
+                "isCorrect": true,
+                "description": "This is the most accurate and general definition of an annuity."
+              },
+              {
+                "id": "opt-d",
+                "content": "A savings account that earns compound interest",
+                "isCorrect": false,
+                "description": "While an annuity may be funded by savings, it's a payment structure, not a savings account type."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-ear-vs-apr",
+            "type": "scq",
+            "question": "Which of the following statements about Effective Annual Rate (EAR) and Annual Percentage Rate (APR) is TRUE?",
+            "explanation": "You're absolutely right! The TRUE statement is that **EAR takes into account the effect of compounding within the year**[cite: 170, 172]. APR is the stated simple interest rate, often without considering how frequently interest is compounded[cite: 171]. EAR, however, gives you the *real* annual cost or return because it includes the power of compounding. It's crucial for truly comparing loans or investments!",
+            "incorrectExplanation": "Not quite! This is a common point of confusion. **APR** is usually the simple, stated rate, often *without* accounting for compounding[cite: 171]. **EAR** is the one that gives you the *true* annual rate because it *does* factor in the magic of compounding within the year[cite: 172, 173]. This means EAR is almost always higher than APR if compounding occurs more than once a year.",
+            "hint": "Think about which rate gives you the 'real' picture after all the interest calculations.",
+            "helpTips": "APR is like the 'sticker price' for interest. EAR is the 'all-in' price, including any hidden fees from compounding. Always look for the EAR to know the true cost or return!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you borrow money or invest, you'll encounter different ways that interest rates are presented: Annual Percentage Rate (APR) and Effective Annual Rate (EAR)[cite: 169]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**APR (Annual Percentage Rate)** is the simple interest rate calculated over a year. It usually does not account for the effect of compounding within the year[cite: 171]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**EAR (Effective Annual Rate)**, also known as Effective Annual Yield (EAY), is the actual annual rate of return earned or paid on an investment or loan after taking into account the effect of compounding interest over a given period[cite: 172, 173]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "APR shows the actual yearly interest paid after compounding",
+                "isCorrect": false,
+                "description": "This describes EAR, not APR. APR typically does not include the effect of compounding."
+              },
+              {
+                "id": "opt-b",
+                "content": "EAR takes into account the effect of compounding within the year",
+                "isCorrect": true,
+                "description": "This is the correct definition of EAR, reflecting the true annual interest rate with compounding."
+              },
+              {
+                "id": "opt-c",
+                "content": "APR includes the effect of compounding, while EAR does not",
+                "isCorrect": false,
+                "description": "This statement incorrectly reverses the roles of APR and EAR regarding compounding."
+              },
+              {
+                "id": "opt-d",
+                "content": "EAR is always lower than APR",
+                "isCorrect": false,
+                "description": "EAR is typically higher than APR when compounding occurs more frequently than annually."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L8-statistics-for-investors",
+        "title": "Statistics for Investors: Mean, Variance, and Data Pitfalls",
+        "description": "Level up your investing insights with basic statistics! Learn about averages, how data spreads, and common thinking errors that can trip up even smart investors.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "📊",
+        "questions": [
+          {
+            "id": "q1-scq-arithmetic-mean",
+            "type": "scq",
+            "question": "Tom had 3 test scores: Math: 80, English: 90, Science: 70[cite: 174]. What is Tom’s arithmetic mean score?",
+            "explanation": "Excellent! You're a math whiz! The arithmetic mean (or average) is found by adding all the scores together and then dividing by the number of scores. So, 80 + 90 + 70 = 240, and 240 ÷ 3 = 80[cite: 175]. Knowing how to calculate averages is a fundamental skill in finance!",
+            "incorrectExplanation": "Not quite! Remember, the arithmetic mean is about finding the average. You add up all the numbers and then divide by how many numbers there are. Give it another try!",
+            "hint": "To find the average, sum the numbers and divide by the count.",
+            "helpTips": "The mean is like evening out all the scores. If everyone had the 'mean' score, the total would be the same.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Statistics can seem intimidating, but some basic ideas are super helpful for investors. One of the simplest is the **Mean**, or average[cite: 174]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The **arithmetic mean** is calculated by summing all the values in a dataset and then dividing by the number of values. It gives you a central value for the data[cite: 175]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "75",
+                "isCorrect": false,
+                "description": "This is incorrect; the sum divided by three is 80."
+              },
+              {
+                "id": "opt-b",
+                "content": "80",
+                "isCorrect": true,
+                "description": "The sum of the scores (240) divided by the number of scores (3) is 80."
+              },
+              {
+                "id": "opt-c",
+                "content": "85",
+                "isCorrect": false,
+                "description": "This is incorrect; the sum divided by three is 80."
+              },
+              {
+                "id": "opt-d",
+                "content": "90",
+                "isCorrect": false,
+                "description": "This is incorrect; the sum divided by three is 80."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-variance-data-spread",
+            "type": "scq",
+            "question": "Four students got the following quiz scores: 70, 80, 90, 100[cite: 176]. They want to know how spread out their scores are. What are they trying to find?",
+            "explanation": "You're spot on! They are trying to find the **sample variance**[cite: 176, 177]. Variance tells you how much the individual data points (like test scores) tend to spread out from the average. If scores are all close, variance is small; if they're very different, variance is larger[cite: 178, 179]. This is super important in finance for understanding how much an investment's returns might swing!",
+            "incorrectExplanation": "Not quite! While knowing the average is useful, finding out how 'spread out' the scores are points specifically to **variance**[cite: 177]. Variance gives you a measure of how much individual data points differ from the mean[cite: 178, 179]. It's a key tool for understanding risk!",
+            "hint": "Think about a measure that describes how much numbers differ from each other.",
+            "helpTips": "Variance is like measuring how 'scattered' data points are. If all scores are clustered, variance is low. If they're all over the place, variance is high.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Beyond just knowing the average, sometimes it's useful to understand how 'spread out' data is. This is where **Variance** comes in[cite: 176]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Variance measures how far a set of numbers are spread out from their average value. A small variance means data points are generally close to the mean, while a large variance indicates that data points are widely spread out from the mean[cite: 177, 178, 179]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The average of the scores",
+                "isCorrect": false,
+                "description": "The average (mean) describes the central tendency, not the spread."
+              },
+              {
+                "id": "opt-b",
+                "content": "The sample variance",
+                "isCorrect": true,
+                "description": "Sample variance measures the dispersion or spread of data points from the mean."
+              },
+              {
+                "id": "opt-c",
+                "content": "The highest score",
+                "isCorrect": false,
+                "description": "The highest score is a single data point, not a measure of spread."
+              },
+              {
+                "id": "opt-d",
+                "content": "The sum of all scores",
+                "isCorrect": false,
+                "description": "The sum is used to calculate the mean, but does not represent the spread."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-correlation-investment-relation",
+            "type": "scq",
+            "question": "Tom noticed that the more hours he studies, the higher his test scores get[cite: 180]. This is an example of:",
+            "explanation": "You're spot on! This is a clear example of **Positive Correlation**[cite: 181]. It means that as one thing (study hours) increases, the other thing (test scores) also tends to increase. Understanding correlation helps investors see how different investments might move together, which is important for diversification!",
+            "incorrectExplanation": "Not quite! When two things tend to move in the same direction – like more studying leading to higher scores – that's called **Positive Correlation**[cite: 181]. Negative correlation would mean one goes up as the other goes down, and no correlation means no connection at all.",
+            "hint": "If both things are increasing (or decreasing) together, what kind of relationship is that?",
+            "helpTips": "Positive correlation: they move in the same direction. Negative correlation: they move in opposite directions. No correlation: no clear pattern.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In data, sometimes two things seem to move together. This relationship is called **Correlation**[cite: 180]."
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  "**Positive correlation**: When one thing increases, the other also increases[cite: 181].",
+                  "**Negative correlation**: When one increases, the other decreases[cite: 181].",
+                  "**No correlation**: No clear connection between two things[cite: 181]."
+                ]
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "No correlation",
+                "isCorrect": false,
+                "description": "There is a clear relationship, so 'no correlation' is incorrect."
+              },
+              {
+                "id": "opt-b",
+                "content": "Negative correlation",
+                "isCorrect": false,
+                "description": "Negative correlation means one variable increases as the other decreases, which is not the case here."
+              },
+              {
+                "id": "opt-c",
+                "content": "Positive correlation",
+                "isCorrect": true,
+                "description": "Positive correlation exists when two variables tend to move in the same direction (both increase or both decrease)."
+              },
+              {
+                "id": "opt-d",
+                "content": "Circular logic",
+                "isCorrect": false,
+                "description": "Circular logic refers to a reasoning fallacy, not a statistical relationship between variables."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-normal-distribution",
+            "type": "scq",
+            "question": "In a class, most students score around 75 on a test[cite: 182]. A few get much higher or much lower scores. If we draw a graph of the scores, it looks like a bell shape[cite: 182]. This is an example of:",
+            "explanation": "You're exactly right! This describes a **Normal Distribution**[cite: 183]. It's often called a 'bell curve' because of its shape. This pattern is very common in nature and statistics, meaning most values cluster around the average, with fewer values at the extremes[cite: 184]. Understanding this helps investors grasp how various market data points (like returns) often behave!",
+            "incorrectExplanation": "Not quite! The description of most scores being in the middle, and fewer at the high and low ends, with a bell-shaped graph, is the classic definition of a **Normal Distribution**[cite: 183, 184]. It's a fundamental concept in statistics that appears in many real-world phenomena.",
+            "hint": "Think about the shape of the graph that's often used to represent many natural phenomena.",
+            "helpTips": "The 'bell curve' is iconic for normal distribution. It means most things are 'average', and extreme cases are less common.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When we look at data, sometimes it falls into a very common pattern called a **Normal Distribution**[cite: 182]. You might know it better as the 'bell curve'."
+              },
+              {
+                "type": "paragraph",
+                "content": "In a normal distribution, most of the data points are clustered around the average (mean), and as you move further away from the average in either direction, there are fewer and fewer data points[cite: 184]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Skewed distribution",
+                "isCorrect": false,
+                "description": "A skewed distribution is asymmetrical, not bell-shaped, with more data on one side of the mean."
+              },
+              {
+                "id": "opt-b",
+                "content": "Random guessing",
+                "isCorrect": false,
+                "description": "This describes a method of answering, not a statistical distribution."
+              },
+              {
+                "id": "opt-c",
+                "content": "Normal distribution",
+                "isCorrect": true,
+                "description": "This accurately describes a normal distribution, characterized by its bell-shaped curve and central clustering of data."
+              },
+              {
+                "id": "opt-d",
+                "content": "No pattern at all",
+                "isCorrect": false,
+                "description": "The description clearly indicates a discernible and common statistical pattern."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-data-mining-bias",
+            "type": "scq",
+            "question": "A teacher looks at lots of students’ habits and finds that students who use blue pens get higher grades[cite: 185]. She says, \"Using blue pens helps you do better in school!\" [cite: 186] What kind of mistake is this?",
+            "explanation": "You're spot on! This is a classic example of **Data Mining Bias**[cite: 187]. It happens when you look at a huge amount of data and accidentally find a connection that's just random luck, not a real cause-and-effect relationship[cite: 188]. Just because two things happen together doesn't mean one causes the other! It's a crucial lesson for interpreting financial data too.",
+            "incorrectExplanation": "Not quite! While it's tempting to believe there's a reason, this is a prime example of **Data Mining Bias**[cite: 187]. When you sift through tons of data, you're bound to find some coincidental connections, even if they're meaningless[cite: 188]. Correlation does not equal causation! This is a big trap in analyzing market trends too.",
+            "hint": "Think about finding a random connection that probably isn't real, just because you looked at too much data.",
+            "helpTips": "Data mining bias is like finding shapes in clouds – you might see a connection, but it's not actually there. Always question if a correlation is truly a cause.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When we analyze data, especially large amounts of it, we need to be careful not to jump to conclusions about cause and effect. One common mistake is called **Data Mining Bias**[cite: 187]."
+              },
+              {
+                "type": "paragraph",
+                "content": "This bias occurs when researchers or analysts sift through large datasets to find patterns or relationships that appear statistically significant but are actually due to random chance rather than a genuine underlying cause[cite: 188]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Sampling bias",
+                "isCorrect": false,
+                "description": "Sampling bias occurs when the sample is not representative of the population."
+              },
+              {
+                "id": "opt-b",
+                "content": "Data mining bias",
+                "isCorrect": true,
+                "description": "This refers to the error of finding spurious correlations due to extensive data exploration."
+              },
+              {
+                "id": "opt-c",
+                "content": "Correlation",
+                "isCorrect": false,
+                "description": "Correlation describes a relationship, but the mistake is attributing causation where none exists."
+              },
+              {
+                "id": "opt-d",
+                "content": "Magic pens",
+                "isCorrect": false,
+                "description": "This is a humorous and incorrect explanation; it's a statistical fallacy."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-hypothesis-testing-type-i-error",
+            "type": "scq",
+            "question": "A school wants to check if students are getting better at math[cite: 189]. Which mistake is it when the school wrongly says students are getting better at math when they actually aren’t?",
+            "explanation": "You're spot on! This is a **Type I error**[cite: 191]. In statistics, a Type I error happens when you conclude that something is true (like students improving) when it's actually false. It's like a 'false positive'. Understanding these errors is important in research and analysis, including financial analysis!",
+            "incorrectExplanation": "Not quite! This specific mistake – saying something *is* happening when it *isn't* – is called a **Type I error**[cite: 191]. A Type II error is the opposite: saying something *isn't* happening when it actually *is*[cite: 192, 193]. Keep these distinct to ensure accurate conclusions!",
+            "hint": "Think about a 'false alarm' or a 'false positive'.",
+            "helpTips": "Type I Error: Falsely believing something is true. Type II Error: Falsely believing something is false. Both are mistakes, but they happen in different ways.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "In research and analysis, especially when testing ideas or 'hypotheses', we can sometimes make mistakes in our conclusions. These are often categorized as Type I and Type II errors[cite: 189]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Type I Error**: Occurs when you incorrectly reject a true null hypothesis. In simpler terms, it's concluding that there is an effect or relationship when there isn't one[cite: 191]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Type II Error**: Occurs when you fail to reject a false null hypothesis. In simpler terms, it's concluding that there is no effect or relationship when there actually is one[cite: 192, 193]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Type I error",
+                "isCorrect": true,
+                "description": "This is a Type I error, where a true null hypothesis is incorrectly rejected (a false positive)."
+              },
+              {
+                "id": "opt-b",
+                "content": "Type II error",
+                "isCorrect": false,
+                "description": "A Type II error is failing to reject a false null hypothesis (a false negative)."
+              },
+              {
+                "id": "opt-c",
+                "content": "Both",
+                "isCorrect": false,
+                "description": "Only Type I error applies to this specific scenario."
+              },
+              {
+                "id": "opt-d",
+                "content": "Neither",
+                "isCorrect": false,
+                "description": "This scenario clearly describes a Type I error."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L9-economics-basics-for-investors",
+        "title": "Economics Basics for Investors: GDP, Inflation, and Scarcity",
+        "description": "Explore the fundamental economic forces that shape our financial world. Learn about scarcity, opportunity cost, inflation, and key indicators like GDP that influence investment decisions.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "🌐",
+        "questions": [
+          {
+            "id": "q1-scq-scarcity-limited-resources",
+            "type": "scq",
+            "question": "Anna has only &dollar;50[cite: 194]. She wants to buy groceries, a new shirt, and go to the movies[cite: 195]. But &dollar;50 is not enough for all three[cite: 196]. What does this show?",
+            "explanation": "You're absolutely right! This clearly shows that **Money is a scarce resource**[cite: 197]. Scarcity in economics means that resources (like money, time, or goods) are limited, but human wants are unlimited. Because Anna can't have everything she wants, she has to make a choice[cite: 198]. This is a fundamental concept in economics!",
+            "incorrectExplanation": "Not quite! The core issue here isn't about Anna's preferences or borrowing money. It's about the fundamental economic problem that there simply isn't enough money to satisfy all her wants[cite: 197, 198]. That's the definition of **scarcity**.",
+            "hint": "Think about what happens when you have limited resources but unlimited desires.",
+            "helpTips": "Scarcity is the basic economic problem. It means we don't have enough resources to get everything we want, so we always have to make choices.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Economics is all about how people make choices when resources are limited. One of the most basic ideas in economics is **Scarcity**[cite: 194]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Scarcity refers to the fundamental economic problem of having seemingly unlimited human wants and needs in a world of limited resources. Because resources are scarce, we must make choices about how to allocate them[cite: 198]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Anna doesn’t like movies",
+                "isCorrect": false,
+                "description": "This is an assumption about Anna's preferences, not an economic principle."
+              },
+              {
+                "id": "opt-b",
+                "content": "Anna should ask her friend for money",
+                "isCorrect": false,
+                "description": "This suggests a solution to a problem, but doesn't explain the underlying economic concept."
+              },
+              {
+                "id": "opt-c",
+                "content": "Money is a scarce resource",
+                "isCorrect": true,
+                "description": "The scenario illustrates scarcity, where limited funds cannot satisfy all desires."
+              },
+              {
+                "id": "opt-d",
+                "content": "Clothes are too expensive",
+                "isCorrect": false,
+                "description": "While clothes might be expensive, the core issue is the limitation of funds relative to multiple wants."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-opportunity-cost-trade-off",
+            "type": "scq",
+            "question": "John has Saturday off[cite: 199]. He can go to work and earn &dollar;100, or go hiking with his friends[cite: 200]. He chooses to go hiking. What is his opportunity cost?",
+            "explanation": "You're spot on! John's opportunity cost is **The &dollar;100 he gave up by not working**[cite: 201, 202]. Opportunity cost is all about what you *give up* when you make a choice. It's the value of the next best alternative you didn't choose. Understanding this helps you see the true cost of every decision, including financial ones!",
+            "incorrectExplanation": "Not quite! Opportunity cost isn't about what you *gain* (like fun hiking) or the direct costs of your chosen activity (like gas)[cite: 201]. It's specifically about the value of the *best alternative* you sacrificed when you made your choice[cite: 202]. In this case, it was the &dollar;100 John could have earned.",
+            "hint": "Think about what John *missed out on* by making his choice.",
+            "helpTips": "Opportunity cost is the 'what if' scenario. It's the value of the best thing you didn't do because you chose something else. Every choice has one!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Because resources are scarce, we constantly have to make choices. And every time we make a choice, we give something up. This is where the concept of **Opportunity Cost** comes in[cite: 199]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Opportunity cost is the value of the next best alternative that you forego when you make a decision[cite: 202]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The fun he has while hiking",
+                "isCorrect": false,
+                "description": "This is a benefit of his choice, not the opportunity cost."
+              },
+              {
+                "id": "opt-b",
+                "content": "The &dollar;100 he gave up by not working",
+                "isCorrect": true,
+                "description": "This is the value of the next best alternative foregone, which is the definition of opportunity cost."
+              },
+              {
+                "id": "opt-c",
+                "content": "His time with friends",
+                "isCorrect": false,
+                "description": "This is part of the chosen activity, not the foregone alternative."
+              },
+              {
+                "id": "opt-d",
+                "content": "The cost of gas to drive to the mountain",
+                "isCorrect": false,
+                "description": "This is an explicit cost of the chosen activity, not the opportunity cost."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-demand-and-supply",
+            "type": "scq",
+            "question": "In the summer, the weather is very hot. Many people want to buy ice cream[cite: 204]. At the same time, ice cream sellers increase the price[cite: 205]. Why does the price go up?",
+            "explanation": "You're spot on! The price goes up because **Demand goes up**[cite: 206]. When many more people want something (higher demand) and the amount available stays the same (supply), sellers can charge more. It's a fundamental principle of how markets work! Great job understanding supply and demand!",
+            "incorrectExplanation": "Not quite! While supply and demand both affect prices, in this scenario, the main driver is that *more people want ice cream*[cite: 204]. When demand increases and supply doesn't, prices tend to rise[cite: 207]. It's a classic example of how popularity influences prices!",
+            "hint": "Think about what happens when lots of people suddenly want the same thing.",
+            "helpTips": "If lots of people want something, its demand goes up. If there isn't enough to go around, the price usually climbs!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "One of the most important concepts in economics for understanding prices is the relationship between **Demand and Supply**[cite: 204]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Demand** refers to how much of a product or service consumers are willing and able to buy at a given price. **Supply** refers to how much of a product or service producers are willing and able to offer at a given price."
+              },
+              {
+                "type": "paragraph",
+                "content": "When demand increases and supply remains constant, the price of a good or service tends to rise. Conversely, if demand decreases, prices tend to fall[cite: 207]."
+              }
+            ],
+            "imagePrompt": "graph LR; A[Hot Weather] --> B[More Desire for Ice Cream]; B --> C[Demand Goes Up]; C --> D[Price Goes Up];",
+            "caption": "How hot weather can influence ice cream prices through demand.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Supply goes down",
+                "isCorrect": false,
+                "description": "The scenario indicates increased demand, not a decrease in supply."
+              },
+              {
+                "id": "opt-b",
+                "content": "Demand goes down",
+                "isCorrect": false,
+                "description": "The scenario clearly states that many people want to buy ice cream, indicating increased demand."
+              },
+              {
+                "id": "opt-c",
+                "content": "Demand goes up",
+                "isCorrect": true,
+                "description": "Increased desire for ice cream due to hot weather leads to an increase in demand, which pushes prices up."
+              },
+              {
+                "id": "opt-d",
+                "content": "Nobody likes ice cream anymore",
+                "isCorrect": false,
+                "description": "This is incorrect; the scenario implies increased popularity of ice cream."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-gdp-economic-growth",
+            "type": "scq",
+            "question": "Which of the following best describes Gross Domestic Product (GDP)?",
+            "explanation": "Fantastic! GDP is best described as **The total value of goods and services a country produces in a year**[cite: 209]. It's like the scorecard for a country's economic health, showing how much is being produced and sold. A higher GDP often means a stronger economy, which can be good news for investors!",
+            "incorrectExplanation": "Not quite! GDP is much broader than just one person's earnings or money in banks[cite: 209]. It's the big picture: how much stuff and services an entire country creates and sells within a year[cite: 210]. It's a key measure of economic growth!",
+            "hint": "Think about a measure that captures the overall economic activity of an entire country.",
+            "helpTips": "GDP is the 'economic heartbeat' of a country. It measures all the new wealth created within its borders in a year.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When we talk about the health of an entire country's economy, one of the most important measurements is **Gross Domestic Product (GDP)**[cite: 208]."
+              },
+              {
+                "type": "paragraph",
+                "content": "GDP is the total monetary or market value of all the finished goods and services produced within a country's borders in a specific time period, usually a year[cite: 209, 210]. It's a key indicator of economic growth."
+              }
+            ],
+            "imagePrompt": "pie title GDP Components \"Consumption\": 68 \"Investment\": 17 \"Government Spending\": 17 \"Net Exports\": -2",
+            "caption": "A simplified breakdown of GDP components in many economies.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The total money a person earns in a year",
+                "isCorrect": false,
+                "description": "This describes personal income, not GDP."
+              },
+              {
+                "id": "opt-b",
+                "content": "The total value of goods and services a country produces in a year",
+                "isCorrect": true,
+                "description": "This is the accurate definition of Gross Domestic Product (GDP)."
+              },
+              {
+                "id": "opt-c",
+                "content": "The amount of money in a country's banks",
+                "isCorrect": false,
+                "description": "This relates to monetary supply, not the total economic output."
+              },
+              {
+                "id": "opt-d",
+                "content": "The number of people who have jobs",
+                "isCorrect": false,
+                "description": "This describes the employment rate, not GDP."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-leading-lagging-indicators",
+            "type": "scq",
+            "question": "Which of the following is an example of a leading economic indicator?",
+            "explanation": "You're spot on! **Stock market trends** [cite: 212] are considered a leading economic indicator because they often predict future economic activity. If the stock market is doing well, it can signal that businesses and investors are feeling good about the future. Unemployment rate and GDP are lagging indicators, showing what has already happened[cite: 213]. Great job distinguishing them!",
+            "incorrectExplanation": "Not quite! While unemployment and GDP are important, they tell us about the past or present[cite: 213]. A **leading indicator** tries to give us a peek into the *future*. Stock market trends often reflect investor expectations about what's to come, making them a leading indicator[cite: 212].",
+            "hint": "Think about which indicator tries to forecast what's *going to happen* in the economy.",
+            "helpTips": "Leading indicators are like a crystal ball for the economy. Lagging indicators are like a rearview mirror. Investors pay attention to both!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Economists and investors look at various data points to understand where the economy is headed. These are often categorized as 'leading' or 'lagging' indicators[cite: 211]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Leading economic indicators** are statistics that tend to precede changes in overall economic activity. They help predict future movements in the economy[cite: 212]."
+              },
+              {
+                "type": "paragraph",
+                "content": "**Lagging economic indicators** are statistics that tend to follow changes in overall economic activity. They confirm past trends and are often used to identify the duration of economic cycles[cite: 213]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Unemployment rate",
+                "isCorrect": false,
+                "description": "The unemployment rate is a lagging indicator, reflecting past economic performance."
+              },
+              {
+                "id": "opt-b",
+                "content": "Gross Domestic Product (GDP)",
+                "isCorrect": false,
+                "description": "GDP is a lagging indicator, measuring past economic output."
+              },
+              {
+                "id": "opt-c",
+                "content": "Stock market trends",
+                "isCorrect": true,
+                "description": "Stock market trends are generally considered a leading indicator, as they often anticipate future economic conditions."
+              },
+              {
+                "id": "opt-d",
+                "content": "Inflation rate",
+                "isCorrect": false,
+                "description": "The inflation rate is typically a lagging indicator."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-inflation-purchasing-power",
+            "type": "scq",
+            "question": "If prices of most goods and services increase over time, what is this called?",
+            "explanation": "You're exactly right! When prices of most goods and services generally increase over time, that's called **Inflation**[cite: 214]. This means your money can buy less than it used to, reducing its purchasing power[cite: 215]. Understanding inflation is vital for investors because it can erode the real value of their returns!",
+            "incorrectExplanation": "Not quite! While the other terms are economic concepts, the specific term for a general increase in prices is **Inflation**[cite: 214]. It's a big deal for your money, because it means your dollar buys less over time[cite: 215]. Keep that in mind when planning your finances!",
+            "hint": "Think about what happens to the cost of living over many years.",
+            "helpTips": "Inflation is like a hidden tax that makes your money less powerful over time. It's why the cost of things like candy bars and movies goes up!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "Have you ever noticed that things seem to cost more now than they did a few years ago? This is due to a very common economic phenomenon called **Inflation**[cite: 214]."
+              },
+              {
+                "type": "paragraph",
+                "content": "Inflation is the rate at which the general level of prices for goods and services is rising, and, consequently, the purchasing power of currency is falling[cite: 215]. When inflation is high, your money doesn't go as far."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Deflation",
+                "isCorrect": false,
+                "description": "Deflation is a decrease in the general price level, the opposite of inflation."
+              },
+              {
+                "id": "opt-b",
+                "content": "Inflation",
+                "isCorrect": true,
+                "description": "Inflation is the general increase in prices over time, leading to a decrease in purchasing power."
+              },
+              {
+                "id": "opt-c",
+                "content": "Recession",
+                "isCorrect": false,
+                "description": "A recession is a significant decline in economic activity, often characterized by negative GDP and rising unemployment."
+              },
+              {
+                "id": "opt-d",
+                "content": "Unemployment",
+                "isCorrect": false,
+                "description": "Unemployment refers to the number of people actively looking for work but unable to find it."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L10-financial-statement-analysis",
+        "title": "Financial Statement Analysis: Understanding the Numbers Behind Businesses",
+        "description": "Become a financial detective! Learn how to read a company's financial report card (income statement, balance sheet, cash flow) to understand its health and potential.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "📝",
+        "questions": [
+          {
+            "id": "q1-scq-double-entry-accounting",
+            "type": "scq",
+            "question": "What is the main idea behind the double-entry accounting system?",
+            "explanation": "You're exactly right! The core principle of double-entry accounting is that **every transaction affects two or more accounts and keeps the books balanced**[cite: 217, 218]. For every debit, there's an equal credit, ensuring that assets always equal liabilities plus equity. This system is the backbone of accurate financial reporting!",
+            "incorrectExplanation": "Not quite! Double-entry accounting is actually about recording *every* transaction in at least two places, always ensuring that the total debits equal the total credits[cite: 217, 218]. It's designed for balance and accuracy, not just tracking one side of a transaction or being exclusive to large companies.",
+            "hint": "Think about the idea of 'balance' or 'two sides' to every financial event.",
+            "helpTips": "Double-entry accounting is like a balanced seesaw. Every time something goes on one side (a debit), something equally important goes on the other side (a credit). It's always about keeping things equal!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When businesses track their money, they use a system called **double-entry accounting**. It's a fundamental concept that ensures accuracy and balance in financial records[cite: 216]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Each transaction is only recorded once, either as income or expense",
+                "isCorrect": false,
+                "description": "This describes single-entry accounting, not double-entry."
+              },
+              {
+                "id": "opt-b",
+                "content": "Money is only tracked when it enters the business",
+                "isCorrect": false,
+                "description": "Double-entry tracks both inflows and outflows, and changes in assets, liabilities, and equity."
+              },
+              {
+                "id": "opt-c",
+                "content": "Every transaction affects two or more accounts and keeps the books balanced",
+                "isCorrect": true,
+                "description": "This accurately describes the core principle of double-entry accounting, ensuring that debits always equal credits."
+              },
+              {
+                "id": "opt-d",
+                "content": "It is used only by large companies, not small businesses",
+                "isCorrect": false,
+                "description": "Double-entry accounting is used by businesses of all sizes for accurate financial records."
+              }
+            ]
+          },
+          {
+            "id": "q2-scq-main-financial-statements",
+            "type": "scq",
+            "question": "Which of the following is NOT one of the main types of financial statements?",
+            "explanation": "You're absolutely right! A **Payroll Schedule** [cite: 220, 222] is an internal document used by HR for paying employees, but it's not one of the main public financial statements. The big ones are the Income Statement, Balance Sheet, and Cash Flow Statement, which give investors a clear picture of a company's financial health[cite: 221]. Great job distinguishing them!",
+            "incorrectExplanation": "Not quite! The Income Statement, Balance Sheet, and Cash Flow Statement are indeed crucial financial statements[cite: 221]. A **Payroll Schedule**, however, is an internal operational document, not a formal financial statement shared with investors[cite: 222]. Keep practicing the main three (or four, if you count Changes in Equity!)!",
+            "hint": "Think about documents that show up in a public company's annual report.",
+            "helpTips": "The main financial statements are like a company's report card to the world. They tell you about profits, assets, debts, and cash flow. A payroll schedule is like a private chore list.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you want to understand how a business is doing financially, you look at its **financial statements**. These are like a company's report card, telling a story about its money. There are usually three main types, plus one important supplementary one[cite: 219]."
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  "**Income Statement**: Shows a company's revenues, expenses, and profit or loss over a period (like a quarter or a year)[cite: 221].",
+                  "**Balance Sheet**: Provides a snapshot of a company's assets (what it owns), liabilities (what it owes), and owner's equity (what belongs to the owners) at a specific point in time[cite: 221].",
+                  "**Cash Flow Statement**: Tracks how much cash a company generates and uses over a period, categorized into operating, investing, and financing activities[cite: 221].",
+                  "**Statement of Changes in Equity**: Shows how the owner's equity has changed over a period[cite: 222]."
+                ]
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Income Statement",
+                "isCorrect": false,
+                "description": "The Income Statement is one of the main financial statements."
+              },
+              {
+                "id": "opt-b",
+                "content": "Balance Sheet",
+                "isCorrect": false,
+                "description": "The Balance Sheet is one of the main financial statements."
+              },
+              {
+                "id": "opt-c",
+                "content": "Cash Flow Statement",
+                "isCorrect": false,
+                "description": "The Cash Flow Statement is one of the main financial statements."
+              },
+              {
+                "id": "opt-d",
+                "content": "Payroll Schedule",
+                "isCorrect": true,
+                "description": "A payroll schedule is an internal operational document, not a formal financial statement."
+              }
+            ]
+          },
+          {
+            "id": "q3-scq-accounting-equation",
+            "type": "scq",
+            "question": "Which of the following is the correct accounting equation?",
+            "explanation": "You're exactly right! The correct accounting equation is **Assets = Liabilities + Owner’s Equity**[cite: 224, 225]. This equation is the foundation of the balance sheet and essentially means that everything a company owns (assets) is either funded by what it owes to others (liabilities) or what belongs to the owners (equity). It always has to balance!",
+            "incorrectExplanation": "Not quite! The accounting equation is fundamental. It always states that **Assets = Liabilities + Owner’s Equity**[cite: 224, 225]. It's crucial because it ensures that a company's financial records are always balanced. Keep practicing this core formula!",
+            "hint": "Think about where a company's 'stuff' (assets) comes from – is it borrowed or owned?",
+            "helpTips": "Imagine a pie. The whole pie is 'Assets'. The slices are 'Liabilities' (what you owe) and 'Owner's Equity' (what's yours). They always add up to the whole pie!",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "At the heart of accounting is a simple yet powerful equation that always holds true. This is called the **Accounting Equation**[cite: 223]."
+              },
+              {
+                "type": "paragraph",
+                "content": "The accounting equation states that a company's assets are equal to the sum of its liabilities and its owner's equity[cite: 224, 225]."
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  "**Assets**: What the company owns (e.g., cash, buildings, equipment)[cite: 225].",
+                  "**Liabilities**: What the company owes to others (e.g., loans, money owed to suppliers)[cite: 225].",
+                  "**Owner’s Equity**: The portion of assets that belongs to the owners after liabilities are paid (e.g., initial investments, retained earnings)[cite: 225]."
+                ]
+              }
+            ],
+            "imagePrompt": "graph TD; A[Assets] --> B{Liabilities}; A --> C{Owner's Equity}; B & C --> A;",
+            "caption": "The balanced relationship in the Accounting Equation.",
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Assets = Revenue + Liabilities",
+                "isCorrect": false,
+                "description": "Revenue is a component of the Income Statement, not directly part of the Balance Sheet equation in this format."
+              },
+              {
+                "id": "opt-b",
+                "content": "Assets = Liabilities + Owner’s Equity",
+                "isCorrect": true,
+                "description": "This is the fundamental accounting equation, demonstrating that assets are financed by liabilities or equity."
+              },
+              {
+                "id": "opt-c",
+                "content": "Assets = Liabilities – Expenses",
+                "isCorrect": false,
+                "description": "Expenses reduce equity, but the direct relationship shown is incorrect."
+              },
+              {
+                "id": "opt-d",
+                "content": "Assets = Income – Liabilities",
+                "isCorrect": false,
+                "description": "Income affects equity, but this is not the direct accounting equation."
+              }
+            ]
+          },
+          {
+            "id": "q4-scq-eps-profitability",
+            "type": "scq",
+            "question": "What does Earnings Per Share (EPS) measure?",
+            "explanation": "You're exactly right! **Earnings Per Share (EPS)** measures **the profit earned on each share of a company’s stock**[cite: 227]. It's a super important metric for investors because it helps them see how much profit a company is generating for every piece of ownership. A higher EPS usually signals a more profitable company! [cite: 228]",
+            "incorrectExplanation": "Not quite! While EPS is related to profit, it's not the total revenue or just the stock price[cite: 227]. EPS specifically breaks down how much profit the company is making *per share* of its stock[cite: 228]. It's a key indicator of a company's profitability from an investor's perspective. Keep that in mind!",
+            "hint": "The 'per share' in the name is a big hint!",
+            "helpTips": "EPS tells you how much of a company's profit is 'assigned' to each tiny piece of ownership (a share). It's a simple way to compare profitability across companies.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When evaluating a company's financial performance, investors look at many numbers. One of the most common and important is **Earnings Per Share (EPS)**[cite: 226]."
+              },
+              {
+                "type": "paragraph",
+                "content": "EPS is calculated as a company's profit (net income) divided by the number of its outstanding common shares[cite: 228]. It essentially tells investors how much profit the company earns for each share of stock."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "The total revenue of a company",
+                "isCorrect": false,
+                "description": "Total revenue is a different metric on the income statement; EPS focuses on profit per share."
+              },
+              {
+                "id": "opt-b",
+                "content": "The profit earned on each share of a company’s stock",
+                "isCorrect": true,
+                "description": "This is the accurate definition of Earnings Per Share (EPS)."
+              },
+              {
+                "id": "opt-c",
+                "content": "The total number of shares a company has issued",
+                "isCorrect": false,
+                "description": "This is 'shares outstanding', a component of EPS calculation, but not EPS itself."
+              },
+              {
+                "id": "opt-d",
+                "content": "The price of one share on the stock market",
+                "isCorrect": false,
+                "description": "This is the stock price, which is distinct from the company's earnings per share."
+              }
+            ]
+          },
+          {
+            "id": "q5-scq-inventory-definition",
+            "type": "scq",
+            "question": "What is inventory in a business?",
+            "explanation": "You're spot on! **Inventory** in a business refers to **products and materials a company holds to sell**[cite: 229, 230]. It's a crucial asset for any company that produces or sells physical goods. Managing inventory efficiently is key to a business's success and profitability!",
+            "incorrectExplanation": "Not quite! While the other options relate to a business's finances, **inventory** specifically refers to the raw materials, work-in-progress, and finished goods that a company holds for the purpose of selling them[cite: 230]. It's essentially the 'stuff' a business has ready to sell to make money.",
+            "hint": "Think about what a store or factory has on hand that they intend to sell to customers.",
+            "helpTips": "Inventory is the 'stock' of goods a company has. For a shoe store, it's all the shoes. For a baker, it's the flour, sugar, and baked goods ready to sell.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "When you look at a company's assets, one important category, especially for businesses that sell physical products, is **Inventory**[cite: 229]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Money owed to suppliers",
+                "isCorrect": false,
+                "description": "This describes accounts payable (a liability), not inventory."
+              },
+              {
+                "id": "opt-b",
+                "content": "Products and materials a company holds to sell",
+                "isCorrect": true,
+                "description": "This is the correct definition of inventory, which includes goods for sale."
+              },
+              {
+                "id": "opt-c",
+                "content": "Equipment used to produce goods",
+                "isCorrect": false,
+                "description": "This describes property, plant, and equipment (fixed assets), not inventory."
+              },
+              {
+                "id": "opt-d",
+                "content": "The company’s total sales in a year",
+                "isCorrect": false,
+                "description": "This describes revenue, which is a measure of sales, not inventory."
+              }
+            ]
+          },
+          {
+            "id": "q6-scq-operating-cash-flow",
+            "type": "scq",
+            "question": "What does Operating Cash Flow (CFO) represent?",
+            "explanation": "You're absolutely correct! **Operating Cash Flow (CFO)** represents **cash generated from the company’s normal business operations**[cite: 232]. This is super important because it shows how much cash a business is truly making from its core activities, before things like investing in new equipment or borrowing money. A strong CFO is a sign of a healthy business!",
+            "incorrectExplanation": "Not quite! While the other options relate to cash flow, **Operating Cash Flow** specifically focuses on the cash generated from a company's day-to-day main business activities, like selling its products or services[cite: 232, 233]. It doesn't include cash from selling assets or buying new equipment, as those are investing activities.",
+            "hint": "Think about the cash that comes and goes from a company's main 'job' or core business.",
+            "helpTips": "Operating Cash Flow is the 'bread and butter' cash. It's the money a business makes (or spends) just by doing what it normally does every day.",
+            "contentBlocks": [
+              {
+                "type": "paragraph",
+                "content": "The **Cash Flow Statement** tells us how cash moves in and out of a company. It's divided into three main activities: operating, investing, and financing. **Operating Cash Flow (CFO)** is a key part of this statement[cite: 231]."
+              }
+            ],
+            "options": [
+              {
+                "id": "opt-a",
+                "content": "Cash received from selling company assets",
+                "isCorrect": false,
+                "description": "This describes cash flow from investing activities."
+              },
+              {
+                "id": "opt-b",
+                "content": "Cash spent on buying new equipment",
+                "isCorrect": false,
+                "description": "This describes cash flow from investing activities."
+              },
+              {
+                "id": "opt-c",
+                "content": "Cash generated from the company’s normal business operations",
+                "isCorrect": true,
+                "description": "This is the accurate definition of Operating Cash Flow, which reflects cash from core business activities."
+              },
+              {
+                "id": "opt-d",
+                "content": "Cash paid out as dividends to shareholders",
+                "isCorrect": false,
+                "description": "This describes cash flow from financing activities."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }

@@ -28,6 +28,7 @@ interface Message {
   role: "user" | "assistant";
   timestamp: number;
   chat_session_id: string;
+  userId?: string;
   metadata?: Record<string, any>;
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
@@ -434,13 +435,14 @@ export function ChatInterface() {
           role: "user",
           timestamp: Date.now(),
           chat_session_id: newConvId,
+          userId,
         };
         setMessages([userMessage]); // Show user message immediately
         setCurrentMessage("");
         inputRef.current?.focus();
         // setLoadingMessage("PawFi is thinking..."); // Set by getAIResponseFromEdge call
 
-        await addMessageMutation.mutateAsync(userMessage); // Save user message
+        await addMessageMutation.mutateAsync(userMessage); // Save user message with userId
 
         // Get AI response for the first message
         const stream = await getAIResponseFromEdge(supabase, newConvId, [
@@ -468,6 +470,7 @@ export function ChatInterface() {
           role: "assistant",
           timestamp: Date.now(),
           chat_session_id: newConvId,
+          userId,
           metadata: { id: assistantMessageId, isStreaming: false },
         };
         await addMessageMutation.mutateAsync(finalAssistantMessage);
@@ -490,6 +493,7 @@ export function ChatInterface() {
         role: "assistant",
         timestamp: Date.now(),
         chat_session_id: currentConversationId || "error-conv",
+        userId,
         metadata: { isError: true },
       };
       setMessages((prev) => {

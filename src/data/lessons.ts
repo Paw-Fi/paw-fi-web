@@ -1,5 +1,5 @@
 import type { Course, Lesson } from "@/types/learning.types";
-import mockCourse from "./mock1.json";
+import basicCourse from '@/data/basic-lessons.json';
 
 // Helper function to get lesson by ID
 // LocalStorage key for course data - unified to use only one key for consistency
@@ -31,7 +31,7 @@ export function getCourseById(id: string): Course | undefined {
   const course = courses.find((c) => c.id === id);
   if (course) return course;
   // Fallback to mock data
-  if (mockCourse.id === id) return mockCourse;
+  if (basicCourse.id === id) return basicCourse;
   return undefined;
 }
 
@@ -49,7 +49,7 @@ export function getLessonById(id: string): Lesson | undefined {
     if (lesson) return lesson;
   }
   // Fallback to mock data
-  for (const lesson of mockCourse.lessons) {
+  for (const lesson of basicCourse.lessons) {
     if (lesson.id === id) return lesson;
   }
   return undefined;
@@ -58,7 +58,7 @@ export function getLessonById(id: string): Lesson | undefined {
 // Get all courses (localStorage or mock)
 export function getAllCourses(): Course[] {
   const courses = getCoursesFromLocalStorage();
-  return courses.length > 0 ? courses : [mockCourse];
+  return courses.length > 0 ? courses : [basicCourse];
 }
 
 // Get all lessons (from all courses)
@@ -67,7 +67,7 @@ export function getAllLessons(): Lesson[] {
   if (courses.length > 0) {
     return courses.flatMap((c) => c.lessons);
   }
-  return mockCourse.lessons;
+  return basicCourse.lessons;
 }
 
 // Store all courses to localStorage

@@ -1,4 +1,154 @@
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -48,7 +198,157 @@ import { LineChart } from '../ui/line-chart';
 
 This document provides a detailed file-by-file breakdown of the PawFi codebase to complement the main documentation.md file. Use this as a reference for understanding specific implementation details.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -94,7 +394,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -142,7 +592,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Table of Contents
 
-1. [Types](# Code Documentation: Chart Components
+1. [Types](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -189,7 +789,157 @@ import { LineChart } from '../ui/line-chart';
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
 1-types)
-2. [Components](# Code Documentation: Chart Components
+2. [Components](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -236,7 +986,157 @@ import { LineChart } from '../ui/line-chart';
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
 2-components)
-3. [Routes](# Code Documentation: Chart Components
+3. [Routes](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -283,7 +1183,157 @@ import { LineChart } from '../ui/line-chart';
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
 3-routes)
-4. [Data Management](# Code Documentation: Chart Components
+4. [Data Management](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -330,7 +1380,157 @@ import { LineChart } from '../ui/line-chart';
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
 4-data-management)
-5. [Utilities](# Code Documentation: Chart Components
+5. [Utilities](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -377,7 +1577,157 @@ import { LineChart } from '../ui/line-chart';
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
 5-utilities)
-6. [Contexts](# Code Documentation: Chart Components
+6. [Contexts](# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -427,7 +1777,157 @@ import { LineChart } from '../ui/line-chart';
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -473,7 +1973,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -521,7 +2171,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  1. Types
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -567,7 +2367,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -613,7 +2563,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -695,7 +2795,157 @@ const question: ChoiceQuestion = {
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -741,7 +2991,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -789,7 +3189,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  2. Components
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -835,7 +3385,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -881,7 +3581,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -929,7 +3779,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Learning Components
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -975,7 +3975,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1021,7 +4171,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1067,7 +4367,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1127,7 +4577,157 @@ import { LineChart } from '../ui/line-chart';
 <MermaidRenderer content="graph TD; A-->B;" />
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1173,7 +4773,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1219,7 +4969,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1265,7 +5165,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1332,7 +5382,157 @@ import { LineChart } from '../ui/line-chart';
 - Handles various states (success/failure)
 - Manages progression through the learning system
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1378,7 +5578,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1424,7 +5774,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1470,7 +5970,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1549,7 +6199,157 @@ const {
 - Uses validation functions from `lesson-utils.ts`
 - Interacts with localStorage for persistence
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1595,7 +6395,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1641,7 +6591,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1687,7 +6787,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1749,7 +6999,157 @@ import { LineChart } from '../ui/line-chart';
 unlockNextLesson(lessonId);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1795,7 +7195,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1841,7 +7391,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1887,7 +7587,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -1958,7 +7808,157 @@ const isCorrect = isAnswerCorrect(question, userAnswer);
 const passedLesson = areAllAnswersCorrect(questions, allAnswers);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2004,7 +8004,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2050,7 +8200,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2096,7 +8396,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2170,7 +8620,157 @@ interface ChoiceQuestionProps {
 />
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2216,7 +8816,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2262,7 +9012,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2310,7 +9210,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  UI Components
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2356,7 +9406,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2402,7 +9602,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2448,7 +9798,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2513,7 +10013,157 @@ import { LineChart } from '../ui/line-chart';
 </Button>
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2559,7 +10209,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2605,7 +10405,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2651,7 +10601,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2720,7 +10820,157 @@ import { LineChart } from '../ui/line-chart';
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2766,7 +11016,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2814,7 +11214,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  3. Routes
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2860,7 +11410,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2906,7 +11606,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -2976,7 +11826,157 @@ import { LineChart } from '../ui/line-chart';
 - Accessed via URL `/learning/[lessonId]`
 - Handles all interactions for a specific lesson
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3022,7 +12022,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3068,7 +12218,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3134,7 +12434,157 @@ import { LineChart } from '../ui/line-chart';
 - Metadata including question count, duration, and XP value
 - Animation for lesson card entry
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3180,7 +12630,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3226,7 +12826,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3294,7 +13044,157 @@ import { LineChart } from '../ui/line-chart';
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3340,7 +13240,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3388,7 +13438,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  4. Data Management
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3434,7 +13634,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3480,7 +13830,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3551,7 +14051,157 @@ const lesson = getLessonById('lesson-1');
 const lessons = getAllLessons();
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3597,7 +14247,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3643,7 +14443,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3704,7 +14654,157 @@ import { LineChart } from '../ui/line-chart';
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3750,7 +14850,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3798,7 +15048,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  5. Utilities
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3844,7 +15244,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3890,7 +15440,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -3960,7 +15660,157 @@ saveToStorage('settings', updatedSettings);
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4006,7 +15856,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4054,7 +16054,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  6. Contexts
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4100,7 +16250,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4146,7 +16446,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4224,7 +16674,157 @@ const { state, nextStep, setAnswer } = useChat();
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4270,7 +16870,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4318,7 +17068,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Implementation Notes
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4364,7 +17264,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4410,7 +17460,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4463,7 +17663,157 @@ The application uses a unified storage approach:
 - Structured as a course object containing lessons array
 - Progress tracking stored within this structure
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4509,7 +17859,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4555,7 +18055,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4608,7 +18258,157 @@ TanStack Router implementation:
 - Dynamic routes using parameters (e.g., `$lessonId`)
 - Route components defined inline with route configuration
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4654,7 +18454,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4700,7 +18650,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4756,7 +18856,157 @@ The codebase emphasizes component reuse:
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4802,7 +19052,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4850,7 +19250,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Chat Sessions & Chat Messages Edge Functions
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4896,7 +19446,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -4942,7 +19642,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5016,7 +19866,157 @@ import { LineChart } from '../ui/line-chart';
     })
     ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5062,7 +20062,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5108,7 +20258,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5160,7 +20460,157 @@ import { LineChart } from '../ui/line-chart';
 - Use ISO8601 strings for all `timestamptz` columns in Postgres.
 - Add logging in Edge Functions to debug serialization and payload issues.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5206,7 +20656,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5252,7 +20852,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5302,7 +21052,157 @@ import { LineChart } from '../ui/line-chart';
 - If you see `Missing required field: chat_session_id`, check request body serialization and field names.
 - If you see `date/time field value out of range`, ensure the timestamp is an ISO8601 string, not milliseconds.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5348,7 +21248,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5394,7 +21444,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5442,7 +21642,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Schema Alignment and Final State (2025-05-20)
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5488,7 +21838,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5534,7 +22034,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5580,7 +22230,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5632,7 +22432,157 @@ import { LineChart } from '../ui/line-chart';
 - For `chat_messages`, all references to `conversation_id` were replaced with `chat_session_id`.
 - The `timestamp` field (BIGINT) is now present in the `chat_messages` table and is used for message ordering and insertion. The `created_at` field is not used for ordering or filtering in chat_messages.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5678,7 +22628,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5724,7 +22824,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5770,7 +23020,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5820,7 +23220,157 @@ import { LineChart } from '../ui/line-chart';
 - The GET handler for chat_messages returns an empty array (`[]`) with HTTP 200 if no messages exist for a session, instead of a 500 error.
 - All error handling is now specific and does not treat 'no messages' as an error.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5866,7 +23416,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5912,7 +23612,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -5958,7 +23808,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6008,7 +24008,157 @@ import { LineChart } from '../ui/line-chart';
 - Message insertion and queries only use columns present in the schema: `id`, `chat_session_id`, `role`, `content`, `timestamp`, `metadata`, `created_at`.
 - All message ordering is now by `timestamp`.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6054,7 +24204,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6100,7 +24400,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6146,7 +24596,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6199,7 +24799,157 @@ import { LineChart } from '../ui/line-chart';
 
 ---
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6245,7 +24995,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6291,7 +25191,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6343,7 +25393,157 @@ import { LineChart } from '../ui/line-chart';
 - The function now only uses columns that exist in the schema: `id`, `user_id`, `session_id`, `model`, `system_prompt`, `is_active`, `created_at`, and `updated_at`.
 - This ensures error-free operation and matches the deployed database structure.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6389,7 +25589,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6435,7 +25785,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6481,7 +25981,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6532,7 +26182,157 @@ import { LineChart } from '../ui/line-chart';
 - **title error:** Occurred because the code referenced a non-existent `title` column on `chat_sessions`.
 - Both errors were resolved by removing these fields from the function's logic and types.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6578,7 +26378,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6624,7 +26574,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6670,7 +26770,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6720,7 +26970,157 @@ import { LineChart } from '../ui/line-chart';
 - Always ensure Edge Function logic matches the Supabase table schema.
 - If new fields are needed, add them to the schema before using them in code.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6766,7 +27166,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6812,7 +27362,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6897,7 +27597,157 @@ import { LineChart } from '../ui/line-chart';
 }
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6943,7 +27793,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -6989,7 +27989,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7071,7 +28221,157 @@ import { LineChart } from '../ui/line-chart';
 }
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7117,7 +28417,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7165,7 +28615,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  8. AI Integration
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7211,7 +28811,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7257,7 +29007,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7324,7 +29224,157 @@ const chatSession = createChatSession(systemPrompt);
 const response = await sendMessageToGemini(message, chatSession);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7370,7 +29420,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7416,7 +29616,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7510,7 +29860,157 @@ const conversations = await getConversations();
 const messages = await getMessages(conversationId);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7556,7 +30056,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7602,7 +30252,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7661,7 +30461,157 @@ if (response.isComplete && response.generatedLessons) {
   handleLessonData(response.generatedLessons);
 }
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7707,7 +30657,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7753,7 +30853,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7814,7 +31064,157 @@ import { LineChart } from '../ui/line-chart';
 - Handles edge cases like code blocks and single-quoted JSON
 - Provides robust error handling for JSON parsing
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7860,7 +31260,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7906,7 +31456,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -7966,7 +31666,157 @@ import { LineChart } from '../ui/line-chart';
 const response = await sendMessageToGemini(chatSession, generateLessonsPrompt);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8012,7 +31862,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8058,7 +32058,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8176,7 +32326,157 @@ import { LineChart } from '../ui/line-chart';
 - When complete JSON is available, it's parsed and displayed as a lesson card
 - The JSON data is stored in localStorage for access in the learning system
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8222,7 +32522,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8270,7 +32720,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Supabase Implementation
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8316,7 +32916,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8362,7 +33112,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8412,7 +33312,157 @@ import { LineChart } from '../ui/line-chart';
 
 The application uses Supabase for authentication and data storage. Below are the implementation details for the database schema and related functionality.
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8458,7 +33508,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8504,7 +33704,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8550,7 +33900,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8633,7 +34133,157 @@ CREATE POLICY "Service role can insert users"
   WITH CHECK (true);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8679,7 +34329,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8725,7 +34525,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8771,7 +34721,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8847,7 +34947,157 @@ CREATE POLICY "Users can insert their own progress"
   WITH CHECK (auth.uid() = user_id);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8893,7 +35143,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8939,7 +35339,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -8985,7 +35535,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9071,7 +35771,157 @@ CREATE POLICY "Users can delete their own conversations"
   USING (auth.uid() = user_id);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9117,7 +35967,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9163,7 +36163,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9209,7 +36359,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9294,7 +36594,157 @@ CREATE POLICY "Users can insert messages into their conversations"
   );
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9340,7 +36790,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9386,7 +36986,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9432,7 +37182,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9496,7 +37396,157 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9542,7 +37592,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9588,7 +37788,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9636,7 +37986,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Integration with Frontend
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9682,7 +38182,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9728,7 +38378,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9774,7 +38574,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9838,7 +38788,157 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9884,7 +38984,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9930,7 +39180,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -9976,7 +39376,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10118,7 +39668,157 @@ const { error: updateError } = await supabase
   .eq('id', conversationId);
 ```
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10164,7 +39864,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10212,7 +40062,157 @@ import { LineChart } from '../ui/line-chart';
 - Chart containers are fully responsive and mobile-friendly.
  Changelog
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10258,7 +40258,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10304,7 +40454,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10368,7 +40668,157 @@ import { LineChart } from '../ui/line-chart';
   - Updated profile page layout with improved responsive width
   - Streamlined navigation flow after authentication to direct users to chat
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10414,7 +40864,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10460,7 +41060,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10514,7 +41264,157 @@ import { LineChart } from '../ui/line-chart';
   - Added information about handling both single lesson and course formats
   - Documented the recursive continuation approach for large JSON responses
 
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10560,7 +41460,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2
@@ -10606,7 +41656,157 @@ import { LineChart } from '../ui/line-chart';
 - All charts have ARIA labels and visually hidden descriptions for screen readers.
 - Colors and fonts are chosen for high contrast and clarity.
 - Chart containers are fully responsive and mobile-friendly.
-# Code Documentation: Chart Components
+# Code Documentation: Course, Lesson, and Question Schemas
+
+## Overview
+This document describes the structure of course, lesson, and question data as used in the PawFi app, matching the Zod schemas in `supabase/functions/chat_stream/schemas.ts` and the sample data in `src/data/mock1.json`.
+
+---
+
+## Course Schema
+A course is the top-level container for lessons.
+
+```
+Course {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp: number;
+  unlocked: boolean;
+  lessons: Lesson[];
+}
+```
+
+## Lesson Schema
+A lesson is a sequence of questions within a course.
+
+```
+Lesson {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  icon: string;
+  questions: Question[];
+}
+```
+
+## Question Schema (Discriminated Union)
+All questions share some common fields, with additional fields depending on type.
+
+```
+Base fields for all questions:
+- id: string
+- type: string (see below)
+- question: string
+- explanation: string
+- incorrectExplanation?: string
+- hint?: string
+- helpTips?: string
+- contentBlocks?: Array<{ type: string; content: string }>
+```
+
+### Supported Question Types
+
+#### 1. Single Choice (scq) / Multiple Choice (mcq)
+```
+{
+  type: 'scq' | 'mcq',
+  options: Array<{
+    id: string;
+    content: string;
+    isCorrect?: boolean;
+    description?: string;
+  }>
+}
+```
+
+#### 2. Sort Categories (sort-categories)
+```
+{
+  type: 'sort-categories',
+  categories: Array<{ id: string; content: string }>,
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: Record<string, string[]>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 3. Sort Order (sort-order)
+```
+{
+  type: 'sort-order',
+  items: Array<{ id: string; content: string }>,
+  correctAnswers: string[]
+}
+```
+
+#### 4. Text Input (text-input)
+```
+{
+  type: 'text-input',
+  validation: {
+    required: boolean;
+    min: number;
+    max: number;
+    errorMessage: string;
+    caseSensitive: boolean;
+  }
+}
+```
+
+#### 5. Image Choice (image-choice)
+```
+{
+  type: 'image-choice',
+  imageOptions: Array<{
+    id: string;
+    content: string;
+    imageUrl: string;
+    imagePrompt: string;
+    caption: string;
+    isCorrect: boolean;
+  }>,
+  imagePrompt?: string,
+  caption?: string
+}
+```
+
+#### 6. Match (match)
+```
+{
+  type: 'match',
+  items: Array<{ id: string; content: string }>,
+  options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+#### 7. Matrix Rating (matrix-rating)
+```
+{
+  type: 'matrix-rating',
+  rows: Array<{ id: string; content: string; color?: string }>,
+  columns: Array<{ id: string; content: string; color?: string }>,
+  correctAnswers: Record<string, string>
+}
+```
+
+---
+
+## Notes
+- All fields marked optional (`?`) may be omitted in some questions.
+- The schemas are validated with Zod and must match exactly for data to be accepted.
+- This structure supports rich, interactive, and varied question types for financial education modules.
+
+---
+
+For any updates to the schema, ensure both the Zod schema and this documentation are kept in sync.
+
+
 
 ## PieChart (`/src/components/ui/pie-chart.tsx`)
 - Built with Chart.js via react-chartjs-2

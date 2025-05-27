@@ -25,8 +25,6 @@ const catIcons=[catBottle,catCash,catCoin,catPig]
 
 function LessonPage() {
   const { courseId, lessonId } = useParams({ from: '/learning/$courseId/lesson/$lessonId' });
-  console.log(courseId)
-  console.log(lessonId)
   
   // Get lesson data from our data file
   const lesson = getLessonById(lessonId);

@@ -9,6 +9,7 @@ import { COURSES_STORAGE_KEY } from '@/data/lessons';
 import { sanitizeCourse } from '@/utils/sanitize-course';
 import { LessonBackButton } from '@/components/learning/lesson-back-button';
 import { useNavigate } from '@tanstack/react-router';
+import basicCourse from '@/data/basic-lessons.json';
 
 export const Route = createFileRoute("/learning/$courseId/")({
   component: CourseDetailPage,
@@ -28,7 +29,7 @@ export default function CourseDetailPage() {
       const stored = localStorage.getItem(COURSES_STORAGE_KEY);
       if (stored) {
         const courses: Course[] = JSON.parse(stored);
-        const found = courses.find((c) => c.id === courseId);
+        const found = [...courses, basicCourse as Course].find((c) => c.id === courseId);
         if (found) {
           const sanitized = sanitizeCourse(found);
           setCourse(sanitized);

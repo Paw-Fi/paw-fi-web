@@ -1,409 +1,280 @@
 {
-  "id": "investing-stocks-teen",
-  "title": "Stocks: Your First Dive",
-  "description": "Get a simple intro to what it means to invest in stocks and why it could be interesting for you.",
+  "id": "intro-money-basics",
+  "title": "Your Money Journey: Getting Started!",
+  "description": "This lesson helps you understand the basics of where your money comes from and where it goes. We'll explore earning, spending, and saving in a fun way!",
+  "icon": "💰",
+  "xp": 150,
+  "unlocked": true,
   "lessons": [
     {
-      "id": "what-are-stocks-101",
-      "title": "What Exactly Are Stocks?",
-      "description": "Unpack the basics of stock ownership without the confusing Wall Street talk.",
-      "xp": 50,
-      "unlocked": true,
-      "icon": "🏢",
-      "questions": [
-        {
-          "id": "stock-ownership-q1",
-          "type": "mcq",
-          "question": "Imagine a pizza cut into slices. If a company's stock is like the whole pizza, what's buying a share like?",
-          "options": [
-            {
-              "id": "opt-1a",
-              "content": "Buying the whole pizza.",
-              "isCorrect": false,
-              "description": "That would mean you own the entire company, not just a part."
-            },
-            {
-              "id": "opt-1b",
-              "content": "Buying one slice of the pizza.",
-              "isCorrect": true,
-              "description": "Exactly! One share represents a small piece of ownership in the company."
-            },
-            {
-              "id": "opt-1c",
-              "content": "Just looking at the pizza.",
-              "isCorrect": false,
-              "description": "That's observing, not owning any part of the company."
-            }
-          ],
-          "explanation": "Good job! Buying a share of stock means you own a tiny part of that company. As the company does well, the value of your 'slice' can also increase!",
-          "helpTips": "Think about your favorite brands. If they sell stock, owning a share means you're a part-owner."
-        },
-        {
-          "id": "why-companies-sell-q2",
-          "type": "scq",
-          "question": "Why do companies usually sell their stock to the public?",
-          "options": [
-            {
-              "id": "opt-2a",
-              "content": "To give away free money.",
-              "isCorrect": false,
-              "description": "Companies sell stock to get money, not give it away."
-            },
-            {
-              "id": "opt-2b",
-              "content": "To raise money to grow their business.",
-              "isCorrect": true,
-              "description": "That's right! Selling stock helps them fund new projects, expand, and innovate."
-            },
-            {
-              "id": "opt-2c",
-              "content": "Just because it's a trend.",
-              "isCorrect": false,
-              "description": "There's a real business reason behind selling stock."
-            }
-          ],
-          "explanation": "Nice work! When you buy stock, you're helping the company get the funds they need to expand and improve. Hopefully, that growth can also make your investment more valuable!",
-          "helpTips": "Imagine a small business wanting to open more stores – selling stock can give them that cash."
-        },
-        {
-          "id": "stock-market-q3",
-          "type": "mcq",
-          "question": "Where do people usually buy and sell stocks?",
-          "options": [
-            {
-              "id": "opt-3a",
-              "content": "At a regular grocery store.",
-              "isCorrect": false,
-              "description": "Grocery stores sell food, not stocks."
-            },
-            {
-              "id": "opt-3b",
-              "content": "On something called the 'stock market'.",
-              "isCorrect": true,
-              "description": "Exactly! The stock market is like a special marketplace for buying and selling stocks."
-            },
-            {
-              "id": "opt-3c",
-              "content": "From a lemonade stand.",
-              "isCorrect": false,
-              "description": "Lemonade stands sell drinks, not company ownership."
-            }
-          ],
-          "explanation": "You got it! The stock market is where buyers and sellers of stocks come together. It can be online or a physical place (though mostly online these days!).",
-          "helpTips": "Think of it like eBay, but for pieces of companies."
-        },
-        {
-          "id": "stock-value-q4",
-          "type": "scq",
-          "question": "What can make the price (value) of a company's stock go up?",
-          "options": [
-            {
-              "id": "opt-4a",
-              "content": "If the company starts losing money.",
-              "isCorrect": false,
-              "description": "Usually, bad news for a company makes its stock price go down."
-            },
-            {
-              "id": "opt-4b",
-              "content": "If the company does well and makes more profit.",
-              "isCorrect": true,
-              "description": "That's right! When a company is successful, more people want to own a part of it, driving the price up."
-            },
-            {
-              "id": "opt-4c",
-              "content": "If the company changes its logo.",
-              "isCorrect": false,
-              "description": "While branding is important, it doesn't directly cause big stock price changes."
-            }
-          ],
-          "explanation": "Fantastic! A company's success often leads to a higher stock price because more investors are interested in buying shares.",
-          "helpTips": "Think about a popular game or app. If lots of people use it, the company behind it might see its stock price increase."
-        },
-        {
-          "id": "stocks-risk-reward-q5",
-          "type": "mcq",
-          "question": "Is investing in stocks a guaranteed way to make money?",
-          "options": [
-            {
-              "id": "opt-5a",
-              "content": "Yes, it's always a sure thing.",
-              "isCorrect": false,
-              "description": "Investing always involves some level of risk."
-            },
-            {
-              "id": "opt-5b",
-              "content": "No, the value of stocks can go up or down.",
-              "isCorrect": true,
-              "description": "Correct! Stock prices can fluctuate based on many factors."
-            },
-            {
-              "id": "opt-5c",
-              "content": "Only if you invest a lot of money.",
-              "isCorrect": false,
-              "description": "The amount you invest doesn't guarantee profits; the performance of the investment does."
-            }
-          ],
-          "explanation": "You're right! The stock market has ups and downs. That's why it's important to learn more and make informed decisions.",
-          "helpTips": "Think of it like a rollercoaster – there are exciting highs and sometimes a few dips."
-        }
-      ]
-    },
-    {
-      "id": "types-of-stocks-201",
-      "title": "Different Flavors of Stocks",
-      "description": "Discover that not all stocks are the same! Learn about some common categories.",
-      "xp": 75,
-      "unlocked": false,
-      "icon": "📊",
-      "questions": [
-        {
-          "id": "common-vs-preferred-q1",
-          "type": "sort-categories",
-          "question": "Sort these descriptions into 'Common Stock' or 'Preferred Stock'.",
-          "categories": [
-            { "id": "cat-1", "content": "Common Stock" },
-            { "id": "cat-2", "content": "Preferred Stock" }
-          ],
-          "items": [
-            { "id": "item-1", "content": "Usually has voting rights in the company." },
-            { "id": "item-2", "content": "Often pays a fixed dividend amount." },
-            { "id": "item-3", "content": "Shareholders are typically last in line if the company goes bankrupt." },
-            { "id": "item-4", "content": "Shareholders get paid dividends before common stockholders." }
-          ],
-          "correctAnswers": {
-            "cat-1": ["item-1", "item-3"],
-            "cat-2": ["item-2", "item-4"]
-          },
-          "explanation": "You sorted them correctly! Common stockholders have voting rights but are riskier in bankruptcy. Preferred stockholders get paid first but usually don't get a vote.",
-          "helpTips": "Think of 'preferred' as getting special treatment with dividends."
-        },
-        {
-          "id": "growth-vs-income-q2",
-          "type": "mcq",
-          "question": "Which of these describes a 'Growth Stock'?",
-          "options": [
-            {
-              "id": "opt-2a",
-              "content": "Stock from a well-established company that pays regular dividends.",
-              "isCorrect": false,
-              "description": "That sounds more like an 'income stock'."
-            },
-            {
-              "id": "opt-2b",
-              "content": "Stock from a company expected to increase its earnings faster than average.",
-              "isCorrect": true,
-              "description": "Exactly! Growth stocks are about potential future increases in value."
-            },
-            {
-              "id": "opt-2c",
-              "content": "Stock that doesn't change in price very much.",
-              "isCorrect": false,
-              "description": "Growth stocks can actually be more volatile."
-            }
-          ],
-          "explanation": "Great job! Growth stocks are exciting because they have the potential to increase in value quickly, but they can also be riskier.",
-          "helpTips": "Think of new tech companies – their stock might be considered a growth stock."
-        },
-        {
-          "id": "blue-chip-q3",
-          "type": "scq",
-          "question": "What is a 'Blue-Chip' stock?",
-          "options": [
-            {
-              "id": "opt-3a",
-              "content": "Stock from a small, new company.",
-              "isCorrect": false,
-              "description": "Blue-chip companies are usually large and well-known."
-            },
-            {
-              "id": "opt-3b",
-              "content": "Stock from a large, well-established company with a history of good performance.",
-              "isCorrect": true,
-              "description": "That's right! Blue-chip stocks are often seen as safer investments."
-            },
-            {
-              "id": "opt-3c",
-              "content": "A stock that is blue in color.",
-              "isCorrect": false,
-              "description": "The color has nothing to do with it!"
-            }
-          ],
-          "explanation": "Correct! Blue-chip companies are like the giants of the stock market – they're usually stable and reliable.",
-          "helpTips": "Think of brands you've known for a long time and trust – they might be blue-chip companies."
-        },
-        {
-          "id": "market-cap-q4",
-          "type": "sort-order",
-          "question": "Order these by company size, from LARGEST to SMALLEST (based on 'market cap').",
-          "items": [
-            { "id": "item-a", "content": "Large-Cap Stock" },
-            { "id": "item-b", "content": "Small-Cap Stock" },
-            { "id": "item-c", "content": "Mid-Cap Stock" }
-          ],
-          "correctAnswers": ["item-a", "item-c", "item-b"],
-          "explanation": "You got the order right! Large-cap companies are the biggest, followed by mid-cap, and then small-cap.",
-          "helpTips": "Think of it like sizes: Large, Medium, Small."
-        },
-        {
-          "id": "dividend-stocks-q5",
-          "type": "mcq",
-          "question": "What's a key feature of 'Dividend Stocks'?",
-          "options": [
-            {
-              "id": "opt-5a",
-              "content": "They are guaranteed to increase in price quickly.",
-              "isCorrect": false,
-              "description": "Price increases are never guaranteed."
-            },
-            {
-              "id": "opt-5b",
-              "content": "They often pay out a portion of the company's profits to shareholders regularly.",
-              "isCorrect": true,
-              "description": "Exactly! Dividends are like getting a little extra income from owning the stock."
-            },
-            {
-              "id": "opt-5c",
-              "content": "They are only from new, unproven companies.",
-              "isCorrect": false,
-              "description": "Established companies can also pay dividends."
-            }
-          ],
-          "explanation": "That's correct! Dividend stocks can be attractive if you're looking for regular income from your investments.",
-          "helpTips": "Think of it like a company sharing its success with its owners (shareholders)."
-        }
-      ]
-    },
-    {
-      "id": "getting-started-301",
-      "title": "Your First Steps in Stocks",
-      "description": "Understand the basic ways you can start investing in stocks.",
+      "id": "basics-101",
+      "title": "Unlocking Your Money Power",
+      "description": "Discover where money comes from, where it goes, and how to start taking control.",
       "xp": 100,
-      "unlocked": false,
+      "unlocked": true,
       "icon": "🚀",
       "questions": [
         {
-          "id": "brokerage-account-q1",
+          "id": "q1-scq-income",
           "type": "scq",
-          "question": "What's usually the first thing you need to open if you want to buy and sell stocks?",
-          "options": [
+          "question": "Where does 'income' usually come from?",
+          "explanation": "Great job! Income is any money you receive, whether it's from allowance, a gift, a part-time job, or even selling something you made. It's the money that fills your pocket!",
+          "incorrectExplanation": "Not quite! Spending is when money leaves your pocket, and saving is setting it aside. Income is money coming in, like your allowance or money from a job.",
+          "hint": "Think about how you get money into your wallet or bank account.",
+          "helpTips": "Income is the money you earn or receive. It's what allows you to spend, save, and reach your goals!",
+          "contentBlocks": [
             {
-              "id": "opt-1a",
-              "content": "A library card.",
-              "isCorrect": false,
-              "description": "Library cards are for borrowing books."
-            },
-            {
-              "id": "opt-1b",
-              "content": "A brokerage account.",
-              "isCorrect": true,
-              "description": "That's right! A brokerage account is like a special bank account for investing."
-            },
-            {
-              "id": "opt-1c",
-              "content": "A pizza delivery app.",
-              "isCorrect": false,
-              "description": "That's for ordering food."
+              "type": "paragraph",
+              "content": "Every journey starts with understanding your fuel! When we talk about money, 'income' is like the fuel for your financial journey. It's the money that comes to you."
             }
           ],
-          "explanation": "Correct! A brokerage account lets you deposit money and then use that money to buy and sell investments like stocks.",
-          "helpTips": "Think of a brokerage account as your online portal to the stock market."
-        },
-        {
-          "id": "stock-funds-q2",
-          "type": "mcq",
-          "question": "What's a 'stock fund' (like an ETF or mutual fund)?",
           "options": [
             {
-              "id": "opt-2a",
-              "content": "Buying stock in just one company.",
+              "id": "opt-1",
+              "content": "Money you spend on snacks",
               "isCorrect": false,
-              "description": "Stock funds usually involve many companies."
+              "description": "This describes money leaving your pocket."
             },
             {
-              "id": "opt-2b",
-              "content": "A way to invest in a collection of many different stocks at once.",
+              "id": "opt-2",
+              "content": "Money you get from allowance or a job",
               "isCorrect": true,
-              "description": "Exactly! It's like buying a whole basket of different company shares."
+              "description": "This describes money coming into your possession."
             },
             {
-              "id": "opt-2c",
-              "content": "A type of stock that only rich people can buy.",
+              "id": "opt-3",
+              "content": "Money you put into a savings account",
               "isCorrect": false,
-              "description": "Stock funds are generally accessible to everyone."
+              "description": "This describes money you are setting aside for later."
+            }
+          ]
+        },
+        {
+          "id": "q2-sort-categories-needs-wants",
+          "type": "sort-categories",
+          "question": "Sort these items into 'Needs' (things you really need to live) or 'Wants' (things that are nice to have but not essential).",
+          "explanation": "Awesome! Knowing the difference between needs and wants is a super power for managing your money. Needs are things you absolutely can't do without, like food and shelter, while wants are extras that make life fun, like new gadgets or movie tickets. This helps you make smart choices!",
+          "incorrectExplanation": "Almost! It can be tricky sometimes, but 'needs' are essentials for survival (like food, water, basic clothes), while 'wants' are things you enjoy but don't strictly need (like a new video game or concert tickets). Getting this distinction helps you prioritize!",
+          "hint": "Think about what's absolutely necessary for survival versus what's for fun or convenience.",
+          "helpTips": "Needs keep you safe and healthy. Wants add fun and comfort but aren't vital. Prioritizing needs before wants helps you stay on track.",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "One of the first steps to managing your money is knowing the difference between a 'Need' and a 'Want'. Needs are things you can't really live without, like food or shelter. Wants are things that are fun to have, but you could totally live without them."
+            },
+            {
+              "type": "paragraph",
+              "content": "Sorting these out helps you decide what's most important when you're spending your money."
             }
           ],
-          "explanation": "Nice one! Stock funds help you diversify, meaning you're not relying on just one company's performance.",
-          "helpTips": "Think of it as spreading your risk – if one company in the fund doesn't do well, the others might still perform okay."
-        },
-        {
-          "id": "long-term-investing-q3",
-          "type": "scq",
-          "question": "For most beginners, is it usually recommended to think of stock investing as a quick way to get rich or a long-term strategy?",
-          "options": [
-            {
-              "id": "opt-3a",
-              "content": "A quick way to get rich.",
-              "isCorrect": false,
-              "description": "Trying to get rich quick in the stock market is usually very risky."
-            },
-            {
-              "id": "opt-3b",
-              "content": "A long-term strategy to grow your money over time.",
-              "isCorrect": true,
-              "description": "That's the common advice! Investing for the long haul can help smooth out the ups and downs."
-            }
+          "imagePrompt": "pie title Needs vs. Wants \"Needs\": 60 \"Wants\": 40",
+          "caption": "A simple way to look at how money might be divided between needs and wants.",
+          "items": [
+            { "id": "item-1", "content": "Food" },
+            { "id": "item-2", "content": "New video game" },
+            { "id": "item-3", "content": "Water" },
+            { "id": "item-4", "content": "School supplies" },
+            { "id": "item-5", "content": "Concert ticket" },
+            { "id": "item-6", "content": "Shelter (a home)" }
           ],
-          "explanation": "You're right! Patience can be key in the stock market. Over the long term, investments have historically tended to grow.",
-          "helpTips": "Think of planting a tree – it takes time to grow big and strong."
-        },
-        {
-          "id": "research-q4",
-          "type": "mcq",
-          "question": "Before investing in a specific company's stock, what's a good idea to do?",
-          "options": [
-            {
-              "id": "opt-4a",
-              "content": "Just pick a company you like.",
-              "isCorrect": false,
-              "description": "While liking a company is okay, it's not enough"},
-              {
-                "id": "opt-4b",
-                "content": "Do some research on the company and its performance.",
-                "isCorrect": true,
-                "description": "Exactly! Understanding the company can help you make a more informed decision."
-              },
-              {
-                "id": "opt-4c",
-                "content": "Ask a stranger online for advice.",
-                "isCorrect": false,
-                "description": "It's better to get information from reliable sources."
-              }
-            ],
-            "explanation": "Great thinking! Doing your homework helps you understand what you're investing in and the potential risks and rewards.",
-            "helpTips": "Look at the company's website, news articles, and financial reports if you can."
-          },
-          {
-            "id": "start-small-q5",
-            "type": "scq",
-            "question": "If you're just starting to invest in stocks, is it generally better to start with a large amount of money or a smaller amount?",
-            "options": [
-              {
-                "id": "opt-5a",
-                "content": "A large amount of money to try and make big returns quickly.",
-                "isCorrect": false,
-                "description": "Starting with a lot of money can be riskier for beginners."
-              },
-              {
-                "id": "opt-5b",
-                "content": "A smaller amount of money to learn and get comfortable with how it works.",
-                "isCorrect": true,
-                "description": "That's usually the smarter approach! You can learn without risking too much."
-              }
-            ],
-            "explanation": "You got it! Starting small allows you to learn the ropes and gain experience without putting a lot of money at risk right away.",
-            "helpTips": "Think of it like learning to ride a bike – you usually start with training wheels before trying big jumps!"
+          "categories": [
+            { "id": "category-1", "content": "Needs" },
+            { "id": "category-2", "content": "Wants" }
+          ],
+          "correctAnswers": {
+            "category-1": ["item-1", "item-3", "item-4", "item-6"],
+            "category-2": ["item-2", "item-5"]
           }
-        ]
-      }
-    ]
-  }
+        },
+        {
+          "id": "q3-text-input-saving-goal",
+          "type": "text-input",
+          "question": "What's one thing you dream of saving money for?",
+          "explanation": "That's an awesome goal! Having a clear goal makes saving much easier and more exciting. Whether it's big or small, a goal gives your savings a purpose!",
+          "hint": "Think about something you really want or an experience you'd love to have.",
+          "helpTips": "Setting a specific goal, like 'new headphones' or 'a trip with friends,' helps you stay motivated to save money. The clearer your goal, the easier it is to reach!",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "Saving money isn't just about putting cash away; it's about reaching your dreams! When you save, you're setting aside money now so you can buy something bigger or do something amazing later."
+            }
+          ],
+          "validation": {
+            "required": true,
+            "min": 3,
+            "max": 50,
+            "errorMessage": "Please tell me what you'd like to save for! Keep it between 3 and 50 characters.",
+            "caseSensitive": false
+          }
+        },
+        {
+          "id": "q4-image-choice-saving",
+          "type": "image-choice",
+          "question": "Which image best shows someone saving money?",
+          "explanation": "You got it! Putting money into a piggy bank or a savings account means you're setting it aside for later instead of spending it now. That's smart saving!",
+          "incorrectExplanation": "Not quite! The other images show money being spent on things like clothes or food. Saving means putting money away for future goals, not using it right away.",
+          "hint": "Saving is about keeping money safe for future use.",
+          "helpTips": "Think about actions that mean 'money put aside' versus 'money used right now'.",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "We just talked about setting a saving goal. Now, let's think about what saving looks like! It's an action you take with your money."
+            }
+          ],
+          "imageOptions": [
+            {
+              "id": "img-opt-1",
+              "content": "Piggy bank being filled",
+              "imageUrl": "https://via.placeholder.com/150/0000FF/FFFFFF?text=Piggy+Bank",
+              "imagePrompt": "graph TD; A[Hand putting coin] --> B(Piggy Bank); B --> C[Future Savings];",
+              "caption": "A hand putting a coin into a piggy bank.",
+              "isCorrect": true
+            },
+            {
+              "id": "img-opt-2",
+              "content": "Shopping for clothes",
+              "imageUrl": "https://via.placeholder.com/150/FF0000/FFFFFF?text=Shopping",
+              "imagePrompt": "graph TD; A[Person] --> B(Shopping Bag); B --> C[Spending Money];",
+              "caption": "Someone holding shopping bags after buying clothes.",
+              "isCorrect": false
+            },
+            {
+              "id": "img-opt-3",
+              "content": "Eating at a restaurant",
+              "imageUrl": "https://via.placeholder.com/150/00FF00/FFFFFF?text=Eating+Out",
+              "imagePrompt": "graph TD; A[Person] --> B(Restaurant Bill); B --> C[Spending Money];",
+              "caption": "Someone eating a meal at a restaurant.",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q5-match-money-terms",
+          "type": "match",
+          "question": "Match these money words to what they mean!",
+          "explanation": "Fantastic! Knowing these basic terms helps you talk about and understand money better. Each word has a specific role in your financial world, and understanding them is a great start!",
+          "incorrectExplanation": "Good try! Each word has a specific meaning. For example, 'income' is money coming in, 'expense' is money going out, 'savings' is money put away, and a 'budget' is your plan for it all. Keep practicing!",
+          "hint": "Think about whether the money is coming in, going out, or being planned/held.",
+          "helpTips": "Income is your 'fuel', expense is your 'cost', savings is your 'reserve', and a budget is your 'map'.",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "Money has its own language! Learning a few key words can make understanding it much easier. Let's match some common terms to their simple meanings."
+            }
+          ],
+          "items": [
+            { "id": "item-1", "content": "Income" },
+            { "id": "item-2", "content": "Expense" },
+            { "id": "item-3", "content": "Savings" },
+            { "id": "item-4", "content": "Budget" }
+          ],
+          "options": [
+            { "id": "opt-1", "content": "Money you earn or receive" },
+            { "id": "opt-2", "content": "Money you spend on things" },
+            { "id": "opt-3", "content": "Money you put aside for later" },
+            { "id": "opt-4", "content": "A plan for how you spend and save" }
+          ],
+          "correctAnswers": {
+            "item-1": "opt-1",
+            "item-2": "opt-2",
+            "item-3": "opt-3",
+            "item-4": "opt-4"
+          }
+        },
+        {
+          "id": "q6-sort-order-budgeting-steps",
+          "type": "sort-order",
+          "question": "Put these steps in order for making a super simple money plan (a 'budget')!",
+          "explanation": "That’s the perfect order! First, you know what you have (income), then you plan where it will go (decide how much to save/spend), and finally, you check how you did (track). This cycle helps you stay in control of your money!",
+          "incorrectExplanation": "Close one! Usually, you need to know how much money you *have* before you can decide how to spend it, and tracking helps you see if your plan is working. Think about it like planning a trip: first you check your map, then you decide your route, then you follow it!",
+          "hint": "Think about the logical flow: what information do you need first, what comes next, and what do you do to check?",
+          "helpTips": "A simple budget is like a roadmap for your money. First, you figure out where you are, then where you want to go, and finally, how to get there. It's a continuous cycle!",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "Even a simple plan for your money, often called a 'budget', can make a huge difference. It's not about restricting yourself, but about making sure your money goes where you want it to go. Here are the basic steps:"
+            }
+          ],
+          "items": [
+            { "id": "step-1", "content": "Track where your money actually goes" },
+            { "id": "step-2", "content": "Decide how much money to save and how much to spend on different things" },
+            { "id": "step-3", "content": "Figure out how much money you have (your income)" }
+          ],
+          "correctAnswers": ["step-3", "step-2", "step-1"]
+        },
+        {
+          "id": "q7-matrix-rating-habits",
+          "type": "matrix-rating",
+          "question": "How important are these habits for managing your money well?",
+          "explanation": "You nailed it! These habits are super important because they help you control your money, reach your goals, and feel secure about your future. Building these habits early can make a huge difference!",
+          "incorrectExplanation": "These habits are all pretty important! Regular saving helps you reach big goals, tracking helps you see where money goes, and setting goals gives you something clear to aim for. They work together to build strong money skills.",
+          "hint": "Consider how each habit impacts your ability to reach your money goals and avoid problems.",
+          "helpTips": "Imagine trying to play a game without knowing the rules or keeping score – it’s similar with money! Good habits make the game easier and more fun.",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "Just like practicing a sport or learning a new skill, managing money involves good habits. These habits help you make smart choices and feel confident about your financial future."
+            }
+          ],
+          "rows": [
+            { "id": "habit-1", "content": "Saving money regularly" },
+            { "id": "habit-2", "content": "Tracking your spending (knowing where your money goes)" },
+            { "id": "habit-3", "content": "Setting financial goals (like saving for a new phone or college)" }
+          ],
+          "columns": [
+            { "id": "rating-1", "content": "Not Important", "color": "red" },
+            { "id": "rating-2", "content": "A Little Important", "color": "orange" },
+            { "id": "rating-3", "content": "Very Important", "color": "yellow" },
+            { "id": "rating-4", "content": "Super Important!", "color": "green" }
+          ],
+          "correctAnswers": {
+            "habit-1": "rating-4",
+            "habit-2": "rating-4",
+            "habit-3": "rating-4"
+          }
+        },
+        {
+          "id": "q8-mcq-saving-reasons",
+          "type": "mcq",
+          "question": "Which of these are good reasons to save money? (Pick all that apply)",
+          "explanation": "Exactly! Saving can be for fun short-term goals like buying new games, big long-term goals like college, or important safety nets like an emergency fund. It's smart to save for a mix of things!",
+          "incorrectExplanation": "Almost! While some options are about spending now, saving is about putting money aside for something you want or need *later*. An emergency fund, a new game, or college are all great reasons to save.",
+          "hint": "Think about what you're putting money aside for, not what you're spending it on right away.",
+          "helpTips": "Saving is about building up funds for the future. This could be for fun purchases, big life events, or just in case of unexpected situations.",
+          "contentBlocks": [
+            {
+              "type": "paragraph",
+              "content": "We've talked about what saving is. Now, let's think about *why* we save. There are tons of reasons, both big and small, for setting money aside!"
+            }
+          ],
+          "options": [
+            {
+              "id": "opt-1",
+              "content": "Buying a new video game or cool gadget",
+              "isCorrect": true,
+              "description": "This is a common short-term saving goal."
+            },
+            {
+              "id": "opt-2",
+              "content": "Building an emergency fund for unexpected things (like a broken phone)",
+              "isCorrect": true,
+              "description": "This provides financial security for unforeseen circumstances."
+            },
+            {
+              "id": "opt-3",
+              "content": "Going out to eat tonight with friends",
+              "isCorrect": false,
+              "description": "This is typically a current spending decision, not a saving goal."
+            },
+            {
+              "id": "opt-4",
+              "content": "Saving for future education, like college or trade school",
+              "isCorrect": true,
+              "description": "This is a significant long-term investment in one's future."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

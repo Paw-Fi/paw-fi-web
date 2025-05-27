@@ -1,4 +1,4 @@
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -52,7 +52,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  PawFi Web Application Documentation
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -104,7 +104,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -171,7 +171,7 @@ PawFi is an educational web application focused on teaching personal finance and
 
 The application is built with TypeScript, React, Tailwind CSS, and TanStack Router. It leverages modern UI patterns, GSAP animations, and a component-based architecture for an engaging user experience.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -223,7 +223,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -281,7 +281,7 @@ The project follows a modular structure organized into the following key directo
 
 ```
 /src
-  /assets       # Calculator Charting & Visualization
+  /assets       
 
 ## Chart.js Integration
 
@@ -334,7 +334,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Static assets like images
-  /components   # Calculator Charting & Visualization
+  /components   
 
 ## Chart.js Integration
 
@@ -387,7 +387,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Reusable UI components
-  /contexts     # Calculator Charting & Visualization
+  /contexts     
 
 ## Chart.js Integration
 
@@ -440,7 +440,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  React contexts for state management
-  /data         # Calculator Charting & Visualization
+  /data         
 
 ## Chart.js Integration
 
@@ -493,7 +493,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Mock data and data access functions
-  /integrations # Calculator Charting & Visualization
+  /integrations 
 
 ## Chart.js Integration
 
@@ -546,7 +546,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Third-party service integrations
-  /lib          # Calculator Charting & Visualization
+  /lib          
 
 ## Chart.js Integration
 
@@ -599,7 +599,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Core library functions
-  /routes       # Calculator Charting & Visualization
+  /routes       
 
 ## Chart.js Integration
 
@@ -652,7 +652,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Application routes
-  /services     # Calculator Charting & Visualization
+  /services     
 
 ## Chart.js Integration
 
@@ -705,7 +705,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Service layer
-  /styles       # Calculator Charting & Visualization
+  /styles       
 
 ## Chart.js Integration
 
@@ -758,7 +758,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Global styles
-  /types        # Calculator Charting & Visualization
+  /types        
 
 ## Chart.js Integration
 
@@ -811,7 +811,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  TypeScript type definitions
-  /utils        # Calculator Charting & Visualization
+  /utils        
 
 ## Chart.js Integration
 
@@ -866,7 +866,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
  Utility functions
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -918,7 +918,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -972,7 +972,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  3. Core Features
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1024,7 +1024,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1076,7 +1076,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1132,7 +1132,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The learning system is the primary feature of the application, providing an interactive educational experience through structured lessons and quizzes.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1184,7 +1184,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1236,7 +1236,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1288,7 +1288,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1350,7 +1350,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `unlock-next-lesson.ts`: Function to unlock sequential lessons
 - `MermaidRenderer.tsx`: Component for rendering diagram syntax as SVG
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1402,7 +1402,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1454,7 +1454,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1506,7 +1506,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1566,7 +1566,7 @@ Lessons follow a structured data model defined in `/types/learning.types.ts`:
 - `Question`: Base type for all question types with shared properties
 - Specialized question types (ChoiceQuestion, SortQuestion, etc.) with type guards
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1618,7 +1618,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1670,7 +1670,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1722,7 +1722,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1783,7 +1783,7 @@ The application implements a progression system that:
 - Unlocks subsequent lessons upon completion
 - Persists progress in localStorage
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1835,7 +1835,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1887,7 +1887,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1943,7 +1943,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The authentication system handles user registration, login, and session management throughout the application.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -1995,7 +1995,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2047,7 +2047,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2099,7 +2099,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2158,7 +2158,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `SignUpForm` (`/components/auth/sign-up-form.tsx`): Registration form with email verification
 - `PageLayout` (`/components/layout/page-layout.tsx`): Layout component that handles header visibility based on authentication
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2210,7 +2210,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2262,7 +2262,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2314,7 +2314,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2378,7 +2378,7 @@ The authentication system includes:
 - Sign-out functionality accessible from the header
 - Streamlined navigation flow after authentication
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2430,7 +2430,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2482,7 +2482,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2538,7 +2538,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The Chat system collects user preferences and information to personalize the learning experience.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2590,7 +2590,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2642,7 +2642,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2694,7 +2694,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2752,7 +2752,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `ChatRoute` (`/routes/chat.tsx`): Main Chat UI
 - `ChatInterface` (`/components/chat/chat-interface.tsx`): AI-assisted chat for personalized recommendations
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2804,7 +2804,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2856,7 +2856,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2908,7 +2908,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -2969,7 +2969,7 @@ The Chat interface has been updated to integrate with the authentication system:
 - Displays sign-in and sign-up buttons for unauthenticated users
 - Provides a seamless path to authentication from the chat interface
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3021,7 +3021,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3073,7 +3073,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3125,7 +3125,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3188,7 +3188,7 @@ The Chat system has been refactored to reuse components from the learning system
 - Real-time progress indicators for course generation
 - Automatic JSON continuation for handling large AI responses
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3240,7 +3240,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3292,7 +3292,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3348,7 +3348,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The application includes a drag-and-drop system for categorization questions using the dnd-kit library.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3400,7 +3400,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3452,7 +3452,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3504,7 +3504,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3561,7 +3561,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `DragOverlay`, `Draggable`, `Droppable` (`/components/learning/dnd/*`)
 - `SortCategoriesQuestion` (`/components/learning/question-types/sort-categories-question.tsx`)
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3613,7 +3613,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3665,7 +3665,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3717,7 +3717,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3776,7 +3776,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Empty state indicators for categories
 - Mobile and desktop support
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3828,7 +3828,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3882,7 +3882,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  4. UI Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3934,7 +3934,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -3986,7 +3986,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4068,7 +4068,7 @@ The application supports multiple question types:
    - Text field with validation
    - Support for prefixes/suffixes
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4120,7 +4120,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4172,7 +4172,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4232,7 +4232,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `CompletionDisplay`: End-of-lesson completion modal with animations
 - `LessonProgressBar`: Visual indicator of lesson progress
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4284,7 +4284,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4338,7 +4338,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  5. State Management & Routing
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4390,7 +4390,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4442,7 +4442,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4501,7 +4501,7 @@ The application uses localStorage for persistence:
 - `paw-fi-course`: Stores course and lesson data including completion status
 - `Chat`: Stores Chat responses
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4553,7 +4553,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4605,7 +4605,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4663,7 +4663,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `ChatContext`: Context provider for Chat state
 - `useChat`: Hook for accessing Chat context
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4715,7 +4715,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4767,7 +4767,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4828,7 +4828,7 @@ The application uses TanStack Router (formerly React Router) for routing:
 - Programmatic navigation with `useNavigate`
 - Route protection for locked lessons
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4880,7 +4880,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4940,7 +4940,7 @@ The application uses GSAP for animations:
 - Confetti effects on lesson completion
 - Transition animations between questions
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -4992,7 +4992,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5046,7 +5046,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  7. Recent Improvements
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5098,7 +5098,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5150,7 +5150,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5207,7 +5207,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Implemented proper rendering of Mermaid diagrams using the Mermaid API
 - Added loading states and error handling for diagrams
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5259,7 +5259,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5311,7 +5311,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5368,7 +5368,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Fixed parameter mismatch in image-choice-question component
 - Corrected validation logic in areAllAnswersCorrect function
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5420,7 +5420,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5472,7 +5472,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5530,7 +5530,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Implemented TypeScript interfaces and type guards for safe mapping
 - Created adapter functions to transform data formats
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5582,7 +5582,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5634,7 +5634,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5692,7 +5692,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Fixed performance issues with useRef
 - Improved styling and visual feedback
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5744,7 +5744,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5798,7 +5798,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  8. Development Guidelines
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5850,7 +5850,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5902,7 +5902,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -5963,7 +5963,7 @@ To add a new question type:
 3. Implement a type guard function
 4. Update the question content renderer to support the new type
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6015,7 +6015,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6067,7 +6067,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6126,7 +6126,7 @@ Lessons can be created by:
 1. Adding new lesson data to the mock data files
 2. Using the author import functionality to import JSON-formatted lessons
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6178,7 +6178,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6232,7 +6232,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  9. Technical Implementation Details
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6284,7 +6284,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6336,7 +6336,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6399,7 +6399,7 @@ The question validation system (`lesson-utils.ts`) implements sophisticated logi
 - **Matrix Rating Questions**: Compares user ratings with expected ratings
 - **Text Input Questions**: Performs pattern matching, case sensitivity checks, and validates against possible answers
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6451,7 +6451,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6503,7 +6503,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6563,7 +6563,7 @@ The application uses GSAP for animations:
 - Sequential animation of modal content
 - Cat mascot animations throughout the learning experience
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6615,7 +6615,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6667,7 +6667,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6727,7 +6727,7 @@ The application stores data in localStorage with a unified approach:
 - Automatic unlocking of lessons based on completion
 - XP reward tracking
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6779,7 +6779,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6831,7 +6831,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6887,7 +6887,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The application implements an automatic JSON continuation mechanism to handle large JSON responses from the Gemini API that may be truncated due to token limitations.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6939,7 +6939,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -6991,7 +6991,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7043,7 +7043,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7101,7 +7101,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `continueJsonResponse` function: Handles the automatic continuation process
 - `checkJsonString` function: Detects incomplete JSON and validates structure
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7153,7 +7153,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7205,7 +7205,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7257,7 +7257,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7318,7 +7318,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - **Format Support**: Handles both single lesson format and complete course format with multiple lessons
 - **Loading Indicators**: Shows loading animation while retrieving the rest of the data
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7370,7 +7370,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7422,7 +7422,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7474,7 +7474,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7534,7 +7534,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Enhanced JSON validation to detect both single lesson and course data structures
 - Recursive continuation for handling particularly large JSON responses
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7586,7 +7586,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7640,7 +7640,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  10. Documentation Maintenance Guidelines
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7692,7 +7692,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7744,7 +7744,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7800,7 +7800,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 This documentation should be updated whenever changes are made to the codebase. Follow these guidelines to maintain documentation quality:
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7852,7 +7852,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7904,7 +7904,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -7956,7 +7956,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8018,7 +8018,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
    - Relationships with other components
    - Any important implementation details
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8070,7 +8070,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8122,7 +8122,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8174,7 +8174,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8235,7 +8235,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
    - Reason for changes
    - Impact on related components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8287,7 +8287,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8339,7 +8339,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8391,7 +8391,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8449,7 +8449,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 2. Update component relationships in the relevant sections
 3. Document any migration steps or breaking changes
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8501,7 +8501,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8553,7 +8553,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8605,7 +8605,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8664,7 +8664,7 @@ This documentation follows the codebase structure:
 - Components are grouped by their functional relationship
 - Types and interfaces are documented with their usage patterns
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8716,7 +8716,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8768,7 +8768,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8824,7 +8824,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 When updating the documentation, add a changelog entry in this format:
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8876,7 +8876,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8940,7 +8940,7 @@ Potential areas for future development:
 - Social sharing of achievements
 - Expanded course catalog with advanced financial topics
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -8992,7 +8992,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9046,7 +9046,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  12. Layout System
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9098,7 +9098,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9150,7 +9150,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9206,7 +9206,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The application uses a centralized layout system to maintain consistent styling and header visibility across pages.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9258,7 +9258,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9310,7 +9310,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9362,7 +9362,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9418,7 +9418,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 - `PageLayout` (`/components/layout/page-layout.tsx`): Wrapper component for all pages except the home page
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9470,7 +9470,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9522,7 +9522,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9574,7 +9574,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9633,7 +9633,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Applies consistent flex-1 and bg-background styling to all pages
 - Eliminates duplicate styling code across individual page components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9685,7 +9685,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9737,7 +9737,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9789,7 +9789,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9859,7 +9859,7 @@ export const Route = createRootRoute({
 });
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9911,7 +9911,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -9967,7 +9967,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 This section provides a detailed file-by-file breakdown of the PawFi codebase. Use this as a reference for understanding specific implementation details.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10019,7 +10019,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10071,7 +10071,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10125,7 +10125,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13.1. Types
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10177,7 +10177,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10229,7 +10229,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10281,7 +10281,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10367,7 +10367,7 @@ const question: ChoiceQuestion = {
 };
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10419,7 +10419,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10471,7 +10471,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10525,7 +10525,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13.2. Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10577,7 +10577,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10629,7 +10629,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10681,7 +10681,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10735,7 +10735,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Learning Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10787,7 +10787,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10839,7 +10839,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10891,7 +10891,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -10943,7 +10943,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11009,7 +11009,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 <MermaidRenderer content="graph TD; A-->B;" />
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11061,7 +11061,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11113,7 +11113,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11165,7 +11165,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11217,7 +11217,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11282,7 +11282,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Unlocks next lessons upon completion
 - Calculates earned XP based on performance
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11334,7 +11334,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11386,7 +11386,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11438,7 +11438,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11490,7 +11490,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11551,7 +11551,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `isAnswerCorrect`: Validates a specific answer for any question type
 - `isCurrentQuestionAnswered`: Checks if the current question has been answered
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11603,7 +11603,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11655,7 +11655,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11707,7 +11707,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11761,7 +11761,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  UI Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11813,7 +11813,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11865,7 +11865,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11917,7 +11917,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -11969,7 +11969,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12034,7 +12034,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 **Sizes:**
 - `sm`, `md`, `lg`
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12086,7 +12086,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12138,7 +12138,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12190,7 +12190,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12242,7 +12242,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12304,7 +12304,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Animation using GSAP
 - Accessibility features
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12356,7 +12356,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12408,7 +12408,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12462,7 +12462,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13.3. Authentication Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12514,7 +12514,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12566,7 +12566,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12618,7 +12618,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12690,7 +12690,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Streamlined navigation flow to direct users to the chat page after authentication
 - Simplified verification UI with clear instructions and visual indicators
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12742,7 +12742,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12794,7 +12794,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12846,7 +12846,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12913,7 +12913,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Provides a link to the registration page for new users
 - Handles various authentication error states
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -12965,7 +12965,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13017,7 +13017,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13069,7 +13069,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13136,7 +13136,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Maintains user state across the application
 - Provides authentication methods to components via context
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13188,7 +13188,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13240,7 +13240,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13294,7 +13294,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13.4. Layout Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13346,7 +13346,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13398,7 +13398,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13450,7 +13450,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13516,7 +13516,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Renders the header on all pages except the home page
 - Applies consistent flex-1 and bg-background styling to all pages
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13568,7 +13568,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13620,7 +13620,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13674,7 +13674,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  13.5. Chat Components
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13726,7 +13726,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13778,7 +13778,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13830,7 +13830,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13905,7 +13905,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `continueJsonResponse()`: Handles the automatic continuation of incomplete JSON
 - `getAIResponse(userMessage: string, addToChat: boolean)`: Enhanced to support JSON continuation
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -13957,7 +13957,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14011,7 +14011,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  14. Backend Services
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14063,7 +14063,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14115,7 +14115,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14171,7 +14171,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 We use Supabase for authentication and data storage. The Supabase client is initialized in `lib/supabase.ts`.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14223,7 +14223,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14275,7 +14275,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14331,7 +14331,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 We've implemented a dedicated backend service for storing and retrieving chat history. The backend is built with Express, TypeScript, and MongoDB, providing a RESTful API for managing conversations.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14383,7 +14383,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14435,7 +14435,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14487,7 +14487,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14547,7 +14547,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Update conversation details
 - Delete conversations
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14599,7 +14599,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14651,7 +14651,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14703,7 +14703,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14766,7 +14766,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 | POST   | /api/conversations/:id/messages | Add a message to a conversation   |
 | DELETE | /api/conversations/:id        | Delete a conversation             |
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14818,7 +14818,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14870,7 +14870,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14922,7 +14922,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -14978,7 +14978,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The frontend interacts with this API using the `conversation-service.ts` service, which provides functions for all the API endpoints. The chat interface has been updated to use this service for storing and retrieving chat history.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15030,7 +15030,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15082,7 +15082,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15134,7 +15134,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15192,7 +15192,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 paw-fi-be/
 ├── src/
 │   ├── config/
-│   │   └── db.ts                 # Calculator Charting & Visualization
+│   │   └── db.ts                 
 
 ## Chart.js Integration
 
@@ -15246,7 +15246,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Database connection
 │   ├── controllers/
-│   │   └── conversationController.ts  # Calculator Charting & Visualization
+│   │   └── conversationController.ts  
 
 ## Chart.js Integration
 
@@ -15300,7 +15300,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  API controllers
 │   ├── models/
-│   │   └── Conversation.ts       # Calculator Charting & Visualization
+│   │   └── Conversation.ts       
 
 ## Chart.js Integration
 
@@ -15354,7 +15354,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  MongoDB models
 │   ├── routes/
-│   │   └── conversationRoutes.ts # Calculator Charting & Visualization
+│   │   └── conversationRoutes.ts 
 
 ## Chart.js Integration
 
@@ -15407,7 +15407,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  API routes
-│   └── server.ts                 # Calculator Charting & Visualization
+│   └── server.ts                 
 
 ## Chart.js Integration
 
@@ -15460,7 +15460,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Main server file
-├── .env.example                  # Calculator Charting & Visualization
+├── .env.example                  
 
 ## Chart.js Integration
 
@@ -15513,7 +15513,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Environment variables template
-├── package.json                  # Calculator Charting & Visualization
+├── package.json                  
 
 ## Chart.js Integration
 
@@ -15566,7 +15566,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  Dependencies and scripts
-└── tsconfig.json                 # Calculator Charting & Visualization
+└── tsconfig.json                 
 
 ## Chart.js Integration
 
@@ -15621,7 +15621,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
  TypeScript configuration
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15673,7 +15673,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15727,7 +15727,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  15. Database Schema
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15779,7 +15779,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15831,7 +15831,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15887,7 +15887,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The application uses Supabase as its backend-as-a-service (BaaS) solution. The following tables are defined in the Supabase database:
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15939,7 +15939,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -15991,7 +15991,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16043,7 +16043,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16112,7 +16112,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can update their own records
 - Service role can insert new records (triggered by auth sign-up)
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16164,7 +16164,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16216,7 +16216,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16268,7 +16268,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16336,7 +16336,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can insert their own progress records
 - Users cannot modify existing progress records
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16388,7 +16388,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16440,7 +16440,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16492,7 +16492,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16558,7 +16558,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can read their own preference records
 - Users can update their own preference records
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16610,7 +16610,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16662,7 +16662,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16714,7 +16714,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16785,7 +16785,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All users can read lessons
 - Only admins can create/update lessons
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16837,7 +16837,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16889,7 +16889,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -16941,7 +16941,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17008,7 +17008,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All users can read categories
 - Only admins can create/update categories
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17060,7 +17060,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17112,7 +17112,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17164,7 +17164,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17231,7 +17231,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All users can read badges
 - Only admins can create/update badges
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17283,7 +17283,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17335,7 +17335,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17387,7 +17387,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17452,7 +17452,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can read their own badges
 - System can insert badges for users
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17504,7 +17504,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17556,7 +17556,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17608,7 +17608,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17675,7 +17675,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All users can read learning paths
 - Only admins can create/update learning paths
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17727,7 +17727,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17779,7 +17779,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17831,7 +17831,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17898,7 +17898,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can read their own learning path progress
 - Users can update their own learning path progress
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -17950,7 +17950,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18002,7 +18002,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18054,7 +18054,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18124,7 +18124,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can update their own chat sessions
 - Users can delete their own chat sessions
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18176,7 +18176,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18228,7 +18228,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18280,7 +18280,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18347,7 +18347,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - Users can read messages in their own chat sessions
 - Users can insert messages into their own chat sessions
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18399,7 +18399,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18451,7 +18451,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18511,7 +18511,7 @@ Supabase Auth provides several built-in tables for authentication management:
 - `auth.sessions`: Manages user sessions
 - `auth.refresh_tokens`: Handles token refresh for authenticated sessions
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18563,7 +18563,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18615,7 +18615,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18672,7 +18672,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - `on_auth_user_created`: Creates a new record in the `users` table when a user signs up
 - `on_user_updated`: Updates the `auth.users` metadata when a user updates their profile
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18724,7 +18724,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18778,7 +18778,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  15. Chat System Architecture
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18830,7 +18830,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18882,7 +18882,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18938,7 +18938,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 The chat system uses Supabase Edge Functions to handle chat history management. Edge Functions are serverless functions that run on Supabase's infrastructure, providing a scalable and efficient way to handle backend operations.
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -18990,7 +18990,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19042,7 +19042,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19094,7 +19094,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19177,7 +19177,7 @@ const { data, error } = await supabase.functions.invoke('chat_sessions', {
 const { data, error } = await supabase.functions.invoke('chat_sessions');
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19229,7 +19229,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19281,7 +19281,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19333,7 +19333,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19418,7 +19418,7 @@ const { data, error } = await supabase.functions.invoke('chat_messages', {
 });
 ```
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19470,7 +19470,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19522,7 +19522,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19576,7 +19576,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  15.2. Frontend Integration
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19628,7 +19628,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19680,7 +19680,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19732,7 +19732,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19796,7 +19796,7 @@ The `conversation-service.ts` file provides a clean API for interacting with the
 - `getMessages`: Retrieves all messages for a specific chat session
 - `addMessage`: Adds a new message to a chat session
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19848,7 +19848,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19900,7 +19900,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -19952,7 +19952,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20015,7 +20015,7 @@ The `chat-interface.tsx` component provides the user interface for the chat syst
 - Integrates with authentication to show different UI based on user state
 - Implements local storage fallback for offline access
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20067,7 +20067,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20119,7 +20119,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20193,7 +20193,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
    - Messages are also stored in localStorage for offline access
    - When connection is restored, messages are synchronized with the server
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20245,7 +20245,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20299,7 +20299,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
  16. Changelog
 
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20351,7 +20351,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 
@@ -20403,7 +20403,7 @@ This project now uses [Chart.js](https://www.chartjs.org/) via [react-chartjs-2]
 
 ## Migration Note
 - All previous custom SVG chart code has been replaced with Chart.js-based React components for maintainability and interactivity.
-# Calculator Charting & Visualization
+
 
 ## Chart.js Integration
 

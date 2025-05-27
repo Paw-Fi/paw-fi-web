@@ -6,7 +6,6 @@ import type { Course, Lesson, Question, QuestionType } from '@/types/learning.ty
 import { generateUniqueId } from '@/utils/id-generator';
 import { CourseForm, LessonList, LessonEditor, QuestionTypeSelector } from '@/components/author/course-editor';
 import { QuestionEditor } from '@/components/author/question-editor';
-import type { UniqueIdentifier } from '@dnd-kit/core';
 
 export const Route = createFileRoute('/author/course/$courseId')({
   component: CourseEditorPage,
@@ -27,6 +26,7 @@ const createEmptyLesson = (parentId: string): Lesson => ({
   title: 'New Lesson',
   description: 'Lesson description',
   icon: '📝',
+  unlocked: true,
   xp: 50,
   questions: []
 });

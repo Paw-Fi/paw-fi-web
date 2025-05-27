@@ -6,6 +6,15 @@ import { useAuth } from "@/contexts/auth-context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faTableCells, faSignOut, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { gsap } from "gsap";
+import { LearningDropdown } from "@/components/ui/learning-dropdown";
+import lessonsData from "@/data/basic-lessons.json";
+
+const lessons = lessonsData.lessons.map((l: any) => ({
+  id: l.id,
+  title: l.title,
+  description: l.description,
+  icon: l.icon
+}));
 
 export default function Header() {
   const { user, signOut, isLoading } = useAuth();
@@ -57,15 +66,8 @@ export default function Header() {
               >
                 Home
               </Link>
-              <Link 
-                to="/learning" 
-                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                activeProps={{
-                  className: "inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-gray-900"
-                }}
-              >
-                Learning
-              </Link>
+              {/* Learning dropdown */}
+              <LearningDropdown lessons={lessons} />
               <Link 
                 to="/chat" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"

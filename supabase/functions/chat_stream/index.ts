@@ -3,11 +3,16 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
+import { tryExtractCourseJson } from "./utils.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { AI_PROMPT } from "./prompt.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-
+console.log("AI_PROMPT", AI_PROMPT.substring(0, 100));
 if (!GEMINI_API_KEY) {
-  console.error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
+  console.error(
+    "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
+  );
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -17,10 +22,10 @@ serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204, // No content
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
-  
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
       status: 405,
@@ -32,18 +37,22 @@ serve(async (req: Request): Promise<Response> => {
     let rawBody: string = await req.text();
     let requestData;
     try {
-      if (!rawBody || rawBody.trim() === '') {
+      if (!rawBody || rawBody.trim() === "") {
         requestData = {};
       } else {
         requestData = JSON.parse(rawBody);
       }
-      console.log('chat_stream rawBody:', rawBody);
-      console.log('chat_stream requestData:', JSON.stringify(requestData));
     } catch (error) {
-      return new Response(JSON.stringify({ error: "Invalid JSON in request body", details: { rawBody } }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Invalid JSON in request body",
+          details: { rawBody },
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
     const { message, history } = requestData;
     if (!message) {
@@ -53,28 +62,37 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Inject system prompt from env.AI_PROMPT as first message in history
-    const AI_PROMPT = Deno.env.get("AI_PROMPT");
     // Format conversation history for Gemini: support both {role, parts} and {role, content}
     const formattedHistory = (history || [])
       .filter((msg: any) => {
         // Accept only messages with valid text
-        if (msg.parts && Array.isArray(msg.parts) && typeof msg.parts[0]?.text === "string" && msg.parts[0].text.trim() !== "") return true;
-        if (typeof msg.content === "string" && msg.content.trim() !== "") return true;
+        if (
+          msg.parts &&
+          Array.isArray(msg.parts) &&
+          typeof msg.parts[0]?.text === "string" &&
+          msg.parts[0].text.trim() !== ""
+        )
+          return true;
+        if (typeof msg.content === "string" && msg.content.trim() !== "")
+          return true;
         return false;
       })
       .map((msg: any) => {
-        if (msg.parts && Array.isArray(msg.parts) && typeof msg.parts[0]?.text === "string") {
+        if (
+          msg.parts &&
+          Array.isArray(msg.parts) &&
+          typeof msg.parts[0]?.text === "string"
+        ) {
           // Already Gemini format, just fix role if needed
           return {
             role: msg.role === "assistant" ? "model" : msg.role,
-            parts: msg.parts
+            parts: msg.parts,
           };
         }
         // Legacy: convert from { role, content }
         return {
           role: msg.role === "assistant" ? "model" : msg.role,
-          parts: [{ text: msg.content }]
+          parts: [{ text: msg.content }],
         };
       });
     // Append the current user message
@@ -82,8 +100,8 @@ serve(async (req: Request): Promise<Response> => {
       ...formattedHistory,
       {
         role: "user",
-        parts: [{ text: message }]
-      }
+        parts: [{ text: message }],
+      },
     ];
     // Log the final contents sent to Gemini
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -94,108 +112,130 @@ serve(async (req: Request): Promise<Response> => {
     // Helper function to check if JSON is complete
     function isJsonComplete(text: string): boolean {
       // If we find ```json but don't find a closing ```, it's incomplete
-      const jsonStart = text.indexOf('```json');
+      const jsonStart = text.indexOf("```json");
       if (jsonStart === -1) return true; // No JSON code block found, considered complete
-      
+
       // Look for closing ``` after the start of ```json
-      const jsonEnd = text.indexOf('```', jsonStart + 7);
+      const jsonEnd = text.indexOf("```", jsonStart + 7);
       return jsonEnd !== -1;
     }
-    
+
     // Initial generation
-    let result = await model.generateContent({
-      contents,
-      systemInstruction: AI_PROMPT,
-    }, generationConfig);
-    
+    let result = await model.generateContent(
+      {
+        contents,
+        systemInstruction: AI_PROMPT,
+      },
+      generationConfig,
+    );
+
     let responseText = result.response.text();
     let attempts = 0;
     const MAX_ATTEMPTS = 5;
-    
+
     // If JSON is incomplete, keep requesting more content
     while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
       attempts++;
       console.log(`JSON incomplete, attempt ${attempts} to get more content`);
-      
+
       // Add the current response to history and ask for continuation
       const continuationContents = [
         ...contents,
         {
           role: "model",
-          parts: [{ text: responseText }]
+          parts: [{ text: responseText }],
         },
         {
           role: "user",
-          parts: [{ text: "Please continue and send the rest of the JSON code block without any additional text." }]
-        }
+          parts: [
+            {
+              text: "Please continue and send the rest of the JSON code block without any additional text.",
+            },
+          ],
+        },
       ];
-      
+
       // Generate continuation
-      const continuationResult = await model.generateContent({
-        contents: continuationContents,
-        systemInstruction: AI_PROMPT,
-      }, generationConfig);
-      
+      const continuationResult = await model.generateContent(
+        {
+          contents: continuationContents,
+          systemInstruction: AI_PROMPT,
+        },
+        generationConfig,
+      );
+
       // Append continuation to response
       const continuationText = continuationResult.response.text();
       responseText += "\n" + continuationText;
-      
+
       // If the combined response now has complete JSON, or we've reached max attempts, exit
       if (isJsonComplete(responseText) || attempts >= MAX_ATTEMPTS) {
         break;
       }
     }
-    
+
     // Clean up the response - if we have multiple ```json markers from continuations, fix it
     let cleanedResponse = responseText;
-    const jsonStartMarker = '```json';
+    const jsonStartMarker = "```json";
     const firstJsonStart = cleanedResponse.indexOf(jsonStartMarker);
-    
+
     if (firstJsonStart !== -1) {
       // Find duplicate ```json markers after the first one
-      let restOfString = cleanedResponse.substring(firstJsonStart + jsonStartMarker.length);
-      restOfString = restOfString.replace(/```json/g, '');
-      
+      let restOfString = cleanedResponse.substring(
+        firstJsonStart + jsonStartMarker.length,
+      );
+      restOfString = restOfString.replace(/```json/g, "");
+
       // Remove any extra closing ``` markers except the last one
-      const lastClosingMarker = restOfString.lastIndexOf('```');
+      const lastClosingMarker = restOfString.lastIndexOf("```");
       if (lastClosingMarker !== -1) {
         const beforeLast = restOfString.substring(0, lastClosingMarker);
         const afterLast = restOfString.substring(lastClosingMarker);
-        restOfString = beforeLast.replace(/```/g, '') + afterLast;
+        restOfString = beforeLast.replace(/```/g, "") + afterLast;
       }
-      
-      cleanedResponse = cleanedResponse.substring(0, firstJsonStart) + jsonStartMarker + restOfString;
+
+      cleanedResponse =
+        cleanedResponse.substring(0, firstJsonStart) +
+        jsonStartMarker +
+        restOfString;
     }
-    
+
     const markdownJsonPrefix = "```json";
     const markdownSuffix = "```";
     const trimmedCleanedResponse = cleanedResponse.trim();
-    
+
     // Check if the response looks like it contains JSON (either with markdown fences or starts with a curly brace)
     const hasJsonMarkdown = trimmedCleanedResponse.includes(markdownJsonPrefix);
-    const looksLikeRawJson = trimmedCleanedResponse.startsWith('{') && trimmedCleanedResponse.endsWith('}');
-    
+    const looksLikeRawJson =
+      trimmedCleanedResponse.startsWith("{") &&
+      trimmedCleanedResponse.endsWith("}");
+
     // If it doesn't look like JSON at all, just return the response as-is
     if (!hasJsonMarkdown && !looksLikeRawJson) {
       return new Response(JSON.stringify({ response: cleanedResponse }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
+
     // Extract JSON content if markdown fences are present
     let stringToParseForJson = cleanedResponse; // Start with the full cleaned response
-    
+
     if (hasJsonMarkdown) {
       const firstPrefixIndex = cleanedResponse.indexOf(markdownJsonPrefix);
       // Content after the first "```json"
-      let potentialJsonContent = cleanedResponse.substring(firstPrefixIndex + markdownJsonPrefix.length);
-      
+      let potentialJsonContent = cleanedResponse.substring(
+        firstPrefixIndex + markdownJsonPrefix.length,
+      );
+
       // Find the last "```" to ensure we get everything even if JSON itself contains "```"
       const lastSuffixIndex = potentialJsonContent.lastIndexOf(markdownSuffix);
-      
+
       if (lastSuffixIndex !== -1) {
         // Found a closing fence, take content between the first prefix and last suffix
-        stringToParseForJson = potentialJsonContent.substring(0, lastSuffixIndex);
+        stringToParseForJson = potentialJsonContent.substring(
+          0,
+          lastSuffixIndex,
+        );
       } else {
         // No closing fence found after the opening one, or it's part of the content.
         // Assume the rest of the string is the content to parse.
@@ -205,23 +245,61 @@ serve(async (req: Request): Promise<Response> => {
       // It's raw JSON without markdown fences
       stringToParseForJson = trimmedCleanedResponse;
     }
-    
+
     stringToParseForJson = stringToParseForJson.trim();
-    
+
     if (!stringToParseForJson) {
-      console.warn("JSON string to parse is empty after stripping fences and trimming. Original cleanedResponse:", cleanedResponse);
+      console.warn(
+        "JSON string to parse is empty after stripping fences and trimming. Original cleanedResponse:",
+        cleanedResponse,
+      );
       return new Response(JSON.stringify({ response: cleanedResponse }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
+
     try {
       // Only try to parse if it looks like JSON
       const parsedJsonObject = parse(stringToParseForJson);
-      
+
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
-      
+
+      // --- Course Extraction & Async Storage ---
+      // Attempt to extract a valid course object using Zod
+      const extractedCourse = tryExtractCourseJson(parsedJsonObject);
+      if (extractedCourse) {
+        // Fire-and-forget async storage
+        (async () => {
+          try {
+            // Replace with actual user_id extraction if available
+            const user_id = requestData.user_id || null;
+            if (!user_id) {
+              console.error("No user_id provided for course storage.");
+              return;
+            }
+            const client = createClient(
+              Deno.env.get("SUPABASE_URL")!,
+              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            );
+            const { error } = await client.functions.invoke(
+              "store-course-from-ai",
+              {
+                body: { user_id, course: extractedCourse },
+              },
+            );
+            if (error) {
+              console.error("Error invoking store-course-from-ai:", error);
+            }
+          } catch (err) {
+            console.error("Async course storage error:", err);
+          }
+        })();
+      } else {
+        console.log("No valid course JSON detected in AI response.");
+      }
+      // --- End Course Extraction & Async Storage ---
+
       // Preserve preamble and epilogue text from the original response
       let preamble = "";
       let epilogue = "";
@@ -230,43 +308,74 @@ serve(async (req: Request): Promise<Response> => {
         preamble = preambleMatch.trim();
         // Find epilogue after the last closing markdown fence
         const lastSuffixIndex = cleanedResponse.lastIndexOf(markdownSuffix);
-        if (lastSuffixIndex !== -1 && lastSuffixIndex + markdownSuffix.length < cleanedResponse.length) {
-          epilogue = cleanedResponse.slice(lastSuffixIndex + markdownSuffix.length).trim();
+        if (
+          lastSuffixIndex !== -1 &&
+          lastSuffixIndex + markdownSuffix.length < cleanedResponse.length
+        ) {
+          epilogue = cleanedResponse
+            .slice(lastSuffixIndex + markdownSuffix.length)
+            .trim();
         }
       }
       // Reconstruct the response with preamble, sanitized JSON, and epilogue
-      const fullMessageParts = [preamble, `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`, epilogue].filter(Boolean);
+      const fullMessageParts = [
+        preamble,
+        `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`,
+        epilogue,
+      ].filter(Boolean);
       const finalContentForClientResponse = fullMessageParts.join("\n\n");
-      return new Response(JSON.stringify({ response: finalContentForClientResponse }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({ response: finalContentForClientResponse }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (parseError) {
-      const errorMessage = parseError instanceof Error ? parseError.message : "Unknown parsing error";
-      console.error("Failed to parse JSON string with partial-json. Error:", errorMessage);
+      const errorMessage =
+        parseError instanceof Error
+          ? parseError.message
+          : "Unknown parsing error";
+      console.error(
+        "Failed to parse JSON string with partial-json. Error:",
+        errorMessage,
+      );
       if (parseError instanceof Error && parseError.stack) {
         console.error("Stack trace:", parseError.stack);
       }
-      console.error("Original cleanedResponse from AI (multi-turn, pre-stripping):", cleanedResponse);
-      console.error("String attempted for parsing (after stripping fences):", `"${stringToParseForJson}"`);
-      return new Response(JSON.stringify({ 
-        error: "Failed to process or parse JSON content from AI response", 
-        details: errorMessage,
-        attemptedJsonStringAfterStripping: stringToParseForJson,
-        rawAiResponse: cleanedResponse
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error(
+        "Original cleanedResponse from AI (multi-turn, pre-stripping):",
+        cleanedResponse,
+      );
+      console.error(
+        "String attempted for parsing (after stripping fences):",
+        `"${stringToParseForJson}"`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: "Failed to process or parse JSON content from AI response",
+          details: errorMessage,
+          attemptedJsonStringAfterStripping: stringToParseForJson,
+          rawAiResponse: cleanedResponse,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Internal Server Error:", errorMessage);
     if (error instanceof Error && error.stack) {
       console.error("Stack trace:", error.stack);
     }
-    return new Response(JSON.stringify({ error: "Internal Server Error", details: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Internal Server Error", details: errorMessage }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
