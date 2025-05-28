@@ -8,9 +8,22 @@ import gsap from 'gsap';
 // Import data from separate data file
 import type { Course } from '@/types/learning.types';
 import { COURSES_STORAGE_KEY } from '@/data/lessons';
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/learning/')({ 
   component: LearningPage,
+  head: () => {
+    const meta = seo({
+      title: 'Financial Learning Hub | PawFi',
+      description: 'Explore courses and lessons on personal finance, investing, and more. Start your financial education journey with PawFi.',
+      keywords: 'financial education, learning, courses, personal finance, investing, PawFi',
+      image: 'https://pawfi.app/og-img.png',
+      url: 'https://pawfi.app/learning/',
+    });
+    return {
+      meta
+    };
+  },
 });
 
 function LearningPage() {

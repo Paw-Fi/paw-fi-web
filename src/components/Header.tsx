@@ -4,12 +4,151 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faTableCells, faSignOut, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { gsap } from "gsap";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
 
-const lessons = lessonsData.lessons.map((l: any) => ({
+// Interfaces and functions from learning-dropdown.tsx
+interface Lesson {
+  id: string;
+  title: string;
+  description: string;
+  icon?: string;
+}
+
+interface LessonGroup {
+  name: string;
+  shortform: string;
+  lessons: Array<{ lesson: Lesson; lessonShortform: string }>;
+}
+
+const lessonMappings = [
+  // Getting Started
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Key Concepts",
+    lessonId: "L1-beginners-guide-investing-concepts",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Risk & Loss",
+    lessonId: "L1b-risk-and-loss",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Investment Risk",
+    lessonId: "L1d-investment-risk",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Diversification",
+    lessonId: "L1c-diversification",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Broker vs Dealer",
+    lessonId: "L1e-broker-vs-dealer",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Primary vs Secondary Market",
+    lessonId: "L1f-primary-vs-secondary-market",
+  },
+  {
+    group: "Getting Started",
+    groupShort: "GS",
+    lessonShort: "Behavioral Finance",
+    lessonId: "L2-behavioral-finance-emotions",
+  },
+  // Investment Types
+  {
+    group: "Investment Types",
+    groupShort: "IT",
+    lessonShort: "Money Market",
+    lessonId: "L3-money-market-explained",
+  },
+  {
+    group: "Investment Types",
+    groupShort: "IT",
+    lessonShort: "Bonds",
+    lessonId: "L4-bond-market-explained",
+  },
+  {
+    group: "Investment Types",
+    groupShort: "IT",
+    lessonShort: "Stocks",
+    lessonId: "L5-equity-market-overview",
+  },
+  {
+    group: "Investment Types",
+    groupShort: "IT",
+    lessonShort: "Derivatives",
+    lessonId: "L6-derivatives-market-simple",
+  },
+  // Financial Concepts
+  {
+    group: "Financial Concepts",
+    groupShort: "FC",
+    lessonShort: "Time Value",
+    lessonId: "L7-time-value-of-money",
+  },
+  {
+    group: "Financial Concepts",
+    groupShort: "FC",
+    lessonShort: "Statistics",
+    lessonId: "L8-statistics-for-investors",
+  },
+  {
+    group: "Financial Concepts",
+    groupShort: "FC",
+    lessonShort: "Economics",
+    lessonId: "L9-economics-basics-for-investors",
+  },
+  {
+    group: "Financial Concepts",
+    groupShort: "FC",
+    lessonShort: "Financial Statement Analysis",
+    lessonId: "L10-financial-statement-analysis",
+  },
+];
+
+function groupLessons(lessonsToGroup: Lesson[]): { groups: LessonGroup[] } {
+  const groupOrder = [
+    { name: "Getting Started", shortform: "GS" },
+    { name: "Investment Types", shortform: "IT" },
+    { name: "Financial Concepts", shortform: "FC" },
+  ];
+  const groups: LessonGroup[] = groupOrder.map((g) => ({ ...g, lessons: [] }));
+
+  for (const mapping of lessonMappings) {
+    const lesson = lessonsToGroup.find((l) => l.id === mapping.lessonId);
+    if (lesson) {
+      const groupIdx = groupOrder.findIndex((g) => g.name === mapping.group);
+      if (groupIdx !== -1) {
+        groups[groupIdx].lessons.push({ lesson, lessonShortform: mapping.lessonShort });
+      }
+    }
+  }
+  for (const lesson of lessonsToGroup) {
+    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.id);
+    if (!alreadyMapped) {
+      const gsGroup = groups.find(g => g.name === "Getting Started");
+      if (gsGroup) {
+        gsGroup.lessons.push({ lesson, lessonShortform: "Other" });
+      }
+    }
+  }
+  return { groups };
+}
+
+const lessons: Lesson[] = lessonsData.lessons.map((l: any) => ({
   id: l.id,
   title: l.title,
   description: l.description,
@@ -19,6 +158,7 @@ const lessons = lessonsData.lessons.map((l: any) => ({
 export default function Header() {
   const { user, signOut, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLearningSubmenuOpen, setIsLearningSubmenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -222,9 +362,29 @@ export default function Header() {
       </div>
 
       {/* Mobile menu, show/hide based on menu state */}
+      {/* Mobile menu overlay */}
       {isMenuOpen && (
-        <div className="sm:hidden">
-          <div className="pt-2 pb-3 space-y-1">
+        <div 
+          className={`fixed inset-0 z-40 flex flex-col bg-white p-4 transition-transform duration-300 ease-in-out sm:hidden transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-menu-title"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 id="mobile-menu-title" className="text-lg font-medium text-gray-900 sr-only">Navigation Menu</h2> {/* SR only title for accessibility */}
+            <div className="flex-grow"></div> {/* Spacer */} 
+            <button
+              type="button"
+              className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <span className="sr-only">Close menu</span>
+              <FontAwesomeIcon icon={faTimes} className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="flex-grow overflow-y-auto">
+            {/* Original menu content starts here */}
+            <div className="space-y-1">
             <Link
               to="/"
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
@@ -235,16 +395,80 @@ export default function Header() {
             >
               Home
             </Link>
-            <Link
-              to="/learning"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
-              activeProps={{
-                className: "block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary bg-primary/10"
-              }}
-              onClick={() => setIsMenuOpen(false)}
+            {/* Learning Accordion Toggle */}
+            <button
+              type="button"
+              className="flex items-center justify-between w-full pl-3 pr-4 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 focus:outline-none"
+              onClick={() => setIsLearningSubmenuOpen(!isLearningSubmenuOpen)}
+              aria-expanded={isLearningSubmenuOpen}
+              aria-controls="learning-submenu"
             >
-              Learning
-            </Link>
+              <span>Learning</span>
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`w-5 h-5 transform transition-transform duration-200 ${isLearningSubmenuOpen ? 'rotate-180' : 'rotate-0'}`}
+              />
+            </button>
+            {/* Learning Submenu Content */}
+            {isLearningSubmenuOpen && (
+              <div id="learning-submenu" className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-gray-200 ml-3">
+                {/* AI Learning Link - Mobile Adapted */}
+                <Link
+                  to="/learning/"
+                  className="group/ai flex w-full items-center gap-3 rounded-md p-3 text-sm font-medium text-white bg-gradient-to-r from-[#7458FF] via-purple-500 to-fuchsia-500 hover:opacity-90"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="text-xl">🤖</span>
+                  <span className="flex-grow">
+                    <span className="block font-semibold">AI Learning</span>
+                    <span className="block text-xs opacity-90 font-normal">Personalized lessons by AI.</span>
+                  </span>
+                  <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4 transition-transform group-hover/ai:translate-x-1" />
+                </Link>
+
+                {/* View All Courses Link - Mobile Adapted */}
+                <Link
+                  to={`/learning/${lessonsData.id}`}
+                  className="flex items-center justify-between w-full pl-3 pr-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span>View All Courses</span>
+                  <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" />
+                </Link>
+
+                {/* Grouped Lessons */}
+                {(groupLessons(lessons).groups).map((group) =>
+                  group.lessons.length === 0 ? null : (
+                    <div key={group.name} className="pt-2">
+                      <h3 className="px-3 mb-1 text-xs font-semibold tracking-wider uppercase text-gray-500">
+                        {group.name}
+                      </h3>
+                      <ul className="space-y-1">
+                        {group.lessons.map(({ lesson, lessonShortform }) => (
+                          <li key={lesson.id}>
+                            <Link
+                              to={`/learning/${lessonsData.id}/lesson/${lesson.id}`}
+                              className="flex items-center gap-2 pl-3 pr-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-md"
+                              onClick={() => setIsMenuOpen(false)}
+                              activeProps={{ className: "bg-primary/10 text-primary font-semibold" }}
+                            >
+                              {lesson.icon && (
+                                <span className="flex-shrink-0 text-base">
+                                  {lesson.icon}
+                                </span>
+                              )}
+                              <span className="truncate flex-grow">
+                                {lessonShortform}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
             <Link
               to="/chat"
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
@@ -337,6 +561,7 @@ export default function Header() {
               </div>
             </div>
           )}
+          </div> {/* End of scrollable content wrapper */}
         </div>
       )}
     </header>

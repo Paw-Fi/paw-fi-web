@@ -6,9 +6,45 @@ import type { Course, Lesson, Question, QuestionType } from '@/types/learning.ty
 import { generateUniqueId } from '@/utils/id-generator';
 import { CourseForm, LessonList, LessonEditor, QuestionTypeSelector } from '@/components/author/course-editor';
 import { QuestionEditor } from '@/components/author/question-editor';
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/author/course/$courseId')({
   component: CourseEditorPage,
+  head: ({ params }: { params: { courseId: string } }) => {
+    let courseTitle = 'New Course'; // Default title
+    let courseDescription = 'Manage your course content on PawFi.'; // Default description
+    let courseImage = 'https://pawfi.app/og-img.png'; // Default site OG image
+
+    try {
+      const savedCourses = localStorage.getItem('courses'); // Assuming 'courses' is the key for the array
+      if (savedCourses) {
+        const coursesArray = JSON.parse(savedCourses) as Course[];
+        const foundCourse = coursesArray.find(c => c.id === params.courseId);
+        if (foundCourse) {
+          courseTitle = foundCourse.title || courseTitle;
+          courseDescription = foundCourse.description || courseDescription;
+          courseImage = foundCourse.image || courseImage; // Use course-specific image if available
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse courses from localStorage for meta tags:', e);
+    }
+
+    const pageUrl = `https://pawfi.app/author/course/${params.courseId}`;
+    const keywords = `course authoring, edit course, manage lessons, PawFi, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}`;
+
+    const meta = seo({
+      title: `Editing: ${courseTitle} | PawFi Authoring`,
+      description: `Edit and manage course content for "${courseTitle}". ${courseDescription}`,
+      keywords: keywords,
+      image: courseImage,
+      url: pageUrl,
+    });
+
+    return {
+      meta,
+    };
+  },
 });
 
 // Default course template for creating new courses

@@ -10,9 +10,53 @@ import { sanitizeCourse } from '@/utils/sanitize-course';
 import { LessonBackButton } from '@/components/learning/lesson-back-button';
 import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute("/learning/$courseId/")({
   component: CourseDetailPage,
+  head: ({ params }: { params: { courseId: string } }) => {
+    let courseTitle = 'Course Details'; // Default title
+    let courseDescription = 'Learn more about this course on PawFi.'; // Default description
+    const siteOgImage = 'https://pawfi.app/og-img.png'; // Default site OG image
+
+    try {
+      const storedCourses = localStorage.getItem(COURSES_STORAGE_KEY);
+      let foundCourse: Course | undefined = undefined;
+
+      if (storedCourses) {
+        const courses: Course[] = JSON.parse(storedCourses);
+        foundCourse = courses.find(c => c.id === params.courseId);
+      }
+
+      // If not found in localStorage, check basicCourse (assuming it's a single Course object)
+      if (!foundCourse && basicCourse && (basicCourse as Course).id === params.courseId) {
+        foundCourse = basicCourse as Course;
+      }
+      
+      if (foundCourse) {
+        courseTitle = foundCourse.title || courseTitle;
+        courseDescription = foundCourse.description || courseDescription;
+        // Assuming Course type does not have a specific image property here
+      }
+    } catch (e) {
+      console.error('Error fetching course data for head tags in /learning/$courseId/:', e);
+    }
+
+    const pageUrl = `https://pawfi.app/learning/${params.courseId}`;
+    const keywords = `${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}, financial education, PawFi, online course`;
+
+    const meta = seo({
+      title: `${courseTitle} | PawFi Learning`,
+      description: `Explore lessons in the ${courseTitle} course. ${courseDescription}`,
+      keywords: keywords,
+      image: siteOgImage,
+      url: pageUrl,
+    });
+
+    return {
+      meta,
+    };
+  },
 });
 
 

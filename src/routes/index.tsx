@@ -28,9 +28,29 @@ import {
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  head: () => {
+    const title = "PawFi - Learn & Manage Your Finances | Free Financial Education & Tools";
+    const description = "PawFi offers free financial education, interactive lessons, and powerful calculators to help you understand and manage your money. Start your journey to financial literacy today!";
+    const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, PawFi";
+    const imageUrl = 'https://pawfi.app/og-img.png';
+    const pageUrl = 'https://pawfi.app/';
+
+    const meta = seo({
+      title: title,
+      description: description,
+      keywords: keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });
+
+    return {
+      meta,
+    };
+  },
 });
 
 function FeatureCard({

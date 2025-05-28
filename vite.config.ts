@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { VitePluginRadar } from 'vite-plugin-radar'
+
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,6 +15,11 @@ export default defineConfig({
       routeFilePrefix: '',
     }),
     viteReact(),
+    VitePluginRadar({
+      analytics: {
+        id: 'G-KVHTSD1MF1',
+      },
+    })
   ],
   resolve: {
     alias: {

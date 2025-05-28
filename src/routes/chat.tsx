@@ -1,6 +1,7 @@
 "use client";
 
 import { createFileRoute } from "@tanstack/react-router";
+import { seo } from '@/utils/seo';
 import catIcon from "@/assets/images/cat.gif";
 
 // Import the chat interface component
@@ -8,6 +9,24 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 
 export const Route = createFileRoute("/chat")({
   component: Chat,
+  head: () => {
+    const title = "AI Chat | PawFi - Your Financial Assistant";
+    const description = "Chat with PawFi's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
+    const keywords = "AI chat, financial assistant, PawFi, money questions, financial help, chatbot";
+    const imageUrl = 'https://pawfi.app/og-img.png';
+    const pageUrl = 'https://pawfi.app/chat';
+
+    const meta = seo({
+      title: title,
+      description: description,
+      keywords: keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });    
+    return {      
+      meta
+    };
+  },
 });
 
 function Chat() {

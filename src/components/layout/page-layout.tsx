@@ -18,7 +18,7 @@ export function PageLayout() {
   return (
     <div className="flex flex-col h-screen w-screen ">
       <Header />
-      <main className="flex-1 bg-background flex flex-col justify-center items-center">
+      <main className="flex-1 bg-background flex flex-col justify-center items-center [view-transition-name:main-content]">
         <Outlet />
       </main>
     </div>

@@ -176,7 +176,7 @@ export function LearningDropdown({ lessons }: LearningDropdownProps) {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link
                 to="/learning/"
-                className="group/ai inline-flex w-full sm:flex-1 items-center justify-center gap-3 rounded-2xl border-4 border-white bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-pink-400 px-6 py-4 text-lg font-bold tracking-wide text-white shadow-lg transition hover:scale-[1.03] focus:ring-2 focus:ring-fuchsia-400 focus:outline-none active:scale-95"
+                className="group/ai inline-flex w-full sm:flex-1 items-center justify-center gap-3 rounded-2xl border-4 border-white bg-gradient-to-tr from-[#7458FF] via-purple-500 to-fuchsia-500 px-6 py-4 text-lg font-bold tracking-wide text-white shadow-lg transition hover:scale-[1.03] focus:ring-2 focus:ring-purple-400 focus:outline-none active:scale-95"
                 tabIndex={0}
                 aria-label="Start AI-Powered Learning"
               >

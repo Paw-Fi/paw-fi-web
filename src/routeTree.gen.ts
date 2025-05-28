@@ -17,7 +17,6 @@ import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
 import { Route as CookiePolicyImport } from './routes/cookie-policy'
 import { Route as ChatImport } from './routes/chat'
-import { Route as RootImport } from './routes/_root'
 import { Route as RegisterRouteImport } from './routes/register/route'
 import { Route as ProfileRouteImport } from './routes/profile/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding/route'
@@ -80,11 +79,6 @@ const CookiePolicyRoute = CookiePolicyImport.update({
 const ChatRoute = ChatImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const RootRoute = RootImport.update({
-  id: '/_root',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -295,13 +289,6 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/_root': {
-      id: '/_root'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof RootImport
       parentRoute: typeof rootRoute
     }
     '/chat': {
@@ -558,7 +545,6 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
-  '': typeof RootRoute
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
@@ -589,7 +575,6 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '': typeof RootRoute
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
@@ -626,7 +611,6 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
-  '/_root': typeof RootRoute
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
@@ -664,7 +648,6 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/register'
-    | ''
     | '/chat'
     | '/cookie-policy'
     | '/intro'
@@ -694,7 +677,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | ''
     | '/chat'
     | '/cookie-policy'
     | '/intro'
@@ -729,7 +711,6 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/register'
-    | '/_root'
     | '/chat'
     | '/cookie-policy'
     | '/intro'
@@ -766,7 +747,6 @@ export interface RootRouteChildren {
   OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
   ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
   RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
-  RootRoute: typeof RootRoute
   ChatRoute: typeof ChatRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
@@ -797,7 +777,6 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
   ProfileRouteRoute: ProfileRouteRouteWithChildren,
   RegisterRouteRoute: RegisterRouteRouteWithChildren,
-  RootRoute: RootRoute,
   ChatRoute: ChatRoute,
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
@@ -837,7 +816,6 @@ export const routeTree = rootRoute
         "/onboarding",
         "/profile",
         "/register",
-        "/_root",
         "/chat",
         "/cookie-policy",
         "/intro",
@@ -893,9 +871,6 @@ export const routeTree = rootRoute
       "children": [
         "/register/"
       ]
-    },
-    "/_root": {
-      "filePath": "_root.tsx"
     },
     "/chat": {
       "filePath": "chat.tsx"

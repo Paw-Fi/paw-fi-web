@@ -32,6 +32,12 @@ function SortCategoriesQuestion({ question, onAnswer, value }: SortCategoriesQue
   const [uncategorizedItems, setUncategorizedItems] = useState<Array<DraggableItemType>>(
     question.items.filter(item => !value || !value[item.id])
   );
+
+  // Reset state when question.id changes
+  useEffect(() => {
+    setItemCategories(value || {});
+    setUncategorizedItems(question.items.filter(item => !value || !value[item.id]));
+  }, [question.id, value, question.items]);
   
   // Track dragging state (following the example pattern)
   const [isDragging, setIsDragging] = useState(false);

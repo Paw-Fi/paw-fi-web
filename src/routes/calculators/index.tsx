@@ -11,9 +11,21 @@ import {
   faCreditCard,
   faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/calculators/')({
   component: CalculatorsPage,
+  head: () => {
+    const meta = seo({
+      title: 'Financial Calculators | PawFi',
+      description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
+      keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization',
+      image: 'https://pawfi.app/og-img.png',
+    });
+    return {
+      meta  
+    };
+  },
 });
 
 
