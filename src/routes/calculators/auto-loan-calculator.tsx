@@ -28,7 +28,7 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
       title: 'Auto Loan Calculator | PawFi',
       description: "Calculate your auto loan payments, interest, and total cost with PawFi's easy-to-use car loan calculator.",
       keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta

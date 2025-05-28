@@ -12,7 +12,7 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
       title: 'Investment Growth Calculator | PawFi',
       description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with PawFi's investment calculator.",
       keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta

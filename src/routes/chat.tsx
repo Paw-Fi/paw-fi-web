@@ -13,7 +13,7 @@ export const Route = createFileRoute("/chat")({
     const title = "AI Chat | PawFi - Your Financial Assistant";
     const description = "Chat with PawFi's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
     const keywords = "AI chat, financial assistant, PawFi, money questions, financial help, chatbot";
-    const imageUrl = 'https://pawfi.app/og-img.png';
+    const imageUrl = 'https://paw-fi.app/og-img.png';
     const pageUrl = 'https://pawfi.app/chat';
 
     const meta = seo({

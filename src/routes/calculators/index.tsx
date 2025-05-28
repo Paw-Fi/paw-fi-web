@@ -20,7 +20,7 @@ export const Route = createFileRoute('/calculators/')({
       title: 'Financial Calculators | PawFi',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
       keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta  

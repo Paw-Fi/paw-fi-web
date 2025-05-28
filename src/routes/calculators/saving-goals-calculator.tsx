@@ -13,7 +13,7 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
       title: 'Savings Goal Calculator | PawFi',
       description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with PawFi.',
       keywords: 'savings goal calculator, financial goals, saving plan, regular savings, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta

@@ -13,7 +13,7 @@ export const Route = createFileRoute('/author/course/$courseId')({
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'New Course'; // Default title
     let courseDescription = 'Manage your course content on PawFi.'; // Default description
-    let courseImage = 'https://pawfi.app/og-img.png'; // Default site OG image
+    let courseImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
     try {
       const savedCourses = localStorage.getItem('courses'); // Assuming 'courses' is the key for the array

@@ -17,7 +17,7 @@ export const Route = createFileRoute('/learning/')({
       title: 'Financial Learning Hub | PawFi',
       description: 'Explore courses and lessons on personal finance, investing, and more. Start your financial education journey with PawFi.',
       keywords: 'financial education, learning, courses, personal finance, investing, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
       url: 'https://pawfi.app/learning/',
     });
     return {

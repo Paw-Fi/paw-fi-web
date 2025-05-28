@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
     const title = "PawFi - Learn & Manage Your Finances | Free Financial Education & Tools";
     const description = "PawFi offers free financial education, interactive lessons, and powerful calculators to help you understand and manage your money. Start your journey to financial literacy today!";
     const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, PawFi";
-    const imageUrl = 'https://pawfi.app/og-img.png';
+    const imageUrl = 'https://paw-fi.app/og-img.png';
     const pageUrl = 'https://pawfi.app/';
 
     const meta = seo({

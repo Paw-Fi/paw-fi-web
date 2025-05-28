@@ -13,7 +13,7 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
       title: 'Mortgage Calculator | PawFi',
       description: 'Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan with PawFi.',
       keywords: 'mortgage calculator, home loan calculator, PITI calculator, amortization schedule, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta

@@ -101,7 +101,7 @@ function IntroPage() {
   // Using direct Link components with viewTransition prop
 
   return (
-    <div className="bg-background flex flex-1 items-center justify-center">
+    <div className="bg-background h-screen flex flex-1 items-center justify-center">
       <div
         className="relative flex w-full max-w-[90vw] lg:max-w-md flex-col gap-4 overflow-hidden rounded-3xl bg-white  shadow-lg lg:min-h-[33rem] min-h-[34rem]"
       >

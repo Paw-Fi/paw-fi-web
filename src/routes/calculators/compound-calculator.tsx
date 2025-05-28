@@ -13,7 +13,7 @@ export const Route = createFileRoute('/calculators/compound-calculator')({
       title: 'Compound Interest Calculator | PawFi',
       description: 'Visualize the power of compound interest. Calculate how your investments can grow over time with our compound interest calculator.',
       keywords: 'compound interest calculator, investment growth, financial planning, compounding, PawFi',
-      image: 'https://pawfi.app/og-img.png',
+      image: 'https://paw-fi.app/og-img.png',
     });
     return {
       meta    

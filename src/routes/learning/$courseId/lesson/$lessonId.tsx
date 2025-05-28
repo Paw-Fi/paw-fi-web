@@ -26,7 +26,7 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
     let lessonTitle = 'Lesson';
     let lessonDescription = 'Explore this lesson on PawFi.';
     let courseTitle = 'Financial Learning';
-    const siteOgImage = 'https://pawfi.app/og-img.png'; // Default site OG image
+    const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
     try {
       const lesson = getLessonById(params.lessonId);
