@@ -294,13 +294,14 @@ export const addMessage = async (
 export async function getAIResponseFromEdge(
   supabase: SupabaseClient,
   prompt: string,
-  history: any[]
+  history: any[],
+  userId?: string
 ): Promise<AIResponse> {
   try {
-    console.log('Sending request to chat_stream function with body:', { message: prompt, history });
+    console.log('Sending request to chat_stream function with body:', { message: prompt, history , userId });
     const { data, error } = await supabase.functions.invoke('chat_stream', {
       method: 'POST',
-      body: { message: prompt, history }
+      body: { message: prompt, history, userId }
       // Supabase will handle JSON serialization and headers automatically
     });
     if (error) throw error;

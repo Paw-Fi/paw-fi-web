@@ -42,7 +42,6 @@ function sanitizeCourseJson(raw: any) {
             validation: q.validation ?? null,
             explanation: q.explanation ? String(q.explanation).trim() : null,
             incorrect_explanation: q.incorrectExplanation ? String(q.incorrectExplanation).trim() : null,
-            hint: q.hint ? String(q.hint).trim() : null,
             help_tips: q.helpTips ? String(q.helpTips).trim() : null,
             content_blocks: q.contentBlocks ?? null,
             position: qidx,
@@ -54,10 +53,20 @@ function sanitizeCourseJson(raw: any) {
 }
 
 serve(async (req) => {
+  // Log the incoming request for debugging
+  let debugBody;
+  try {
+    debugBody = await req.clone().json();
+    console.log("[store-course-from-ai] Received payload:", debugBody);
+  } catch (e) {
+    console.log("[store-course-from-ai] Could not parse payload as JSON", e);
+  }
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
   const { user_id, course } = await req.json();
+  console.log("[store-course-from-ai] Parsed user_id:", user_id);
+  console.log("[store-course-from-ai] Parsed course:", course);
   if (!user_id || !course) {
     return new Response(
       JSON.stringify({ error: "Missing user_id or course" }),
@@ -67,7 +76,9 @@ serve(async (req) => {
   let sanitized;
   try {
     sanitized = sanitizeCourseJson(course);
+    console.log("[store-course-from-ai] Sanitized course:", sanitized);
   } catch (err) {
+    console.error("[store-course-from-ai] Course sanitization error:", err);
     return new Response(
       JSON.stringify({ error: "Invalid course JSON: " + err.message }),
       { status: 400, headers: { "Content-Type": "application/json" } }
@@ -78,6 +89,15 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
   // Insert course
+  console.log("[store-course-from-ai] Inserting course row:", {
+    user_id,
+    course_id: sanitized.id,
+    title: sanitized.title,
+    description: sanitized.description,
+    icon: sanitized.icon,
+    xp: sanitized.xp,
+    unlocked: sanitized.unlocked,
+  });
   const { data: courseRow, error: courseErr } = await supabase
     .from("user_courses")
     .insert({
@@ -92,15 +112,16 @@ serve(async (req) => {
     .select("id")
     .single();
   if (courseErr || !courseRow?.id) {
+    console.error("[store-course-from-ai] Failed to insert course", courseErr);
     return new Response(
       JSON.stringify({ error: "Failed to insert course", details: courseErr }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-  const user_course_id = courseRow.id;
+  const course_id = courseRow.id;
   // Insert lessons
   const lessonsToInsert = sanitized.lessons.map((lesson) => ({
-    user_course_id,
+    course_id,
     lesson_id: lesson.id,
     title: lesson.title,
     description: lesson.description,
@@ -109,11 +130,13 @@ serve(async (req) => {
     icon: lesson.icon,
     position: lesson.position,
   }));
+  console.log("[store-course-from-ai] Inserting lessons:", lessonsToInsert);
   const { data: lessonRows, error: lessonErr } = await supabase
     .from("user_lessons")
     .insert(lessonsToInsert)
     .select("id, lesson_id, position");
   if (lessonErr) {
+    console.error("[store-course-from-ai] Failed to insert lessons", lessonErr);
     return new Response(
       JSON.stringify({ error: "Failed to insert lessons", details: lessonErr }),
       { status: 500, headers: { "Content-Type": "application/json" } }
@@ -127,10 +150,10 @@ serve(async (req) => {
   // Insert questions
   const questionsToInsert = [];
   for (const lesson of sanitized.lessons) {
-    const user_lesson_id = lessonIdMap[lesson.id];
+    const lesson_id = lessonIdMap[lesson.id];
     for (const q of lesson.questions) {
       questionsToInsert.push({
-        user_lesson_id,
+        lesson_id,
         question_id: q.id,
         type: q.type,
         question: q.question,
@@ -144,18 +167,18 @@ serve(async (req) => {
         validation: q.validation,
         explanation: q.explanation,
         incorrect_explanation: q.incorrect_explanation,
-        hint: q.hint, // Added
         help_tips: q.help_tips,
-        content_blocks: q.content_blocks, // Added
         position: q.position,
       });
     }
   }
   if (questionsToInsert.length > 0) {
+    console.log("[store-course-from-ai] Inserting questions:", questionsToInsert);
     const { error: questionErr } = await supabase
       .from("user_questions")
       .insert(questionsToInsert);
     if (questionErr) {
+      console.error("[store-course-from-ai] Failed to insert questions", questionErr);
       return new Response(
         JSON.stringify({ error: "Failed to insert questions", details: questionErr }),
         { status: 500, headers: { "Content-Type": "application/json" } }

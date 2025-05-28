@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useUserCourses } from '@/services/course-service';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 
 // Import data from separate data file
-import type { Course } from '@/types/learning.types';
-import { COURSES_STORAGE_KEY } from '@/data/lessons';
+
+
 import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/learning/')({ 
@@ -27,43 +29,18 @@ export const Route = createFileRoute('/learning/')({
 });
 
 function LearningPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Reference to the container of lesson cards
   const lessonCardsRef = useRef<HTMLDivElement>(null);
-  
-  // Load courses data from localStorage or fall back to default data
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      // Migration: support old single-course data
-      const legacy = localStorage.getItem('paw-fi-course');
-      let loadedCourses: Course[] = [];
-      if (legacy) {
-        const legacyCourse = JSON.parse(legacy);
-        if (legacyCourse && legacyCourse.id) {
-          loadedCourses = [legacyCourse];
-          localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(loadedCourses));
-          localStorage.removeItem('paw-fi-course');
-        }
-      } else {
-        const stored = localStorage.getItem(COURSES_STORAGE_KEY);
-        if (stored) {
-          loadedCourses = JSON.parse(stored);
-        }
-      }
-      setCourses(Array.isArray(loadedCourses) ? loadedCourses : []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  
+  const { user } = useAuth();
+  const {
+    data: courses = [],
+    isLoading,
+    isError,
+    error,
+  } = useUserCourses(user?.id ?? '', { enabled: !!user });
+
   // Use GSAP for animations
   useGSAP(() => {
-    if (!lessonCardsRef.current) return;
+    if (!lessonCardsRef.current || !courses) return;
     const cards = lessonCardsRef.current.querySelectorAll('.course-card');
     if (cards.length === 0) return;
     gsap.set(cards, { opacity: 0, y: 20 });
@@ -75,6 +52,30 @@ function LearningPage() {
       ease: 'power2.out'
     });
   }, [courses]);
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <p className="text-gray-600">You must be logged in to view your courses.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <p className="text-red-600">Error loading courses: {error instanceof Error ? error.message : 'Unknown error'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-12 px-4">
@@ -106,8 +107,8 @@ function LearningPage() {
           ) : (
             courses.map((course) => (
               <Link
-                key={course.id}
-                to={`/learning/${course.id}`}
+                key={course.course_id}
+                to={`/learning/${course.course_id}`}
                 className="course-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
               >
                 <div className="p-6 flex flex-col h-full justify-between">

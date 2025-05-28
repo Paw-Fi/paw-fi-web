@@ -447,7 +447,7 @@ export function ChatInterface() {
         // Get AI response for the first message
         const stream = await getAIResponseFromEdge(supabase, newConvId, [
           userMessage,
-        ]); // Pass only user message for context
+        ], userId); // Pass only user message for context
         let assistantResponse = "";
         const assistantMessageId = `assistant-${Date.now()}`;
 
@@ -562,7 +562,7 @@ export function ChatInterface() {
         const response = await getAIResponseFromEdge(
           supabase,
           content,
-          contextMessages,
+          contextMessages,     
         );
         const assistantMessage: Message = {
           content:
@@ -677,6 +677,7 @@ export function ChatInterface() {
           supabase,
           content,
           contextMessages,
+          user.id,
         );
 
         // Add the assistant response to the messages (optimistic update)

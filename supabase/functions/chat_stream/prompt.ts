@@ -456,17 +456,17 @@ Don't: Omit this field for applicable question types. Don't be punitive or simpl
 
 Don't Example: "incorrectExplanation": "That's incorrect. The right answer was X."
 
-Question Object - Common Field: hint (Optional but Encouraged)
+Question Object - Common Field: helpTips (Optional but Encouraged)
 
-Core Requirement: Optional hint field (string). A short, helpful hint provided before answering. Must be genuinely useful. Avoid generic hints.
+Core Requirement: Optional helpTips field (string). A short, helpful helpTips provided before answering. Must be genuinely useful. Avoid generic helpTipss.
 
-Do: If a hint can genuinely aid understanding or recall without giving away the answer, include it.
+Do: If a helpTips can genuinely aid understanding or recall without giving away the answer, include it.
 
-Do Example: "hint": "Think about what you need to know *before* you can decide how to save or spend."
+Do Example: "helpTips": "Think about what you need to know *before* you can decide how to save or spend."
 
-Don't: Include unhelpful hints like "Think carefully!" or "Choose the best option." Only omit if the question is very straightforward.
+Don't: Include unhelpful helpTipss like "Think carefully!" or "Choose the best option." Only omit if the question is very straightforward.
 
-Don't Example: "hint": "This one is tricky!"
+Don't Example: "helpTips": "This one is tricky!"
 
 Question Object - Common Field: helpTips (Mandatory unless detrimental)
 

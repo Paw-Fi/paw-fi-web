@@ -55,6 +55,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     const { message, history } = requestData;
+    console.log("requestData", requestData)
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
@@ -264,18 +265,26 @@ serve(async (req: Request): Promise<Response> => {
 
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
-
+      console.log("wellFormedJsonString", wellFormedJsonString);
       // --- Course Extraction & Async Storage ---
       // Attempt to extract a valid course object using Zod
-      const extractedCourse = tryExtractCourseJson(parsedJsonObject);
+      const extractedCourse = wellFormedJsonString
       if (extractedCourse) {
         // Fire-and-forget async storage
         (async () => {
           try {
             // Replace with actual user_id extraction if available
-            const user_id = requestData.user_id || null;
+            const user_id = requestData.userId || null;
             if (!user_id) {
               console.error("No user_id provided for course storage.");
+              return;
+            }
+            // Ensure course is an object, not a string
+            let parsedCourse;
+            try {
+              parsedCourse = typeof extractedCourse === "string" ? JSON.parse(extractedCourse) : extractedCourse;
+            } catch (err) {
+              console.error("Failed to parse extractedCourse as JSON", err);
               return;
             }
             const client = createClient(
@@ -285,7 +294,7 @@ serve(async (req: Request): Promise<Response> => {
             const { error } = await client.functions.invoke(
               "store-course-from-ai",
               {
-                body: { user_id, course: extractedCourse },
+                body: { user_id, course: parsedCourse },
               },
             );
             if (error) {

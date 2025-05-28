@@ -64,7 +64,6 @@ export type BaseQuestion = {
   question: string;
   explanation?: string;
   incorrectExplanation?: string;
-  hint?: string;
   helpTips?: string;
   contentBlocks?: ContentBlock[];
   imagePrompt?: string;
@@ -72,46 +71,40 @@ export type BaseQuestion = {
 };
 
 // A fully flexible Question type to accommodate JSON data
-export type Question = {
-  id: string;
+export interface Question {
+  question_id: string;
+  id?: string; // legacy/compat
   type: QuestionType;
   question: string;
   explanation?: string;
   incorrectExplanation?: string;
-  hint?: string;
   helpTips?: string;
   contentBlocks?: ContentBlock[];
   imagePrompt?: string;
   caption?: string;
-  
   // Common properties
-  options?: any[]; // Allow any array to accommodate different data sources
-  itemsPerRow?: number; // Allow any number value
-  
+  options?: any[];
+  itemsPerRow?: number;
   // Sort and category properties
-  items?: any[]; // Allow any array
-  correctAnswers?: string[] | Record<string, string[]> | any; // Support both array and record formats
-  categories?: any[]; // Allow any array format
-  helpTipsData?: any[]; // Allow any array format
-  
+  items?: any[];
+  correctAnswers?: string[] | Record<string, string[]> | any;
+  categories?: any[];
+  helpTipsData?: any[];
   // Match properties
   matchItems?: any[];
-  
   // Matrix rating properties
   ratingOptions?: any[];
   correctRatings?: Record<string, string>;
   imageUrl?: string;
-  
   // Text input properties
   placeholder?: string;
   prefix?: string;
   suffix?: string;
   correctAnswer?: string | string[];
-  validation?: any; // Allow any validation structure
-  
+  validation?: any;
   // Allow additional properties for flexibility
   [key: string]: any;
-};
+}
 
 // Type aliases for cleaner code - all based on the flexible Question type
 export type ChoiceQuestion = Question;
@@ -152,23 +145,25 @@ export function isImageChoiceQuestion(question: Question): question is Question 
 }
 
 // Lesson structure
-export type Lesson = {
-  id: string;
+export interface Lesson {
+  lesson_id: string;
+  id?: string; // legacy/compat
   title: string;
   description: string;
   xp: number;
   unlocked: boolean;
   icon?: string;
   questions: Question[];
-  contentBlocks?: ContentBlock[] | any[]; // Support for structured content blocks
-  helpTips?: string; // Some lessons may have help tips directly
-};
+  contentBlocks?: ContentBlock[] | any[];
+  helpTips?: string;
+}
 
 // Course containing multiple lessons
-export type Course = {
-  id: string;
+export interface Course {
+  course_id: string;
+  id?: string; // legacy/compat
   title: string;
   description: string;
-  icon?: string; // Allow for course icon
+  icon?: string;
   lessons: Lesson[];
-};
+}

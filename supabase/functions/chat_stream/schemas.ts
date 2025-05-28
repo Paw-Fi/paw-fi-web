@@ -54,7 +54,6 @@ const BaseQuestionFields = {
   question: z.string(),
   explanation: z.string(),
   incorrectExplanation: z.string().optional(),
-  hint: z.string().optional(),
   helpTips: z.string().optional(),
   contentBlocks: z.array(ContentBlockSchema).optional(),
 };

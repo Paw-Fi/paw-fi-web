@@ -10,8 +10,9 @@ import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
 import { QuestionHeader } from "@/components/learning/question-header";
-import { getLessonById, COURSES_STORAGE_KEY } from "@/data/lessons"; // Added COURSES_STORAGE_KEY
-import type { Course } from '@/types/learning.types'; // Added Course type
+import { useAuth } from '@/contexts/auth-context';
+import { useUserCourses } from '@/services/course-service';
+import type { Course } from '@/types/learning.types';
 import { seo } from '@/utils/seo';
 import basicCourse from '@/data/basic-lessons.json'; // Ensure this is imported
 import { createFileRoute, useParams } from "@tanstack/react-router";
@@ -80,16 +81,28 @@ const catIcons=[catBottle,catCash,catCoin,catPig]
 
 function LessonPage() {
   const { courseId, lessonId } = useParams({ from: '/learning/$courseId/lesson/$lessonId' });
-  
-  // Get lesson data from our data file
-  const lesson = getLessonById(lessonId);
+  const { user } = useAuth();
+  const {
+    data: courses = [],
+    isLoading,
+    isError,
+    error,
+  } = useUserCourses(user?.id ?? '', { enabled: !!user });
+  const course = courses.find((c: Course) => c.course_id === courseId);
+  const lesson = course?.lessons.find((l) => l.lesson_id === lessonId);
 
-  // Fallback if lesson doesn't exist
+  if (isLoading) {
+    return (
+      <div className="flex flex-row items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">{lesson?.title || 'Lesson'}</h1>
+          {!isLoading && <LessonBackButton />}
+        </div>
+    );
+  }
   if (!lesson) {
     return <LessonNotFound />;
   }
 
-  // Use our custom hook to handle all lesson logic
   const {
     currentQuestionIndex,
     currentQuestion,

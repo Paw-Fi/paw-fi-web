@@ -1,12 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 
 import { useParams, Link } from '@tanstack/react-router';
-import { useEffect, useState, useRef } from 'react';
+import { useRef } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useUserCourses } from '@/services/course-service';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import type { Course, Lesson } from '@/types/learning.types';
-import { COURSES_STORAGE_KEY } from '@/data/lessons';
-import { sanitizeCourse } from '@/utils/sanitize-course';
+
+
 import { LessonBackButton } from '@/components/learning/lesson-back-button';
 import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
@@ -25,11 +27,11 @@ export const Route = createFileRoute("/learning/$courseId/")({
 
       if (storedCourses) {
         const courses: Course[] = JSON.parse(storedCourses);
-        foundCourse = courses.find(c => c.id === params.courseId);
+        foundCourse = courses.find(c => c.course_id === params.courseId);
       }
 
       // If not found in localStorage, check basicCourse (assuming it's a single Course object)
-      if (!foundCourse && basicCourse && (basicCourse as Course).id === params.courseId) {
+      if (!foundCourse && basicCourse && (basicCourse as Course).course_id === params.courseId) {
         foundCourse = basicCourse as Course;
       }
       
@@ -63,30 +65,15 @@ export const Route = createFileRoute("/learning/$courseId/")({
 
 export default function CourseDetailPage() {
   const { courseId } = useParams({ from: '/learning/$courseId/' });
-  const [course, setCourse] = useState<Course | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const lessonCardsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      const stored = localStorage.getItem(COURSES_STORAGE_KEY);
-      if (stored) {
-        const courses: Course[] = JSON.parse(stored);
-        const found = [...courses, basicCourse as Course].find((c) => c.id === courseId);
-        if (found) {
-          const sanitized = sanitizeCourse(found);
-          setCourse(sanitized);
-        } else {
-          setCourse(null);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading course:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [courseId]);
+  const { user } = useAuth();
+  const {
+    data: courses = [],
+    isLoading,
+    isError,
+    error,
+  } = useUserCourses(user?.id ?? '', { enabled: !!user });
+  const course = courses.find((c) => c.course_id === courseId) || null;
 
   useGSAP(() => {
     if (!lessonCardsRef.current) return;
@@ -104,14 +91,23 @@ export default function CourseDetailPage() {
 
   const navigate = useNavigate();
 
-  return (
-    <div className="py-12 px-4">
-      <div className="mb-4 lg:mb-0">
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <span className="text-lg text-gray-400">Loading course...</span>
+      </div>
+    );
+  }
 
-            <LessonBackButton onBack={() => navigate({ to: "/learning" })} />
+  return (
+    <div className="py-12 px-4 relative">
+        {!isLoading && <div className="absolute top-4 left-4">
+          <LessonBackButton onBack={() => navigate({ to: "/learning" })} />
+        </div>}
+      <div className="flex flex-row items-center justify-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Course Details'}</h1>
       </div>
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">{course?.title}</h1>
         <p className="text-gray-600 max-w-md mx-auto">{course?.description}</p>
       </div>
       {isLoading ? (
@@ -137,8 +133,8 @@ export default function CourseDetailPage() {
             course.lessons.map((lesson: Lesson) => (
               lesson.unlocked ? (
                 <Link
-                  key={lesson.id}
-                  to={`/learning/${courseId}/lesson/${lesson.id}`}
+                  key={lesson.lesson_id}
+                  to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
                   className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
                 >
                   <div className="p-4">
