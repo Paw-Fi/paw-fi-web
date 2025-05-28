@@ -26,15 +26,18 @@ export function getFromStorage<T>(key: string, fallback: T): T {
     console.error('Error retrieving from localStorage:', error);
     return fallback;
   }
+  return fallback;
 }
 
 /**
  * Remove data from localStorage with the PawFi prefix
  */
 export function removeFromStorage(key: string): void {
-  try {
-    localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
-  } catch (error) {
-    console.error('Error removing from localStorage:', error);
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+    } catch (error) {
+      console.error('Error removing from localStorage:', error);
+    }
   }
 }

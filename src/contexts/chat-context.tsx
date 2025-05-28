@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import { getFromStorage, saveToStorage } from '@/utils/storage';
 import type { Question } from '@/types/learning.types';
@@ -27,16 +27,37 @@ const defaultState: ChatState = {
   answers: {},
 };
 
+const chatReducer = (state: ChatState, action: { type: string; payload: any }) => {
+  switch (action.type) {
+    case 'HYDRATE':
+      return action.payload;
+    case 'NEXT_STEP':
+      return { ...state, currentStep: Math.min(state.currentStep + 1, questions.length) };
+    case 'PREV_STEP':
+      return { ...state, currentStep: Math.max(state.currentStep - 1, 0) };
+    case 'SET_ANSWER':
+      return { ...state, answers: { ...state.answers, [action.payload.questionId]: action.payload.answer } };
+    case 'RESET_CHAT':
+      return defaultState;
+    default:
+      return state;
+  }
+};
+
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ChatState>(() => 
-    getFromStorage<ChatState>(STORAGE_KEY, defaultState)
-  );
+  const [state, dispatch] = useReducer(chatReducer, defaultState);
 
+  // Hydrate from localStorage on client
+  useEffect(() => {
+    const stored = getFromStorage(STORAGE_KEY);
+    if (stored) {
+      dispatch({ type: 'HYDRATE', payload: JSON.parse(stored) });
+    }
+  }, []);
 
-
-const isComplete = state.currentStep >= questions.length;
+  const isComplete = state.currentStep >= questions.length;
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
