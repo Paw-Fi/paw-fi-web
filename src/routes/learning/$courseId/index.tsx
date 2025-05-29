@@ -73,7 +73,7 @@ export default function CourseDetailPage() {
     isError,
     error,
   } = useUserCourses(user?.id ?? '', { enabled: !!user });
-  const course = courses.find((c) => c.course_id === courseId) || null;
+  const course =courseId===basicCourse.id ? basicCourse : courses.find((c) => c.course_id === courseId) || null;
 
   useGSAP(() => {
     if (!lessonCardsRef.current) return;
@@ -91,28 +91,65 @@ export default function CourseDetailPage() {
 
   const navigate = useNavigate();
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-40">
-        <span className="text-lg text-gray-400">Loading course...</span>
-      </div>
-    );
-  }
-
   return (
     <div className="py-12 px-4 relative">
         {!isLoading && <div className="absolute top-4 left-4">
           <LessonBackButton onBack={() => navigate({ to: "/learning" })} />
         </div>}
-      <div className="flex flex-row items-center justify-center mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Course Details'}</h1>
-      </div>
-      <div className="text-center mb-8">
-        <p className="text-gray-600 max-w-md mx-auto">{course?.description}</p>
-      </div>
       {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+ 
+          <div className="flex flex-col gap-4 items-center mb-8">
+            <div className="h-4 w-64 rounded bg-gray-200 animate-pulse" />
+            <div className="h-4 w-80 mx-auto rounded bg-gray-200 animate-pulse " />
+          </div>
+   
+      ) : (
+        <>
+          <div className="flex flex-row items-center justify-center mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">{course?.title}</h1>
+          </div>
+          <div className="text-center mb-8">
+            <p className="text-gray-600 max-w-md mx-auto">{course?.description}</p>
+          </div>
+        </>
+      )}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="lesson-card block lg:min-w-128 bg-white rounded-2xl shadow-md overflow-hidden transition-all cursor-pointer p-6 mb-4 animate-pulse"
+            >
+              <div className="flex items-center mb-2">
+                <div className="h-8 w-8 rounded-full bg-gray-200 mr-3" />
+                <div className="flex-1">
+                  <div className="h-5 w-3/4 bg-gray-200 rounded mb-1" />
+                  <div className="h-4 w-1/2 bg-gray-100 rounded" />
+                </div>
+              </div>
+              <div className="mb-3">
+                <div className="h-4 w-full bg-gray-100 rounded mb-1" />
+                <div className="h-4 w-2/3 bg-gray-100 rounded" />
+              </div>
+              <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="h-6 w-6 rounded-full bg-gray-200 mr-2" />
+                  <div className="h-4 w-16 bg-gray-100 rounded" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-10 bg-gray-100 rounded" />
+                  <div className="h-6 w-14 rounded-full bg-gray-200" />
+                </div>
+              </div>
+              {/* Locked bar skeleton (show on 2 out of 3 for realism) */}
+              {i > 0 && (
+                <div className="mt-3 flex items-center gap-2 rounded bg-gray-100 px-3 py-2">
+                  <div className="h-4 w-4 rounded bg-gray-200" />
+                  <div className="h-4 w-40 bg-gray-200 rounded" />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <div ref={lessonCardsRef} className="max-w-xl mx-auto space-y-6">

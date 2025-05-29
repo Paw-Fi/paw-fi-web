@@ -1,29 +1,30 @@
-'use client';
+"use client";
 
-import { useRef } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import { useUserCourses } from '@/services/course-service';
-import { Link, createFileRoute } from '@tanstack/react-router';
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
+import { useRef } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserCourses } from "@/services/course-service";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 
 // Import data from separate data file
 
+import { seo } from "@/utils/seo";
 
-import { seo } from '@/utils/seo';
-
-export const Route = createFileRoute('/learning/')({ 
+export const Route = createFileRoute("/learning/")({
   component: LearningPage,
   head: () => {
     const meta = seo({
-      title: 'Financial Learning Hub | PawFi',
-      description: 'Explore courses and lessons on personal finance, investing, and more. Start your financial education journey with PawFi.',
-      keywords: 'financial education, learning, courses, personal finance, investing, PawFi',
-      image: 'https://paw-fi.app/og-img.png',
-      url: 'https://pawfi.app/learning/',
+      title: "PawFi: AI-Powered Financial Learning & Personalized Lessons",
+      description:
+        "Unlock your financial potential with PawFi. Our AI understands your needs to deliver personalized financial lessons, complemented by expert-written courses and powerful calculators.",
+      keywords:
+        "AI financial learning, personalized finance lessons, PawFi, financial education, AI finance coach, investment analysis, financial modeling, personal finance, money management, financial literacy tools",
+      image: "https://paw-fi.app/og-img.png",
+      url: "https://pawfi.app/learning/",
     });
     return {
-      meta
+      meta,
     };
   },
 });
@@ -36,12 +37,12 @@ function LearningPage() {
     isLoading,
     isError,
     error,
-  } = useUserCourses(user?.id ?? '', { enabled: !!user });
+  } = useUserCourses(user?.id ?? "", { enabled: !!user });
 
   // Use GSAP for animations
   useGSAP(() => {
     if (!lessonCardsRef.current || !courses) return;
-    const cards = lessonCardsRef.current.querySelectorAll('.course-card');
+    const cards = lessonCardsRef.current.querySelectorAll(".course-card");
     if (cards.length === 0) return;
     gsap.set(cards, { opacity: 0, y: 20 });
     gsap.to(cards, {
@@ -49,57 +50,113 @@ function LearningPage() {
       y: 0,
       duration: 0.5,
       stagger: 0.15,
-      ease: 'power2.out'
+      ease: "power2.out",
     });
   }, [courses]);
 
   if (!user) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <p className="text-gray-600">You must be logged in to view your courses.</p>
+      <div className="flex h-40 items-center justify-center">
+        <p className="text-gray-600">
+          You must be logged in to view your courses.
+        </p>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="px-4 py-12">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-2xl font-bold">Your Personalized Courses</h1>
+          <p className="mx-auto max-w-md text-gray-600">
+            Choose a course to continue learning. You can generate more courses
+            with our AI.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="course-card min-h-64 block animate-pulse transform cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md transition-all"
+            >
+              <div className="flex h-full flex-col justify-between p-6">
+                <div>
+                  <div className="mb-3 flex items-center">
+                    <div className="mr-3 h-10 w-10 rounded-full bg-gray-200" />
+                    <div>
+                      <div className="mb-2 h-5 w-32 rounded bg-gray-200" />
+                      <div className="h-4 w-40 rounded bg-gray-100" />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                  <div className="flex items-center">
+                    <div className="mr-2 h-6 w-6 rounded-full bg-gray-200" />
+                    <div className="h-4 w-16 rounded bg-gray-100" />
+                  </div>
+                  <div className="h-4 w-10 rounded bg-gray-100" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <p className="text-red-600">Error loading courses: {error instanceof Error ? error.message : 'Unknown error'}</p>
+      <div className="flex h-40 items-center justify-center">
+        <p className="text-red-600">
+          Error loading courses:{" "}
+          {error instanceof Error ? error.message : "Unknown error"}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="py-12 px-4">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">Your Courses</h1>
-        <p className="text-gray-600 max-w-md mx-auto">
-          Choose a course to continue learning. You can generate more courses with our AI.
+    <div className="px-4 py-12">
+      <div className="mb-8 text-center">
+        <h1 className="mb-2 text-2xl font-bold">Your Personalized Courses</h1>
+        <p className="mx-auto max-w-md text-gray-600">
+          Choose a course to continue learning. You can generate more courses
+          with our AI.
         </p>
       </div>
       {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="flex h-40 items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-purple-500"></div>
         </div>
       ) : (
-        <div ref={lessonCardsRef} className="mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl">
+        <div
+          ref={lessonCardsRef}
+          className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+        >
           {courses.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-2xl shadow-md col-span-full">
-              <p className="text-gray-600 mb-4">No courses available. Chat with our AI to generate personalized courses.</p>
+            <div className="col-span-full rounded-2xl bg-white p-8 text-center shadow-md">
+              <p className="mb-4 text-gray-600">
+                No courses available. Chat with our AI to generate personalized
+                courses.
+              </p>
               <Link
                 to="/chat"
-                className="inline-flex items-center justify-center px-5 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+                className="focus:ring-opacity-50 inline-flex items-center justify-center rounded-lg bg-purple-600 px-5 py-3 font-medium text-white transition-colors hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                <svg
+                  className="mr-2 h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                  />
                 </svg>
                 Chat with AI
               </Link>
@@ -109,31 +166,33 @@ function LearningPage() {
               <Link
                 key={course.course_id}
                 to={`/learning/${course.course_id}`}
-                className="course-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
+                className="course-card block transform cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg"
               >
-                <div className="p-6 flex flex-col h-full justify-between">
+                <div className="flex h-full flex-col justify-between p-6">
                   <div>
-                    <div className="flex items-center mb-3">
+                    <div className="mb-3 flex items-center">
                       <div className="mr-3 text-4xl" aria-hidden="true">
-                        {course.icon || '📖'}
+                        {course.icon || "📖"}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{course.title}</h3>
-                        <p className="text-sm text-gray-500">{course.description}</p>
+                        <h3 className="text-lg font-semibold">
+                          {course.title}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {course.description}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3">
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                     <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-full mr-2 bg-primary flex items-center justify-center text-white font-semibold text-xs">
+                      <div className="bg-primary mr-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold text-white">
                         {course.lessons.length}
                       </div>
                       <span className="text-sm">Lessons</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <div className="text-sm text-gray-500">
-                        
-                      </div>
+                      <div className="text-sm text-gray-500"></div>
                     </div>
                   </div>
                 </div>

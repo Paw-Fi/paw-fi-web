@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Course, Question } from "@/types/learning.types";
+import type { Course, Lesson, Question } from "@/types/learning.types";
 import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { unlockNextLesson } from "./unlock-next-lesson";
 
 interface UseLessonProps {
-  lessonId: string;
+  lesson: Lesson | undefined;
   courseId: string;
-  questions: Question[];
-  unlocked: boolean;
-  xp: number;
 }
 
-export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLessonProps) {
+export function useLesson({ lesson, courseId }: UseLessonProps) {
 
   const navigate = useNavigate();
   const router = useRouter();
@@ -28,13 +25,15 @@ export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLe
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const questions = lesson?.questions || [];
+  const lessonId = lesson?.lesson_id;
 
   // Handle redirection if lesson is not unlocked
   useEffect(() => {
-    if (!unlocked) {
+    if (lesson&&!lesson?.unlocked) {
       navigate({ to: "/learning" });
     }
-  }, [navigate, unlocked]);
+  }, [navigate, lesson]);
 
   // Get current question
   const currentQuestion = questions[currentQuestionIndex];
@@ -63,7 +62,7 @@ export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLe
   // Check the current answer correctness
   const handleCheckAnswer = () => {
     setShowFeedback(true);
-    const answer = answers[currentQuestion.id];
+    const answer = answers[currentQuestion?.question_id];
     
     // Check if the current answer is correct
     const isCorrect = isAnswerCorrect(currentQuestion, answer);
@@ -108,15 +107,15 @@ export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLe
 
       // Set XP earned based on correct answers
       if (allCorrect) {
-        setEarnedXp(xp);
+        setEarnedXp(lesson?.xp || 0);
         // If all answers are correct, unlock the next lesson
         unlockNextLesson(lessonId,courseId);
       } else {
         // Partial XP based on number of correct answers
         const correctCount = questions.filter((q) => 
-          isAnswerCorrect(q, answers[q.id])
+          isAnswerCorrect(q, answers[q?.question_id])
         ).length;
-        setEarnedXp(Math.floor((correctCount / questions.length) * xp));
+        setEarnedXp(Math.floor((correctCount / questions.length) * lesson.xp));
       }
 
       setIsComplete(true);
@@ -167,7 +166,7 @@ export function useLesson({ lessonId, courseId, questions, unlocked, xp }: UseLe
   };
 
   // Check if current question is answered
-  const isQuestionAnswered = isCurrentQuestionAnswered(currentQuestion, answers[currentQuestion.id]);
+  const isQuestionAnswered = isCurrentQuestionAnswered(currentQuestion, answers[currentQuestion?.question_id]);
 
   return {
     currentQuestionIndex,

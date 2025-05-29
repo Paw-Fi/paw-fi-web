@@ -33,6 +33,7 @@ interface Message {
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
 import { Modal } from "../ui/modal";
+import { useCookie } from "@/utils/use-cookie"; // Adjust this path if your alias is not set up. Use "../../utils/use-cookie" if needed.
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
@@ -40,13 +41,15 @@ import { sanitizeCourse } from "@/utils/sanitize-course";
 
 export function ChatInterface() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const { getCookie, setCookie } = useCookie();
+
   // --- Guest Conversation Utilities ---
   function getGuestSessionId(): string {
     if (typeof window === "undefined") return "";
-    let id = localStorage.getItem("paw-fi-guest-session-id");
+    let id = getCookie("paw-fi-guest-session-id");
     if (!id) {
       id = crypto.randomUUID();
-      localStorage.setItem("paw-fi-guest-session-id", id);
+      setCookie("paw-fi-guest-session-id", id, { days: 365, path: "/", sameSite: "Lax" });
     }
     return id;
   }
@@ -56,7 +59,7 @@ export function ChatInterface() {
   function loadGuestMessages(): Message[] {
     if (typeof window === "undefined") return [];
     try {
-      const raw = localStorage.getItem(guestMessagesKey());
+      const raw = getCookie(guestMessagesKey());
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -64,25 +67,25 @@ export function ChatInterface() {
   }
   function saveGuestMessages(msgs: Message[]) {
     if (typeof window === "undefined") return;
-    localStorage.setItem(guestMessagesKey(), JSON.stringify(msgs));
+    setCookie(guestMessagesKey(), JSON.stringify(msgs), { days: 365, path: "/", sameSite: "Lax" });
   }
   function clearGuestMessages() {
     if (typeof window === "undefined") return;
-    localStorage.removeItem(guestMessagesKey());
+    setCookie(guestMessagesKey(), "", { days: -1, path: "/", sameSite: "Lax" });
   }
 
   function acquireMergeLock(): boolean {
     if (typeof window === "undefined") return false;
     const lockKey = "paw-fi-chat-merge-lock";
     const now = Date.now();
-    const lockVal = localStorage.getItem(lockKey);
+    const lockVal = getCookie(lockKey);
     if (lockVal && now - parseInt(lockVal, 10) < 10000) return false; // 10s lock
-    localStorage.setItem(lockKey, now.toString());
+    setCookie(lockKey, now.toString(), { days: 1, path: "/", sameSite: "Lax" });
     return true;
   }
   function releaseMergeLock() {
     if (typeof window === "undefined") return;
-    localStorage.removeItem("paw-fi-chat-merge-lock");
+    setCookie("paw-fi-chat-merge-lock", "", { days: -1, path: "/", sameSite: "Lax" });
   }
   const navigate = useNavigate();
   const [currentMessage, setCurrentMessage] = useState("");

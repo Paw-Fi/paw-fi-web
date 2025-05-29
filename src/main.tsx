@@ -1,4 +1,3 @@
-import { StrictMode } from 'react'
 import "@styles/main.css";
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router';
@@ -13,7 +12,6 @@ import './lib/gsap-config'
 import { routeTree } from './routeTree.gen'
 
 import reportWebVitals from './reportWebVitals.ts'
-import { ChatProvider } from './contexts/chat-context.tsx'
 import { AuthProvider } from './contexts/auth-context.tsx'
 
 // Create a new router instance
@@ -64,7 +62,6 @@ function App() {
   return (
     <TanstackQuery.Provider>
       <AuthProvider>
-        <ChatProvider>
           <ToastContainer 
             position="top-right"
             autoClose={5000}
@@ -78,7 +75,6 @@ function App() {
             theme="light"
           />
           <RouterProvider router={router} />
-        </ChatProvider>
       </AuthProvider>
     </TanstackQuery.Provider>
   );

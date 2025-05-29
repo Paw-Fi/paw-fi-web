@@ -20,6 +20,8 @@ import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
 import catPig from "@/assets/images/lessons/cat-pig.svg";
+import { getLessonById } from "@/data/lessons";
+import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 
 export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
   component: LessonPage,
@@ -82,27 +84,32 @@ const catIcons=[catBottle,catCash,catCoin,catPig]
 function LessonPage() {
   const { courseId, lessonId } = useParams({ from: '/learning/$courseId/lesson/$lessonId' });
   const { user } = useAuth();
-  const {
-    data: courses = [],
-    isLoading,
-    isError,
-    error,
-  } = useUserCourses(user?.id ?? '', { enabled: !!user });
-  const course = courses.find((c: Course) => c.course_id === courseId);
-  const lesson = course?.lessons.find((l) => l.lesson_id === lessonId);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-row items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">{lesson?.title || 'Lesson'}</h1>
-          {!isLoading && <LessonBackButton />}
-        </div>
-    );
+  // Fetch all user courses using the TanStack query
+  const { data: courses, isLoading: isCoursesLoading, isError: isCoursesError } = useUserCourses(user?.id ?? '', { enabled: !!user });
+
+  // Find the course and lesson (handle async loading)
+  const course = courseId === basicCourse.id
+    ? basicCourse
+    : courses?.find((c: Course) => c.course_id === courseId);
+  const lesson = courseId === basicCourse.id
+    ? basicCourse.lessons.find((l) => l.lesson_id === lessonId)
+    : course?.lessons?.find((l) => l.lesson_id === lessonId);
+
+  // Always call the hook, even if lesson is undefined
+  const lessonHook = useLesson({ lesson, courseId });
+
+  // Early returns for loading, error, not found
+  if (isCoursesLoading) {
+    return <LessonSkeleton />;
+  }
+  if (isCoursesError) {
+    return <div className="text-center text-red-500 py-16">Failed to load course data.</div>;
   }
   if (!lesson) {
     return <LessonNotFound />;
   }
-
+  // Destructure after all early returns
   const {
     currentQuestionIndex,
     currentQuestion,
@@ -120,14 +127,10 @@ function LessonPage() {
     handleNext,
     handleBack,
     handleAnswer,
-    showFeedback
-  } = useLesson({
-    lessonId,
-    courseId,
-    questions: lesson.questions,
-    unlocked: lesson.unlocked,
-    xp: lesson.xp
-  });
+    showFeedback,
+  } = lessonHook;
+
+
 
   return (
     <div className="bg-background flex flex-1 flex-col px-4 py-8 lg:flex-row">

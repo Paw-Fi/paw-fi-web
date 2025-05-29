@@ -13,22 +13,24 @@ import banner2 from "@/assets/images/index/pawfi-banner2.png";
 import waveBackground from "@/assets/images/index/homepage-bg.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faChartLine,
-  faLightbulb,
-  faPiggyBank,
   faArrowRight,
   faGraduationCap,
-  faCoins,
-  faChartPie,
-  faCheckCircle,
   faBookOpen,
   faChalkboardTeacher,
   faPuzzlePiece,
+  faBrain,
+  faCalculator,
+  faCommentsDollar,
+  faTasks,
+  faRobot,
+
+  faTimes,
+  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import { supabase } from "@/lib/supabase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { seo } from '@/utils/seo';
+import basicLessonsData from '@/data/basic-lessons.json';
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -120,11 +122,73 @@ function FeatureCard({
   );
 }
 
+function BasicLessonCard({
+  icon,
+  title,
+  description,
+  linkTo,
+  animationDelay = 0,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  linkTo: string;
+  animationDelay?: number;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (cardRef.current) {
+        gsap.set(cardRef.current, { opacity: 0, y: 30, scale: 0.95 });
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              gsap.to(cardRef.current, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.7,
+                delay: animationDelay,
+                ease: "back.out(1.7)",
+              });
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1 },
+        );
+        observer.observe(cardRef.current);
+        return () => observer.disconnect();
+      }
+    },
+    { scope: cardRef, dependencies: [animationDelay] }, // Added animationDelay to dependencies
+  );
+
+  return (
+    <Link
+    to={linkTo}
+      ref={cardRef}
+      className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col transition-all hover:shadow-lg hover:-translate-y-1"
+    >
+      <div className="flex-grow">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <span className="text-xl" aria-hidden="true">{icon}</span>
+        </div>
+        <h3 className="mb-3 text-xl font-semibold text-slate-800">{title}</h3>
+        <p className="text-sm text-slate-600 leading-relaxed mb-6">{description}</p>
+      </div>
+      <div
+        className="inline-flex items-center font-medium text-emerald-600 hover:text-emerald-800 mt-auto"
+      >
+        Start Lesson
+        <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+      </div>
+    </Link>
+  );
+}
+
 function WaitlistForm() {
   const formRef = useRef<HTMLDivElement>(null);
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useGSAP(
     () => {
@@ -207,58 +271,38 @@ function WaitlistForm() {
   };
 
   return (
-    <div ref={formRef} className="rounded-3xl bg-purple-100 p-8 shadow-md">
-      {!submitted ? (
+    <div ref={formRef} className="rounded-3xl bg-purple-100 p-8 shadow-md">    
         <div className="form-contents flex flex-col items-center justify-center">
           <h3 className="mb-3 text-center text-2xl font-bold">
-            Join our Waitlist
+          Get Early Access to AI-Powered Learning
           </h3>
           <p className="mb-6 text-center text-gray-700">
-            Be the first to know when PawFi launches!
+          Be among the first to experience personalized financial education with PawFi. Join our community for updates and beta access.
           </p>
 
-          <form
-            onSubmit={handleSubmit}
-          >
+          
             <div className="mx-auto flex max-w-md flex-col gap-3 md:flex-row">              
               <Button
-                type="submit"
-                className="rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700"
-                isLoading={isSubmitting}
-                disabled={isSubmitting}
+                className="rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700"            
+                onClick={handleSubmit}
               >
-                Join Waitlist
+                Join Discord 
               </Button>
             </div>
-          </form>
         </div>
-      ) : (
-        <div
-          className="flex flex-col items-center justify-center py-10 text-center"
-        >
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-            <FontAwesomeIcon
-              icon={faCheckCircle}
-              className="text-2xl text-green-500"
-            />
-          </div>
-          <h3 className="mb-3 text-2xl font-bold">You're on the list!</h3>
-          <p className="max-w-md text-lg text-gray-700">
-            We'll notify you when PawFi is ready for you to explore.
-          </p>
-        </div>
-      )}
+      
     </div>
   );
 }
 
-function HomePage() {
+export function HomePage() {
   // Force GSAP's ScrollTrigger to refresh when this component mounts
   gsap.registerPlugin(ScrollTrigger);
   const headerRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const missionRef = useRef<HTMLDivElement>(null);
-  const learningSectionRef = useRef<HTMLDivElement>(null);
+  const learningSectionRef = useRef<HTMLDivElement>(null); // Used for two sections
+  const basicLessonsSectionRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLImageElement>(null);
 
   // ScrollTrigger is already registered globally
@@ -271,9 +315,11 @@ function HomePage() {
     // Set initial states for all animated elements
     gsap.set(".features-title", { opacity: 0, y: 30 });
     gsap.set(missionRef.current, { opacity: 0, y: 50 });
-    gsap.set(".learning-title", { opacity: 0, y: 30 });
+    gsap.set(".learning-title", { opacity: 0, y: 30 }); // Applies to both sections using this class
     gsap.set(".learning-image", { opacity: 0, scale: 0.8 });
     gsap.set(".learning-step", { opacity: 0, x: -30 });
+    gsap.set(".basic-lessons-title", { opacity: 0, y: 30 });
+    // BasicLessonCard animations are handled within the component itself
     
     // Create animation functions
     const animateFeatures = () => {
@@ -305,6 +351,16 @@ function HomePage() {
           duration: 0.5
         }, "-=0.5");
     };
+
+    const animateBasicLessons = () => {
+      gsap.to(".basic-lessons-title", {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power3.out",
+      });
+      // Individual card animations are self-contained in BasicLessonCard
+    };
     
     // Use IntersectionObserver to trigger animations when elements come into view
     const featuresObserver = new IntersectionObserver(entries => {
@@ -327,17 +383,34 @@ function HomePage() {
         learningObserver.disconnect();
       }
     }, { threshold: 0.1 });
+
+    const basicLessonsObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        animateBasicLessons();
+        basicLessonsObserver.disconnect();
+      }
+    }, { threshold: 0.1 });
+
+
     
     // Observe the trigger elements
     if (featuresRef.current) featuresObserver.observe(featuresRef.current);
     if (missionRef.current) missionObserver.observe(missionRef.current);
-    if (learningSectionRef.current) learningObserver.observe(learningSectionRef.current);
+    // learningSectionRef is used by two sections, ensure IntersectionObserver is robust or use separate refs if issues arise
+    if (learningSectionRef.current) {
+        // Assuming learningSectionRef points to the PARENT of multiple animated sections or the first one.
+        // For more complex scenarios with multiple distinct sections using the same ref for triggering, 
+        // consider unique refs or more specific querySelectors for observers.
+        learningObserver.observe(learningSectionRef.current); 
+    }
+    if (basicLessonsSectionRef.current) basicLessonsObserver.observe(basicLessonsSectionRef.current);
     
     return () => {
       // Clean up
       featuresObserver.disconnect();
       missionObserver.disconnect();
       learningObserver.disconnect();
+      basicLessonsObserver.disconnect();
       ScrollTrigger.getAll().forEach(st => st.kill());
     };
   }, []);
@@ -403,7 +476,7 @@ function HomePage() {
   useEffect(() => {
     const handleScroll = () => {
       // Get all elements with animations
-      const elements = document.querySelectorAll('.learning-step, .features-title, .learning-title, .learning-image');
+      const elements = document.querySelectorAll('.learning-step, .features-title, .learning-title, .learning-image, .basic-lessons-title');
       
       elements.forEach(el => {
         const rect = el.getBoundingClientRect();
@@ -433,21 +506,21 @@ function HomePage() {
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">
           <img src={catCoin} alt="PawFi" className="h-10 w-10" />
-          <span className="ml-2 text-xl font-bold">PawFi</span>
+          <span className="ml-2 text-xl font-bold">PawFi</span>         
         </div>
         <div className="flex items-center gap-4">
           <Link
-            to="/intro"
-            className="font-medium text-purple-600 hover:text-purple-800"
+            to="/learning"
+            className="font-medium text-purple-600 hover:text-purple-800 hidden lg:block"
           >
-            Try Demo
+            Explore Courses
           </Link>
           <Link
             to="/intro"
             className="font-medium text-purple-600 hover:text-purple-800"
           >
             <Button className="bg-purple-600 hover:bg-purple-700">
-              Get Started
+            Chat with AI
             </Button>
           </Link>
         </div>
@@ -461,28 +534,27 @@ function HomePage() {
         <div className="z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
           <div className="relative z-20">
             <h1 className="hero-title mb-6 text-4xl font-bold md:text-5xl lg:text-6xl">
-              Learning finance{" "}
-              <span className="text-purple-600">shouldn't be</span> boring
+            Personalized Financial Mastery with{" "}
+              <span className="text-purple-600">AI-Driven Learning</span>
             </h1>
             <p className="hero-subtitle mb-8 text-xl text-gray-700">
-              Join PawFi, the playful financial literacy app that makes
-              learning about money fun and accessible for everyone.
+              PawFi understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert
             </p>
             <div className="hero-cta flex flex-col gap-4 sm:flex-row">
               <Link to="/intro">
                 <Button className="w-full rounded-lg bg-purple-600 px-8 py-3 font-medium text-white hover:bg-purple-700 sm:w-auto">
-                  Try Demo
+                Start Your AI Lesson
                 </Button>
               </Link>
-              <a href="https://discord.gg/bWbNbd3q">
+              <Link to="/learning/guide-to-investing">
                 <Button
                   variant="outline"
                   className="w-full rounded-lg border-purple-600 px-8 py-3 font-medium text-purple-600 hover:bg-purple-50 sm:w-auto"
                 >
-                  Join Waitlist
+                  Explore Features
                 </Button>
-              </a>
-            </div>
+                </Link>
+                </div>
           </div>
           <div className="relative z-20 flex justify-center lg:justify-end">
             <img
@@ -507,52 +579,52 @@ function HomePage() {
       >
         <div className="mx-auto max-w-7xl">
           <h2 className="features-title mb-16 text-center text-3xl font-bold md:text-4xl">
-            Financial education{" "}
-            <span className="text-purple-600">reimagined</span>
+          Intelligent Financial Education, 
+            <span className="text-purple-600">Tailored For You</span>
           </h2>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
-              icon={faLightbulb}
-              title="Interactive Learning"
-              description="Engaging lessons that adapt to your learning style and financial goals."
+              icon={faBrain} // AI Understanding
+              title="AI-Personalized Lessons"
+              description="Our AI analyzes your goals and knowledge to create a unique learning path just for you."
               animationDelay={0.1}
             />
 
             <FeatureCard
-              icon={faPiggyBank}
-              title="Goal-Based Saving"
-              description="Set financial goals and track your progress with fun visual milestones."
-              animationDelay={0.2}
+             icon={faChalkboardTeacher} // Expert Instructor
+             title="Expert-Crafted Courses"
+             description="Learn foundational finance from a CFA, CSC, MBA with 10+ years of experience in simplified lessons."
+             animationDelay={0.2}
             />
 
             <FeatureCard
-              icon={faGraduationCap}
-              title="Learn At Your Pace"
-              description="Bite-sized lessons that fit into your busy schedule."
-              animationDelay={0.3}
+             icon={faCommentsDollar} // AI Chat
+             title="Interactive AI Chat"
+             description="Ask questions, get explanations, and explore financial scenarios with our intelligent AI assistant."
+             animationDelay={0.3}
             />
-
-            <FeatureCard
-              icon={faChartLine}
-              title="Track Your Progress"
-              description="Visual dashboards to see how your knowledge is growing over time."
+               <FeatureCard
+              icon={faCalculator} // Calculators
+              title="Practical Financial Calculators"
+              description="Utilize tools for auto loans, compound interest, mortgages, retirement, and savings goals."
               animationDelay={0.4}
             />
 
             <FeatureCard
-              icon={faCoins}
-              title="Earn While You Learn"
-              description="Get rewarded with XP and badges as you master new financial concepts."
-              animationDelay={0.5}
+               icon={faTasks} // Personalized Path
+               title="Adaptive Learning Path"
+               description="Your curriculum evolves as you learn, ensuring you're always challenged and engaged."
+               animationDelay={0.5}
             />
 
             <FeatureCard
-              icon={faChartPie}
-              title="Personalized Path"
-              description="Content tailored to your specific financial situation and goals."
+        icon={faGraduationCap} // Learn at your pace
+        title="Flexible Self-Paced Study"
+        description="Master complex financial topics at your own speed, anytime, anywhere."
               animationDelay={0.6}
             />
+          
           </div>
         </div>
       </section>
@@ -560,12 +632,9 @@ function HomePage() {
       {/* Mission Section */}
       <section ref={missionRef} className="px-6 py-20 md:px-12 lg:px-24">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="mb-8 text-3xl font-bold md:text-4xl">Our Mission</h2>
-          <p className="mb-12 text-xl text-gray-700">
-            At PawFi, we believe everyone deserves access to financial
-            education that's engaging, approachable, and actually fun. We're on
-            a mission to help you build confidence with money through playful,
-            interactive learning.
+        <h2 className="section-title-animate mb-8 text-3xl font-bold text-slate-800 md:text-4xl">Our Vision for Your Financial Future</h2>
+          <p className="mb-10 text-lg text-slate-600 leading-relaxed">
+            At PawFi, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
           </p>
           <div className="flex justify-center">
             <img src={banner3} alt="Cat with Piggy Bank" className="w-56" />
@@ -586,71 +655,34 @@ function HomePage() {
             </h2>
 
             <div className="space-y-8">
-              <div className="learning-step flex items-start gap-4">
+              {[
+                { title: "Tell Us About You", description: "Share your financial goals and current understanding. Our AI listens.", number: 1 },
+                { title: "Receive Your Custom Plan", description: "Our AI designs a unique lesson plan, focusing on what matters most to you.", number: 2 },
+                { title: "Learn & Interact", description: "Engage with AI-generated lessons, chat for clarity, and practice with real-world scenarios.", number: 3 },
+                { title: "Track & Achieve", description: "Monitor your progress, master new skills, and apply your knowledge confidently.", number: 4 },
+              ].map((step, index) => (
+                <div className="learning-step flex items-start gap-4">
                 <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  1
+                  {step.number}
                 </div>
                 <div>
                   <h3 className="mb-2 text-xl font-bold">
-                    Take a quick assessment
+                    {step.title}
                   </h3>
                   <p className="text-gray-700">
-                    We'll get to know your financial goals and current
-                    knowledge.
+                    {step.description}
                   </p>
                 </div>
               </div>
-
-              <div className="learning-step flex items-start gap-4">
-                <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  2
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xl font-bold">
-                    Follow your personalized learning path
-                  </h3>
-                  <p className="text-gray-700">
-                    Engage with interactive lessons designed just for you.
-                  </p>
-                </div>
-              </div>
-
-              <div className="learning-step flex items-start gap-4">
-                <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  3
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xl font-bold">
-                    Track your progress
-                  </h3>
-                  <p className="text-gray-700">
-                    Earn rewards as you master new concepts and reach
-                    milestones.
-                  </p>
-                </div>
-              </div>
-
-              <div className="learning-step flex items-start gap-4">
-                <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  4
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xl font-bold">
-                    Apply your knowledge
-                  </h3>
-                  <p className="text-gray-700">
-                    Use what you've learned to make better financial decisions.
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
 
             <div className="mt-12">
               <Link
-                to="/intro"
+                to="/chat"
                 className="inline-flex items-center font-medium text-purple-600 hover:text-purple-800"
               >
-                See it in action
+               Discover Your Path
                 <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
               </Link>
             </div>
@@ -671,17 +703,21 @@ function HomePage() {
         title="Start Your Financial Learning Journey"
         className="bg-purple-50 px-6 py-20 md:px-12 lg:px-24"
       >
+        <div className="mx-auto max-w-7xl text-center">
+            <h2 className="section-title-animate mb-16 text-3xl font-bold text-slate-800 md:text-4xl">
+                Comprehensive Financial Toolkit
+            </h2>
+        </div>
         <div className="grid gap-8 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-8 shadow-md">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
               <FontAwesomeIcon icon={faBookOpen} className="text-xl" />
             </div>
-            <h3 className="mb-3 text-xl font-semibold">Explore Lessons</h3>
+            <h3 className="mb-3 text-xl font-semibold">Expert-Led Foundational Courses</h3>
             <p className="mb-6 text-gray-700">
-              Browse a variety of financial lessons to enhance your knowledge.
-            </p>
+            Build a strong base with structured courses from our experienced financial instructor.            </p>
             <Link
-              to="/learning"
+              to="/learning/guide-to-investing"
               className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
             >
               Start learning
@@ -691,11 +727,11 @@ function HomePage() {
 
           <div className="rounded-2xl bg-white p-8 shadow-md">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-purple-600">
-              <FontAwesomeIcon icon={faChalkboardTeacher} className="text-xl" />
+              <FontAwesomeIcon icon={faRobot} className="text-xl" />
             </div>
             <h3 className="mb-3 text-xl font-semibold">Chat with PawFi AI</h3>
             <p className="mb-6 text-gray-700">
-              Get personalized financial advice and answers to your questions.
+            Get instant, personalized financial advice and answers to your complex questions, 24/7.
             </p>
             <Link
               to="/chat"
@@ -710,9 +746,9 @@ function HomePage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
               <FontAwesomeIcon icon={faPuzzlePiece} className="text-xl" />
             </div>
-            <h3 className="mb-3 text-xl font-semibold">Interactive Tools</h3>
+            <h3 className="mb-3 text-xl font-semibold">Interactive Financial Tools</h3>
             <p className="mb-6 text-gray-700">
-              Use our calculators and interactive tools to make informed financial decisions.
+            Plan your future with our suite of calculators for loans, investments, retirement, and more.
             </p>
             <Link
               to="/calculators"
@@ -721,6 +757,51 @@ function HomePage() {
               Explore tools
               <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Expert-Led Basic Lessons Section */}
+      <section
+        ref={basicLessonsSectionRef}
+        className="bg-slate-50 px-6 py-20 md:px-12 lg:px-24"
+      >
+        <div className="mx-auto max-w-7xl">
+          <h2 className="basic-lessons-title mb-6 text-center text-3xl font-bold text-slate-800 md:text-4xl">
+            Dive Deeper with Expert-Led Lessons
+          </h2>
+          <p className="mb-12 text-center text-lg text-slate-600 md:mx-auto md:max-w-2xl">
+            Our foundational courses are crafted by a seasoned Financial Instructor (CFA, CSC, MBA) with over 10 years of experience, making complex topics clear and actionable, no matter your background.
+          </p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
+              <BasicLessonCard
+                key={`preview-${lesson.id}`}
+                icon={lesson.icon}
+                title={lesson.title}
+                description={lesson.description}
+                linkTo={`/learning/${basicLessonsData.id}/lesson/${lesson.id}`}
+                animationDelay={0.1 * (index + 1)}
+              />
+            ))}
+            {/* Explore More Card */}
+            {basicLessonsData.lessons.length > 2 && (
+              <Link
+                to={`/learning/${basicLessonsData.id}`}
+                role="button"           
+                className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-50"
+              >
+                <div className="flex-grow flex flex-col items-center justify-center">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <FontAwesomeIcon icon={faPlus} className="text-xl" />
+                  </div>
+                  <h3 className="mb-3 text-xl font-semibold text-slate-800">Explore All Lessons</h3>
+                  <p className="text-sm text-slate-600">
+                    View all {basicLessonsData.lessons.length} foundational courses.
+                  </p>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -741,8 +822,7 @@ function HomePage() {
               <span className="ml-2 text-xl font-bold">PawFi</span>
             </div>
             <p className="text-gray-400">
-              Making financial education accessible, engaging, and fun for
-              everyone.
+            Empowering your financial journey with intelligent, personalized learning.
             </p>
           </div>
 
@@ -750,23 +830,23 @@ function HomePage() {
             <h3 className="mb-4 text-lg font-bold">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  Home
+                <a href="/learning" className="text-gray-400 hover:text-white">
+                AI Learning
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  Features
+                <a href="/learning/guide-to-investing" className="text-gray-400 hover:text-white">
+                Expert Courses
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  How It Works
+                <a href="/calculators" className="text-gray-400 hover:text-white">
+                Financial Calculators
                 </a>
               </li>
               <li>
-                <a href="https://discord.gg/bWbNbd3q" className="text-gray-400 hover:text-white">
-                  Join Waitlist
+                <a href="/chat" className="text-gray-400 hover:text-white">
+                Chat with AI
                 </a>
               </li>
             </ul>
@@ -842,7 +922,7 @@ function HomePage() {
         </div>
 
         <div className="mx-auto mt-12 max-w-7xl border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p> 2023 PawFi. All rights reserved.</p>
+          <p> 2025 PawFi. All rights reserved.</p>
         </div>
       </footer>
     </div>

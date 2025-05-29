@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 // --- Types ---
 import type { Course } from '../types/learning.types';
 
+
 // --- RAW ASYNC FUNCTION ---
 export async function getUserCourses(userId: string): Promise<Course[]> {
   const { data, error } = await supabase.functions.invoke('get-user-courses', {

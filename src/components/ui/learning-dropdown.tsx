@@ -3,17 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "@tanstack/react-router";
 import basicCourse from '@/data/basic-lessons.json';
 
-
-interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  icon?: string;
-}
-
-interface LearningDropdownProps {
-  lessons: Lesson[];
-}
+// Use the shared Lesson interface from @/types/learning.types
+import type { Lesson } from "@/types/learning.types";
 
 // No JS truncate needed; use CSS line-clamp/truncate for all text truncation.
 
@@ -132,7 +123,7 @@ function groupLessons(lessons: Lesson[]): { groups: LessonGroup[] } {
 
   // Map lessons by canonical ID
   for (const mapping of lessonMappings) {
-    const lesson = lessons.find((l) => l.id === mapping.lessonId);
+    const lesson = lessons.find((l) => l.lesson_id === mapping.lessonId);
     if (lesson) {
       const groupIdx = groupOrder.findIndex((g) => g.name === mapping.group);
       if (groupIdx !== -1) {
@@ -142,12 +133,16 @@ function groupLessons(lessons: Lesson[]): { groups: LessonGroup[] } {
   }
   // Optionally, add any unmapped lessons to Getting Started/Other
   for (const lesson of lessons) {
-    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.id);
+    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.lesson_id);
     if (!alreadyMapped) {
       groups[0].lessons.push({ lesson, lessonShortform: "Other" });
     }
   }
   return { groups };
+}
+
+interface LearningDropdownProps {
+  lessons: Lesson[];
 }
 
 export function LearningDropdown({ lessons }: LearningDropdownProps) {
@@ -166,7 +161,7 @@ export function LearningDropdown({ lessons }: LearningDropdownProps) {
       </button>
 
       {/* Dropdown panel, show/hide based on group-hover/focus-within state */}
-      <div className="pointer-events-none w-[45rem] absolute -left-24 top-full z-50 max-w-3xl rounded-2xl bg-white opacity-0 shadow-xl ring-1 ring-gray-900/5 transition-all duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus:outline-none">
+      <div className="pointer-events-none w-[50rem] absolute -left-24 top-full z-50 max-w-3xl rounded-2xl bg-white opacity-0 shadow-xl ring-1 ring-gray-900/5 transition-all duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus:outline-none">
         <nav
           className="py-1"
           role="navigation"
@@ -197,7 +192,7 @@ export function LearningDropdown({ lessons }: LearningDropdownProps) {
                 tabIndex={0}
                 aria-label="View all investing courses"
               >
-                <span>View All Courses</span>
+                <span>View All Lessons</span>
                 <FontAwesomeIcon icon={faArrowRight} className="h-5 w-5" aria-hidden="true" />
               </Link>
             </div>
@@ -209,24 +204,24 @@ export function LearningDropdown({ lessons }: LearningDropdownProps) {
                     className="flex flex-1 flex-col rounded-xl border border-gray-100 bg-gray-50 p-5 shadow"
                   >
                     <div
-    className={
-      "mb-3 text-xs font-semibold tracking-wider uppercase " +
-      (group.name === "Getting Started"
-        ? "bg-gradient-to-r from-blue-400 to-green-400 text-transparent bg-clip-text"
-        : group.name === "Investment Types"
-          ? "bg-gradient-to-r from-fuchsia-600 to-pink-400 text-transparent bg-clip-text"
-          : group.name === "Financial Concepts"
-            ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text"
-            : "text-gray-700")
-    }
-  >
-    {group.name}
-  </div>
+                      className={
+                        "mb-3 text-xs font-semibold tracking-wider uppercase " +
+                        (group.name === "Getting Started"
+                          ? "bg-gradient-to-r from-blue-400 to-green-400 text-transparent bg-clip-text"
+                          : group.name === "Investment Types"
+                            ? "bg-gradient-to-r from-fuchsia-600 to-pink-400 text-transparent bg-clip-text"
+                            : group.name === "Financial Concepts"
+                              ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text"
+                              : "text-gray-700")
+                      }
+                    >
+                      {group.name}
+                    </div>
                     <ul className="space-y-3">
                       {group.lessons.map(({ lesson, lessonShortform }) => (
-                        <li key={lesson.id}>
+                        <li key={lesson.lesson_id}>
                           <Link
-                            to={`/learning/${basicCourse.id}/lesson/${lesson.id}`}
+                            to={`/learning/${basicCourse.id}/lesson/${lesson.lesson_id}`}
                             className="hover:bg-primary/10 focus:bg-primary/20 flex items-center gap-2 rounded-lg p-2 transition"
                           >
                             {lesson.icon && (

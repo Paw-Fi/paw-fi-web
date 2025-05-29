@@ -8,14 +8,8 @@ import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight }
 import { gsap } from "gsap";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
+import type { Lesson } from "@/types/learning.types";
 
-// Interfaces and functions from learning-dropdown.tsx
-interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  icon?: string;
-}
 
 interface LessonGroup {
   name: string;
@@ -128,7 +122,7 @@ function groupLessons(lessonsToGroup: Lesson[]): { groups: LessonGroup[] } {
   const groups: LessonGroup[] = groupOrder.map((g) => ({ ...g, lessons: [] }));
 
   for (const mapping of lessonMappings) {
-    const lesson = lessonsToGroup.find((l) => l.id === mapping.lessonId);
+    const lesson = lessonsToGroup.find((l) => l.lesson_id === mapping.lessonId);
     if (lesson) {
       const groupIdx = groupOrder.findIndex((g) => g.name === mapping.group);
       if (groupIdx !== -1) {
@@ -137,7 +131,7 @@ function groupLessons(lessonsToGroup: Lesson[]): { groups: LessonGroup[] } {
     }
   }
   for (const lesson of lessonsToGroup) {
-    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.id);
+    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.lesson_id);
     if (!alreadyMapped) {
       const gsGroup = groups.find(g => g.name === "Getting Started");
       if (gsGroup) {
@@ -149,10 +143,13 @@ function groupLessons(lessonsToGroup: Lesson[]): { groups: LessonGroup[] } {
 }
 
 const lessons: Lesson[] = lessonsData.lessons.map((l: any) => ({
-  id: l.id,
+  lesson_id: l.lesson_id,
   title: l.title,
   description: l.description,
-  icon: l.icon
+  icon: l.icon,
+  xp: l.xp,
+  unlocked: l.unlocked,
+  questions: l.questions,
 }));
 
 export default function Header() {
@@ -432,7 +429,7 @@ export default function Header() {
                   className="flex items-center justify-between w-full pl-3 pr-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <span>View All Courses</span>
+                  <span>View All Lessons</span>
                   <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" />
                 </Link>
 
@@ -445,9 +442,9 @@ export default function Header() {
                       </h3>
                       <ul className="space-y-1">
                         {group.lessons.map(({ lesson, lessonShortform }) => (
-                          <li key={lesson.id}>
+                          <li key={lesson.lesson_id}>
                             <Link
-                              to={`/learning/${lessonsData.id}/lesson/${lesson.id}`}
+                              to={`/learning/${lessonsData.id}/lesson/${lesson.lesson_id}`}
                               className="flex items-center gap-2 pl-3 pr-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-md"
                               onClick={() => setIsMenuOpen(false)}
                               activeProps={{ className: "bg-primary/10 text-primary font-semibold" }}

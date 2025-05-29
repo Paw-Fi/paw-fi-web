@@ -73,7 +73,6 @@ export type BaseQuestion = {
 // A fully flexible Question type to accommodate JSON data
 export interface Question {
   question_id: string;
-  id?: string; // legacy/compat
   type: QuestionType;
   question: string;
   explanation?: string;
@@ -147,7 +146,6 @@ export function isImageChoiceQuestion(question: Question): question is Question 
 // Lesson structure
 export interface Lesson {
   lesson_id: string;
-  id?: string; // legacy/compat
   title: string;
   description: string;
   xp: number;

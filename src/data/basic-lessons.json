@@ -4,7 +4,7 @@
     "description": "Unlock the secrets of smart money moves! This course is your friendly guide to understanding how to grow your wealth, manage risks, and decode financial markets, step by step.",
     "lessons": [
       {
-        "id": "L1-beginners-guide-investing-concepts",
+        "lesson_id": "L1-beginners-guide-investing-concepts",
         "title": "Beginner's Guide to Investing: Key Concepts Explained",
         "description": "Ever wonder how your money can grow? This lesson dives into the fundamental ideas of saving versus investing, helping you understand how to make your money work for you.",
         "xp": 100,
@@ -257,7 +257,7 @@
         ]
       },
       {
-        "id": "L2-behavioral-finance-emotions",
+        "lesson_id": "L2-behavioral-finance-emotions",
         "title": "Behavioral Finance: How Emotions Affect Investment Choices",
         "description": "Our brains can play tricks on us when it comes to money! Discover common mental shortcuts and biases that can influence your investment decisions, and learn how to make smarter choices.",
         "xp": 100,
@@ -442,7 +442,7 @@
         ]
       },
       {
-        "id": "L3-money-market-explained",
+        "lesson_id": "L3-money-market-explained",
         "title": "Money Market Essentials: T-Bills, Repos, and Short-Term Instruments",
         "description": "Dive into the world of short-term borrowing and lending. Learn about the 'money market' and key instruments like T-bills and repos that keep the financial system running smoothly.",
         "xp": 100,
@@ -675,7 +675,7 @@
         ]
       },
       {
-        "id": "L4-bond-market-explained",
+        "lesson_id": "L4-bond-market-explained",
         "title": "Bond Market Explained: Credit, Yields, and Investment Strategies",
         "description": "Unravel the mysteries of bonds! This lesson explains how bonds work, how their prices are set, and what factors like credit ratings and interest rates influence their value.",
         "xp": 100,
@@ -955,7 +955,7 @@
         ]
       },
       {
-        "id": "L5-equity-market-overview",
+        "lesson_id": "L5-equity-market-overview",
         "title": "Equity Market Overview: Stocks, IPOs, and Investor Rights",
         "description": "Step into the exciting world of stocks! Learn about common and preferred shares, how companies go public, and the different ways you can buy and sell stocks in the market.",
         "xp": 100,
@@ -1245,7 +1245,7 @@
         ]
       },
       {
-        "id": "L6-derivatives-market-simple",
+        "lesson_id": "L6-derivatives-market-simple",
         "title": "Derivatives Market: Futures, Options, and Swaps Made Simple",
         "description": "Uncover the exciting world of derivatives! This lesson demystifies financial instruments like futures, options, and swaps, showing you how they get their value and how they can be used.",
         "xp": 100,
@@ -1521,7 +1521,7 @@
         ]
       },
       {
-        "id": "L7-time-value-of-money",
+        "lesson_id": "L7-time-value-of-money",
         "title": "Time Value of Money: How Interest and Value Change Over Time",
         "description": "Discover why a dollar today is worth more than a dollar tomorrow! This lesson explains the magic of interest, compounding, and how to compare money across different points in time.",
         "xp": 100,
@@ -1817,7 +1817,7 @@
         ]
       },
       {
-        "id": "L8-statistics-for-investors",
+        "lesson_id": "L8-statistics-for-investors",
         "title": "Statistics for Investors: Mean, Variance, and Data Pitfalls",
         "description": "Level up your investing insights with basic statistics! Learn about averages, how data spreads, and common thinking errors that can trip up even smart investors.",
         "xp": 100,
@@ -2105,7 +2105,7 @@
         ]
       },
       {
-        "id": "L9-economics-basics-for-investors",
+        "lesson_id": "L9-economics-basics-for-investors",
         "title": "Economics Basics for Investors: GDP, Inflation, and Scarcity",
         "description": "Explore the fundamental economic forces that shape our financial world. Learn about scarcity, opportunity cost, inflation, and key indicators like GDP that influence investment decisions.",
         "xp": 100,
@@ -2397,7 +2397,7 @@
         ]
       },
       {
-        "id": "L10-financial-statement-analysis",
+        "lesson_id": "L10-financial-statement-analysis",
         "title": "Financial Statement Analysis: Understanding the Numbers Behind Businesses",
         "description": "Become a financial detective! Learn how to read a company's financial report card (income statement, balance sheet, cash flow) to understand its health and potential.",
         "xp": 100,
