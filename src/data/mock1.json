@@ -19,10 +19,10 @@
           "type": "scq",
           "question": "Where does 'income' usually come from?",
           "explanation": "Great job! Income is any money you receive, whether it's from allowance, a gift, a part-time job, or even selling something you made. It's the money that fills your pocket!",
-          "incorrectExplanation": "Not quite! Spending is when money leaves your pocket, and saving is setting it aside. Income is money coming in, like your allowance or money from a job.",
+          "incorrect_explanation": "Not quite! Spending is when money leaves your pocket, and saving is setting it aside. Income is money coming in, like your allowance or money from a job.",
           "hint": "Think about how you get money into your wallet or bank account.",
-          "helpTips": "Income is the money you earn or receive. It's what allows you to spend, save, and reach your goals!",
-          "contentBlocks": [
+          "help_tips": "Income is the money you earn or receive. It's what allows you to spend, save, and reach your goals!",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "Every journey starts with understanding your fuel! When we talk about money, 'income' is like the fuel for your financial journey. It's the money that comes to you."
@@ -54,10 +54,10 @@
           "type": "sort-categories",
           "question": "Sort these items into 'Needs' (things you really need to live) or 'Wants' (things that are nice to have but not essential).",
           "explanation": "Awesome! Knowing the difference between needs and wants is a super power for managing your money. Needs are things you absolutely can't do without, like food and shelter, while wants are extras that make life fun, like new gadgets or movie tickets. This helps you make smart choices!",
-          "incorrectExplanation": "Almost! It can be tricky sometimes, but 'needs' are essentials for survival (like food, water, basic clothes), while 'wants' are things you enjoy but don't strictly need (like a new video game or concert tickets). Getting this distinction helps you prioritize!",
+          "incorrect_explanation": "Almost! It can be tricky sometimes, but 'needs' are essentials for survival (like food, water, basic clothes), while 'wants' are things you enjoy but don't strictly need (like a new video game or concert tickets). Getting this distinction helps you prioritize!",
           "hint": "Think about what's absolutely necessary for survival versus what's for fun or convenience.",
-          "helpTips": "Needs keep you safe and healthy. Wants add fun and comfort but aren't vital. Prioritizing needs before wants helps you stay on track.",
-          "contentBlocks": [
+          "help_tips": "Needs keep you safe and healthy. Wants add fun and comfort but aren't vital. Prioritizing needs before wants helps you stay on track.",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "One of the first steps to managing your money is knowing the difference between a 'Need' and a 'Want'. Needs are things you can't really live without, like food or shelter. Wants are things that are fun to have, but you could totally live without them."
@@ -81,7 +81,7 @@
             { "id": "category-1", "content": "Needs" },
             { "id": "category-2", "content": "Wants" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "category-1": ["item-1", "item-3", "item-4", "item-6"],
             "category-2": ["item-2", "item-5"]
           }
@@ -92,8 +92,8 @@
           "question": "What's one thing you dream of saving money for?",
           "explanation": "That's an awesome goal! Having a clear goal makes saving much easier and more exciting. Whether it's big or small, a goal gives your savings a purpose!",
           "hint": "Think about something you really want or an experience you'd love to have.",
-          "helpTips": "Setting a specific goal, like 'new headphones' or 'a trip with friends,' helps you stay motivated to save money. The clearer your goal, the easier it is to reach!",
-          "contentBlocks": [
+          "help_tips": "Setting a specific goal, like 'new headphones' or 'a trip with friends,' helps you stay motivated to save money. The clearer your goal, the easier it is to reach!",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "Saving money isn't just about putting cash away; it's about reaching your dreams! When you save, you're setting aside money now so you can buy something bigger or do something amazing later."
@@ -112,16 +112,16 @@
           "type": "image-choice",
           "question": "Which image best shows someone saving money?",
           "explanation": "You got it! Putting money into a piggy bank or a savings account means you're setting it aside for later instead of spending it now. That's smart saving!",
-          "incorrectExplanation": "Not quite! The other images show money being spent on things like clothes or food. Saving means putting money away for future goals, not using it right away.",
+          "incorrect_explanation": "Not quite! The other images show money being spent on things like clothes or food. Saving means putting money away for future goals, not using it right away.",
           "hint": "Saving is about keeping money safe for future use.",
-          "helpTips": "Think about actions that mean 'money put aside' versus 'money used right now'.",
-          "contentBlocks": [
+          "help_tips": "Think about actions that mean 'money put aside' versus 'money used right now'.",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "We just talked about setting a saving goal. Now, let's think about what saving looks like! It's an action you take with your money."
             }
           ],
-          "imageOptions": [
+          "image_options": [
             {
               "id": "img-opt-1",
               "content": "Piggy bank being filled",
@@ -153,10 +153,10 @@
           "type": "match",
           "question": "Match these money words to what they mean!",
           "explanation": "Fantastic! Knowing these basic terms helps you talk about and understand money better. Each word has a specific role in your financial world, and understanding them is a great start!",
-          "incorrectExplanation": "Good try! Each word has a specific meaning. For example, 'income' is money coming in, 'expense' is money going out, 'savings' is money put away, and a 'budget' is your plan for it all. Keep practicing!",
+          "incorrect_explanation": "Good try! Each word has a specific meaning. For example, 'income' is money coming in, 'expense' is money going out, 'savings' is money put away, and a 'budget' is your plan for it all. Keep practicing!",
           "hint": "Think about whether the money is coming in, going out, or being planned/held.",
-          "helpTips": "Income is your 'fuel', expense is your 'cost', savings is your 'reserve', and a budget is your 'map'.",
-          "contentBlocks": [
+          "help_tips": "Income is your 'fuel', expense is your 'cost', savings is your 'reserve', and a budget is your 'map'.",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "Money has its own language! Learning a few key words can make understanding it much easier. Let's match some common terms to their simple meanings."
@@ -174,7 +174,7 @@
             { "id": "opt-3", "content": "Money you put aside for later" },
             { "id": "opt-4", "content": "A plan for how you spend and save" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "opt-1",
             "item-2": "opt-2",
             "item-3": "opt-3",
@@ -186,10 +186,10 @@
           "type": "sort-order",
           "question": "Put these steps in order for making a super simple money plan (a 'budget')!",
           "explanation": "That’s the perfect order! First, you know what you have (income), then you plan where it will go (decide how much to save/spend), and finally, you check how you did (track). This cycle helps you stay in control of your money!",
-          "incorrectExplanation": "Close one! Usually, you need to know how much money you *have* before you can decide how to spend it, and tracking helps you see if your plan is working. Think about it like planning a trip: first you check your map, then you decide your route, then you follow it!",
+          "incorrect_explanation": "Close one! Usually, you need to know how much money you *have* before you can decide how to spend it, and tracking helps you see if your plan is working. Think about it like planning a trip: first you check your map, then you decide your route, then you follow it!",
           "hint": "Think about the logical flow: what information do you need first, what comes next, and what do you do to check?",
-          "helpTips": "A simple budget is like a roadmap for your money. First, you figure out where you are, then where you want to go, and finally, how to get there. It's a continuous cycle!",
-          "contentBlocks": [
+          "help_tips": "A simple budget is like a roadmap for your money. First, you figure out where you are, then where you want to go, and finally, how to get there. It's a continuous cycle!",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "Even a simple plan for your money, often called a 'budget', can make a huge difference. It's not about restricting yourself, but about making sure your money goes where you want it to go. Here are the basic steps:"
@@ -200,17 +200,17 @@
             { "id": "step-2", "content": "Decide how much money to save and how much to spend on different things" },
             { "id": "step-3", "content": "Figure out how much money you have (your income)" }
           ],
-          "correctAnswers": ["step-3", "step-2", "step-1"]
+          "correct_answers": ["step-3", "step-2", "step-1"]
         },
         {
           "id": "q7-matrix-rating-habits",
           "type": "matrix-rating",
           "question": "How important are these habits for managing your money well?",
           "explanation": "You nailed it! These habits are super important because they help you control your money, reach your goals, and feel secure about your future. Building these habits early can make a huge difference!",
-          "incorrectExplanation": "These habits are all pretty important! Regular saving helps you reach big goals, tracking helps you see where money goes, and setting goals gives you something clear to aim for. They work together to build strong money skills.",
+          "incorrect_explanation": "These habits are all pretty important! Regular saving helps you reach big goals, tracking helps you see where money goes, and setting goals gives you something clear to aim for. They work together to build strong money skills.",
           "hint": "Consider how each habit impacts your ability to reach your money goals and avoid problems.",
-          "helpTips": "Imagine trying to play a game without knowing the rules or keeping score – it’s similar with money! Good habits make the game easier and more fun.",
-          "contentBlocks": [
+          "help_tips": "Imagine trying to play a game without knowing the rules or keeping score – it’s similar with money! Good habits make the game easier and more fun.",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "Just like practicing a sport or learning a new skill, managing money involves good habits. These habits help you make smart choices and feel confident about your financial future."
@@ -227,7 +227,7 @@
             { "id": "rating-3", "content": "Very Important", "color": "yellow" },
             { "id": "rating-4", "content": "Super Important!", "color": "green" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "habit-1": "rating-4",
             "habit-2": "rating-4",
             "habit-3": "rating-4"
@@ -238,10 +238,10 @@
           "type": "mcq",
           "question": "Which of these are good reasons to save money? (Pick all that apply)",
           "explanation": "Exactly! Saving can be for fun short-term goals like buying new games, big long-term goals like college, or important safety nets like an emergency fund. It's smart to save for a mix of things!",
-          "incorrectExplanation": "Almost! While some options are about spending now, saving is about putting money aside for something you want or need *later*. An emergency fund, a new game, or college are all great reasons to save.",
+          "incorrect_explanation": "Almost! While some options are about spending now, saving is about putting money aside for something you want or need *later*. An emergency fund, a new game, or college are all great reasons to save.",
           "hint": "Think about what you're putting money aside for, not what you're spending it on right away.",
-          "helpTips": "Saving is about building up funds for the future. This could be for fun purchases, big life events, or just in case of unexpected situations.",
-          "contentBlocks": [
+          "help_tips": "Saving is about building up funds for the future. This could be for fun purchases, big life events, or just in case of unexpected situations.",
+          "content_blocks": [
             {
               "type": "paragraph",
               "content": "We've talked about what saving is. Now, let's think about *why* we save. There are tons of reasons, both big and small, for setting money aside!"

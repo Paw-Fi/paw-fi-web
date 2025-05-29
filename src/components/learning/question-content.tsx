@@ -26,10 +26,10 @@ export function QuestionContent({
     <div className={countdownSeconds > 0 ? "pointer-events-none opacity-70" : ""} aria-disabled={countdownSeconds > 0}>
       {question.type === "sort-order" && (
         <SortQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(answer) =>
-            countdownSeconds === 0 && onAnswer(question.id, answer)
+            countdownSeconds === 0 && onAnswer(question.question_id, answer)
           }
           value={value}
         />
@@ -37,10 +37,10 @@ export function QuestionContent({
 
       {question.type === "sort-categories" && (
         <SortCategoriesQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(answer) =>
-            countdownSeconds === 0 && onAnswer(question.id, answer)
+            countdownSeconds === 0 && onAnswer(question.question_id, answer)
           }
           value={value}
         />
@@ -49,10 +49,10 @@ export function QuestionContent({
       {(question.type === "mcq" ||
         question.type === "scq") && (
         <ChoiceQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(answer) =>
-            countdownSeconds === 0 && onAnswer(question.id, answer)
+            countdownSeconds === 0 && onAnswer(question.question_id, answer)
           }
           value={value}
         />
@@ -60,10 +60,10 @@ export function QuestionContent({
 
       {question.type === "match" && (
         <MatchQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(answer) =>
-            countdownSeconds === 0 && onAnswer(question.id, answer)
+            countdownSeconds === 0 && onAnswer(question.question_id, answer)
           }
           value={value}
         />
@@ -71,10 +71,10 @@ export function QuestionContent({
 
       {question.type === "matrix-rating" && (
         <MatrixRatingQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(answer) =>
-            countdownSeconds === 0 && onAnswer(question.id, answer)
+            countdownSeconds === 0 && onAnswer(question.question_id, answer)
           }
           value={value}
         />
@@ -82,10 +82,10 @@ export function QuestionContent({
 
       {question.type === "text-input" && (
         <TextInputQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(value: string) =>
-            countdownSeconds === 0 && onAnswer(question.id, value)
+            countdownSeconds === 0 && onAnswer(question.question_id, value)
           }
           value={value}
         />
@@ -93,10 +93,10 @@ export function QuestionContent({
 
       {question.type === "image-choice" && (
         <ImageChoiceQuestion
-          key={question.id}
+          key={question.question_id}
           question={question}
           onAnswer={(value: string) =>
-            countdownSeconds === 0 && onAnswer(question.id, value)
+            countdownSeconds === 0 && onAnswer(question.question_id, value)
           }
           value={value}
         />

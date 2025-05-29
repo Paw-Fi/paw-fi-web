@@ -63,9 +63,9 @@ export type BaseQuestion = {
   type: QuestionType;
   question: string;
   explanation?: string;
-  incorrectExplanation?: string;
-  helpTips?: string;
-  contentBlocks?: ContentBlock[];
+  incorrect_explanation?: string;
+  help_tips?: string;
+  content_blocks?: ContentBlock[];
   imagePrompt?: string;
   caption?: string;
 };
@@ -76,17 +76,18 @@ export interface Question {
   type: QuestionType;
   question: string;
   explanation?: string;
-  incorrectExplanation?: string;
-  helpTips?: string;
-  contentBlocks?: ContentBlock[];
+  incorrect_explanation?: string;
+  help_tips?: string;
+  content_blocks?: ContentBlock[];
   imagePrompt?: string;
   caption?: string;
   // Common properties
   options?: any[];
+  image_options?: any[];
   itemsPerRow?: number;
   // Sort and category properties
   items?: any[];
-  correctAnswers?: string[] | Record<string, string[]> | any;
+  correct_answers?: string[] | Record<string, string[]> | any;
   categories?: any[];
   helpTipsData?: any[];
   // Match properties
@@ -101,8 +102,6 @@ export interface Question {
   suffix?: string;
   correctAnswer?: string | string[];
   validation?: any;
-  // Allow additional properties for flexibility
-  [key: string]: any;
 }
 
 // Type aliases for cleaner code - all based on the flexible Question type
@@ -152,8 +151,8 @@ export interface Lesson {
   unlocked: boolean;
   icon?: string;
   questions: Question[];
-  contentBlocks?: ContentBlock[] | any[];
-  helpTips?: string;
+  content_blocks?: ContentBlock[] | any[];
+  help_tips?: string;
 }
 
 // Course containing multiple lessons

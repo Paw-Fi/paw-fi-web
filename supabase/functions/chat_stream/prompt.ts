@@ -444,51 +444,51 @@ Don't: Omit this field. Don't make it very short, generic, or sound like a textb
 
 Don't Example: "explanation": "Correct." or "explanation": "The answer is A because it is the defined first step in budgetary processes."
 
-Question Object - Common Field: incorrectExplanation (Mandatory, unless text-input)
+Question Object - Common Field: incorrect_explanation (Mandatory, unless text-input)
 
-Core Requirement: For all question types except text-input, you MUST include an incorrectExplanation field (string). This is shown if the user answers incorrectly. The tone should be encouraging and informative.
+Core Requirement: For all question types except text-input, you MUST include an incorrect_explanation field (string). This is shown if the user answers incorrectly. The tone should be encouraging and informative.
 
 Do: Provide a supportive explanation that clarifies why the chosen answer was wrong and gently guides towards the correct concept.
 
-Do Example (for an SCQ): "incorrectExplanation": "Almost! While saving is important, the very *first* step in budgeting is usually figuring out where your money goes. Give it another try!"
+Do Example (for an SCQ): "incorrect_explanation": "Almost! While saving is important, the very *first* step in budgeting is usually figuring out where your money goes. Give it another try!"
 
 Don't: Omit this field for applicable question types. Don't be punitive or simply state "Wrong."
 
-Don't Example: "incorrectExplanation": "That's incorrect. The right answer was X."
+Don't Example: "incorrect_explanation": "That's incorrect. The right answer was X."
 
-Question Object - Common Field: helpTips (Optional but Encouraged)
+Question Object - Common Field: help_tips (Optional but Encouraged)
 
-Core Requirement: Optional helpTips field (string). A short, helpful helpTips provided before answering. Must be genuinely useful. Avoid generic helpTipss.
+Core Requirement: Optional help_tips field (string). A short, helpful help_tips provided before answering. Must be genuinely useful. Avoid generic helpTipss.
 
-Do: If a helpTips can genuinely aid understanding or recall without giving away the answer, include it.
+Do: If a help_tips can genuinely aid understanding or recall without giving away the answer, include it.
 
-Do Example: "helpTips": "Think about what you need to know *before* you can decide how to save or spend."
+Do Example: "help_tips": "Think about what you need to know *before* you can decide how to save or spend."
 
 Don't: Include unhelpful helpTipss like "Think carefully!" or "Choose the best option." Only omit if the question is very straightforward.
 
-Don't Example: "helpTips": "This one is tricky!"
+Don't Example: "help_tips": "This one is tricky!"
 
-Question Object - Common Field: helpTips (Mandatory unless detrimental)
+Question Object - Common Field: help_tips (Mandatory unless detrimental)
 
-Core Requirement: helpTips field (string) MUST be included by default. Treat these as valuable supplementary information. Only omit if inclusion significantly detracts from clarity or flow.
+Core Requirement: help_tips field (string) MUST be included by default. Treat these as valuable supplementary information. Only omit if inclusion significantly detracts from clarity or flow.
 
 Do: Provide additional context, definitions, or brief explanations that enhance understanding related to the question's topic.
 
-Do Example: "helpTips": "Needs are things you must have, like food. Wants are cool extras, like a new game. Savings are for future goals!" (for a budgeting question).
+Do Example: "help_tips": "Needs are things you must have, like food. Wants are cool extras, like a new game. Savings are for future goals!" (for a budgeting question).
 
-Don't: Omit helpTips without a strong reason. Don't make them overly long or repeat the question.
+Don't: Omit help_tips without a strong reason. Don't make them overly long or repeat the question.
 
-Don't Example: Omit helpTips on a complex topic where it could clarify terms.
+Don't Example: Omit help_tips on a complex topic where it could clarify terms.
 
-Question Object - Common Field: contentBlocks (Optional Array)
+Question Object - Common Field: content_blocks (Optional Array)
 
-Core Requirement: Optional contentBlocks array. Each block must have type ('paragraph', 'bulletList', 'numberedList', 'scenario') and content (string or string[]).
+Core Requirement: Optional content_blocks array. Each block must have type ('paragraph', 'bulletList', 'numberedList', 'scenario') and content (string or string[]).
 
-Do: Use contentBlocks to structure preparatory information, scenarios, or lists that set up the question.
+Do: Use content_blocks to structure preparatory information, scenarios, or lists that set up the question.
 
 Do Example:
 
-"contentBlocks": [
+"content_blocks": [
   {
     "type": "scenario",
     "content": "Sarah gets $20 allowance. She wants a $60 game. She also needs $5 for bus fare this week."
@@ -499,7 +499,7 @@ Do Example:
 
 Don't: Use invalid type values or mismatch content structure (e.g., string for bulletList). Don't overuse if not necessary.
 
-Don't Example: "contentBlocks": [{ "type": "story", "content": "..." }] (story is not a valid type).
+Don't Example: "content_blocks": [{ "type": "story", "content": "..." }] (story is not a valid type).
 
 Question Object - Common Field: imagePrompt (Optional String for Mermaid)
 
@@ -541,41 +541,20 @@ Don't Example (scq with two correct): Two options with isCorrect: true.
 
 Don't Example (Option description error): "description": "That's right! This is a good strategy."
 
-Question Type-Specific: image-choice - imageOptions Array
+Question Type-Specific: image-choice - image_options Array
 
-Core Requirement: Similar to scq/mcq options, but in an imageOptions array. Each object includes all fields from options plus optional imageUrl (string), imagePrompt (string), caption (string).
+Core Requirement: Similar to scq/mcq options, but in an image_options array. Each object includes all fields from options plus optional imageUrl (string), imagePrompt (string), caption (string).\nImage Source Instructions:\nFor Diagrams/Charts/Flowcharts: Use Mermaid syntax in imagePrompt field:\njson{\n  \"imagePrompt\": \"graph TD; A[Start] --> B[Process] --> C[End]\"\n}\nFor Photos/Illustrations: Fetch from public libraries using imageUrl field. Search and select from:\n\nWikimedia Commons: https://commons.wikimedia.org (best for educational content)\nUnsplash: https://unsplash.com (high-quality photos)\nPixabay: https://pixabay.com (mixed content, education category)\n\nChoose images that are:\n\nSimple and educationally clear\nFree for commercial use\nSuitable for quiz interface\nDirectly relevant to the option content\n\nDo Examples:\nDiagram Example (imagePrompt):\njson{\n  \"id\": \"imgOpt1\",\n  \"content\": \"Savings Process\",\n  \"isCorrect\": true,\n  \"imagePrompt\": \"graph TD; A[Income] --> B[Budget] --> C[Save] --> D[Goal Achieved]\",\n  \"caption\": \"Step-by-step savings flowchart\"\n}\nPhoto Example (imageUrl):\njson{\n  \"id\": \"imgOpt2\",\n  \"content\": \"Apple Fruit\",\n  \"isCorrect\": false,\n  \"imageUrl\": \"https://commons.wikimedia.org/wiki/File:Red_Apple.jpg\",\n  \"caption\": \"Fresh red apple for nutrition lesson\"\n}\nDon't: Confuse with regular options. Ensure each imageOption has the necessary base fields (id, content, isCorrect) and use imagePrompt for diagrams OR imageUrl for photos, not both.\nDon't Example: Forgetting isCorrect for an imageOption, or using both imagePrompt and imageUrl simultaneously.
 
-Do: Use this for questions where users select from images or image+text combinations.
+Question Type-Specific: sort-order - items Array and correct_answers Array
 
-Do Example (imageOption):
+Core Requirement: items array of objects (each with id, content) to be sorted. correct_answers array of item IDs in the correct sequence. Use for arranging all items in a specific priority or logical order.
 
-{
-  "id": "imgOpt1",
-  "content": "Savings Jar",
-  "isCorrect": true,
-  "imagePrompt": "graph TD; A[Piggy Bank] -->|Money In| B(Safe!)"
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
-
-Don't: Confuse with regular options. Ensure each imageOption has the necessary base fields (id, content, isCorrect).
-
-Don't Example: Forgetting isCorrect for an imageOption.
-
-Question Type-Specific: sort-order - items Array and correctAnswers Array
-
-Core Requirement: items array of objects (each with id, content) to be sorted. correctAnswers array of item IDs in the correct sequence. Use for arranging all items in a specific priority or logical order.
-
-Do: List all item IDs in correctAnswers in the single correct order.
+Do: List all item IDs in correct_answers in the single correct order.
 
 Do Example:
 
 "items": [ { "id": "step1", "content": "Open envelope" }, { "id": "step2", "content": "Read letter" } ],
-"correctAnswers": ["step1", "step2"]
+"correct_answers": ["step1", "step2"]
 IGNORE_WHEN_COPYING_START
 content_copy
 download
@@ -583,21 +562,21 @@ Use code with caution.
 Json
 IGNORE_WHEN_COPYING_END
 
-Don't: Use for grouping (use sort-categories). Don't make correctAnswers an object or an array of objects.
+Don't: Use for grouping (use sort-categories). Don't make correct_answers an object or an array of objects.
 
-Don't Example: "correctAnswers": { "step1": 1, "step2": 2 } (incorrect format).
+Don't Example: "correct_answers": { "step1": 1, "step2": 2 } (incorrect format).
 
-Question Type-Specific: sort-categories - items, categories, correctAnswers Object
+Question Type-Specific: sort-categories - items, categories, correct_answers Object
 
-Core Requirement: items array (objects with id, content). categories array (objects with id, content). correctAnswers object mapping each category ID to an array of item IDs belonging to it.
+Core Requirement: items array (objects with id, content). categories array (objects with id, content). correct_answers object mapping each category ID to an array of item IDs belonging to it.
 
-Do: Ensure correctAnswers maps category IDs (strings) to arrays of item IDs (strings).
+Do: Ensure correct_answers maps category IDs (strings) to arrays of item IDs (strings).
 
 Do Example:
 
 "items": [ { "id": "i1", "content": "Apple" }, { "id": "i2", "content": "Carrot" } ],
 "categories": [ { "id": "c1", "content": "Fruit" }, { "id": "c2", "content": "Vegetable" } ],
-"correctAnswers": { "c1": ["i1"], "c2": ["i2"] }
+"correct_answers": { "c1": ["i1"], "c2": ["i2"] }
 IGNORE_WHEN_COPYING_START
 content_copy
 download
@@ -605,13 +584,13 @@ Use code with caution.
 Json
 IGNORE_WHEN_COPYING_END
 
-Don't: Have item IDs in correctAnswers that don't exist in items. Don't map item IDs to category IDs.
+Don't: Have item IDs in correct_answers that don't exist in items. Don't map item IDs to category IDs.
 
-Don't Example (incorrect correctAnswers structure): "correctAnswers": [ { "c1": ["i1"] } ] (should be an object, not array).
+Don't Example (incorrect correct_answers structure): "correct_answers": [ { "c1": ["i1"] } ] (should be an object, not array).
 
-Question Type-Specific: match - items, options, correctAnswers Object
+Question Type-Specific: match - items, options, correct_answers Object
 
-Core Requirement: items array (objects with id, content). options array (the matchable targets, objects with id, content). correctAnswers object mapping each item ID to a unique option ID (one-to-one mapping).
+Core Requirement: items array (objects with id, content). options array (the matchable targets, objects with id, content). correct_answers object mapping each item ID to a unique option ID (one-to-one mapping).
 
 Do: Ensure every item maps to one unique option, and every option is used exactly once.
 
@@ -619,7 +598,7 @@ Do Example:
 
 "items": [ { "id": "term1", "content": "Debit" } ],
 "options": [ { "id": "def1", "content": "Money out" } ],
-"correctAnswers": { "term1": "def1" }
+"correct_answers": { "term1": "def1" }
 IGNORE_WHEN_COPYING_START
 content_copy
 download
@@ -629,7 +608,7 @@ IGNORE_WHEN_COPYING_END
 
 Don't: Use if multiple items map to the same option (use sort-categories instead). Don't leave options unused or map an item to multiple options.
 
-Don't Example (violates one-to-one): "correctAnswers": { "item1": "optA", "item2": "optA" } (optA used twice).
+Don't Example (violates one-to-one): "correct_answers": { "item1": "optA", "item2": "optA" } (optA used twice).
 
 Question Type-Specific: matrix-rating - rows, columns Arrays
 
@@ -650,7 +629,7 @@ IGNORE_WHEN_COPYING_END
 
 Don't: Confuse rows and columns. This type does not typically have a single "correctAnswer" in the JSON, as it's often for opinions/ratings.
 
-Don't Example: Trying to add a correctAnswers field unless specifically designed for a quiz-like matrix.
+Don't Example: Trying to add a correct_answers field unless specifically designed for a quiz-like matrix.
 
 Question Type-Specific: text-input - validation Object (Optional)
 
@@ -673,7 +652,7 @@ Use code with caution.
 Json
 IGNORE_WHEN_COPYING_END
 
-Don't: Make validation overly strict if not necessary. Remember incorrectExplanation is not used for this type.
+Don't: Make validation overly strict if not necessary. Remember incorrect_explanation is not used for this type.
 
 Don't Example: Adding a complex regex for a simple open-ended question.
 
@@ -713,9 +692,9 @@ Don't: Leave out required fields thinking they are implied or not needed.
 
 Don't Example: Omitting the type field from a question object.
 
-Data Integrity - Mandatory Fields (explanation, helpTips, incorrectExplanation)
+Data Integrity - Mandatory Fields (explanation, help_tips, incorrect_explanation)
 
-Core Requirement: explanation (for correct answers) and helpTips are mandatory for all questions (unless helpTips truly detrimental). incorrectExplanation is mandatory for all non-text-input questions.
+Core Requirement: explanation (for correct answers) and help_tips are mandatory for all questions (unless help_tips truly detrimental). incorrect_explanation is mandatory for all non-text-input questions.
 
 Do: Provide these fields with meaningful content as described earlier.
 
@@ -723,13 +702,13 @@ Do Example: Diligently writing a unique explanation for every question.
 
 Don't: Skip these fields to save time or because you think they are redundant.
 
-Don't Example: Forgetting to add incorrectExplanation to an scq question.
+Don't Example: Forgetting to add incorrect_explanation to an scq question.
 
 Data Integrity - Question-Specific Data
 
 Core Requirement: Never skip required question-type-specific fields (like options for mcq/scq, items for sort-order, etc.).
 
-Do: Ensure that if a question is of type scq, it has an options array. If it's sort-order, it has items and correctAnswers.
+Do: Ensure that if a question is of type scq, it has an options array. If it's sort-order, it has items and correct_answers.
 
 Do Example: An scq question always includes a populated options array.
 
@@ -809,53 +788,53 @@ Don't: Just state the correct order without explaining the reasoning.
 
 Don't Example: "explanation": "The correct order was Emergency Fund, then Investing, then Luxury Purchase."
 
-Answer Format Requirement - correctAnswers field for Sort & Match types
+Answer Format Requirement - correct_answers field for Sort & Match types
 
-Core Requirement: sort-order, sort-categories, and match question types MUST include a correctAnswers field defining the expected correct configuration.
+Core Requirement: sort-order, sort-categories, and match question types MUST include a correct_answers field defining the expected correct configuration.
 
-Do: Ensure the correctAnswers field is present and correctly structured for these three types. (Specific structures for each are detailed elsewhere and below).
+Do: Ensure the correct_answers field is present and correctly structured for these three types. (Specific structures for each are detailed elsewhere and below).
 
-Do Example (Conceptual): For any match question, there is a correctAnswers object.
+Do Example (Conceptual): For any match question, there is a correct_answers object.
 
-Don't: Omit the correctAnswers field for sort-order, sort-categories, or match questions.
+Don't: Omit the correct_answers field for sort-order, sort-categories, or match questions.
 
-Don't Example: Creating a match question but not specifying the correctAnswers mapping.
+Don't Example: Creating a match question but not specifying the correct_answers mapping.
 
-correctAnswers Format for sort-order
+correct_answers Format for sort-order
 
-Core Requirement: For sort-order, correctAnswers must be a complete, ordered array of item IDs, from highest to lowest priority (top to bottom).
+Core Requirement: For sort-order, correct_answers must be a complete, ordered array of item IDs, from highest to lowest priority (top to bottom).
 
 Do: List the string IDs of the items in the single correct sequence.
 
-Do Example: "correctAnswers": ["item-emergency-fund", "item-debt-repayment", "item-investing"]
+Do Example: "correct_answers": ["item-emergency-fund", "item-debt-repayment", "item-investing"]
 
 Don't: Make it an array of objects, or an object map.
 
-Don't Example: "correctAnswers": [{ "id": "item-3"}, {"id": "item-1"}]
+Don't Example: "correct_answers": [{ "id": "item-3"}, {"id": "item-1"}]
 
-correctAnswers Format for sort-categories
+correct_answers Format for sort-categories
 
-Core Requirement: For sort-categories, correctAnswers must be an object that maps each category ID (string) to an array of item IDs (strings) correctly assigned to it.
+Core Requirement: For sort-categories, correct_answers must be an object that maps each category ID (string) to an array of item IDs (strings) correctly assigned to it.
 
 Do: Create a key for each category ID, with its value being an array of item IDs that belong to that category.
 
-Do Example: "correctAnswers": { "cat-needs": ["item-rent", "item-food"], "cat-wants": ["item-game", "item-movie"] }
+Do Example: "correct_answers": { "cat-needs": ["item-rent", "item-food"], "cat-wants": ["item-game", "item-movie"] }
 
 Don't: Make it an array, or map items to categories.
 
-Don't Example: "correctAnswers": { "item-rent": "cat-needs" }
+Don't Example: "correct_answers": { "item-rent": "cat-needs" }
 
-correctAnswers Format for match
+correct_answers Format for match
 
-Core Requirement: For match, correctAnswers must be an object that maps each item ID (string) to the ID (string) of its correct match option. This enforces one-to-one mapping.
+Core Requirement: For match, correct_answers must be an object that maps each item ID (string) to the ID (string) of its correct match option. This enforces one-to-one mapping.
 
 Do: Create a key for each item ID, with its value being the ID of the single option it matches to.
 
-Do Example: "correctAnswers": { "item-term-asset": "option-def-asset", "item-term-liability": "option-def-liability" }
+Do Example: "correct_answers": { "item-term-asset": "option-def-asset", "item-term-liability": "option-def-liability" }
 
 Don't: Map an item to multiple options, or an option to multiple items.
 
-Don't Example: "correctAnswers": { "item-term-asset": ["option-def-asset", "option-def-another"] }
+Don't Example: "correct_answers": { "item-term-asset": ["option-def-asset", "option-def-another"] }
 
 IV. Final Adherence Instruction (NON-NEGOTIABLE)
 

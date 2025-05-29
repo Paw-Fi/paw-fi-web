@@ -6,7 +6,7 @@ const ContentBlockSchema = z.object({
   content: z.string(),
 });
 
-const ImageOptionSchema = z.object({
+const image_optionschema = z.object({
   id: z.string(),
   content: z.string(),
   imageUrl: z.string(),
@@ -53,9 +53,9 @@ const BaseQuestionFields = {
   type: z.string(),
   question: z.string(),
   explanation: z.string(),
-  incorrectExplanation: z.string().optional(),
-  helpTips: z.string().optional(),
-  contentBlocks: z.array(ContentBlockSchema).optional(),
+  incorrect_explanation: z.string().optional(),
+  help_tips: z.string().optional(),
+  content_blocks: z.array(ContentBlockSchema).optional(),
 };
 
 // MCQ and SCQ
@@ -77,7 +77,7 @@ const SortCategoriesQuestionSchema = z.object({
   type: z.literal("sort-categories"),
   categories: z.array(CategorySchema),
   items: z.array(ItemSchema),
-  correctAnswers: z.record(z.string(), z.array(z.string())),
+  correct_answers: z.record(z.string(), z.array(z.string())),
   imagePrompt: z.string().optional(),
   caption: z.string().optional(),
 });
@@ -87,7 +87,7 @@ const SortOrderQuestionSchema = z.object({
   ...BaseQuestionFields,
   type: z.literal("sort-order"),
   items: z.array(ItemSchema),
-  correctAnswers: z.array(z.string()),
+  correct_answers: z.array(z.string()),
 });
 
 // Text-input
@@ -101,7 +101,7 @@ const TextInputQuestionSchema = z.object({
 const ImageChoiceQuestionSchema = z.object({
   ...BaseQuestionFields,
   type: z.literal("image-choice"),
-  imageOptions: z.array(ImageOptionSchema),
+  image_options: z.array(image_optionschema),
   imagePrompt: z.string().optional(),
   caption: z.string().optional(),
 });
@@ -112,7 +112,7 @@ const MatchQuestionSchema = z.object({
   type: z.literal("match"),
   items: z.array(ItemSchema),
   options: z.array(OptionSchema),
-  correctAnswers: z.record(z.string(), z.string()),
+  correct_answers: z.record(z.string(), z.string()),
 });
 
 // Matrix-rating
@@ -121,7 +121,7 @@ const MatrixRatingQuestionSchema = z.object({
   type: z.literal("matrix-rating"),
   rows: z.array(RowOrColumnSchema),
   columns: z.array(RowOrColumnSchema),
-  correctAnswers: z.record(z.string(), z.string()),
+  correct_answers: z.record(z.string(), z.string()),
 });
 
 export const QuestionSchema = z.discriminatedUnion("type", [

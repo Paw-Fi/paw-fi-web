@@ -1,0 +1,1078 @@
+{
+    "id": "4d6c263e-4e5c-4e26-b664-02bf01bc6900",
+    "user_id": "4f42e85a-4637-41fb-8fc5-f81933c83861",
+    "course_id": "spending-smarts-teen-gamer",
+    "title": "Level Up Your Spending Game!",
+    "description": "Master your spending habits with fun, game-inspired lessons. Learn where your money goes and how to make smarter choices!",
+    "created_at": "2025-05-28T14:15:11.326499+00:00",
+    "updated_at": "2025-05-28T14:15:11.326499+00:00",
+    "icon": null,
+    "unlocked": false,
+    "xp": 0,
+    "lessons": [
+      {
+        "id": "86920a99-683f-4186-a7e3-93c33349376a",
+        "course_id": "4d6c263e-4e5c-4e26-b664-02bf01bc6900",
+        "lesson_id": "lesson-1-money-basics",
+        "title": "What IS Money, Anyway? 🤷‍♀️",
+        "description": "A crash course in cash! Understand what money is and how it works in our world.",
+        "xp": 100,
+        "unlocked": true,
+        "icon": "💸",
+        "position": 0,
+        "created_at": "2025-05-28T14:15:11.459018+00:00",
+        "updated_at": "2025-05-28T14:15:11.459018+00:00",
+        "questions": [
+          {
+            "id": "4babc427-16b4-4897-85ae-018d67079d0b",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-1",
+            "type": "scq",
+            "question": "What's the main reason we use money instead of just trading stuff?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "It looks cool.",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "It makes trading easier.",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "It's fun to count.",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Exactly! Money makes it way easier to buy and sell things without having to find someone who wants to trade *exactly* what you have.",
+            "incorrect_explanation": "Not quite! While trading can work, money makes it much easier to buy and sell things quickly and efficiently.",
+            "help_tips": "Think about how hard it would be to trade your video games for groceries!",
+            "position": 0,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "40f6875d-189e-4267-9de1-c50629dc4322",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-2",
+            "type": "scq",
+            "question": "If you earn money, what's the smartest thing to do with *some* of it?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Spend it all right away.",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Save some of it.",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Give it all away.",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "You got it! Saving some money is a great habit to start early. It helps you reach bigger goals later on!",
+            "incorrect_explanation": "Almost! While spending is fun, saving a little bit is a good habit to get into. Think about it!",
+            "help_tips": "Think long term!",
+            "position": 1,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "9f9872d4-74b0-4529-878d-2a4a1f09033a",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-3",
+            "type": "scq",
+            "question": "What's one way you could earn money as a teen?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Rob a bank",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Get a part-time job",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Print it yourself",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Spot on! There are tons of ways to earn money, like doing chores for neighbors or getting a part-time job.",
+            "incorrect_explanation": "Not exactly! While some options might be possible, think about realistic ways teens can earn money.",
+            "help_tips": "Think about things you're good at, or chores people need help with.",
+            "position": 2,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "79f046b1-d473-4663-aec3-f5049dcbb5c7",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-4",
+            "type": "scq",
+            "question": "What does it mean to 'budget' your money?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Throwing it all away",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Planning how to spend it",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Hiding it under your bed",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "You're on fire! Budgeting is like creating a plan for your money, so you know where it's going.",
+            "incorrect_explanation": "Not quite! Budgeting isn't about getting rid of money, but about making a plan for where it goes.",
+            "help_tips": "Think of it like planning a strategy!",
+            "position": 3,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "26d15d46-2c41-469a-a265-e9adf42a88e4",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-5",
+            "type": "scq",
+            "question": "What is 'interest'?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Extra money you earn for saving",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "A fee for borrowing money",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-3",
+                "content": "Something that only adults understand",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "That's right! Interest is like a reward for saving money. The bank pays you extra!",
+            "incorrect_explanation": "Not quite, interest is extra money you can earn by saving! The bank rewards you for leaving your money with them.",
+            "help_tips": "It's like a reward!",
+            "position": 4,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "b6999474-95b2-47bc-a1d7-4049a1f34c34",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-6",
+            "type": "sort-order",
+            "question": "Put these in order from LEAST to MOST expensive:",
+            "options": null,
+            "image_options": null,
+            "items": [
+              {
+                "id": "item-1",
+                "content": "A candy bar"
+              },
+              {
+                "id": "item-2",
+                "content": "A new car"
+              },
+              {
+                "id": "item-3",
+                "content": "A video game"
+              }
+            ],
+            "categories": null,
+            "correct_answers": [
+              "item-1",
+              "item-3",
+              "item-2"
+            ],
+            "validation": null,
+            "explanation": "Correct! A candy bar is the cheapest, then the video game, and a car is usually the most expensive.",
+            "incorrect_explanation": null,
+            "help_tips": "Think about how much these things cost in real life.",
+            "position": 5,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "96bde276-bf1e-4946-94c6-a95c96bb46f0",
+            "lesson_id": "86920a99-683f-4186-a7e3-93c33349376a",
+            "question_id": "q1-7",
+            "type": "text-input",
+            "question": "In your own words, what does it mean to be 'financially responsible'?",
+            "options": null,
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "That's a great way to put it! Being financially responsible means making smart choices with your money and thinking about the future.",
+            "incorrect_explanation": null,
+            "help_tips": "Think about making smart choices.",
+            "position": 6,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          }
+        ]
+      },
+      {
+        "id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+        "course_id": "4d6c263e-4e5c-4e26-b664-02bf01bc6900",
+        "lesson_id": "lesson-2-track-it",
+        "title": "No Idea Where Your Money Goes? Let's Track It! 🕵️‍♂️",
+        "description": "Become a spending detective! Learn easy ways to track your spending, like using apps or even just a notebook.",
+        "xp": 120,
+        "unlocked": false,
+        "icon": "📊",
+        "position": 1,
+        "created_at": "2025-05-28T14:15:11.459018+00:00",
+        "updated_at": "2025-05-28T14:15:11.459018+00:00",
+        "questions": [
+          {
+            "id": "41e6385d-3bf6-4731-bfcc-935f0b1fa11c",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-1",
+            "type": "scq",
+            "question": "Why is it helpful to track your spending?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "It's fun to do.",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "You can see where your money goes.",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "It makes you rich.",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Yep! Tracking helps you see exactly where your money is going, so you can make better choices.",
+            "incorrect_explanation": "Not quite! While tracking can feel like extra work at first, it's super helpful to know where your money is going.",
+            "help_tips": "It's like having a map of your money!",
+            "position": 0,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "7eb6b5da-e7db-4b47-974c-49f669cd3b23",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-2",
+            "type": "mcq",
+            "question": "Which of these are good ways to track your spending?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Using a budgeting app",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "Writing it down in a notebook",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Ignoring it completely",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-4",
+                "content": "Using a spreadsheet",
+                "isCorrect": true
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Nice work! All of these are great ways to track your spending, from simple to more high-tech.",
+            "incorrect_explanation": "Almost! Tracking your spending can be done in different ways.",
+            "help_tips": "Consider the options to keep track of your spendings",
+            "position": 1,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "fbf3fbae-0044-48ae-9a4f-d184587d55fd",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-3",
+            "type": "scq",
+            "question": "What's a 'need'?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Something you must have to survive",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "Something cool you want",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-3",
+                "content": "Something super expensive",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Exactly! Needs are things you can't live without.",
+            "incorrect_explanation": "Almost! Needs are the basics.",
+            "help_tips": "What do you really need?",
+            "position": 2,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "8c2b6ac3-7b5f-41b1-b4b3-39bf6f09643c",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-4",
+            "type": "scq",
+            "question": "What's a 'want'?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Something you need to survive",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Something cool you'd like to have",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Something free",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "You got it! Wants are fun, but not essential.",
+            "incorrect_explanation": "Not quite! Wants are the extras.",
+            "help_tips": "Is it something extra?",
+            "position": 3,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "58174f97-a5d3-4505-97ec-3f84ab425159",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-5",
+            "type": "sort-categories",
+            "question": "Drag each item into the 'Need' or 'Want' category:",
+            "options": null,
+            "image_options": null,
+            "items": [
+              {
+                "id": "item-1",
+                "content": "Food"
+              },
+              {
+                "id": "item-2",
+                "content": "Video Games"
+              },
+              {
+                "id": "item-3",
+                "content": "Rent/Housing"
+              },
+              {
+                "id": "item-4",
+                "content": "Latest Phone"
+              }
+            ],
+            "categories": [
+              {
+                "id": "cat-1",
+                "content": "Need"
+              },
+              {
+                "id": "cat-2",
+                "content": "Want"
+              }
+            ],
+            "correct_answers": {
+              "cat-1": [
+                "item-1",
+                "item-3"
+              ],
+              "cat-2": [
+                "item-2",
+                "item-4"
+              ]
+            },
+            "validation": null,
+            "explanation": "Awesome! It's important to know the difference between needs and wants. This can help you decide how to spend and save!",
+            "incorrect_explanation": null,
+            "help_tips": "Think about what you *need* to survive vs. what you just *want* to have.",
+            "position": 4,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "8b7c15e6-0555-425c-aa3a-aa5dde19a7b3",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-6",
+            "type": "text-input",
+            "question": "What's one 'want' you could cut back on to save money?",
+            "options": null,
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": {
+              "max": 50,
+              "min": 1,
+              "required": true,
+              "errorMessage": "Please enter a short answer!"
+            },
+            "explanation": "Nice! Thinking about cutting back on wants is a great step towards saving money.",
+            "incorrect_explanation": null,
+            "help_tips": "What do you like that you can live without?",
+            "position": 5,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "f015bf89-61fb-4409-8754-119f8a42ecec",
+            "lesson_id": "2d58c14f-b293-4fbe-834e-1121c3254c06",
+            "question_id": "q2-7",
+            "type": "image-choice",
+            "question": "Which image best represents tracking your spending?",
+            "options": null,
+            "image_options": [
+              {
+                "id": "imgOpt1",
+                "content": "Tracking app",
+                "isCorrect": true,
+                "imagePrompt": "graph TD; A[Phone App] -->|Expenses| B(Chart!)"
+              },
+              {
+                "id": "imgOpt2",
+                "content": "Full wallet",
+                "isCorrect": false,
+                "imagePrompt": "graph TD; A[Wallet] -->|Money| B(Shopping)"
+              }
+            ],
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Awesome, using an app to track expenses!",
+            "incorrect_explanation": null,
+            "help_tips": "Think about what a good visual aid is for tracking.",
+            "position": 6,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          }
+        ]
+      },
+      {
+        "id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+        "course_id": "4d6c263e-4e5c-4e26-b664-02bf01bc6900",
+        "lesson_id": "lesson-3-beat-impulse-buys",
+        "title": "Defeat Impulse Buys! ⚔️",
+        "description": "Learn to resist those urges to buy stuff you don't really need. Tips and tricks for smarter shopping!",
+        "xp": 150,
+        "unlocked": false,
+        "icon": "🛍️",
+        "position": 2,
+        "created_at": "2025-05-28T14:15:11.459018+00:00",
+        "updated_at": "2025-05-28T14:15:11.459018+00:00",
+        "questions": [
+          {
+            "id": "77a1cd3b-eaa7-43af-9a82-90319cf5812e",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-1",
+            "type": "scq",
+            "question": "What's an 'impulse buy'?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Something you buy without planning",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "Something you save up for",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-3",
+                "content": "Something healthy",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "That's right! An impulse buy is something you buy without really thinking about it.",
+            "incorrect_explanation": "Almost! Impulse buys are unplanned.",
+            "help_tips": "Did you think about it?",
+            "position": 0,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "7bdfba64-5fd0-4ee6-adb6-576ee159ae47",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-2",
+            "type": "scq",
+            "question": "Why are impulse buys often a problem?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "They're always a good deal",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "They can ruin your budget",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "They help you save money",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "You got it! Impulse buys can mess up your budget and prevent you from saving for important goals.",
+            "incorrect_explanation": "Not really. They can leave you short when you need money for important items.",
+            "help_tips": "What can this do to your other goals?",
+            "position": 1,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "70aedd86-9b21-4a17-88cf-ed7db2a0875b",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-3",
+            "type": "scq",
+            "question": "What's a good strategy to avoid impulse buys?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Buy it right away!",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Wait a day or two before buying it",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Hide your money",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Spot on! Waiting helps you decide if you really want it.",
+            "incorrect_explanation": "Not likely. Waiting will help avoid the trap of impulse buying!",
+            "help_tips": "Give it time...",
+            "position": 2,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "458b1167-b2d7-4ff6-9fa4-e0f41bdd60bd",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-4",
+            "type": "scq",
+            "question": "Imagine you're at the store and see a cool gadget. What should you do first to avoid an impulse buy?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Buy it immediately!",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Ask yourself if you really need it",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Tell your friends about it",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Exactly! Asking yourself if you *really* need it is key.",
+            "incorrect_explanation": "Not quite! There's a better first step before this one",
+            "help_tips": "Do you need it or want it?",
+            "position": 3,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "d2d71ba9-ea6f-4c93-a66d-692cb7eaac75",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-5",
+            "type": "sort-order",
+            "question": "Put these steps in order to resist an impulse buy:",
+            "options": null,
+            "image_options": null,
+            "items": [
+              {
+                "id": "item-1",
+                "content": "Wait before buying"
+              },
+              {
+                "id": "item-2",
+                "content": "Recognize the urge"
+              },
+              {
+                "id": "item-3",
+                "content": "Ask: Do I really need it?"
+              }
+            ],
+            "categories": null,
+            "correct_answers": [
+              "item-2",
+              "item-3",
+              "item-1"
+            ],
+            "validation": null,
+            "explanation": "Correct! First, recognize the urge. Then, ask if you need it. Finally, wait before buying.",
+            "incorrect_explanation": null,
+            "help_tips": "Think about what you need versus want.",
+            "position": 4,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "51bc0775-33c2-4a3f-8c41-6ccb77138ee3",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-6",
+            "type": "text-input",
+            "question": "What's one trick YOU can use to avoid impulse buys?",
+            "options": null,
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": {
+              "max": 50,
+              "min": 1,
+              "required": true,
+              "errorMessage": "Please enter a short answer!"
+            },
+            "explanation": "That's a great idea! Finding tricks that work for you is super helpful.",
+            "incorrect_explanation": null,
+            "help_tips": "What do you do to stay on track?",
+            "position": 5,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "83ba0b25-ac1b-4f00-aba1-cd1a8afa8468",
+            "lesson_id": "0d51563d-244b-4a43-8549-fad4b2c9aade",
+            "question_id": "q3-7",
+            "type": "image-choice",
+            "question": "Which image best represents avoiding impulse buys?",
+            "options": null,
+            "image_options": [
+              {
+                "id": "imgOpt1",
+                "content": "Thinking about goals",
+                "isCorrect": true,
+                "imagePrompt": "graph TD; A[Goals] -->|Focus| B(Less Impulses!)"
+              },
+              {
+                "id": "imgOpt2",
+                "content": "Buying everything",
+                "isCorrect": false,
+                "imagePrompt": "graph TD; A[Wallet] -->|Buy All| B(No Savings!)"
+              }
+            ],
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Nice one! Thinking about your goals is the best way to avoid impulse buys.",
+            "incorrect_explanation": null,
+            "help_tips": "Think about what is motivating you!",
+            "position": 6,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          }
+        ]
+      },
+      {
+        "id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+        "course_id": "4d6c263e-4e5c-4e26-b664-02bf01bc6900",
+        "lesson_id": "lesson-4-gamer-spending",
+        "title": "In-Game Spending: Level Up or Game Over? 🎮",
+        "description": "Explore spending in games (like microtransactions) and decide if it's worth it.",
+        "xp": 180,
+        "unlocked": false,
+        "icon": "🕹️",
+        "position": 3,
+        "created_at": "2025-05-28T14:15:11.459018+00:00",
+        "updated_at": "2025-05-28T14:15:11.459018+00:00",
+        "questions": [
+          {
+            "id": "cc00b3f7-af84-45b7-8e10-d9827a491123",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-1",
+            "type": "scq",
+            "question": "What's a 'microtransaction' in a game?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Huge purchases.",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Small in-game purchases",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Donating to the developers.",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Correct, microtransactions are small purchases in-game to get extras!",
+            "incorrect_explanation": "Not true, but microtransactions are common and can be good value.",
+            "help_tips": "These are often small purchases",
+            "position": 0,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "b5466168-0060-4c58-914d-5d9a0e841c89",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-2",
+            "type": "scq",
+            "question": "Are microtransactions always bad?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Yes, they're always a rip-off",
+                "isCorrect": false
+              },
+              {
+                "id": "opt-2",
+                "content": "Not always, it depends",
+                "isCorrect": true
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Correct! They aren't ALWAYS bad.",
+            "incorrect_explanation": "Exactly! They aren't ALWAYS bad. Microtransactions might be bad for you though!",
+            "help_tips": "Some are useful",
+            "position": 1,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "b3598cae-cbe8-4ac8-ad2b-2a8e92009b81",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-3",
+            "type": "mcq",
+            "question": "What questions should you ask yourself BEFORE buying something in a game?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Can I afford it?",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "Will it REALLY make the game more fun?",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-3",
+                "content": "Do I need it to keep up with my friends?",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-4",
+                "content": "Does it look cool?",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "You got it! This allows you to see if it's really important to you or not!",
+            "incorrect_explanation": "Consider this before you spend",
+            "help_tips": "Can you afford it?",
+            "position": 2,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "1360174b-1403-46b2-bc48-38d7f90a81a3",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-4",
+            "type": "scq",
+            "question": "What can you do to avoid spending too much money on in-game stuff?",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "Set a budget",
+                "isCorrect": true
+              },
+              {
+                "id": "opt-2",
+                "content": "Buy everything",
+                "isCorrect": false
+              }
+            ],
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Absolutely, this can keep you from over-spending on in-game loot!",
+            "incorrect_explanation": "Remember this, and this will help avoid over-spending!",
+            "help_tips": "Don't spend it all.",
+            "position": 3,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "a55f83f3-f8b0-4b17-bb7b-037d03af55a5",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-5",
+            "type": "match",
+            "question": "Match the spending scenario with its result:",
+            "options": [
+              {
+                "id": "opt-1",
+                "content": "You see where your money goes!"
+              },
+              {
+                "id": "opt-2",
+                "content": "No Idea where your money goes!"
+              }
+            ],
+            "image_options": null,
+            "items": [
+              {
+                "id": "item-1",
+                "content": "Track it."
+              },
+              {
+                "id": "item-2",
+                "content": "Don't track it."
+              }
+            ],
+            "categories": null,
+            "correct_answers": {
+              "item-1": "opt-1",
+              "item-2": "opt-2"
+            },
+            "validation": null,
+            "explanation": "Perfect! The spending scenarios all match the results!",
+            "incorrect_explanation": null,
+            "help_tips": "How can you avoid these scenarios?",
+            "position": 4,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "8c59fecd-0d66-4a35-a687-68133a2d1ab7",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-6",
+            "type": "text-input",
+            "question": "Have you ever regretted buying something in a game? What happened?",
+            "options": null,
+            "image_options": null,
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": {
+              "max": 100,
+              "min": 1,
+              "required": true,
+              "errorMessage": "Please share your story!"
+            },
+            "explanation": "It's okay if you have! The point is to learn from those experiences and make smarter choices in the future.",
+            "incorrect_explanation": null,
+            "help_tips": "What does this cost in real life?",
+            "position": 5,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          },
+          {
+            "id": "147003c7-1e51-4acf-bf5c-de16a980a2e5",
+            "lesson_id": "d8a3fa52-2e75-4ef2-9a6d-ab1aec9f35d9",
+            "question_id": "q4-7",
+            "type": "image-choice",
+            "question": "Which one is best?",
+            "options": null,
+            "image_options": [
+              {
+                "id": "imgOpt1",
+                "content": "Good Luck",
+                "isCorrect": true,
+                "imagePrompt": "graph TD; A[You] -->|Level Up| B(Smart Spendings!)"
+              },
+              {
+                "id": "imgOpt2",
+                "content": "Bad Luck",
+                "isCorrect": false,
+                "imagePrompt": "graph TD; A[You] -->|Down Grade| B(Bad Spendings!)"
+              }
+            ],
+            "items": null,
+            "categories": null,
+            "correct_answers": null,
+            "validation": null,
+            "explanation": "Congratulations! You have leveled up your money skills.",
+            "incorrect_explanation": null,
+            "help_tips": "How can you level up?",
+            "position": 6,
+            "created_at": "2025-05-28T14:15:11.616347+00:00",
+            "updated_at": "2025-05-28T14:15:11.616347+00:00",
+            "columns": null,
+            "rows": null
+          }
+        ]
+      }
+    ]
+  }

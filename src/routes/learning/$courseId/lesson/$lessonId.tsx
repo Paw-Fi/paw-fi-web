@@ -115,7 +115,6 @@ function LessonPage() {
     currentQuestion,
     answers,
     isComplete,
-    isSuccess,
     earnedXp,
     currentAnswerCorrect,
     countdownSeconds,
@@ -157,12 +156,12 @@ function LessonPage() {
                 question={currentQuestion} 
                 countdownSeconds={countdownSeconds}
                 onAnswer={handleAnswer}
-                value={answers[currentQuestion.id]}
+                value={answers[currentQuestion.question_id]}
               />
               <AnswerFeedback 
                 isCorrect={currentAnswerCorrect} 
                 explanation={currentQuestion.explanation}
-                incorrectExplanation={currentQuestion.incorrectExplanation}
+                incorrect_explanation={currentQuestion.incorrect_explanation||currentQuestion?.validation?.errorMessage}
                 countdownSeconds={countdownSeconds}
                 showExplanation={showExplanation}
                 showFeedback={showFeedback}
@@ -181,10 +180,10 @@ function LessonPage() {
 
           {/* Help tips container*/}
           <div className="top-0 right-0 block mx-auto lg:w-72 lg:translate-x-[105%] lg:absolute mt-8 lg:mt-0">
-            {(currentQuestion.helpTips || currentQuestion.hint) && (
+            {(currentQuestion.help_tips || currentQuestion.hint) && (
               <HelpTips 
                 questionType={currentQuestion.type}
-                helpTips={currentQuestion.helpTips}
+                help_tips={currentQuestion.help_tips}
                 hint={currentQuestion.hint}
                 categories={currentQuestion.categories}
                 helpTipsData={currentQuestion.helpTipsData}
@@ -195,14 +194,13 @@ function LessonPage() {
       </div>
       <div className="flex flex-1 flex-col"></div>
 
-      {/* Completion message - success case */}
-      {isSuccess ? (
+      {/* Completion message - success case */}   
         <CompletionDisplay
           isOpen={isComplete}
           onClose={handleBack}
           description="Great job! You've completed this lesson."
           lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
-          lessonId={lesson?.id} // Pass the actual lesson.id, not the URL parameter
+          lessonId={lesson?.lesson_id} // Pass the actual lesson.id, not the URL parameter
           courseId={courseId}
           reward={{
             amount: earnedXp,
@@ -221,23 +219,7 @@ function LessonPage() {
           }}
           actionText="Continue Learning"
           isSuccess
-        />
-      ) : (
-        // Try again screen when answers are incorrect
-        <CompletionDisplay
-          isOpen={isComplete}
-          onClose={handleBack}
-          title="Keep Learning"
-          description={`Some of your answers were incorrect in Lesson ${lessonId}: ${lesson?.title}.`}
-          // No reward since they didn't pass
-          actionText="Go to Home Page"
-          // Custom handler for retry button
-          onCustomAction={() => handleRetry()}
-          // Use a different emoji for the retry screen - no emoji for retry screen
-          emoji=""
-          isSuccess={false}
-        />
-      )}
+        />    
     </div>
   );
 }

@@ -12,7 +12,7 @@ interface QuestionEditorProps {
 export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
   const [questionText, setQuestionText] = useState(question.question);
   const [explanation, setExplanation] = useState(question.explanation || '');
-  const [incorrectExplanation, setIncorrectExplanation] = useState(question.incorrectExplanation || '');
+  const [incorrect_explanation, setIncorrectExplanation] = useState(question.incorrect_explanation || '');
   const [options, setOptions] = useState<any[]>(question.options || []);
   const [items, setItems] = useState<any[]>(question.items || []);
   const [correctAnswer, setCorrectAnswer] = useState<string | string[] | undefined>(
@@ -23,7 +23,7 @@ export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
   useEffect(() => {
     setQuestionText(question.question);
     setExplanation(question.explanation || '');
-    setIncorrectExplanation(question.incorrectExplanation || '');
+    setIncorrectExplanation(question.incorrect_explanation || '');
     setOptions(question.options || []);
     setItems(question.items || []);
     setCorrectAnswer(question.correctAnswer || '');
@@ -34,7 +34,7 @@ export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
       ...question,
       question: questionText,
       explanation,
-      incorrectExplanation,
+      incorrect_explanation,
     };
 
     if (question.type === 'mcq' || question.type === 'scq' || question.type === 'image-choice') {
@@ -282,7 +282,7 @@ export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
         </label>
         <textarea
           id="incorrect-explanation"
-          value={incorrectExplanation}
+          value={incorrect_explanation}
           onChange={(e) => setIncorrectExplanation(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
           rows={3}

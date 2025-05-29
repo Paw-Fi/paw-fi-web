@@ -44,10 +44,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -71,7 +71,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -82,7 +82,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -104,7 +104,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -123,7 +123,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -133,7 +133,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -244,10 +244,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -271,7 +271,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -282,7 +282,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -304,7 +304,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -323,7 +323,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -333,7 +333,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -440,10 +440,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -467,7 +467,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -478,7 +478,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -500,7 +500,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -519,7 +519,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -529,7 +529,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -638,10 +638,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -665,7 +665,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -676,7 +676,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -698,7 +698,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -717,7 +717,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -727,7 +727,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -835,10 +835,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -862,7 +862,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -873,7 +873,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -895,7 +895,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -914,7 +914,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -924,7 +924,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1032,10 +1032,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -1059,7 +1059,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -1070,7 +1070,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -1092,7 +1092,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -1111,7 +1111,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1121,7 +1121,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1229,10 +1229,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -1256,7 +1256,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -1267,7 +1267,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -1289,7 +1289,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -1308,7 +1308,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1318,7 +1318,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1426,10 +1426,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -1453,7 +1453,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -1464,7 +1464,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -1486,7 +1486,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -1505,7 +1505,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1515,7 +1515,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1623,10 +1623,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -1650,7 +1650,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -1661,7 +1661,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -1683,7 +1683,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -1702,7 +1702,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1712,7 +1712,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1823,10 +1823,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -1850,7 +1850,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -1861,7 +1861,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -1883,7 +1883,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -1902,7 +1902,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -1912,7 +1912,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2019,10 +2019,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -2046,7 +2046,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -2057,7 +2057,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -2079,7 +2079,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -2098,7 +2098,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2108,7 +2108,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2217,10 +2217,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -2244,7 +2244,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -2255,7 +2255,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -2277,7 +2277,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -2296,7 +2296,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2306,7 +2306,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2413,10 +2413,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -2440,7 +2440,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -2451,7 +2451,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -2473,7 +2473,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -2492,7 +2492,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2502,7 +2502,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2609,10 +2609,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -2636,7 +2636,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -2647,7 +2647,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -2669,7 +2669,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -2688,7 +2688,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2698,7 +2698,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2841,10 +2841,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -2868,7 +2868,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -2879,7 +2879,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -2901,7 +2901,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -2920,7 +2920,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -2930,7 +2930,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3037,10 +3037,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -3064,7 +3064,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -3075,7 +3075,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -3097,7 +3097,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -3116,7 +3116,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3126,7 +3126,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3235,10 +3235,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -3262,7 +3262,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -3273,7 +3273,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -3295,7 +3295,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -3314,7 +3314,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3324,7 +3324,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3431,10 +3431,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -3458,7 +3458,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -3469,7 +3469,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -3491,7 +3491,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -3510,7 +3510,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3520,7 +3520,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3627,10 +3627,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -3654,7 +3654,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -3665,7 +3665,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -3687,7 +3687,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -3706,7 +3706,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3716,7 +3716,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3825,10 +3825,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -3852,7 +3852,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -3863,7 +3863,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -3885,7 +3885,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -3904,7 +3904,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -3914,7 +3914,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4021,10 +4021,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -4048,7 +4048,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -4059,7 +4059,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -4081,7 +4081,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -4100,7 +4100,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4110,7 +4110,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4217,10 +4217,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -4244,7 +4244,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -4255,7 +4255,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -4277,7 +4277,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -4296,7 +4296,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4306,7 +4306,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4413,10 +4413,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -4440,7 +4440,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -4451,7 +4451,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -4473,7 +4473,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -4492,7 +4492,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4502,7 +4502,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4623,10 +4623,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -4650,7 +4650,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -4661,7 +4661,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -4683,7 +4683,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -4702,7 +4702,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4712,7 +4712,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4819,10 +4819,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -4846,7 +4846,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -4857,7 +4857,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -4879,7 +4879,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -4898,7 +4898,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -4908,7 +4908,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5015,10 +5015,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -5042,7 +5042,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -5053,7 +5053,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -5075,7 +5075,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -5094,7 +5094,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5104,7 +5104,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5211,10 +5211,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -5238,7 +5238,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -5249,7 +5249,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -5271,7 +5271,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -5290,7 +5290,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5300,7 +5300,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5428,10 +5428,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -5455,7 +5455,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -5466,7 +5466,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -5488,7 +5488,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -5507,7 +5507,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5517,7 +5517,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5624,10 +5624,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -5651,7 +5651,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -5662,7 +5662,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -5684,7 +5684,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -5703,7 +5703,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5713,7 +5713,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5820,10 +5820,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -5847,7 +5847,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -5858,7 +5858,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -5880,7 +5880,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -5899,7 +5899,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -5909,7 +5909,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6016,10 +6016,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -6043,7 +6043,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -6054,7 +6054,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -6076,7 +6076,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -6095,7 +6095,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6105,7 +6105,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6245,10 +6245,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -6272,7 +6272,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -6283,7 +6283,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -6305,7 +6305,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -6324,7 +6324,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6334,7 +6334,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6441,10 +6441,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -6468,7 +6468,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -6479,7 +6479,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -6501,7 +6501,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -6520,7 +6520,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6530,7 +6530,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6637,10 +6637,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -6664,7 +6664,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -6675,7 +6675,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -6697,7 +6697,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -6716,7 +6716,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6726,7 +6726,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6833,10 +6833,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -6860,7 +6860,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -6871,7 +6871,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -6893,7 +6893,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -6912,7 +6912,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -6922,7 +6922,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7045,10 +7045,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -7072,7 +7072,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -7083,7 +7083,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -7105,7 +7105,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -7124,7 +7124,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7134,7 +7134,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7241,10 +7241,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -7268,7 +7268,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -7279,7 +7279,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -7301,7 +7301,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -7320,7 +7320,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7330,7 +7330,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7437,10 +7437,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -7464,7 +7464,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -7475,7 +7475,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -7497,7 +7497,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -7516,7 +7516,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7526,7 +7526,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7633,10 +7633,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -7660,7 +7660,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -7671,7 +7671,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -7693,7 +7693,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -7712,7 +7712,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7722,7 +7722,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7854,10 +7854,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -7881,7 +7881,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -7892,7 +7892,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -7914,7 +7914,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -7933,7 +7933,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -7943,7 +7943,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8050,10 +8050,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -8077,7 +8077,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -8088,7 +8088,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -8110,7 +8110,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -8129,7 +8129,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8139,7 +8139,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8246,10 +8246,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -8273,7 +8273,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -8284,7 +8284,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -8306,7 +8306,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -8325,7 +8325,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8335,7 +8335,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8442,10 +8442,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -8469,7 +8469,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -8480,7 +8480,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -8502,7 +8502,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -8521,7 +8521,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8531,7 +8531,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8666,10 +8666,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -8693,7 +8693,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -8704,7 +8704,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -8726,7 +8726,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -8745,7 +8745,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8755,7 +8755,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8862,10 +8862,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -8889,7 +8889,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -8900,7 +8900,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -8922,7 +8922,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -8941,7 +8941,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -8951,7 +8951,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9058,10 +9058,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -9085,7 +9085,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -9096,7 +9096,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -9118,7 +9118,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -9137,7 +9137,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9147,7 +9147,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9256,10 +9256,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -9283,7 +9283,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -9294,7 +9294,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -9316,7 +9316,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -9335,7 +9335,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9345,7 +9345,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9452,10 +9452,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -9479,7 +9479,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -9490,7 +9490,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -9512,7 +9512,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -9531,7 +9531,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9541,7 +9541,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9648,10 +9648,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -9675,7 +9675,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -9686,7 +9686,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -9708,7 +9708,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -9727,7 +9727,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9737,7 +9737,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9844,10 +9844,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -9871,7 +9871,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -9882,7 +9882,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -9904,7 +9904,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -9923,7 +9923,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -9933,7 +9933,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10059,10 +10059,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -10086,7 +10086,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -10097,7 +10097,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -10119,7 +10119,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -10138,7 +10138,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10148,7 +10148,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10255,10 +10255,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -10282,7 +10282,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -10293,7 +10293,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -10315,7 +10315,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -10334,7 +10334,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10344,7 +10344,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10451,10 +10451,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -10478,7 +10478,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -10489,7 +10489,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -10511,7 +10511,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -10530,7 +10530,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10540,7 +10540,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10647,10 +10647,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -10674,7 +10674,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -10685,7 +10685,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -10707,7 +10707,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -10726,7 +10726,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10736,7 +10736,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10866,10 +10866,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -10893,7 +10893,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -10904,7 +10904,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -10926,7 +10926,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -10945,7 +10945,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -10955,7 +10955,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11062,10 +11062,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -11089,7 +11089,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -11100,7 +11100,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -11122,7 +11122,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -11141,7 +11141,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11151,7 +11151,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11260,10 +11260,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -11287,7 +11287,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -11298,7 +11298,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -11320,7 +11320,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -11339,7 +11339,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11349,7 +11349,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11456,10 +11456,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -11483,7 +11483,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -11494,7 +11494,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -11516,7 +11516,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -11535,7 +11535,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11545,7 +11545,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11652,10 +11652,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -11679,7 +11679,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -11690,7 +11690,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -11712,7 +11712,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -11731,7 +11731,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11741,7 +11741,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11872,10 +11872,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -11899,7 +11899,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -11910,7 +11910,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -11932,7 +11932,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -11951,7 +11951,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -11961,7 +11961,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12068,10 +12068,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -12095,7 +12095,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -12106,7 +12106,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -12128,7 +12128,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -12147,7 +12147,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12157,7 +12157,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12264,10 +12264,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -12291,7 +12291,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -12302,7 +12302,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -12324,7 +12324,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -12343,7 +12343,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12353,7 +12353,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12480,10 +12480,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -12507,7 +12507,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -12518,7 +12518,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -12540,7 +12540,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -12559,7 +12559,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12569,7 +12569,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12676,10 +12676,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -12703,7 +12703,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -12714,7 +12714,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -12736,7 +12736,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -12755,7 +12755,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12765,7 +12765,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12872,10 +12872,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -12899,7 +12899,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -12910,7 +12910,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -12932,7 +12932,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -12951,7 +12951,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -12961,7 +12961,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13090,10 +13090,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -13117,7 +13117,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -13128,7 +13128,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -13150,7 +13150,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -13169,7 +13169,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13179,7 +13179,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13286,10 +13286,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -13313,7 +13313,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -13324,7 +13324,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -13346,7 +13346,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -13365,7 +13365,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13375,7 +13375,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13484,10 +13484,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -13511,7 +13511,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -13522,7 +13522,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -13544,7 +13544,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -13563,7 +13563,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13573,7 +13573,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13680,10 +13680,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -13707,7 +13707,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -13718,7 +13718,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -13740,7 +13740,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -13759,7 +13759,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13769,7 +13769,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13876,10 +13876,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -13903,7 +13903,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -13914,7 +13914,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -13936,7 +13936,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -13955,7 +13955,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -13965,7 +13965,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14097,10 +14097,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -14124,7 +14124,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -14135,7 +14135,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -14157,7 +14157,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -14176,7 +14176,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14186,7 +14186,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14293,10 +14293,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -14320,7 +14320,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -14331,7 +14331,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -14353,7 +14353,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -14372,7 +14372,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14382,7 +14382,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14489,10 +14489,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -14516,7 +14516,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -14527,7 +14527,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -14549,7 +14549,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -14568,7 +14568,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14578,7 +14578,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14700,10 +14700,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -14727,7 +14727,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -14738,7 +14738,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -14760,7 +14760,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -14779,7 +14779,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14789,7 +14789,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14896,10 +14896,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -14923,7 +14923,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -14934,7 +14934,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -14956,7 +14956,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -14975,7 +14975,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -14985,7 +14985,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15094,10 +15094,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -15121,7 +15121,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -15132,7 +15132,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -15154,7 +15154,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -15173,7 +15173,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15183,7 +15183,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15290,10 +15290,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -15317,7 +15317,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -15328,7 +15328,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -15350,7 +15350,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -15369,7 +15369,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15379,7 +15379,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15486,10 +15486,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -15513,7 +15513,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -15524,7 +15524,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -15546,7 +15546,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -15565,7 +15565,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15575,7 +15575,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15706,10 +15706,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -15733,7 +15733,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -15744,7 +15744,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -15766,7 +15766,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -15785,7 +15785,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15795,7 +15795,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15902,10 +15902,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -15929,7 +15929,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -15940,7 +15940,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -15962,7 +15962,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -15981,7 +15981,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -15991,7 +15991,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16100,10 +16100,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -16127,7 +16127,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -16138,7 +16138,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -16160,7 +16160,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -16179,7 +16179,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16189,7 +16189,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16296,10 +16296,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -16323,7 +16323,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -16334,7 +16334,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -16356,7 +16356,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -16375,7 +16375,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16385,7 +16385,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16492,10 +16492,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -16519,7 +16519,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -16530,7 +16530,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -16552,7 +16552,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -16571,7 +16571,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16581,7 +16581,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16720,10 +16720,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -16747,7 +16747,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -16758,7 +16758,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -16780,7 +16780,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -16799,7 +16799,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16809,7 +16809,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -16916,10 +16916,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -16943,7 +16943,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -16954,7 +16954,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -16976,7 +16976,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -16995,7 +16995,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17005,7 +17005,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17114,10 +17114,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -17141,7 +17141,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -17152,7 +17152,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -17174,7 +17174,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -17193,7 +17193,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17203,7 +17203,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17310,10 +17310,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -17337,7 +17337,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -17348,7 +17348,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -17370,7 +17370,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -17389,7 +17389,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17399,7 +17399,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17506,10 +17506,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -17533,7 +17533,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -17544,7 +17544,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -17566,7 +17566,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -17585,7 +17585,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17595,7 +17595,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17709,10 +17709,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -17736,7 +17736,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -17747,7 +17747,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -17769,7 +17769,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -17788,7 +17788,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17798,7 +17798,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17905,10 +17905,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -17932,7 +17932,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -17943,7 +17943,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -17965,7 +17965,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -17984,7 +17984,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -17994,7 +17994,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18101,10 +18101,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -18128,7 +18128,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -18139,7 +18139,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -18161,7 +18161,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -18180,7 +18180,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18190,7 +18190,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18304,10 +18304,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -18331,7 +18331,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -18342,7 +18342,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -18364,7 +18364,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -18383,7 +18383,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18393,7 +18393,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18500,10 +18500,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -18527,7 +18527,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -18538,7 +18538,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -18560,7 +18560,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -18579,7 +18579,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18589,7 +18589,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18696,10 +18696,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -18723,7 +18723,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -18734,7 +18734,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -18756,7 +18756,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -18775,7 +18775,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18785,7 +18785,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18902,10 +18902,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -18929,7 +18929,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -18940,7 +18940,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -18962,7 +18962,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -18981,7 +18981,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -18991,7 +18991,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19098,10 +19098,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -19125,7 +19125,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -19136,7 +19136,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -19158,7 +19158,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -19177,7 +19177,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19187,7 +19187,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19296,10 +19296,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -19323,7 +19323,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -19334,7 +19334,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -19356,7 +19356,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -19375,7 +19375,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19385,7 +19385,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19492,10 +19492,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -19519,7 +19519,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -19530,7 +19530,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -19552,7 +19552,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -19571,7 +19571,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19581,7 +19581,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19688,10 +19688,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -19715,7 +19715,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -19726,7 +19726,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -19748,7 +19748,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -19767,7 +19767,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19777,7 +19777,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -19912,10 +19912,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -19939,7 +19939,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -19950,7 +19950,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -19972,7 +19972,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -19991,7 +19991,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20001,7 +20001,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20108,10 +20108,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -20135,7 +20135,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -20146,7 +20146,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -20168,7 +20168,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -20187,7 +20187,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20197,7 +20197,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20304,10 +20304,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -20331,7 +20331,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -20342,7 +20342,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -20364,7 +20364,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -20383,7 +20383,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20393,7 +20393,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20506,10 +20506,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -20533,7 +20533,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -20544,7 +20544,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -20566,7 +20566,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -20585,7 +20585,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20595,7 +20595,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20702,10 +20702,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -20729,7 +20729,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -20740,7 +20740,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -20762,7 +20762,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -20781,7 +20781,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20791,7 +20791,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20898,10 +20898,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -20925,7 +20925,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -20936,7 +20936,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -20958,7 +20958,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -20977,7 +20977,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -20987,7 +20987,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21098,10 +21098,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -21125,7 +21125,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -21136,7 +21136,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -21158,7 +21158,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -21177,7 +21177,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21187,7 +21187,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21294,10 +21294,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -21321,7 +21321,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -21332,7 +21332,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -21354,7 +21354,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -21373,7 +21373,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21383,7 +21383,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21490,10 +21490,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -21517,7 +21517,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -21528,7 +21528,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -21550,7 +21550,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -21569,7 +21569,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21579,7 +21579,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21688,10 +21688,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -21715,7 +21715,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -21726,7 +21726,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -21748,7 +21748,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -21767,7 +21767,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21777,7 +21777,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21884,10 +21884,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -21911,7 +21911,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -21922,7 +21922,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -21944,7 +21944,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -21963,7 +21963,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -21973,7 +21973,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22080,10 +22080,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -22107,7 +22107,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -22118,7 +22118,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -22140,7 +22140,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -22159,7 +22159,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22169,7 +22169,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22276,10 +22276,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -22303,7 +22303,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -22314,7 +22314,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -22336,7 +22336,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -22355,7 +22355,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22365,7 +22365,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22478,10 +22478,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -22505,7 +22505,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -22516,7 +22516,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -22538,7 +22538,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -22557,7 +22557,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22567,7 +22567,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22674,10 +22674,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -22701,7 +22701,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -22712,7 +22712,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -22734,7 +22734,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -22753,7 +22753,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22763,7 +22763,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22870,10 +22870,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -22897,7 +22897,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -22908,7 +22908,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -22930,7 +22930,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -22949,7 +22949,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -22959,7 +22959,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23066,10 +23066,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -23093,7 +23093,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -23104,7 +23104,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -23126,7 +23126,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -23145,7 +23145,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23155,7 +23155,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23266,10 +23266,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -23293,7 +23293,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -23304,7 +23304,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -23326,7 +23326,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -23345,7 +23345,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23355,7 +23355,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23462,10 +23462,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -23489,7 +23489,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -23500,7 +23500,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -23522,7 +23522,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -23541,7 +23541,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23551,7 +23551,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23658,10 +23658,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -23685,7 +23685,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -23696,7 +23696,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -23718,7 +23718,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -23737,7 +23737,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23747,7 +23747,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23854,10 +23854,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -23881,7 +23881,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -23892,7 +23892,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -23914,7 +23914,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -23933,7 +23933,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -23943,7 +23943,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24054,10 +24054,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -24081,7 +24081,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -24092,7 +24092,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -24114,7 +24114,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -24133,7 +24133,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24143,7 +24143,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24250,10 +24250,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -24277,7 +24277,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -24288,7 +24288,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -24310,7 +24310,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -24329,7 +24329,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24339,7 +24339,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24446,10 +24446,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -24473,7 +24473,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -24484,7 +24484,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -24506,7 +24506,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -24525,7 +24525,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24535,7 +24535,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24642,10 +24642,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -24669,7 +24669,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -24680,7 +24680,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -24702,7 +24702,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -24721,7 +24721,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24731,7 +24731,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24845,10 +24845,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -24872,7 +24872,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -24883,7 +24883,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -24905,7 +24905,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -24924,7 +24924,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -24934,7 +24934,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25041,10 +25041,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -25068,7 +25068,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -25079,7 +25079,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -25101,7 +25101,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -25120,7 +25120,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25130,7 +25130,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25237,10 +25237,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -25264,7 +25264,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -25275,7 +25275,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -25297,7 +25297,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -25316,7 +25316,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25326,7 +25326,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25439,10 +25439,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -25466,7 +25466,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -25477,7 +25477,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -25499,7 +25499,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -25518,7 +25518,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25528,7 +25528,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25635,10 +25635,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -25662,7 +25662,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -25673,7 +25673,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -25695,7 +25695,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -25714,7 +25714,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25724,7 +25724,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25831,10 +25831,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -25858,7 +25858,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -25869,7 +25869,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -25891,7 +25891,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -25910,7 +25910,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -25920,7 +25920,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26027,10 +26027,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -26054,7 +26054,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -26065,7 +26065,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -26087,7 +26087,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -26106,7 +26106,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26116,7 +26116,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26228,10 +26228,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -26255,7 +26255,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -26266,7 +26266,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -26288,7 +26288,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -26307,7 +26307,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26317,7 +26317,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26424,10 +26424,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -26451,7 +26451,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -26462,7 +26462,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -26484,7 +26484,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -26503,7 +26503,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26513,7 +26513,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26620,10 +26620,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -26647,7 +26647,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -26658,7 +26658,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -26680,7 +26680,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -26699,7 +26699,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26709,7 +26709,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26816,10 +26816,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -26843,7 +26843,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -26854,7 +26854,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -26876,7 +26876,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -26895,7 +26895,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -26905,7 +26905,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27016,10 +27016,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -27043,7 +27043,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -27054,7 +27054,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -27076,7 +27076,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -27095,7 +27095,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27105,7 +27105,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27212,10 +27212,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -27239,7 +27239,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -27250,7 +27250,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -27272,7 +27272,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -27291,7 +27291,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27301,7 +27301,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27408,10 +27408,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -27435,7 +27435,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -27446,7 +27446,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -27468,7 +27468,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -27487,7 +27487,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27497,7 +27497,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27643,10 +27643,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -27670,7 +27670,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -27681,7 +27681,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -27703,7 +27703,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -27722,7 +27722,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27732,7 +27732,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27839,10 +27839,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -27866,7 +27866,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -27877,7 +27877,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -27899,7 +27899,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -27918,7 +27918,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -27928,7 +27928,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28035,10 +28035,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -28062,7 +28062,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -28073,7 +28073,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -28095,7 +28095,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -28114,7 +28114,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28124,7 +28124,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28267,10 +28267,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -28294,7 +28294,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -28305,7 +28305,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -28327,7 +28327,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -28346,7 +28346,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28356,7 +28356,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28463,10 +28463,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -28490,7 +28490,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -28501,7 +28501,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -28523,7 +28523,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -28542,7 +28542,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28552,7 +28552,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28661,10 +28661,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -28688,7 +28688,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -28699,7 +28699,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -28721,7 +28721,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -28740,7 +28740,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28750,7 +28750,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28857,10 +28857,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -28884,7 +28884,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -28895,7 +28895,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -28917,7 +28917,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -28936,7 +28936,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -28946,7 +28946,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29053,10 +29053,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -29080,7 +29080,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -29091,7 +29091,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -29113,7 +29113,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -29132,7 +29132,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29142,7 +29142,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29270,10 +29270,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -29297,7 +29297,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -29308,7 +29308,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -29330,7 +29330,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -29349,7 +29349,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29359,7 +29359,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29466,10 +29466,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -29493,7 +29493,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -29504,7 +29504,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -29526,7 +29526,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -29545,7 +29545,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29555,7 +29555,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29662,10 +29662,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -29689,7 +29689,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -29700,7 +29700,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -29722,7 +29722,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -29741,7 +29741,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29751,7 +29751,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29906,10 +29906,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -29933,7 +29933,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -29944,7 +29944,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -29966,7 +29966,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -29985,7 +29985,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -29995,7 +29995,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30102,10 +30102,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -30129,7 +30129,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -30140,7 +30140,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -30162,7 +30162,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -30181,7 +30181,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30191,7 +30191,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30298,10 +30298,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -30325,7 +30325,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -30336,7 +30336,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -30358,7 +30358,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -30377,7 +30377,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30387,7 +30387,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30507,10 +30507,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -30534,7 +30534,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -30545,7 +30545,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -30567,7 +30567,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -30586,7 +30586,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30596,7 +30596,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30703,10 +30703,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -30730,7 +30730,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -30741,7 +30741,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -30763,7 +30763,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -30782,7 +30782,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30792,7 +30792,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30899,10 +30899,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -30926,7 +30926,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -30937,7 +30937,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -30959,7 +30959,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -30978,7 +30978,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -30988,7 +30988,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31110,10 +31110,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -31137,7 +31137,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -31148,7 +31148,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -31170,7 +31170,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -31189,7 +31189,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31199,7 +31199,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31306,10 +31306,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -31333,7 +31333,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -31344,7 +31344,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -31366,7 +31366,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -31385,7 +31385,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31395,7 +31395,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31502,10 +31502,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -31529,7 +31529,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -31540,7 +31540,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -31562,7 +31562,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -31581,7 +31581,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31591,7 +31591,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31712,10 +31712,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -31739,7 +31739,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -31750,7 +31750,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -31772,7 +31772,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -31791,7 +31791,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31801,7 +31801,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31908,10 +31908,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -31935,7 +31935,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -31946,7 +31946,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -31968,7 +31968,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -31987,7 +31987,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -31997,7 +31997,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32104,10 +32104,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -32131,7 +32131,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -32142,7 +32142,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -32164,7 +32164,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -32183,7 +32183,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32193,7 +32193,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32372,10 +32372,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -32399,7 +32399,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -32410,7 +32410,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -32432,7 +32432,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -32451,7 +32451,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32461,7 +32461,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32568,10 +32568,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -32595,7 +32595,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -32606,7 +32606,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -32628,7 +32628,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -32647,7 +32647,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32657,7 +32657,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32766,10 +32766,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -32793,7 +32793,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -32804,7 +32804,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -32826,7 +32826,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -32845,7 +32845,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32855,7 +32855,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -32962,10 +32962,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -32989,7 +32989,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33000,7 +33000,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -33022,7 +33022,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -33041,7 +33041,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33051,7 +33051,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33158,10 +33158,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -33185,7 +33185,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33196,7 +33196,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -33218,7 +33218,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -33237,7 +33237,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33247,7 +33247,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33358,10 +33358,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -33385,7 +33385,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33396,7 +33396,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -33418,7 +33418,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -33437,7 +33437,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33447,7 +33447,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33554,10 +33554,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -33581,7 +33581,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33592,7 +33592,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -33614,7 +33614,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -33633,7 +33633,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33643,7 +33643,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33750,10 +33750,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -33777,7 +33777,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33788,7 +33788,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -33810,7 +33810,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -33829,7 +33829,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33839,7 +33839,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -33946,10 +33946,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -33973,7 +33973,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -33984,7 +33984,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -34006,7 +34006,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -34025,7 +34025,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34035,7 +34035,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34179,10 +34179,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -34206,7 +34206,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -34217,7 +34217,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -34239,7 +34239,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -34258,7 +34258,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34268,7 +34268,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34375,10 +34375,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -34402,7 +34402,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -34413,7 +34413,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -34435,7 +34435,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -34454,7 +34454,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34464,7 +34464,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34571,10 +34571,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -34598,7 +34598,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -34609,7 +34609,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -34631,7 +34631,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -34650,7 +34650,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34660,7 +34660,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34767,10 +34767,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -34794,7 +34794,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -34805,7 +34805,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -34827,7 +34827,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -34846,7 +34846,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34856,7 +34856,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -34993,10 +34993,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -35020,7 +35020,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -35031,7 +35031,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -35053,7 +35053,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -35072,7 +35072,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35082,7 +35082,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35189,10 +35189,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -35216,7 +35216,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -35227,7 +35227,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -35249,7 +35249,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -35268,7 +35268,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35278,7 +35278,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35385,10 +35385,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -35412,7 +35412,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -35423,7 +35423,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -35445,7 +35445,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -35464,7 +35464,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35474,7 +35474,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35581,10 +35581,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -35608,7 +35608,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -35619,7 +35619,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -35641,7 +35641,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -35660,7 +35660,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35670,7 +35670,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35817,10 +35817,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -35844,7 +35844,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -35855,7 +35855,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -35877,7 +35877,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -35896,7 +35896,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -35906,7 +35906,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36013,10 +36013,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -36040,7 +36040,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -36051,7 +36051,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -36073,7 +36073,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -36092,7 +36092,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36102,7 +36102,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36209,10 +36209,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -36236,7 +36236,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -36247,7 +36247,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -36269,7 +36269,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -36288,7 +36288,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36298,7 +36298,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36405,10 +36405,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -36432,7 +36432,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -36443,7 +36443,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -36465,7 +36465,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -36484,7 +36484,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36494,7 +36494,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36640,10 +36640,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -36667,7 +36667,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -36678,7 +36678,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -36700,7 +36700,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -36719,7 +36719,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36729,7 +36729,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36836,10 +36836,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -36863,7 +36863,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -36874,7 +36874,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -36896,7 +36896,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -36915,7 +36915,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -36925,7 +36925,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37032,10 +37032,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -37059,7 +37059,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -37070,7 +37070,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -37092,7 +37092,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -37111,7 +37111,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37121,7 +37121,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37228,10 +37228,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -37255,7 +37255,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -37266,7 +37266,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -37288,7 +37288,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -37307,7 +37307,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37317,7 +37317,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37442,10 +37442,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -37469,7 +37469,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -37480,7 +37480,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -37502,7 +37502,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -37521,7 +37521,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37531,7 +37531,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37638,10 +37638,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -37665,7 +37665,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -37676,7 +37676,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -37698,7 +37698,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -37717,7 +37717,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37727,7 +37727,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37834,10 +37834,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -37861,7 +37861,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -37872,7 +37872,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -37894,7 +37894,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -37913,7 +37913,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -37923,7 +37923,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38032,10 +38032,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -38059,7 +38059,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -38070,7 +38070,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -38092,7 +38092,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -38111,7 +38111,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38121,7 +38121,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38228,10 +38228,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -38255,7 +38255,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -38266,7 +38266,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -38288,7 +38288,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -38307,7 +38307,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38317,7 +38317,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38424,10 +38424,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -38451,7 +38451,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -38462,7 +38462,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -38484,7 +38484,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -38503,7 +38503,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38513,7 +38513,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38620,10 +38620,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -38647,7 +38647,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -38658,7 +38658,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -38680,7 +38680,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -38699,7 +38699,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38709,7 +38709,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38834,10 +38834,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -38861,7 +38861,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -38872,7 +38872,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -38894,7 +38894,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -38913,7 +38913,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -38923,7 +38923,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39030,10 +39030,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -39057,7 +39057,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -39068,7 +39068,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -39090,7 +39090,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -39109,7 +39109,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39119,7 +39119,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39226,10 +39226,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -39253,7 +39253,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -39264,7 +39264,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -39286,7 +39286,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -39305,7 +39305,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39315,7 +39315,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39422,10 +39422,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -39449,7 +39449,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -39460,7 +39460,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -39482,7 +39482,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -39501,7 +39501,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39511,7 +39511,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39714,10 +39714,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -39741,7 +39741,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -39752,7 +39752,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -39774,7 +39774,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -39793,7 +39793,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39803,7 +39803,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39910,10 +39910,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -39937,7 +39937,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -39948,7 +39948,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -39970,7 +39970,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -39989,7 +39989,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -39999,7 +39999,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40108,10 +40108,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -40135,7 +40135,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -40146,7 +40146,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -40168,7 +40168,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -40187,7 +40187,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40197,7 +40197,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40304,10 +40304,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -40331,7 +40331,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -40342,7 +40342,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -40364,7 +40364,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -40383,7 +40383,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40393,7 +40393,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40500,10 +40500,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -40527,7 +40527,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -40538,7 +40538,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -40560,7 +40560,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -40579,7 +40579,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40589,7 +40589,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40714,10 +40714,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -40741,7 +40741,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -40752,7 +40752,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -40774,7 +40774,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -40793,7 +40793,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40803,7 +40803,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40910,10 +40910,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -40937,7 +40937,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -40948,7 +40948,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -40970,7 +40970,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -40989,7 +40989,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -40999,7 +40999,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41106,10 +41106,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -41133,7 +41133,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -41144,7 +41144,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -41166,7 +41166,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -41185,7 +41185,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41195,7 +41195,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41310,10 +41310,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -41337,7 +41337,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -41348,7 +41348,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -41370,7 +41370,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -41389,7 +41389,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41399,7 +41399,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41506,10 +41506,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -41533,7 +41533,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -41544,7 +41544,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -41566,7 +41566,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -41585,7 +41585,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41595,7 +41595,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41702,10 +41702,10 @@ Base fields for all questions:
 - type: string (see below)
 - question: string
 - explanation: string
-- incorrectExplanation?: string
+- incorrect_explanation?: string
 - hint?: string
-- helpTips?: string
-- contentBlocks?: Array<{ type: string; content: string }>
+- help_tips?: string
+- content_blocks?: Array<{ type: string; content: string }>
 ```
 
 ### Supported Question Types
@@ -41729,7 +41729,7 @@ Base fields for all questions:
   type: 'sort-categories',
   categories: Array<{ id: string; content: string }>,
   items: Array<{ id: string; content: string }>,
-  correctAnswers: Record<string, string[]>,
+  correct_answers: Record<string, string[]>,
   imagePrompt?: string,
   caption?: string
 }
@@ -41740,7 +41740,7 @@ Base fields for all questions:
 {
   type: 'sort-order',
   items: Array<{ id: string; content: string }>,
-  correctAnswers: string[]
+  correct_answers: string[]
 }
 ```
 
@@ -41762,7 +41762,7 @@ Base fields for all questions:
 ```
 {
   type: 'image-choice',
-  imageOptions: Array<{
+  image_options: Array<{
     id: string;
     content: string;
     imageUrl: string;
@@ -41781,7 +41781,7 @@ Base fields for all questions:
   type: 'match',
   items: Array<{ id: string; content: string }>,
   options: Array<{ id: string; content: string; isCorrect?: boolean; description?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 
@@ -41791,7 +41791,7 @@ Base fields for all questions:
   type: 'matrix-rating',
   rows: Array<{ id: string; content: string; color?: string }>,
   columns: Array<{ id: string; content: string; color?: string }>,
-  correctAnswers: Record<string, string>
+  correct_answers: Record<string, string>
 }
 ```
 

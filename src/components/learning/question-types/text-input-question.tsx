@@ -5,12 +5,14 @@ import type { TextInputQuestion } from '@/types/learning.types';
 
 interface TextInputQuestionProps {
   question: TextInputQuestion;
-  onAnswer: (answer: string) => void;
+  onAnswer: (value: string) => void;
   value?: string;
 }
 
 export default function TextInputQuestion({ question, onAnswer, value = '' }: TextInputQuestionProps) {
-  const [inputValue, setInputValue] = useState(value);
+  // Only use value if it's a non-question_id string, otherwise default to empty string
+  const initialInputValue = value && typeof value === 'string' && value !== question.question_id ? value : "";
+  const [inputValue, setInputValue] = useState<string>(initialInputValue);
   const [error, setError] = useState<string | null>(null);
   
   // Update internal state when external value changes
@@ -69,10 +71,11 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
     // Clear error when user types
     if (error) setError(null);
     
-    // Just update the answer without validating
-    // This matches the behavior of other question types
+    // Only propagate the input value
     onAnswer(newValue);
   };
+
+
 
   const handleBlur = () => {
     validateInput(inputValue);
@@ -98,7 +101,7 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
           onChange={handleChange}
           onBlur={handleBlur}
           aria-invalid={!!error}
-          aria-describedby={error ? `${question.id}-error` : undefined}
+          aria-describedby={error ? `${question.question_id}-error` : undefined}
         />
         
         {question.suffix && (
@@ -110,7 +113,7 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
       
       {error && (
         <p 
-          id={`${question.id}-error`} 
+          id={`${question.question_id}-error`} 
           className="text-sm text-red-600"
           aria-live="polite"
         >

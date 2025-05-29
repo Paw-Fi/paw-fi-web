@@ -45,9 +45,9 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
   return (
     <div className="choice-question">
       {/* Render content blocks if available */}
-      {question.contentBlocks && question.contentBlocks.length > 0 && (
+      {question.content_blocks && question.content_blocks.length > 0 && (
         <div className="mb-4">
-          <ContentBlockRenderer blocks={question.contentBlocks} />
+          <ContentBlockRenderer blocks={question.content_blocks} />
         </div>
       )}
       <div

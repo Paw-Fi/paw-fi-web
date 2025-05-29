@@ -3,7 +3,7 @@
 interface AnswerFeedbackProps {
   isCorrect: boolean | null;
   explanation?: string;
-  incorrectExplanation?: string;
+  incorrect_explanation?: string;
   countdownSeconds: number;
   showExplanation: boolean;
   showFeedback: boolean;
@@ -12,7 +12,7 @@ interface AnswerFeedbackProps {
 export function AnswerFeedback({ 
   isCorrect, 
   explanation, 
-  incorrectExplanation,
+  incorrect_explanation,
   countdownSeconds, 
   showExplanation ,
   showFeedback
@@ -54,7 +54,7 @@ export function AnswerFeedback({
             )}
           </span>
         </div>
-        <p className="text-gray-700">{incorrectExplanation ?? "Take a moment to review your answer and try again."}</p>
+        <p className="text-gray-700">{incorrect_explanation ?? "Take a moment to review your answer and try again."}</p>
       </div>
     );
   }

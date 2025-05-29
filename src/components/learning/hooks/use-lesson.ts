@@ -19,7 +19,6 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isComplete, setIsComplete] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(true);
   const [earnedXp, setEarnedXp] = useState(0);
   const [currentAnswerCorrect, setCurrentAnswerCorrect] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(0);
@@ -101,23 +100,11 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
       // Reset all UI states when moving to a new question
       resetQuestionStates();
     } else {
-      // We've reached the end of the lesson
-      const allCorrect = areAllAnswersCorrect(questions, answers);
-      setIsSuccess(allCorrect);
-
-      // Set XP earned based on correct answers
-      if (allCorrect) {
+      // We've reached the end of the lesson     
         setEarnedXp(lesson?.xp || 0);
         // If all answers are correct, unlock the next lesson
         unlockNextLesson(lessonId,courseId);
-      } else {
-        // Partial XP based on number of correct answers
-        const correctCount = questions.filter((q) => 
-          isAnswerCorrect(q, answers[q?.question_id])
-        ).length;
-        setEarnedXp(Math.floor((correctCount / questions.length) * lesson.xp));
-      }
-
+    
       setIsComplete(true);
     }
   };
@@ -174,7 +161,6 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
     answers,
     isComplete,
     showFeedback,
-    isSuccess,
     earnedXp,
     currentAnswerCorrect,
     countdownSeconds,

@@ -12,7 +12,7 @@ interface ImageChoiceQuestionProps {
 }
 
 export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQuestionProps) {
-  const options=question.options  || question.imageOptions
+  const options=question.options  || question.image_options
   if (!options || !Array.isArray(options)) {
     return <div className="text-red-500">No image options available.</div>;
   }
@@ -23,7 +23,6 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
   const itemsPerRow = question.itemsPerRow || 1;
 
   const handleOptionClick = (optionId: string) => {
-    console.log(`Selected option: ${optionId} for question: ${question.id}`);
     setSelectedOption(optionId);
     // Only pass the optionId as expected by the parent component
     onAnswer(optionId);

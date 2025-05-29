@@ -106,13 +106,13 @@ export const mockLessons = [
             { "id": "primary", "name": "Primary Market" },
             { "id": "secondary", "name": "Secondary Market" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "primary",
             "item-2": "secondary",
             "item-3": "primary",
             "item-4": "secondary"
           },
-          "helpTips": "Primary Market = When companies create and sell NEW shares directly to investors (money goes to the company)\n\nSecondary Market = When investors trade EXISTING shares with each other (company doesn't get the money)"
+          "help_tips": "Primary Market = When companies create and sell NEW shares directly to investors (money goes to the company)\n\nSecondary Market = When investors trade EXISTING shares with each other (company doesn't get the money)"
         },
         {
           "id": "bull-vs-bear",
@@ -148,13 +148,13 @@ export const mockLessons = [
             { "id": "opt-4", "content": "Dow Jones", "isCorrect": true },
             { "id": "opt-5", "content": "NYSE", "isCorrect": false }
           ],
-          "helpTips": "Stock indexes track groups of stocks to measure market performance. They're like the temperature of the market!"
+          "help_tips": "Stock indexes track groups of stocks to measure market performance. They're like the temperature of the market!"
         },
         {
           "id": "stockbroker-role",
           "type": "text-input",
           "question": "What's the main role of a stockbroker or trading app?",
-          "correctAnswers": ["facilitate", "execute", "place", "process", "buy", "sell", "trades", "orders", "transactions", "connect", "facilitate trades", "execute trades", "place trades", "buy and sell", "buy stocks", "sell stocks"],
+          "correct_answers": ["facilitate", "execute", "place", "process", "buy", "sell", "trades", "orders", "transactions", "connect", "facilitate trades", "execute trades", "place trades", "buy and sell", "buy stocks", "sell stocks"],
           "explanation": "A stockbroker or trading app helps execute your trades, connecting you with the market so you can buy and sell investments."
         },
         {
@@ -178,7 +178,7 @@ export const mockLessons = [
             "item-3": "okay",
             "item-4": "risky"
           },
-          "helpTips": "Start small and consistent! Even small amounts grow over time through compound interest."
+          "help_tips": "Start small and consistent! Even small amounts grow over time through compound interest."
         },
         {
           "id": "stock-charts",
@@ -237,7 +237,7 @@ export const mockLessons = [
             "item-3": "opt-3",
             "item-4": "opt-4"
           },
-          "helpTips": "Different companies have different dividend schedules. Understanding these helps you plan your passive income stream."
+          "help_tips": "Different companies have different dividend schedules. Understanding these helps you plan your passive income stream."
         },
         {
           "id": "dividend-yield",
@@ -267,8 +267,8 @@ export const mockLessons = [
           "id": "dividend-calculation",
           "type": "text-input",
           "question": "If you own 100 shares of a $50 stock with a 4% annual dividend yield, how much dividend income will you receive per year?",
-          "correctAnswers": ["$200", "200", "200 dollars", "$200.00", "200.00"],
-          "helpTips": "Step 1: Calculate total investment (shares × price)\nStep 2: Multiply by dividend yield percentage",
+          "correct_answers": ["$200", "200", "200 dollars", "$200.00", "200.00"],
+          "help_tips": "Step 1: Calculate total investment (shares × price)\nStep 2: Multiply by dividend yield percentage",
           "explanation": "100 shares × $50 = $5,000 total investment\n$5,000 × 4% = $200 annual dividend income"
         },
         {
@@ -285,13 +285,13 @@ export const mockLessons = [
             { "id": "more", "name": "More Passive" },
             { "id": "less", "name": "Less Passive" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "more",
             "item-2": "less",
             "item-3": "more",
             "item-4": "less"
           },
-          "helpTips": "The most passive strategies require minimal ongoing time, research, or decision-making."
+          "help_tips": "The most passive strategies require minimal ongoing time, research, or decision-making."
         },
         {
           "id": "drip-benefits",
@@ -339,7 +339,7 @@ export const mockLessons = [
             { "id": "opt-3", "content": "Day trading dividend stocks", "isCorrect": false },
             { "id": "opt-4", "content": "Trading dividend options", "isCorrect": false }
           ],
-          "helpTips": "ETFs offer instant diversification across many dividend-paying companies with a single purchase. This reduces risk while still providing passive income."
+          "help_tips": "ETFs offer instant diversification across many dividend-paying companies with a single purchase. This reduces risk while still providing passive income."
         },
         {
           "id": "dividend-taxation",
@@ -357,8 +357,8 @@ export const mockLessons = [
           "id": "dividend-growth",
           "type": "text-input",
           "question": "If a company raises its dividend by 7% each year, how many years until your dividend income doubles?",
-          "correctAnswers": ["10", "10 years", "about 10", "approximately 10", "~10"],
-          "helpTips": "Use the Rule of 72: 72 ÷ annual percentage increase = years to double",
+          "correct_answers": ["10", "10 years", "about 10", "approximately 10", "~10"],
+          "help_tips": "Use the Rule of 72: 72 ÷ annual percentage increase = years to double",
           "explanation": "72 ÷ 7 = 10.3 years (roughly 10 years) to double your dividend income with 7% annual increases."
         }
       ]
@@ -405,7 +405,7 @@ export const mockLessons = [
             "item-3": "high",
             "item-4": "low"
           },
-          "helpTips": "Longer time horizons allow you to take more risk since you have time to recover from market downturns."
+          "help_tips": "Longer time horizons allow you to take more risk since you have time to recover from market downturns."
         },
         {
           "id": "risk-return",
@@ -418,8 +418,8 @@ export const mockLessons = [
             { "id": "item-4", "content": "Individual Tech Stocks" },
             { "id": "item-5", "content": "Early-Stage Startups" }
           ],
-          "correctAnswers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
-          "helpTips": "Generally, higher potential returns come with higher risk. Lower risk investments tend to be more stable but offer lower returns."
+          "correct_answers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
+          "help_tips": "Generally, higher potential returns come with higher risk. Lower risk investments tend to be more stable but offer lower returns."
         },
         {
           "id": "diversification",
@@ -468,14 +468,14 @@ export const mockLessons = [
             { "id": "opt-4", "content": "Your emotional comfort with volatility", "isCorrect": true },
             { "id": "opt-5", "content": "The current president", "isCorrect": false }
           ],
-          "helpTips": "Your personal risk tolerance depends on both objective factors (age, timeline, income) and subjective factors (comfort with seeing investments fluctuate)."
+          "help_tips": "Your personal risk tolerance depends on both objective factors (age, timeline, income) and subjective factors (comfort with seeing investments fluctuate)."
         },
         {
           "id": "investment-math",
           "type": "text-input",
           "question": "If you invest $200 monthly for 10 years with an 8% average annual return, approximately how much will you have? (Round to nearest $5,000)",
-          "correctAnswers": ["$35,000", "$35000", "35000", "35k", "$35k", "about $35,000", "approximately $35,000", "$35,000", "around $35,000", "roughly $35,000"],
-          "helpTips": "The formula is: FV = P × [(1 + r)^n - 1] ÷ r × (1 + r)\nWhere FV = future value, P = periodic contribution, r = rate per period, n = number of periods",
+          "correct_answers": ["$35,000", "$35000", "35000", "35k", "$35k", "about $35,000", "approximately $35,000", "$35,000", "around $35,000", "roughly $35,000"],
+          "help_tips": "The formula is: FV = P × [(1 + r)^n - 1] ÷ r × (1 + r)\nWhere FV = future value, P = periodic contribution, r = rate per period, n = number of periods",
           "explanation": "$200 monthly × 12 months × 10 years with compound interest at 8% grows to approximately $35,000."
         },
         {
@@ -492,7 +492,7 @@ export const mockLessons = [
             { "id": "true", "name": "True" },
             { "id": "false", "name": "False" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "false",
             "item-2": "true",
             "item-3": "false",
@@ -522,7 +522,7 @@ export const mockLessons = [
             "item-3": "opt-3",
             "item-4": "opt-4"
           },
-          "helpTips": "Different investment goals require different strategies. Match your investment approach to your timeline and objectives."
+          "help_tips": "Different investment goals require different strategies. Match your investment approach to your timeline and objectives."
         }
       ]
     },
@@ -560,13 +560,13 @@ export const mockLessons = [
             { "id": "etfs", "name": "ETFs" },
             { "id": "stocks", "name": "Individual Stocks" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "etfs",
             "item-2": "stocks",
             "item-3": "etfs",
             "item-4": "stocks"
           },
-          "helpTips": "ETFs spread risk across many investments, while individual stocks let you invest in specific companies you believe in."
+          "help_tips": "ETFs spread risk across many investments, while individual stocks let you invest in specific companies you believe in."
         },
         {
           "id": "etf-types",
@@ -613,7 +613,7 @@ export const mockLessons = [
             "item-3": "good",
             "item-4": "expensive"
           },
-          "helpTips": "ETF fees directly reduce your returns. Lower is better! Even small differences compound significantly over time.",
+          "help_tips": "ETF fees directly reduce your returns. Lower is better! Even small differences compound significantly over time.",
           "imagePrompt": "graph LR\n    A[$10,000 investment] --> B[30 years]\n    B --> C[0.03% fee: $9,900 lost]\n    B --> D[0.5% fee: $47,000 lost]\n    B --> E[1.5% fee: $120,000 lost]\n    style A fill:#f9f9f9,stroke:#ccc\n    style B fill:#f9f9f9,stroke:#ccc\n    style C fill:#d1f5d3,stroke:#82c985\n    style D fill:#fff2a8,stroke:#d6d64f\n    style E fill:#ffb0b0,stroke:#cc7a7a"
         },
         {
@@ -662,15 +662,15 @@ export const mockLessons = [
             { "id": "opt-3", "content": "Volume determines the dividend yield", "isCorrect": false },
             { "id": "opt-4", "content": "Higher volume means lower fees", "isCorrect": false }
           ],
-          "helpTips": "ETFs with higher trading volume typically have tighter bid-ask spreads, making them easier and potentially cheaper to trade when you need to buy or sell."
+          "help_tips": "ETFs with higher trading volume typically have tighter bid-ask spreads, making them easier and potentially cheaper to trade when you need to buy or sell."
         },
         {
           "id": "etf-calculation",
           "type": "text-input",
           "question": "If you invest $10,000 in an ETF with a 3% dividend yield, how much annual dividend income would you expect?",
-          "correctAnswers": ["$300", "300", "300 dollars", "$300.00"],
+          "correct_answers": ["$300", "300", "300 dollars", "$300.00"],
           "explanation": "$10,000 × 3% = $300 expected annual dividend income",
-          "helpTips": "Dividend yield percentage × investment amount = annual dividend income"
+          "help_tips": "Dividend yield percentage × investment amount = annual dividend income"
         },
         {
           "id": "etf-strategy",
@@ -683,7 +683,7 @@ export const mockLessons = [
             { "id": "item-4", "content": "Create a regular investment schedule" },
             { "id": "item-5", "content": "Set up dividend reinvestment if growing" }
           ],
-          "correctAnswers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
+          "correct_answers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
           "explanation": "Building a passive income ETF portfolio starts with clear goals, followed by research, comparison, regular investing, and finally setting up systems like dividend reinvestment for compounding growth."
         },
         {
@@ -730,7 +730,7 @@ export const mockLessons = [
             "item-3": "opt-3",
             "item-4": "opt-4"
           },
-          "helpTips": "Understanding different risk types helps you build protection strategies into your portfolio."
+          "help_tips": "Understanding different risk types helps you build protection strategies into your portfolio."
         },
         {
           "id": "diversification-benefits",
@@ -759,13 +759,13 @@ export const mockLessons = [
             { "id": "higher", "name": "Higher Risk Tolerance" },
             { "id": "lower", "name": "Lower Risk Tolerance" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "higher",
             "item-4": "higher",
             "item-2": "lower",
             "item-3": "lower"
           },
-          "helpTips": "Risk tolerance depends heavily on time horizon (years until you need the money) and personal financial stability."
+          "help_tips": "Risk tolerance depends heavily on time horizon (years until you need the money) and personal financial stability."
         },
         {
           "id": "portfolio-rebalancing",
@@ -800,15 +800,15 @@ export const mockLessons = [
             { "id": "opt-3", "content": "A guarantee that you won't lose money", "isCorrect": false },
             { "id": "opt-4", "content": "An insurance policy for investments", "isCorrect": false }
           ],
-          "helpTips": "Stop-loss orders are risk management tools that automatically sell a stock if it drops to a price you set, helping limit potential losses."
+          "help_tips": "Stop-loss orders are risk management tools that automatically sell a stock if it drops to a price you set, helping limit potential losses."
         },
         {
           "id": "emergency-fund",
           "type": "text-input",
           "question": "How many months of expenses should a basic emergency fund cover?",
-          "correctAnswers": ["3-6", "3 to 6", "3 to 6 months", "3-6 months", "three to six", "three to six months", "between 3 and 6", "between 3 and 6 months"],
+          "correct_answers": ["3-6", "3 to 6", "3 to 6 months", "3-6 months", "three to six", "three to six months", "between 3 and 6", "between 3 and 6 months"],
           "explanation": "A standard emergency fund should cover 3-6 months of necessary expenses. This protects your investments by preventing forced selling during downturns or emergencies.",
-          "helpTips": "An emergency fund acts as a financial buffer between you and unexpected expenses, protecting your investments from early withdrawal."
+          "help_tips": "An emergency fund acts as a financial buffer between you and unexpected expenses, protecting your investments from early withdrawal."
         },
         {
           "id": "volatility-management",
@@ -821,8 +821,8 @@ export const mockLessons = [
             { "id": "item-4", "content": "Small-cap growth stocks" },
             { "id": "item-5", "content": "Cryptocurrency" }
           ],
-          "correctAnswers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
-          "helpTips": "Volatility refers to how much an investment's price fluctuates. Generally, the potential for higher returns comes with higher volatility.",
+          "correct_answers": ["item-1", "item-2", "item-3", "item-4", "item-5"],
+          "help_tips": "Volatility refers to how much an investment's price fluctuates. Generally, the potential for higher returns comes with higher volatility.",
           "imagePrompt": "graph LR\n    A[Savings] --> B[Bonds]\n    B --> C[Blue-chip Stocks]\n    C --> D[Small-cap Stocks]\n    D --> E[Crypto]\n    A -. Low volatility .-> B\n    B -. Low-medium .-> C\n    C -. Medium-high .-> D\n    D -. Very high .-> E\n    style A fill:#d1f5d3,stroke:#82c985\n    style B fill:#e6f7c9,stroke:#a4cb77\n    style C fill:#fff2a8,stroke:#d6d64f\n    style D fill:#ffd4d4,stroke:#e29a9a\n    style E fill:#ffb0b0,stroke:#cc7a7a"
         },
         {
@@ -874,13 +874,13 @@ export const mockLessons = [
             { "id": "realistic", "name": "Realistic" },
             { "id": "unrealistic", "name": "Unrealistic" }
           ],
-          "correctAnswers": {
+          "correct_answers": {
             "item-1": "realistic",
             "item-2": "unrealistic",
             "item-3": "realistic",
             "item-4": "unrealistic"
           },
-          "helpTips": "Setting realistic expectations helps you stick to your investment plan during inevitable market fluctuations."
+          "help_tips": "Setting realistic expectations helps you stick to your investment plan during inevitable market fluctuations."
         }
       ]
     }

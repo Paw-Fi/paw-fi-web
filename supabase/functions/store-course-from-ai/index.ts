@@ -33,17 +33,17 @@ function sanitizeCourseJson(raw: any) {
             type: String(q.type),
             question: String(q.question),
             options: q.options ?? null,
-            image_options: q.imageOptions ?? null,
+            image_options: q.image_options ?? null,
             items: q.items ?? null,
             categories: q.categories ?? null,
             rows: q.rows ?? null, // For matrix-rating
             columns: q.columns ?? null, // For matrix-rating
-            correct_answers: q.correctAnswers ?? null,
+            correct_answers: q.correct_answers ?? null,
             validation: q.validation ?? null,
             explanation: q.explanation ? String(q.explanation).trim() : null,
-            incorrect_explanation: q.incorrectExplanation ? String(q.incorrectExplanation).trim() : null,
-            help_tips: q.helpTips ? String(q.helpTips).trim() : null,
-            content_blocks: q.contentBlocks ?? null,
+            incorrect_explanation: q.incorrect_explanation ? String(q.incorrect_explanation).trim() : null,
+            help_tips: q.help_tips ? String(q.help_tips).trim() : null,
+            content_blocks: q.content_blocks ?? null,
             position: qidx,
           };
         }),

@@ -6,18 +6,18 @@ import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
 
 interface HelpTipsProps {
   questionType: string;
-  helpTips?: string;
+  help_tips?: string;
   categories?: Array<{ id: string; name: string }>;
   helpTipsData?: Array<{ col1: string; col2: string }>;
 }
 
 export function HelpTips({ 
   questionType, 
-  helpTips, 
+  help_tips, 
   categories, 
   helpTipsData 
 }: HelpTipsProps) {
-  if (!helpTips) return null;
+  if (!help_tips) return null;
 
   return (
     <div className="relative rounded-3xl bg-green-50 p-6 shadow-md">
@@ -67,7 +67,7 @@ export function HelpTips({
           {(!helpTipsData ||
             categories?.length !== 2) && (
             <p className="text-sm text-green-700">
-              {helpTips}
+              {help_tips}
             </p>
           )}
         </div>
@@ -75,7 +75,7 @@ export function HelpTips({
 
       {questionType !== "sort-categories" && (
         <p className="text-sm whitespace-pre-line text-green-700">
-          {helpTips}
+          {help_tips}
         </p>
       )}
     </div>
