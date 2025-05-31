@@ -14,6 +14,8 @@ import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from '@/utils/seo';
 
+const COURSES_STORAGE_KEY = 'userCourses';
+
 export const Route = createFileRoute("/learning/$courseId/")({
   component: CourseDetailPage,
   head: ({ params }: { params: { courseId: string } }) => {
@@ -70,8 +72,6 @@ export default function CourseDetailPage() {
   const {
     data: courses = [],
     isLoading,
-    isError,
-    error,
   } = useUserCourses(user?.id ?? '', { enabled: !!user });
   const course =courseId===basicCourse.id ? basicCourse : courses.find((c) => c.course_id === courseId) || null;
 
@@ -171,7 +171,7 @@ export default function CourseDetailPage() {
               lesson.unlocked ? (
                 <Link
                   key={lesson.lesson_id}
-                  to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
+                  to={`/learning/${courseId}/lesson/${lesson.lesson_id}/tutorial`}
                   className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
                 >
                   <div className="p-4">
@@ -204,7 +204,7 @@ export default function CourseDetailPage() {
                 </Link>
               ) : (
                 <div
-                  key={lesson.id}
+                  key={lesson.lesson_id}
                   className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden brightness-[0.97] cursor-not-allowed"
                 >
                   <div className="p-4">

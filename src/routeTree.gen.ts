@@ -42,7 +42,10 @@ import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculato
 import { Route as AuthorImportImport } from './routes/author/import'
 import { Route as LearningCourseIdIndexImport } from './routes/learning/$courseId/index'
 import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
+import { Route as LearningCourseIdLessonTutorialImport } from './routes/learning/$courseId/lesson/tutorial'
+import { Route as LearningCourseIdLessonQuizImport } from './routes/learning/$courseId/lesson/quiz'
 import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning/$courseId/lesson/$lessonId'
+import { Route as LearningCourseIdLessonLessonIdSummaryImport } from './routes/learning/$courseId/lesson/$lessonId.summary'
 
 // Create/Update Routes
 
@@ -238,11 +241,33 @@ const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const LearningCourseIdLessonTutorialRoute =
+  LearningCourseIdLessonTutorialImport.update({
+    id: '/learning/$courseId/lesson/tutorial',
+    path: '/learning/$courseId/lesson/tutorial',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const LearningCourseIdLessonQuizRoute = LearningCourseIdLessonQuizImport.update(
+  {
+    id: '/learning/$courseId/lesson/quiz',
+    path: '/learning/$courseId/lesson/quiz',
+    getParentRoute: () => rootRoute,
+  } as any,
+)
+
 const LearningCourseIdLessonLessonIdRoute =
   LearningCourseIdLessonLessonIdImport.update({
     id: '/learning/$courseId/lesson/$lessonId',
     path: '/learning/$courseId/lesson/$lessonId',
     getParentRoute: () => rootRoute,
+  } as any)
+
+const LearningCourseIdLessonLessonIdSummaryRoute =
+  LearningCourseIdLessonLessonIdSummaryImport.update({
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => LearningCourseIdLessonLessonIdRoute,
   } as any)
 
 // Populate the FileRoutesByPath interface
@@ -473,6 +498,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningCourseIdLessonLessonIdImport
       parentRoute: typeof rootRoute
     }
+    '/learning/$courseId/lesson/quiz': {
+      id: '/learning/$courseId/lesson/quiz'
+      path: '/learning/$courseId/lesson/quiz'
+      fullPath: '/learning/$courseId/lesson/quiz'
+      preLoaderRoute: typeof LearningCourseIdLessonQuizImport
+      parentRoute: typeof rootRoute
+    }
+    '/learning/$courseId/lesson/tutorial': {
+      id: '/learning/$courseId/lesson/tutorial'
+      path: '/learning/$courseId/lesson/tutorial'
+      fullPath: '/learning/$courseId/lesson/tutorial'
+      preLoaderRoute: typeof LearningCourseIdLessonTutorialImport
+      parentRoute: typeof rootRoute
+    }
+    '/learning/$courseId/lesson/$lessonId/summary': {
+      id: '/learning/$courseId/lesson/$lessonId/summary'
+      path: '/summary'
+      fullPath: '/learning/$courseId/lesson/$lessonId/summary'
+      preLoaderRoute: typeof LearningCourseIdLessonLessonIdSummaryImport
+      parentRoute: typeof LearningCourseIdLessonLessonIdImport
+    }
   }
 }
 
@@ -538,6 +584,21 @@ const RegisterRouteRouteWithChildren = RegisterRouteRoute._addFileChildren(
   RegisterRouteRouteChildren,
 )
 
+interface LearningCourseIdLessonLessonIdRouteChildren {
+  LearningCourseIdLessonLessonIdSummaryRoute: typeof LearningCourseIdLessonLessonIdSummaryRoute
+}
+
+const LearningCourseIdLessonLessonIdRouteChildren: LearningCourseIdLessonLessonIdRouteChildren =
+  {
+    LearningCourseIdLessonLessonIdSummaryRoute:
+      LearningCourseIdLessonLessonIdSummaryRoute,
+  }
+
+const LearningCourseIdLessonLessonIdRouteWithChildren =
+  LearningCourseIdLessonLessonIdRoute._addFileChildren(
+    LearningCourseIdLessonLessonIdRouteChildren,
+  )
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
@@ -570,7 +631,10 @@ export interface FileRoutesByFullPath {
   '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRouteWithChildren
+  '/learning/$courseId/lesson/quiz': typeof LearningCourseIdLessonQuizRoute
+  '/learning/$courseId/lesson/tutorial': typeof LearningCourseIdLessonTutorialRoute
+  '/learning/$courseId/lesson/$lessonId/summary': typeof LearningCourseIdLessonLessonIdSummaryRoute
 }
 
 export interface FileRoutesByTo {
@@ -600,7 +664,10 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRouteWithChildren
+  '/learning/$courseId/lesson/quiz': typeof LearningCourseIdLessonQuizRoute
+  '/learning/$courseId/lesson/tutorial': typeof LearningCourseIdLessonTutorialRoute
+  '/learning/$courseId/lesson/$lessonId/summary': typeof LearningCourseIdLessonLessonIdSummaryRoute
 }
 
 export interface FileRoutesById {
@@ -636,7 +703,10 @@ export interface FileRoutesById {
   '/register/': typeof RegisterIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId/': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRouteWithChildren
+  '/learning/$courseId/lesson/quiz': typeof LearningCourseIdLessonQuizRoute
+  '/learning/$courseId/lesson/tutorial': typeof LearningCourseIdLessonTutorialRoute
+  '/learning/$courseId/lesson/$lessonId/summary': typeof LearningCourseIdLessonLessonIdSummaryRoute
 }
 
 export interface FileRouteTypes {
@@ -674,6 +744,9 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
+    | '/learning/$courseId/lesson/quiz'
+    | '/learning/$courseId/lesson/tutorial'
+    | '/learning/$courseId/lesson/$lessonId/summary'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -703,6 +776,9 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
+    | '/learning/$courseId/lesson/quiz'
+    | '/learning/$courseId/lesson/tutorial'
+    | '/learning/$courseId/lesson/$lessonId/summary'
   id:
     | '__root__'
     | '/'
@@ -737,6 +813,9 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId/'
     | '/learning/$courseId/lesson/$lessonId'
+    | '/learning/$courseId/lesson/quiz'
+    | '/learning/$courseId/lesson/tutorial'
+    | '/learning/$courseId/lesson/$lessonId/summary'
   fileRoutesById: FileRoutesById
 }
 
@@ -767,7 +846,9 @@ export interface RootRouteChildren {
   LearningIndexRoute: typeof LearningIndexRoute
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
   LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
-  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
+  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRouteWithChildren
+  LearningCourseIdLessonQuizRoute: typeof LearningCourseIdLessonQuizRoute
+  LearningCourseIdLessonTutorialRoute: typeof LearningCourseIdLessonTutorialRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -797,7 +878,10 @@ const rootRouteChildren: RootRouteChildren = {
   LearningIndexRoute: LearningIndexRoute,
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
   LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
-  LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
+  LearningCourseIdLessonLessonIdRoute:
+    LearningCourseIdLessonLessonIdRouteWithChildren,
+  LearningCourseIdLessonQuizRoute: LearningCourseIdLessonQuizRoute,
+  LearningCourseIdLessonTutorialRoute: LearningCourseIdLessonTutorialRoute,
 }
 
 export const routeTree = rootRoute
@@ -836,7 +920,9 @@ export const routeTree = rootRoute
         "/learning/",
         "/author/course/$courseId",
         "/learning/$courseId/",
-        "/learning/$courseId/lesson/$lessonId"
+        "/learning/$courseId/lesson/$lessonId",
+        "/learning/$courseId/lesson/quiz",
+        "/learning/$courseId/lesson/tutorial"
       ]
     },
     "/": {
@@ -953,7 +1039,20 @@ export const routeTree = rootRoute
       "filePath": "learning/$courseId/index.tsx"
     },
     "/learning/$courseId/lesson/$lessonId": {
-      "filePath": "learning/$courseId/lesson/$lessonId.tsx"
+      "filePath": "learning/$courseId/lesson/$lessonId.tsx",
+      "children": [
+        "/learning/$courseId/lesson/$lessonId/summary"
+      ]
+    },
+    "/learning/$courseId/lesson/quiz": {
+      "filePath": "learning/$courseId/lesson/quiz.tsx"
+    },
+    "/learning/$courseId/lesson/tutorial": {
+      "filePath": "learning/$courseId/lesson/tutorial.tsx"
+    },
+    "/learning/$courseId/lesson/$lessonId/summary": {
+      "filePath": "learning/$courseId/lesson/$lessonId.summary.tsx",
+      "parent": "/learning/$courseId/lesson/$lessonId"
     }
   }
 }
