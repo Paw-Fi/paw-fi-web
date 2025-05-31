@@ -31,32 +31,13 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
     let courseTitle = 'Financial Learning';
     const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
+
     try {
       const lesson = getLessonById(params.lessonId);
       if (lesson) {
         lessonTitle = lesson.title || lessonTitle;
         lessonDescription = lesson.description || (lesson.content && typeof lesson.content === 'string' ? lesson.content.substring(0, 155) + '...' : lessonDescription);
         
-        let foundCourse: Course | undefined = undefined;
-        const storedCourses = localStorage.getItem(COURSES_STORAGE_KEY);
-        if (storedCourses) {
-          const courses: Course[] = JSON.parse(storedCourses);
-          foundCourse = courses.find(c => c.id === params.courseId);
-          if (!foundCourse && lesson && lesson.parentId) {
-              foundCourse = courses.find(c => c.id === lesson.parentId);
-          }
-        }
-
-        if (!foundCourse && basicCourse && (basicCourse as Course).id === params.courseId) {
-          foundCourse = basicCourse as Course;
-        }
-        else if (!foundCourse && lesson && lesson.parentId && basicCourse && (basicCourse as Course).id === lesson.parentId) {
-          foundCourse = basicCourse as Course;
-        }
-        
-        if (foundCourse) {
-          courseTitle = foundCourse.title || courseTitle;
-        }  
       }
     } catch (e) {
       console.error('Error fetching lesson/course data for meta tags:', e);
@@ -73,8 +54,33 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
       url: pageUrl,
     });
 
+    // Add structured data for the lesson
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "LearningResource",
+      "name": lessonTitle,
+      "description": lessonDescription,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+
     return {
       meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

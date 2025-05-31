@@ -32,7 +32,6 @@ import { Route as FormatIndexImport } from './routes/format/index'
 import { Route as DashboardIndexImport } from './routes/dashboard/index'
 import { Route as CalculatorsIndexImport } from './routes/calculators/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
-import { Route as DemoTanstackQueryImport } from './routes/demo.tanstack-query'
 import { Route as CalculatorsSavingGoalsCalculatorImport } from './routes/calculators/saving-goals-calculator'
 import { Route as CalculatorsRetirementCalculatorImport } from './routes/calculators/retirement-calculator'
 import { Route as CalculatorsMortgageCalculatorImport } from './routes/calculators/mortgage-calculator'
@@ -169,12 +168,6 @@ const CalculatorsIndexRoute = CalculatorsIndexImport.update({
 const AuthorIndexRoute = AuthorIndexImport.update({
   id: '/author/',
   path: '/author/',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const DemoTanstackQueryRoute = DemoTanstackQueryImport.update({
-  id: '/demo/tanstack-query',
-  path: '/demo/tanstack-query',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -382,13 +375,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalculatorsSavingGoalsCalculatorImport
       parentRoute: typeof rootRoute
     }
-    '/demo/tanstack-query': {
-      id: '/demo/tanstack-query'
-      path: '/demo/tanstack-query'
-      fullPath: '/demo/tanstack-query'
-      preLoaderRoute: typeof DemoTanstackQueryImport
-      parentRoute: typeof rootRoute
-    }
     '/author/': {
       id: '/author/'
       path: '/author'
@@ -558,7 +544,6 @@ export interface FileRoutesByFullPath {
   '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/author': typeof AuthorIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -588,7 +573,6 @@ export interface FileRoutesByTo {
   '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/author': typeof AuthorIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -624,7 +608,6 @@ export interface FileRoutesById {
   '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/author/': typeof AuthorIndexRoute
   '/calculators/': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -661,7 +644,6 @@ export interface FileRouteTypes {
     | '/calculators/mortgage-calculator'
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
-    | '/demo/tanstack-query'
     | '/author'
     | '/calculators'
     | '/dashboard/'
@@ -690,7 +672,6 @@ export interface FileRouteTypes {
     | '/calculators/mortgage-calculator'
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
-    | '/demo/tanstack-query'
     | '/author'
     | '/calculators'
     | '/dashboard'
@@ -724,7 +705,6 @@ export interface FileRouteTypes {
     | '/calculators/mortgage-calculator'
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
-    | '/demo/tanstack-query'
     | '/author/'
     | '/calculators/'
     | '/dashboard/'
@@ -760,7 +740,6 @@ export interface RootRouteChildren {
   CalculatorsMortgageCalculatorRoute: typeof CalculatorsMortgageCalculatorRoute
   CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
   CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
-  DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
   CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
@@ -790,7 +769,6 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorsMortgageCalculatorRoute: CalculatorsMortgageCalculatorRoute,
   CalculatorsRetirementCalculatorRoute: CalculatorsRetirementCalculatorRoute,
   CalculatorsSavingGoalsCalculatorRoute: CalculatorsSavingGoalsCalculatorRoute,
-  DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   AuthorIndexRoute: AuthorIndexRoute,
   CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
@@ -829,7 +807,6 @@ export const routeTree = rootRoute
         "/calculators/mortgage-calculator",
         "/calculators/retirement-calculator",
         "/calculators/saving-goals-calculator",
-        "/demo/tanstack-query",
         "/author/",
         "/calculators/",
         "/format/",
@@ -910,9 +887,6 @@ export const routeTree = rootRoute
     },
     "/calculators/saving-goals-calculator": {
       "filePath": "calculators/saving-goals-calculator.tsx"
-    },
-    "/demo/tanstack-query": {
-      "filePath": "demo.tanstack-query.tsx"
     },
     "/author/": {
       "filePath": "author/index.tsx"

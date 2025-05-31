@@ -16,14 +16,75 @@ import { seo } from '@/utils/seo';
 export const Route = createFileRoute('/calculators/')({
   component: CalculatorsPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators';
     const meta = seo({
       title: 'Financial Calculators | PawFi',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
       keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for calculators page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Financial Calculators",
+      "description": "Interactive financial calculators to help with money management and financial planning",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Compound Interest Calculator",
+          "url": "https://pawfi.app/calculators/compound-calculator"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Mortgage Calculator",
+          "url": "https://pawfi.app/calculators/mortgage-calculator"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Investment Calculator",
+          "url": "https://pawfi.app/calculators/investment-calculator"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Auto Loan Calculator",
+          "url": "https://pawfi.app/calculators/auto-loan-calculator"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "name": "Retirement Calculator",
+          "url": "https://pawfi.app/calculators/retirement-calculator"
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "name": "Savings Goal Calculator",
+          "url": "https://pawfi.app/calculators/saving-goals-calculator"
+        }
+      ]
+    };
+    
     return {
-      meta  
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

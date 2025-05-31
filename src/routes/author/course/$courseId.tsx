@@ -7,6 +7,7 @@ import { generateUniqueId } from '@/utils/id-generator';
 import { CourseForm, LessonList, LessonEditor, QuestionTypeSelector } from '@/components/author/course-editor';
 import { QuestionEditor } from '@/components/author/question-editor';
 import { seo } from '@/utils/seo';
+import basicLessons from '@/data/basic-lessons.json';
 
 export const Route = createFileRoute('/author/course/$courseId')({
   component: CourseEditorPage,
@@ -16,16 +17,14 @@ export const Route = createFileRoute('/author/course/$courseId')({
     let courseImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
     try {
-      const savedCourses = localStorage.getItem('courses'); // Assuming 'courses' is the key for the array
-      if (savedCourses) {
-        const coursesArray = JSON.parse(savedCourses) as Course[];
-        const foundCourse = coursesArray.find(c => c.id === params.courseId);
+
+        const foundCourse = basicLessons
         if (foundCourse) {
           courseTitle = foundCourse.title || courseTitle;
           courseDescription = foundCourse.description || courseDescription;
           courseImage = foundCourse.image || courseImage; // Use course-specific image if available
         }
-      }
+      
     } catch (e) {
       console.error('Failed to parse courses from localStorage for meta tags:', e);
     }
@@ -41,8 +40,33 @@ export const Route = createFileRoute('/author/course/$courseId')({
       url: pageUrl,
     });
 
+    // Add structured data for the course editor
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": `Editing: ${courseTitle}`,
+      "description": `Edit and manage course content for "${courseTitle}".`,
+      "publisher": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+
     return {
       meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

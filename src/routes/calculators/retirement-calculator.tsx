@@ -25,14 +25,44 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/calculators/retirement-calculator')({
   component: RetirementCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/retirement-calculator';
     const meta = seo({
       title: 'Retirement Savings Calculator | PawFi',
       description: "Plan for your retirement. Estimate how much you need to save and how long your savings will last with PawFi's retirement calculator.",
       keywords: 'retirement calculator, retirement planning, savings goal, 401k, IRA, pension, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for retirement calculator page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Retirement Savings Calculator",
+      "description": "Plan for your retirement. Estimate how much you need to save and how long your savings will last with PawFi's retirement calculator.",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Retirement Planning"
+    };
+    
     return {
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

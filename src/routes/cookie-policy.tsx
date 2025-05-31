@@ -1,7 +1,48 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/cookie-policy')({
   component: CookiePolicy,
+  head: () => {
+    const pageUrl = 'https://pawfi.app/cookie-policy';
+    const meta = seo({
+      title: 'Cookie Policy | PawFi',
+      description: 'Learn about how PawFi uses cookies and similar technologies on our website to enhance your browsing experience.',
+      keywords: 'cookie policy, cookies, tracking technologies, PawFi cookies',
+      image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
+    });
+    
+    // Add structured data for cookie policy page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Cookie Policy",
+      "description": "PawFi's cookie policy explaining how we use cookies and similar technologies",
+      "url": pageUrl,
+      "publisher": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 function CookiePolicy() {

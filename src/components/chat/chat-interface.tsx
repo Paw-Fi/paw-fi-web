@@ -2,26 +2,28 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import type { FormEvent } from "react"; // For verbatimModuleSyntax
-import {
-  useConversations,
-  useConversation,
-  useCreateConversation,
-  useAddMessage,
-} from "@/services/conversation-service";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
+
 import { Button } from "@/components/ui/button";
+import { Modal } from "../ui/modal";
 import {
-  getConversations,
-  createConversation,
-  getConversation,
-  addMessage,
+  fetchConversations,
+  fetchConversation,
+  createNewConversation,
+  addMessageToConversation,
   type Message as ServiceMessage,
+  type Conversation,
+  getAIResponseFromEdge
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatMessageItem } from "./chat-message-item";
 import { storeCourse } from "@/data/lessons";
-import { useNavigate } from "@tanstack/react-router";
-import { getAIResponseFromEdge } from "@/services/conversation-service";
 import { supabase } from "@/lib/supabase";
+import { useCookie } from "@/utils/use-cookie";
+import { sanitizeCourse } from "@/utils/sanitize-course";
 
 interface Message {
   content: string;
@@ -32,32 +34,65 @@ interface Message {
   metadata?: Record<string, any>;
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
-import { Modal } from "../ui/modal";
-import { useCookie } from "@/utils/use-cookie"; // Adjust this path if your alias is not set up. Use "../../utils/use-cookie" if needed.
-import { Link } from "@tanstack/react-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
-import { sanitizeCourse } from "@/utils/sanitize-course";
+
+// Utility function to extract the first JSON object from a string
+const extractFirstJson = (text: string) => {
+  try {
+    const jsonRegex = /{[\s\S]*?}/g;
+    const matches = text.match(jsonRegex);
+    if (!matches || matches.length === 0) return null;
+    
+    for (const match of matches) {
+      try {
+        return JSON.parse(match);
+      } catch (e) {
+        // This match wasn't valid JSON, try the next one
+        continue;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Error extracting JSON:", error);
+    return null;
+  }
+};
 
 export function ChatInterface() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const { getCookie, setCookie } = useCookie();
 
   // --- Guest Conversation Utilities ---
-  function getGuestSessionId(): string {
-    if (typeof window === "undefined") return "";
+  // State for client values with consistent initial SSR values
+  const [guestSessionId, setGuestSessionId] = useState("");
+  
+  // Initialize client-side values after hydration
+  useEffect(() => {
+    // This will only run on the client after hydration
     let id = getCookie("paw-fi-guest-session-id");
     if (!id) {
       id = crypto.randomUUID();
       setCookie("paw-fi-guest-session-id", id, { days: 365, path: "/", sameSite: "Lax" });
     }
-    return id;
+    setGuestSessionId(id);
+  }, []);
+  
+  function getGuestSessionId(): string {
+    return guestSessionId;
   }
   function guestMessagesKey() {
     return `paw-fi-guest-messages-${getGuestSessionId()}`;
   }
+  // Initialize messages state with empty array for SSR
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  
+  // Load messages from localStorage after component mounts
+  useEffect(() => {
+    loadGuestMessages();
+  }, []);
+  
   function loadGuestMessages(): Message[] {
-    if (typeof window === "undefined") return [];
+    // During SSR or initial render, return the state
+    if (typeof window === "undefined") return localMessages;
     try {
       const raw = getCookie(guestMessagesKey());
       return raw ? JSON.parse(raw) : [];
@@ -65,19 +100,54 @@ export function ChatInterface() {
       return [];
     }
   }
-  function saveGuestMessages(msgs: Message[]) {
+  function saveGuestMessages(messages: Message[]) {
+    // Update local state first for consistent UI
+    setLocalMessages(messages);
+    
+    // Skip localStorage operations during SSR
     if (typeof window === "undefined") return;
-    setCookie(guestMessagesKey(), JSON.stringify(msgs), { days: 365, path: "/", sameSite: "Lax" });
+    
+    try {
+      setCookie(guestMessagesKey(), JSON.stringify(messages), { days: 365, path: "/", sameSite: "Lax" });
+    } catch (error) {
+      console.error("Error saving guest messages:", error);
+    }
   }
   function clearGuestMessages() {
+    // Update local state first for consistent UI
+    setLocalMessages([]);
+    
+    // Skip cookie operations during SSR
     if (typeof window === "undefined") return;
-    setCookie(guestMessagesKey(), "", { days: -1, path: "/", sameSite: "Lax" });
+    
+    try {
+      setCookie(guestMessagesKey(), "", { days: -1, path: "/", sameSite: "Lax" });
+    } catch (error) {
+      console.error("Error clearing guest messages:", error);
+    }
+  }
+  
+  // Server-stable timestamp to prevent hydration mismatches
+  const [baseTimestamp] = useState(() => {
+    // Use a consistent timestamp during SSR and initial client render
+    return 1717000000000; // Fixed timestamp for SSR (May 30, 2024)
+  });
+  
+  // Get a timestamp that's consistent between server and client
+  // but still provides relative time differences for sorting
+  function getConsistentTimestamp(): number {
+    if (typeof window === "undefined") {
+      // During SSR, use the base timestamp + a small increment for ordering
+      return baseTimestamp;
+    }
+    // On client after hydration, use real timestamps
+    return Date.now();
   }
 
   function acquireMergeLock(): boolean {
     if (typeof window === "undefined") return false;
+    const now = getConsistentTimestamp();
     const lockKey = "paw-fi-chat-merge-lock";
-    const now = Date.now();
     const lockVal = getCookie(lockKey);
     if (lockVal && now - parseInt(lockVal, 10) < 10000) return false; // 10s lock
     setCookie(lockKey, now.toString(), { days: 1, path: "/", sameSite: "Lax" });
@@ -119,6 +189,7 @@ export function ChatInterface() {
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
+  const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -153,11 +224,21 @@ export function ChatInterface() {
     });
   }
 
-  const {
+  // Initialize query client for React Query
+  const queryClient = useQueryClient();
+  
+  // Fetch all conversations
+  const { 
     data: conversationsData,
     isLoading: isConversationsLoading,
-    refetch: refetchConversations,
-  } = useConversations(supabase);
+    refetch: refetchConversations
+  } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => fetchConversations(supabase),
+    enabled: isAuthenticated,
+    staleTime: 30000, // 30 seconds
+  });
+  
   const conversations = useMemo(
     () => conversationsData || [],
     [conversationsData],
@@ -175,11 +256,17 @@ export function ChatInterface() {
     return conversations[0]?.id;
   }, [conversations]);
 
-  const {
+  // Fetch current conversation with messages
+  const { 
     data: currentConversationData,
     isLoading: isConversationLoading,
-    refetch: refetchConversation,
-  } = useConversation(supabase, currentConversationId);
+    refetch: refetchConversation
+  } = useQuery({
+    queryKey: ['conversation', currentConversationId],
+    queryFn: () => fetchConversation(supabase, currentConversationId),
+    enabled: !!currentConversationId && isAuthenticated,
+    staleTime: 10000, // 10 seconds
+  });
 
   // Only sync messages from Supabase on initial load or when switching conversations
   const hasInitializedMessages = useRef<string | null>(null);
@@ -195,8 +282,149 @@ export function ChatInterface() {
     }
   }, [isAuthenticated, currentConversationId, currentConversationData]);
 
-  const createConversationMutation = useCreateConversation(supabase);
-  const addMessageMutation = useAddMessage(supabase);
+  // Create conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: (params: { userId: string; sessionId: string; initialMessages?: Message[] }) => 
+      createNewConversation(supabase, params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    }
+  });
+
+  // Add message mutation
+  const addMessageMutation = useMutation({
+    mutationFn: (message: Message) => addMessageToConversation(supabase, message),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['conversation', currentConversationId] 
+      });
+    }
+  });
+  
+  // Function to create a new conversation and send the first message
+  async function handleCreateConversationAndSendMessage(
+    userIdParam: string,
+    firstMessageContent: string,
+  ) {
+    try {
+      setIsSendingMessage(true);
+      setIsLoading(true);
+      setLoadingMessage("Creating conversation...");
+      
+      // Clear any existing timer
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+      }
+      
+      // Start a new timer to track loading duration
+      loadingTimerRef.current = setInterval(() => {
+        setLoadingDuration((prev) => prev + 1);
+      }, 1000);
+
+      // Create a new conversation
+      const sessionId = getGuestSessionId();
+      const result = await createConversationMutation.mutateAsync({
+        userId: userIdParam,
+        sessionId,
+        initialMessages: [],
+      });
+
+      if (!result || !result.id) {
+        throw new Error("Failed to create conversation");
+      }
+
+      const newConversationId = result.id;
+
+      // Update local state
+      if (typeof window !== "undefined") {
+        localStorage.setItem("paw-fi-current-conversation", newConversationId);
+      }
+
+      // Add the user's message to the conversation
+      const userMessage: Message = {
+        content: firstMessageContent,
+        role: "user",
+        timestamp: getConsistentTimestamp(),
+        chat_session_id: newConversationId,
+        userId: userIdParam,
+      };
+
+      // Show user message immediately
+      setMessages([userMessage]);
+      setCurrentMessage("");
+      inputRef.current?.focus();
+
+      // Save the user message
+      await addMessageMutation.mutateAsync(userMessage);
+
+      // Fetch AI response
+      setLoadingMessage("PawFi is thinking...");
+      const aiResponse = await getAIResponseFromEdge(
+        supabase,
+        firstMessageContent,
+        [{ role: userMessage.role, content: userMessage.content }],
+        userIdParam
+      );
+
+      // Add AI response to conversation
+      const assistantMessage: Message = {
+        content: aiResponse.response || "I'm sorry, I couldn't generate a response.",
+        role: "assistant",
+        timestamp: getConsistentTimestamp(),
+        chat_session_id: newConversationId,
+        userId: userIdParam,
+        metadata: aiResponse.generatedLessons ? { courseRecommendation: aiResponse.generatedLessons } : undefined,
+      };
+
+      // Save the assistant message
+      await addMessageMutation.mutateAsync(assistantMessage);
+
+      // Refresh the conversations list and current conversation
+      await Promise.all([refetchConversations(), refetchConversation()]);
+
+      // Update local state with the new messages
+      setMessages([userMessage, assistantMessage]);
+
+      // Check for course recommendation
+      if (assistantMessage.metadata?.courseRecommendation) {
+        setRecommendedCourse(assistantMessage.metadata.courseRecommendation);
+      }
+    } catch (error) {
+      console.error("Error in handleCreateConversationAndSendMessage:", error);
+      // Show error message to user
+      const errorMsg: Message = {
+        content: "Sorry, I couldn't start a new conversation. Please try again.",
+        role: "assistant",
+        timestamp: getConsistentTimestamp(),
+        chat_session_id: currentConversationId || "error-conv",
+        userId: userIdParam,
+        metadata: { isError: true },
+      };
+      
+      setMessages((prev) => {
+        // Check if this exact error message already exists
+        const messageExists = prev.some(
+          (msg) =>
+            msg.timestamp === errorMsg.timestamp &&
+            msg.role === errorMsg.role &&
+            msg.content === errorMsg.content,
+        );
+
+        return messageExists ? prev : [...prev, errorMsg];
+      });
+    } finally {
+      setIsSendingMessage(false);
+      setIsLoading(false);
+      setLoadingMessage("PawFi is thinking...");
+      setLoadingDuration(0);
+
+      // Clear the loading timer
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    }
+  }
 
   const authenticatedMessage =
     "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
@@ -236,8 +464,9 @@ export function ChatInterface() {
       setIsMergingGuestToAuth(true);
       (async () => {
         try {
-          // Use service functions for all Supabase operations
-          const conversations = await getConversations(supabase);
+          // Use TanStack Query to fetch conversations
+          await refetchConversations();
+          const conversations = conversationsData || [];
           let session = conversations.find(
             (c: { user_id: string; id: string }) => c.user_id === user.id,
           );
@@ -245,17 +474,17 @@ export function ChatInterface() {
           if (!sessionId) {
             // Create new session with a new session id (reuse guest session id for continuity)
             sessionId = getGuestSessionId();
-            const created = await createConversation(
-              supabase,
-              user.id,
+            const created = await createConversationMutation.mutateAsync({
+              userId: user.id,
               sessionId,
-              [],
-            );
+              initialMessages: [],
+            });
             sessionId = created.id;
           }
           // Fetch all existing messages for deduplication
-          const conversation = await getConversation(supabase, sessionId);
-          const existingMsgs = conversation.messages || [];
+          await refetchConversation();
+          const conversationData = { messages: [] }; // Default empty if not available
+          const existingMsgs = conversationData.messages || [];
           // Deduplicate guest messages
           const deduped = guestMsgs.filter(
             (m: ServiceMessage) =>
@@ -268,7 +497,7 @@ export function ChatInterface() {
           );
           // Insert deduped guest messages
           for (const msg of deduped) {
-            await addMessage(supabase, {
+            await addMessageMutation.mutateAsync({
               ...msg,
               chat_session_id: sessionId,
             });
@@ -400,130 +629,13 @@ export function ChatInterface() {
           behavior: "smooth",
           block: "end",
         });
-      }
-    }
-  }, [messages, isLoading]);
-
-  const handleCreateConversationAndSendMessage = async (
-    userId: string,
-    firstMessageContent: string,
-  ) => {
-    setIsLoading(true);
-    setLoadingMessage("Starting new conversation...");
-    setLoadingDuration(0);
-
-    // Clear any existing timer
-    if (loadingTimerRef.current) {
-      clearInterval(loadingTimerRef.current);
-    }
-
-    // Start a new timer to track loading duration
-    loadingTimerRef.current = setInterval(() => {
-      setLoadingDuration((prev) => prev + 1);
-    }, 1000);
-    try {
-      const newConversationTitle = `Chat ${new Date().toLocaleString()}`;
-      const newConvData = await createConversationMutation.mutateAsync({
-        userId,
-        title: newConversationTitle,
-      });
-
-      if (newConvData && newConvData.id) {
-        const newConvId = newConvData.id;
-        await refetchConversations(); // This should update currentConversationId via its useMemo
-
-        // Send the first message to this new conversation
-        const userMessage: Message = {
-          content: firstMessageContent,
-          role: "user",
-          timestamp: Date.now(),
-          chat_session_id: newConvId,
-          userId,
-        };
-        setMessages([userMessage]); // Show user message immediately
-        setCurrentMessage("");
-        inputRef.current?.focus();
-        // setLoadingMessage("PawFi is thinking..."); // Set by getAIResponseFromEdge call
-
-        await addMessageMutation.mutateAsync(userMessage); // Save user message with userId
-
-        // Get AI response for the first message
-        const stream = await getAIResponseFromEdge(supabase, newConvId, [
-          userMessage,
-        ], userId); // Pass only user message for context
-        let assistantResponse = "";
-        const assistantMessageId = `assistant-${Date.now()}`;
-
-        for await (const chunk of stream) {
-          assistantResponse += chunk;
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              content: assistantResponse,
-              role: "assistant",
-              timestamp: Date.now(),
-              chat_session_id: newConvId,
-              metadata: { id: assistantMessageId, isStreaming: true },
-            },
-          ]);
-        }
-
-        const finalAssistantMessage: Message = {
-          content: assistantResponse,
-          role: "assistant",
-          timestamp: Date.now(),
-          chat_session_id: newConvId,
-          userId,
-          metadata: { id: assistantMessageId, isStreaming: false },
-        };
-        await addMessageMutation.mutateAsync(finalAssistantMessage);
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.metadata?.id === assistantMessageId
-              ? finalAssistantMessage
-              : msg,
-          ),
-        );
-        refetchConversation(); // Fetch again to ensure UI is consistent with DB
+        // Refresh conversation data
       } else {
         throw new Error("Failed to create conversation or get new ID.");
       }
-    } catch (error) {
-      console.error("Error creating conversation and sending message:", error);
-      const errorMsg: Message = {
-        content:
-          "Sorry, I couldn't start a new conversation. Please try again.",
-        role: "assistant",
-        timestamp: Date.now(),
-        chat_session_id: currentConversationId || "error-conv",
-        userId,
-        metadata: { isError: true },
-      };
-      setMessages((prev) => {
-        // Check if this exact error message already exists
-        const messageExists = prev.some(
-          (msg) =>
-            msg.timestamp === errorMsg.timestamp &&
-            msg.role === errorMsg.role &&
-            msg.content === errorMsg.content,
-        );
-
-        return messageExists ? prev : [...prev, errorMsg];
-      });
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage("PawFi is thinking...");
-      setLoadingDuration(0);
-
-      // Clear the loading timer
-      if (loadingTimerRef.current) {
-        clearInterval(loadingTimerRef.current);
-        loadingTimerRef.current = null;
       }
-
-      inputRef.current?.focus();
-    }
-  };
+      },[isLoading])
+  
 
   const handleSendMessage = async (content: string) => {
     setIsSendingMessage(true);
@@ -534,7 +646,7 @@ export function ChatInterface() {
       const userMessage: Message = {
         content,
         role: "user",
-        timestamp: Date.now(),
+        timestamp: getConsistentTimestamp(),
         chat_session_id: guestId,
       };
       // Add to UI and guest state
@@ -571,7 +683,7 @@ export function ChatInterface() {
           content:
             response.response || "I'm sorry, I couldn't generate a response.",
           role: "assistant",
-          timestamp: Date.now(),
+          timestamp: getConsistentTimestamp(),
           chat_session_id: guestId,
         };
         setMessages((prev) => {
@@ -588,7 +700,7 @@ export function ChatInterface() {
           content:
             "Sorry, I had trouble connecting. Please check your connection or try again.",
           role: "assistant",
-          timestamp: Date.now(),
+          timestamp: getConsistentTimestamp(),
           chat_session_id: guestId,
           metadata: { isError: true },
         };
@@ -623,7 +735,7 @@ export function ChatInterface() {
     const userMessage: Message = {
       content,
       role: "user",
-      timestamp: Date.now(),
+      timestamp: getConsistentTimestamp(),
       chat_session_id: currentConversationId,
     };
 
@@ -688,7 +800,7 @@ export function ChatInterface() {
           content:
             response.response || "I'm sorry, I couldn't generate a response.",
           role: "assistant",
-          timestamp: Date.now(),
+          timestamp: getConsistentTimestamp(),
           chat_session_id: currentConversationId,
         };
         setMessages((prevMessages) => {
@@ -712,7 +824,7 @@ export function ChatInterface() {
         content:
           "Sorry, I had trouble connecting. Please check your connection or try again.",
         role: "assistant",
-        timestamp: Date.now(),
+        timestamp: getConsistentTimestamp(),
         chat_session_id: currentConversationId,
         metadata: { isError: true },
       };

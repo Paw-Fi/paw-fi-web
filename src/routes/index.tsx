@@ -1,10 +1,11 @@
 "use client";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useRef,useEffect } from "react";
-import { useGSAP } from "@gsap/react";
-// Import GSAP with plugins already registered
-import { gsap, ScrollTrigger } from "@/lib/gsap-config";
+import "@/types/route-types"; // Import route type definitions
+import React, { useRef, useEffect, useState } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { useInView } from "@/lib/use-in-view";
+import { fadeInUp, fadeInDown, fadeInLeft, scaleUp, elasticScale, staggerContainer, fadeIn, floatAnimation } from "@/lib/motion-variants";
 import { Button } from "@/components/ui/button";
 import banner from "@/assets/images/index/pawfi-banner.png";
 import banner3 from "@/assets/images/index/pawfi-banner3.png";
@@ -27,8 +28,6 @@ import {
   faTimes,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { seo } from '@/utils/seo';
 import basicLessonsData from '@/data/basic-lessons.json';
 import faqData from '@/data/home/home-faq.json';
@@ -144,56 +143,23 @@ function FeatureCard({
   animationDelay?: number;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      if (cardRef.current) {
-        // Direct DOM manipulation approach - set initial state
-        gsap.set(cardRef.current, {
-          opacity: 0,
-          y: 30,
-          scale: 0.95
-        });
-        
-        // Create a simple IntersectionObserver to trigger the animation
-        const observer = new IntersectionObserver(
-          (entries) => {
-            if (entries[0].isIntersecting) {
-              // When card comes into view, animate it
-              gsap.to(cardRef.current, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 0.7,
-                delay: animationDelay,
-                ease: "back.out(1.7)"
-              });
-              // Only need to observe once
-              observer.disconnect();
-            }
-          },
-          { threshold: 0.1 }
-        );
-        
-        observer.observe(cardRef.current);
-        
-        return () => observer.disconnect();
-      }
-    },
-    { scope: cardRef, dependencies: [] },
-  );
+  const isInView = useInView(cardRef, 0.1);
 
   return (
-    <div
+    <motion.div
       ref={cardRef}
       className={`transform rounded-2xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg ${className}`}
+      variants={fadeInUp}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      custom={animationDelay}
     >
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100">
         <FontAwesomeIcon icon={icon} size="lg" className="text-purple-600" aria-hidden="true" />
       </div>
       <h3 className="mb-2 text-xl font-bold">{title}</h3>
       <p className="text-gray-600">{description}</p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -210,55 +176,62 @@ function BasicLessonCard({
   linkTo: string;
   animationDelay?: number;
 }) {
+  // Create a wrapper div with ref that will be animated
   const cardRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      if (cardRef.current) {
-        gsap.set(cardRef.current, { opacity: 0, y: 30, scale: 0.95 });
-        const observer = new IntersectionObserver(
-          (entries) => {
-            if (entries[0].isIntersecting) {
-              gsap.to(cardRef.current, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 0.7,
-                delay: animationDelay,
-                ease: "back.out(1.7)",
-              });
-              observer.disconnect();
-            }
-          },
-          { threshold: 0.1 },
-        );
-        observer.observe(cardRef.current);
-        return () => observer.disconnect();
-      }
-    },
-    { scope: cardRef, dependencies: [animationDelay] }, // Added animationDelay to dependencies
-  );
+  const isInView = useInView(cardRef, 0.1);
 
   return (
-    <Link
-    to={linkTo}
-      ref={cardRef}
-      className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col transition-all hover:shadow-lg hover:-translate-y-1"
-    >
-      <div className="flex-grow">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <span className="text-xl" aria-hidden="true">{icon}</span>
-        </div>
-        <h3 className="mb-3 text-xl font-semibold text-slate-800">{title}</h3>
-        <p className="text-sm text-slate-600 leading-relaxed mb-6">{description}</p>
-      </div> {/* End of flex-grow div */}
-      <div
-        className="inline-flex items-center font-medium text-emerald-600 hover:text-emerald-800 mt-auto"
+    <div ref={cardRef}>
+      <motion.div
+        className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col"
+        variants={fadeInUp}
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
+        custom={animationDelay}
+        whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+        transition={{ type: "spring", stiffness: 300 }}
       >
-        Start Lesson
-        <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-      </div>
-    </Link>
+        <Link to={linkTo} className="h-full flex flex-col">
+          <div className="flex-grow">
+            <motion.div 
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+              variants={elasticScale}
+              custom={animationDelay + 0.1}
+            >
+              <span className="text-xl" aria-hidden="true">{icon}</span>
+            </motion.div>
+            <motion.h3 
+              className="mb-3 text-xl font-semibold text-slate-800"
+              variants={fadeInUp}
+              custom={animationDelay + 0.2}
+            >
+              {title}
+            </motion.h3>
+            <motion.p 
+              className="text-sm text-slate-600 leading-relaxed mb-6"
+              variants={fadeInUp}
+              custom={animationDelay + 0.3}
+            >
+              {description}
+            </motion.p>
+          </div>
+          <motion.div
+            className="inline-flex items-center font-medium text-emerald-600 hover:text-emerald-800 mt-auto"
+            variants={fadeInUp}
+            custom={animationDelay + 0.4}
+          >
+            Start Lesson
+            <motion.span
+              initial={{ x: 0 }}
+              whileHover={{ x: 5 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
+              <FontAwesomeIcon icon={faArrowRight} className="ml-2" aria-hidden="true" />
+            </motion.span>
+          </motion.div>
+        </Link>
+      </motion.div>
+    </div>
   );
 }
 
@@ -266,41 +239,7 @@ import { FaqSection } from '@/components/ui/faq-section';
 
 function WaitlistForm() {
   const formRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      if (formRef.current) {
-        // Direct DOM manipulation approach - set initial state
-        gsap.set(formRef.current, {
-          opacity: 0,
-          y: 50
-        });
-        
-        // Create a simple IntersectionObserver to trigger the animation
-        const observer = new IntersectionObserver(
-          (entries) => {
-            if (entries[0].isIntersecting) {
-              // When form comes into view, animate it
-              gsap.to(formRef.current, {
-                opacity: 1,
-                y: 0,
-                duration: 0.8,
-                ease: "power3.out"
-              });
-              // Only need to observe once
-              observer.disconnect();
-            }
-          },
-          { threshold: 0.1 }
-        );
-        
-        observer.observe(formRef.current);
-        
-        return () => observer.disconnect();
-      }
-    },
-    { scope: formRef, dependencies: [] },
-  );
+  const isInView = useInView(formRef, 0.1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -348,237 +287,100 @@ function WaitlistForm() {
   };
 
   return (
-    <div ref={formRef} className="rounded-3xl bg-purple-100 p-8 shadow-md">    
-        <div className="form-contents flex flex-col items-center justify-center">
-          <h3 className="mb-3 text-center text-2xl font-bold">
+    <motion.div 
+      ref={formRef} 
+      className="rounded-3xl bg-purple-100 p-8 shadow-md"
+      variants={fadeInUp}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+    >    
+      <div className="flex flex-col items-center justify-center">
+        <motion.h3 
+          className="mb-3 text-center text-2xl font-bold"
+          variants={fadeInUp}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          custom={0.1}
+        >
           Get Early Access to AI-Powered Learning
-          </h3>
-          <p className="mb-6 text-center text-gray-700">
+        </motion.h3>
+        <motion.p 
+          className="mb-6 text-center text-gray-700"
+          variants={fadeInUp}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          custom={0.2}
+        >
           Be among the first to experience personalized financial education with PawFi. Join our community for updates and beta access.
-          </p>
+        </motion.p>
 
-          
-            <div className="mx-auto flex max-w-md flex-col gap-3 md:flex-row">              
-              <Button
-                className="rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700"            
-                onClick={handleSubmit}
-              >
-                Join Discord 
-              </Button>
-            </div>
-        </div>
-      
-    </div>
+        <motion.div 
+          className="mx-auto flex max-w-md flex-col gap-3 md:flex-row"
+          variants={fadeInUp}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          custom={0.3}
+        >              
+          <Button
+            className="rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700"            
+            onClick={handleSubmit}
+          >
+            Join Discord 
+          </Button>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 }
 
 export function HomePage() {
-  // Force GSAP's ScrollTrigger to refresh when this component mounts
-  gsap.registerPlugin(ScrollTrigger);
   const headerRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const missionRef = useRef<HTMLDivElement>(null);
-  const learningSectionRef = useRef<HTMLDivElement>(null); // Used for two sections
+  const learningSectionRef = useRef<HTMLDivElement>(null);
   const basicLessonsSectionRef = useRef<HTMLDivElement>(null);
+  const waitlistSectionRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLImageElement>(null);
-
-  // ScrollTrigger is already registered globally
-
-  // Completely remove dependency on ScrollTrigger for sections and use IntersectionObserver directly
-  useEffect(() => {
-    // Kill any existing ScrollTriggers to avoid conflicts
-    ScrollTrigger.getAll().forEach(st => st.kill());
-    
-    // Set initial states for all animated elements
-    gsap.set(".features-title", { opacity: 0, y: 30 });
-    gsap.set(missionRef.current, { opacity: 0, y: 50 });
-    gsap.set(".learning-title", { opacity: 0, y: 30 }); // Applies to both sections using this class
-    gsap.set(".learning-image", { opacity: 0, scale: 0.8 });
-    gsap.set(".learning-step", { opacity: 0, x: -30 });
-    gsap.set(".basic-lessons-title", { opacity: 0, y: 30 });
-    // BasicLessonCard animations are handled within the component itself
-    
-    // Create animation functions
-    const animateFeatures = () => {
-      gsap.to(".features-title", {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: "power3.out"
-      });
-    };
-    
-    const animateMission = () => {
-      gsap.to(missionRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: "power3.out"
-      });
-    };
-    
-    const animateLearning = () => {
-      const tl = gsap.timeline();
-      tl.to(".learning-title", { opacity: 1, y: 0, duration: 0.6 })
-        .to(".learning-image", { opacity: 1, scale: 1, duration: 0.8 }, "-=0.3")
-        .to(".learning-step", {
-          opacity: 1,
-          x: 0,
-          stagger: 0.2,
-          duration: 0.5
-        }, "-=0.5");
-    };
-
-    const animateBasicLessons = () => {
-      gsap.to(".basic-lessons-title", {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: "power3.out",
-      });
-      // Individual card animations are self-contained in BasicLessonCard
-    };
-    
-    // Use IntersectionObserver to trigger animations when elements come into view
-    const featuresObserver = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        animateFeatures();
-        featuresObserver.disconnect();
-      }
-    }, { threshold: 0.1 });
-    
-    const missionObserver = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        animateMission();
-        missionObserver.disconnect();
-      }
-    }, { threshold: 0.1 });
-    
-    const learningObserver = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        animateLearning();
-        learningObserver.disconnect();
-      }
-    }, { threshold: 0.1 });
-
-    const basicLessonsObserver = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        animateBasicLessons();
-        basicLessonsObserver.disconnect();
-      }
-    }, { threshold: 0.1 });
-
-
-    
-    // Observe the trigger elements
-    if (featuresRef.current) featuresObserver.observe(featuresRef.current);
-    if (missionRef.current) missionObserver.observe(missionRef.current);
-    // learningSectionRef is used by two sections, ensure IntersectionObserver is robust or use separate refs if issues arise
-    if (learningSectionRef.current) {
-        // Assuming learningSectionRef points to the PARENT of multiple animated sections or the first one.
-        // For more complex scenarios with multiple distinct sections using the same ref for triggering, 
-        // consider unique refs or more specific querySelectors for observers.
-        learningObserver.observe(learningSectionRef.current); 
-    }
-    if (basicLessonsSectionRef.current) basicLessonsObserver.observe(basicLessonsSectionRef.current);
-    
-    return () => {
-      // Clean up
-      featuresObserver.disconnect();
-      missionObserver.disconnect();
-      learningObserver.disconnect();
-      basicLessonsObserver.disconnect();
-      ScrollTrigger.getAll().forEach(st => st.kill());
-    };
-  }, []);
-
-  // Initial animations for hero section only - these work fine
-  useGSAP(() => {
-    const tl = gsap.timeline();
-
-    // Animate the header elements
-    tl.from(".hero-title", {
-      opacity: 0,
-      y: -50,
-      duration: 0.8,
-      ease: "power3.out",
-    });
-
-    tl.from(
-      ".hero-subtitle",
-      {
-        opacity: 0,
-        y: -30,
-        duration: 0.8,
-        ease: "power3.out",
-      },
-      "-=0.6",
-    );
-
-    tl.from(
-      ".hero-cta",
-      {
-        opacity: 0,
-        y: 30,
-        duration: 0.8,
-        ease: "power3.out",
-      },
-      "-=0.6",
-    );
-
-    // Animate the cat
-    tl.from(
-      catRef.current,
-      {
-        scale: 0.8,
-        opacity: 0,
-        rotation: -10,
-        duration: 1,
-        ease: "elastic.out(1, 0.5)",
-      },
-      "-=0.8",
-    );
-
-    // Create floating animation for the cat
-    gsap.to(catRef.current, {
-      y: 15,
-      duration: 2,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
-    });
-  }, { dependencies: [] });
   
-  // Register a scroll listener to force check visibility of elements as fallback
+  // Use our custom hook to detect when elements enter the viewport
+  const featuresInView = useInView(featuresRef, 0.1);
+  const missionInView = useInView(missionRef, 0.1);
+  const learningInView = useInView(learningSectionRef, 0.1);
+  const basicLessonsInView = useInView(basicLessonsSectionRef, 0.1);
+  const waitlistInView = useInView(waitlistSectionRef, 0.1);
+  const footerInView = useInView(footerRef, 0.1);
+  
+  // Controls for staggered animations
+  const learningControls = useAnimation();
+  
+  // Trigger staggered animations when learning section comes into view
   useEffect(() => {
-    const handleScroll = () => {
-      // Get all elements with animations
-      const elements = document.querySelectorAll('.learning-step, .features-title, .learning-title, .learning-image, .basic-lessons-title');
-      
-      elements.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        // If element is in viewport and has opacity 0, make it visible
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          const opacity = window.getComputedStyle(el).opacity;
-          if (parseFloat(opacity) === 0) {
-            gsap.to(el, { opacity: 1, y: 0, x: 0, scale: 1, duration: 0.5 });
-          }
-        }
-      });
-    };
+    if (learningInView) {
+      learningControls.start('visible');
+    }
+  }, [learningInView, learningControls]);
+  
+  // For the cat animation, we need to handle the floating effect separately
+  const [catAnimationState, setCatAnimationState] = useState('hidden');
+  
+  useEffect(() => {
+    // Start with the initial animation
+    setCatAnimationState('visible');
     
-    // Add scroll listener
-    window.addEventListener('scroll', handleScroll);
+    // After the initial animation completes, switch to floating animation
+    const timer = setTimeout(() => {
+      setCatAnimationState('floating');
+    }, 1000); // Matches the duration of the initial animation
     
-    // Initial check
-    setTimeout(handleScroll, 200);
-    setTimeout(handleScroll, 1000); // Another check after a delay
-    
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => clearTimeout(timer);
   }, []);
+  
+  // No need for a scroll listener with Framer Motion's useInView hook
+  // Each section now uses its own ref and animation logic
 
   return (
-    <div className="bg-background flex-1 overflow-x-hidden">
+    <div className="bg-background flex-1 overflow-hidden">
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">
@@ -601,13 +403,13 @@ export function HomePage() {
         </div>
         <div className="flex items-center gap-4">
           <Link
-            to="/learning"
+            to="/learning/your-2025-guide-to-investing"
             className="font-medium text-purple-600 hover:text-purple-800 hidden lg:block"
           >
             Explore Courses
           </Link>
           <Link
-            to="/intro"
+            to="/chat"
             className="font-medium text-purple-600 hover:text-purple-800"
           >
             <Button className="bg-purple-600 hover:bg-purple-700">
@@ -624,17 +426,35 @@ export function HomePage() {
       >
         <div className="z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
           <div className="relative z-20">
-            <h1 className="hero-title mb-6 text-4xl font-bold md:text-5xl lg:text-6xl">
-            Personalized Financial Mastery with{" "}
+            <motion.h1 
+              className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl"
+              variants={fadeInDown}
+              initial="hidden"
+              animate="visible"
+              custom={0}
+            >
+              Personalized Financial Mastery with{" "}
               <span className="text-purple-600">AI-Driven Learning</span>
-            </h1>
-            <p className="hero-subtitle mb-8 text-xl text-gray-700">
+            </motion.h1>
+            <motion.p 
+              className="mb-8 text-xl text-gray-700"
+              variants={fadeInDown}
+              initial="hidden"
+              animate="visible"
+              custom={0.2}
+            >
               PawFi understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert-curated content and AI insights.
-            </p>
-            <div className="hero-cta flex flex-col gap-4 sm:flex-row">
-              <Link to="/intro">
+            </motion.p>
+            <motion.div 
+              className="flex flex-col gap-4 sm:flex-row"
+              variants={fadeInDown}
+              initial="hidden"
+              animate="visible"
+              custom={0.4}
+            >
+              <Link to="/learning">
                 <Button className="w-full rounded-lg bg-purple-600 px-8 py-3 font-medium text-white hover:bg-purple-700 sm:w-auto">
-                Start Your AI Lesson
+                  Start Your AI Lesson
                 </Button>
               </Link>
               <Link to="/learning/your-2025-guide-to-investing">
@@ -644,17 +464,32 @@ export function HomePage() {
                 >
                   Guide to Investing
                 </Button>
-                </Link>
-                </div>
+              </Link>
+            </motion.div>
           </div>
           <div className="relative z-20 flex justify-center lg:justify-end">
-            <img
-              ref={catRef}
+            <motion.img
               src={banner}
               alt="Friendly cat mascot illustrating PawFi's AI-driven financial learning platform"
               className="w-72 md:w-96"
               width="1846"
               height="2275"
+              initial="hidden"
+              animate={{
+                scale: 1,
+                opacity: 1,
+                y: [0, -10, 0],
+                transition: {
+                  opacity: { duration: 0.6, delay: 0.6 },
+                  scale: { duration: 0.8, delay: 0.6, type: "spring", stiffness: 200 },
+                  y: {
+                    duration: 4,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    ease: "easeInOut"
+                  }
+                }
+              }}
             />
           </div>
         </div>
@@ -671,10 +506,15 @@ export function HomePage() {
         className="bg-purple-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto max-w-7xl">
-          <h2 className="features-title mb-16 text-center text-3xl font-bold md:text-4xl">
-          Intelligent Financial Education, 
+          <motion.h2 
+            className="mb-16 text-center text-3xl font-bold md:text-4xl"
+            variants={fadeInDown}
+            initial="hidden"
+            animate={featuresInView ? "visible" : "hidden"}
+          >
+            Intelligent Financial Education, 
             <span className="text-purple-600">Tailored For You</span>
-          </h2>
+          </motion.h2>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[
@@ -700,10 +540,23 @@ export function HomePage() {
       {/* Mission Section */}
       <section ref={missionRef} className="px-6 py-20 md:px-12 lg:px-24">
         <div className="mx-auto max-w-4xl text-center">
-        <h2 className="section-title-animate mb-8 text-3xl font-bold text-slate-800 md:text-4xl">Our Vision for Your Financial Future</h2>
-          <p className="mb-10 text-lg text-slate-600 leading-relaxed">
+          <motion.h2 
+            className="mb-8 text-3xl font-bold text-slate-800 md:text-4xl"
+            variants={fadeInDown}
+            initial="hidden"
+            animate={missionInView ? "visible" : "hidden"}
+          >
+            Our Vision for Your Financial Future
+          </motion.h2>
+          <motion.p 
+            className="mb-10 text-lg text-slate-600 leading-relaxed"
+            variants={fadeInUp}
+            initial="hidden"
+            animate={missionInView ? "visible" : "hidden"}
+            custom={0.2}
+          >
             At PawFi, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
-          </p>
+          </motion.p>
           <div className="flex justify-center">
             <img src={banner3} alt="Illustration of a cat with a piggy bank, symbolizing PawFi's commitment to financial growth and literacy" className="w-56" width="1216" height="1848" loading="lazy" />
           </div>
@@ -718,118 +571,264 @@ export function HomePage() {
       >
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
           <div>
-            <h2 className="learning-title mb-10 text-3xl font-bold md:text-4xl">
+            <motion.h2 
+              className="mb-10 text-3xl font-bold md:text-4xl"
+              variants={fadeInDown}
+              initial="hidden"
+              animate={learningInView ? "visible" : "hidden"}
+            >
               How PawFi Works
-            </h2>
+            </motion.h2>
 
-            <div className="space-y-8">
+            <motion.div 
+              className="space-y-8"
+              variants={staggerContainer}
+              initial="hidden"
+              animate={learningControls}
+            >
               {[
                 { title: "Tell Us About You", description: "Share your financial goals and current understanding. Our AI listens.", number: 1 },
                 { title: "Receive Your Custom Plan", description: "Our AI designs a unique lesson plan, focusing on what matters most to you.", number: 2 },
                 { title: "Learn & Interact", description: "Engage with AI-generated lessons, chat for clarity, and practice with real-world scenarios.", number: 3 },
                 { title: "Track & Achieve", description: "Monitor your progress, master new skills, and apply your knowledge confidently.", number: 4 },
               ].map((step, index) => (
-                <div className="learning-step flex items-start gap-4">
-                <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  {step.number}
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xl font-bold">
-                    {step.title}
-                  </h3>
-                  <p className="text-gray-700">
-                    {step.description}
-                  </p>
-                </div>
-              </div>
+                <motion.div 
+                  key={step.number}
+                  className="flex items-start gap-4"
+                  variants={fadeInLeft}
+                  custom={index * 0.2}
+                >
+                  <motion.div 
+                    className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white"
+                    variants={elasticScale}
+                    custom={index * 0.2 + 0.3}
+                  >
+                    {step.number}
+                  </motion.div>
+                  <div>
+                    <motion.h3 
+                      className="mb-2 text-xl font-bold"
+                      variants={fadeInUp}
+                      custom={index * 0.2 + 0.1}
+                    >
+                      {step.title}
+                    </motion.h3>
+                    <motion.p 
+                      className="text-gray-700"
+                      variants={fadeInUp}
+                      custom={index * 0.2 + 0.2}
+                    >
+                      {step.description}
+                    </motion.p>
+                  </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
 
-            <div className="mt-12">
+            <motion.div 
+              className="mt-12"
+              variants={fadeInUp}
+              initial="hidden"
+              animate={learningInView ? "visible" : "hidden"}
+              custom={0.8}
+            >
               <Link
                 to="/chat"
                 className="inline-flex items-center font-medium text-purple-600 hover:text-purple-800"
               >
-               Discover Your Path
-                <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+                Discover Your Path
+                <motion.span
+                  initial={{ x: 0 }}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+                </motion.span>
               </Link>
-            </div>
+            </motion.div>
           </div>
 
-          <div className="flex justify-center">
-            <img
-              className="learning-image w-44 md:w-80"
+          <motion.div 
+            className="flex justify-center"
+            variants={fadeIn}
+            initial="hidden"
+            animate={learningInView ? "visible" : "hidden"}
+            custom={0.5}
+          >
+            <motion.img
+              className="w-44 md:w-80"
               src={banner2}
               alt="Visual representation of PawFi's personalized AI learning journey for financial education"
               width="1084"
               height="1848"
               loading="lazy"
+              variants={floatAnimation}
+              animate="animate"
+              transition={{ repeat: Infinity, repeatType: "reverse", duration: 3 }}
             />
-          </div>
+          </motion.div>
         </div>
       </section>
           {/* Learning Journey Section */}
           <section
-        ref={learningSectionRef}
+        ref={basicLessonsSectionRef}
         title="Start Your Financial Learning Journey"
         className="bg-purple-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto max-w-7xl text-center">
-            <h2 className="section-title-animate mb-16 text-3xl font-bold text-slate-800 md:text-4xl">
+            <motion.h2 
+              className="mb-16 text-3xl font-bold text-slate-800 md:text-4xl"
+              variants={fadeInDown}
+              initial="hidden"
+              animate={basicLessonsInView ? "visible" : "hidden"}
+            >
                 Comprehensive Financial Toolkit
-            </h2>
+            </motion.h2>
         </div>
-        <div className="grid gap-8 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-8 shadow-md">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-              <FontAwesomeIcon icon={faBookOpen} className="text-xl" />
-            </div>
-            <h3 className="mb-3 text-xl font-semibold">Expert-Led Foundational Courses</h3>
-            <p className="mb-6 text-gray-700">
-            Build a strong base with structured courses from our experienced financial instructor.            </p>
-            <Link
-              to="/learning/your-2025-guide-to-investing"
-              className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
+        <motion.div 
+          className="grid gap-8 md:grid-cols-3"
+          variants={staggerContainer}
+          initial="hidden"
+          animate={basicLessonsInView ? "visible" : "hidden"}
+        >
+          <motion.div 
+            className="rounded-2xl bg-white p-8 shadow-md"
+            variants={fadeInUp}
+            custom={0.1}
+          >
+            <motion.div 
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600"
+              variants={elasticScale}
+              custom={0.2}
             >
-              Start learning
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-            </Link>
-          </div>
+              <FontAwesomeIcon icon={faBookOpen} className="text-xl" aria-hidden="true" />
+            </motion.div>
+            <motion.h3 
+              className="mb-3 text-xl font-semibold"
+              variants={fadeInUp}
+              custom={0.3}
+            >
+              Expert-Led Foundational Courses
+            </motion.h3>
+            <motion.p 
+              className="mb-6 text-gray-700"
+              variants={fadeInUp}
+              custom={0.4}
+            >
+              Build a strong base with structured courses from our experienced financial instructor.
+            </motion.p>
+            <motion.div
+              variants={fadeInUp}
+              custom={0.5}
+            >
+              <Link
+                to="/learning/your-2025-guide-to-investing"
+                className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
+              >
+                Start learning
+                <motion.span
+                  initial={{ x: 0 }}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-2" aria-hidden="true" />
+                </motion.span>
+              </Link>
+            </motion.div>
+          </motion.div>
 
-          <div className="rounded-2xl bg-white p-8 shadow-md">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-purple-600">
-              <FontAwesomeIcon icon={faRobot} className="text-xl" />
-            </div>
-            <h3 className="mb-3 text-xl font-semibold">Chat with PawFi AI</h3>
-            <p className="mb-6 text-gray-700">
-            Get instant, personalized financial advice and answers to your complex questions, 24/7.
-            </p>
-            <Link
-              to="/chat"
-              className="inline-flex items-center font-medium text-purple-600 hover:text-purple-800"
+          <motion.div 
+            className="rounded-2xl bg-white p-8 shadow-md"
+            variants={fadeInUp}
+            custom={0.3}
+          >
+            <motion.div 
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-purple-600"
+              variants={elasticScale}
+              custom={0.4}
             >
-              Start chatting
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-            </Link>
-          </div>
+              <FontAwesomeIcon icon={faRobot} className="text-xl" aria-hidden="true" />
+            </motion.div>
+            <motion.h3 
+              className="mb-3 text-xl font-semibold"
+              variants={fadeInUp}
+              custom={0.5}
+            >
+              Chat with PawFi AI
+            </motion.h3>
+            <motion.p 
+              className="mb-6 text-gray-700"
+              variants={fadeInUp}
+              custom={0.6}
+            >
+              Get instant, personalized financial advice and answers to your complex questions, 24/7.
+            </motion.p>
+            <motion.div
+              variants={fadeInUp}
+              custom={0.7}
+            >
+              <Link
+                to="/chat"
+                className="inline-flex items-center font-medium text-purple-600 hover:text-purple-800"
+              >
+                Start chatting
+                <motion.span
+                  initial={{ x: 0 }}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-2" aria-hidden="true" />
+                </motion.span>
+              </Link>
+            </motion.div>
+          </motion.div>
 
-          <div className="rounded-2xl bg-white p-8 shadow-md">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
-              <FontAwesomeIcon icon={faPuzzlePiece} className="text-xl" />
-            </div>
-            <h3 className="mb-3 text-xl font-semibold">Interactive Financial Tools</h3>
-            <p className="mb-6 text-gray-700">
-            Plan your future with our suite of calculators for loans, investments, retirement, and more.
-            </p>
-            <Link
-              to="/calculators"
-              className="inline-flex items-center font-medium text-green-600 hover:text-green-800"
+          <motion.div 
+            className="rounded-2xl bg-white p-8 shadow-md"
+            variants={fadeInUp}
+            custom={0.5}
+          >
+            <motion.div 
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600"
+              variants={elasticScale}
+              custom={0.6}
             >
-              Explore tools
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-            </Link>
-          </div>
-        </div>
+              <FontAwesomeIcon icon={faPuzzlePiece} className="text-xl" aria-hidden="true" />
+            </motion.div>
+            <motion.h3 
+              className="mb-3 text-xl font-semibold"
+              variants={fadeInUp}
+              custom={0.7}
+            >
+              Interactive Financial Tools
+            </motion.h3>
+            <motion.p 
+              className="mb-6 text-gray-700"
+              variants={fadeInUp}
+              custom={0.8}
+            >
+              Plan your future with our suite of calculators for loans, investments, retirement, and more.
+            </motion.p>
+            <motion.div
+              variants={fadeInUp}
+              custom={0.9}
+            >
+              <Link
+                to="/calculators"
+                className="inline-flex items-center font-medium text-green-600 hover:text-green-800"
+              >
+                Explore tools
+                <motion.span
+                  initial={{ x: 0 }}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-2" aria-hidden="true" />
+                </motion.span>
+              </Link>
+            </motion.div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Expert-Led Basic Lessons Section */}
@@ -838,42 +837,77 @@ export function HomePage() {
         className="bg-slate-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto max-w-7xl">
-          <h2 className="basic-lessons-title mb-6 text-center text-3xl font-bold text-slate-800 md:text-4xl">
+          <motion.h2 
+            className="mb-6 text-center text-3xl font-bold text-slate-800 md:text-4xl"
+            variants={fadeInDown}
+            initial="hidden"
+            animate={basicLessonsInView ? "visible" : "hidden"}
+          >
             Dive Deeper with Expert-Led Lessons
-          </h2>
-          <p className="mb-12 text-center text-lg text-slate-600 md:mx-auto md:max-w-2xl">
+          </motion.h2>
+          <motion.p 
+            className="mb-12 text-center text-lg text-slate-600 md:mx-auto md:max-w-2xl"
+            variants={fadeInUp}
+            initial="hidden"
+            animate={basicLessonsInView ? "visible" : "hidden"}
+            custom={0.2}
+          >
             Our foundational courses are crafted by a seasoned Financial Instructor (CFA, CSC, MBA) with over 10 years of experience, making complex topics clear and actionable, no matter your background.
-          </p>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          </motion.p>
+          <motion.div 
+            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+            variants={staggerContainer}
+            initial="hidden"
+            animate={basicLessonsInView ? "visible" : "hidden"}
+          >
             {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
               <BasicLessonCard
-                key={`preview-${lesson.id}`}
+                key={`preview-${lesson.lesson_id}`}
                 icon={lesson.icon}
                 title={lesson.title}
                 description={lesson.description}
-                linkTo={`/learning/${basicLessonsData.id}/lesson/${lesson.id}`}
+                linkTo={`/learning/${basicLessonsData.id}/lesson/${lesson.lesson_id}`}
                 animationDelay={0.1 * (index + 1)}
               />
             ))}
             {/* Explore More Card */}
             {basicLessonsData.lessons.length > 2 && (
-              <Link
-                to={`/learning/${basicLessonsData.id}`}
-                role="button"           
-                className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-50"
+              <motion.div
+                variants={fadeInUp}
+                custom={0.4}
               >
-                <div className="flex-grow flex flex-col items-center justify-center">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <FontAwesomeIcon icon={faPlus} className="text-xl" />
+                <Link
+                  to={`/learning/${basicLessonsData.id}`}
+                  role="button"           
+                  className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-50"
+                >
+                  <div className="flex-grow flex flex-col items-center justify-center">
+                    <motion.div 
+                      className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+                      variants={elasticScale}
+                      custom={0.5}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="text-xl" aria-hidden="true" />
+                    </motion.div>
+                    <motion.h3 
+                      className="mb-3 text-xl font-semibold text-slate-800"
+                      variants={fadeInUp}
+                      custom={0.6}
+                    >
+                      Explore All Lessons
+                    </motion.h3>
+                    <motion.p 
+                      className="text-sm text-slate-600"
+                      variants={fadeInUp}
+                      custom={0.7}
+                    >
+                      View all {basicLessonsData.lessons.length} foundational courses.
+                    </motion.p>
                   </div>
-                  <h3 className="mb-3 text-xl font-semibold text-slate-800">Explore All Lessons</h3>
-                  <p className="text-sm text-slate-600">
-                    View all {basicLessonsData.lessons.length} foundational courses.
-                  </p>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -881,79 +915,133 @@ export function HomePage() {
       <FaqSection faqData={faqData} />
 
       {/* Waitlist Section */}
-      <section id="waitlist" className="px-6 py-20 md:px-12 lg:px-24">
-        <div className="mx-auto max-w-4xl">
+      <section 
+        id="waitlist" 
+        className="px-6 py-20 md:px-12 lg:px-24"
+        ref={waitlistSectionRef}
+      >
+        <motion.div 
+          className="mx-auto max-w-4xl"
+          variants={fadeIn}
+          initial="hidden"
+          animate={waitlistInView ? "visible" : "hidden"}
+          transition={{ duration: 0.5 }}
+        >
           <WaitlistForm />
-        </div>
+        </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 px-6 py-12 text-white md:px-12 lg:px-24">
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <div className="mb-4 flex items-center">
-              <img src={catCoin} alt="PawFi Logo" className="h-8 w-8" width="32" height="32" loading="lazy" />
-              <span className="ml-2 text-xl font-bold">PawFi</span>
-            </div>
-            <p className="text-gray-400">
+      <footer 
+        className="bg-gray-900 px-6 py-12 text-white md:px-12 lg:px-24"
+        ref={footerRef}
+      >
+        <motion.div 
+          className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate={footerInView ? "visible" : "hidden"}
+        >
+          <motion.div variants={fadeInUp} custom={0.1}>
+            <motion.div className="mb-4 flex items-center" variants={fadeInUp} custom={0.2}>
+              <motion.img 
+                src={catCoin} 
+                alt="PawFi Logo" 
+                className="h-8 w-8" 
+                width="32" 
+                height="32" 
+                loading="lazy" 
+                variants={elasticScale}
+                custom={0.3}
+              />
+              <motion.span className="ml-2 text-xl font-bold" variants={fadeInUp} custom={0.4}>PawFi</motion.span>
+            </motion.div>
+            <motion.p className="text-gray-400" variants={fadeInUp} custom={0.5}>
             Empowering your financial journey with intelligent, personalized learning.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
 
-          <div>
-            <h3 className="mb-4 text-lg font-bold">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <a href="/learning" className="text-gray-400 hover:text-white">
+          <motion.div variants={fadeInUp} custom={0.2}>
+            <motion.h3 className="mb-4 text-lg font-bold" variants={fadeInUp} custom={0.3}>Quick Links</motion.h3>
+            <motion.ul className="space-y-2" variants={staggerContainer}>
+              <motion.li variants={fadeInUp} custom={0.4}>
+                <Link to="/learning" className="text-gray-400 hover:text-white">
                 AI Learning
-                </a>
-              </li>
-              <li>
-                <a href="/learning/your-2025-guide-to-investing" className="text-gray-400 hover:text-white">
+                </Link>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.5}>
+                <Link to="/learning/your-2025-guide-to-investing" className="text-gray-400 hover:text-white">
                 Expert Courses
-                </a>
-              </li>
-              <li>
-                <a href="/calculators" className="text-gray-400 hover:text-white">
+                </Link>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.6}>
+                <Link to="/calculators" className="text-gray-400 hover:text-white">
                 Financial Calculators
-                </a>
-              </li>
-              <li>
-                <a href="/chat" className="text-gray-400 hover:text-white">
+                </Link>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.7}>
+                <Link to="/chat" className="text-gray-400 hover:text-white">
                 Chat with AI
-                </a>
-              </li>
-            </ul>
-          </div>
+                </Link>
+              </motion.li>
+            </motion.ul>
+          </motion.div>
 
-          <div>
-            <h3 className="mb-4 text-lg font-bold">Legal</h3>
-            <ul className="space-y-2">
-              <li>
+          <motion.div variants={fadeInUp} custom={0.3}>
+            <motion.h3 className="mb-4 text-lg font-bold" variants={fadeInUp} custom={0.4}>Legal</motion.h3>
+            <motion.ul className="space-y-2" variants={staggerContainer}>
+              <motion.li variants={fadeInUp} custom={0.5}>
                 <Link to="/privacy-policy" className="text-gray-400 hover:text-white">
                   Privacy Policy
                 </Link>
-              </li>
-              <li>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.6}>
                 <Link to="/terms-of-service" className="text-gray-400 hover:text-white">
                   Terms of Service
                 </Link>
-              </li>
-              <li>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.7}>
                 <Link to="/cookie-policy" className="text-gray-400 hover:text-white">
                   Cookie Policy
                 </Link>
-              </li>
-            </ul>
-          </div>
+              </motion.li>
+            </motion.ul>
+          </motion.div>
 
-          <div>
-            <h3 className="mb-4 text-lg font-bold">Connect</h3>
-            <p className="mb-4 text-gray-400">
-              Stay up to date with the latest from PawFi.
-            </p>
-            <div className="flex space-x-4">
-              <a href="https://facebook.com/your-pawfi-page" aria-label="PawFi on Facebook" className="text-gray-400 hover:text-white">
+          <motion.div variants={fadeInUp} custom={0.4}>
+            <motion.h3 className="mb-4 text-lg font-bold" variants={fadeInUp} custom={0.5}>Connect</motion.h3>
+            <motion.ul className="space-y-2" variants={staggerContainer}>
+              <motion.li variants={fadeInUp} custom={0.6}>
+                <a href="https://twitter.com" className="text-gray-400 hover:text-white">
+                  Twitter
+                </a>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.7}>
+                <a href="https://discord.gg/RZdG7GpX" className="text-gray-400 hover:text-white">
+                  Discord
+                </a>
+              </motion.li>
+              <motion.li variants={fadeInUp} custom={0.8}>
+                <a href="mailto:hello@pawfi.com" className="text-gray-400 hover:text-white">
+                  Contact Us
+                </a>
+              </motion.li>
+            </motion.ul>
+          </motion.div>
+
+          <motion.div 
+            className="col-span-full mx-auto mt-12 max-w-7xl border-t border-gray-800 pt-8 text-center text-gray-400"
+            variants={fadeInUp}
+            custom={0.9}
+          >
+            <motion.div className="flex justify-center space-x-4 mb-4" variants={staggerContainer}>
+              <motion.a 
+                href="https://facebook.com/your-pawfi-page" 
+                aria-label="PawFi on Facebook" 
+                className="text-gray-400 hover:text-white"
+                variants={fadeInUp}
+                custom={1.0}
+              >
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"
@@ -966,8 +1054,14 @@ export function HomePage() {
                     clipRule="evenodd"
                   />
                 </svg>
-              </a>
-              <a href="https://twitter.com/your-pawfi-handle" aria-label="PawFi on Twitter" className="text-gray-400 hover:text-white">
+              </motion.a>
+              <motion.a 
+                href="https://twitter.com/your-pawfi-handle" 
+                aria-label="PawFi on Twitter" 
+                className="text-gray-400 hover:text-white"
+                variants={fadeInUp}
+                custom={1.1}
+              >
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"
@@ -976,8 +1070,14 @@ export function HomePage() {
                 >
                   <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
                 </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
+              </motion.a>
+              <motion.a 
+                href="https://instagram.com/your-pawfi-handle" 
+                aria-label="PawFi on Instagram" 
+                className="text-gray-400 hover:text-white"
+                variants={fadeInUp}
+                custom={1.2}
+              >
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"
@@ -990,14 +1090,11 @@ export function HomePage() {
                     clipRule="evenodd"
                   />
                 </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-12 max-w-7xl border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p> 2025 PawFi. All rights reserved.</p>
-        </div>
+              </motion.a>
+            </motion.div>
+            <motion.p variants={fadeInUp} custom={1.3}>© 2025 PawFi. All rights reserved.</motion.p>
+          </motion.div>
+        </motion.div>
       </footer>
     </div>
   );

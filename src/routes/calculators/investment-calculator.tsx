@@ -8,14 +8,44 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/calculators/investment-calculator')({
   component: InvestmentCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/investment-calculator';
     const meta = seo({
       title: 'Investment Growth Calculator | PawFi',
       description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with PawFi's investment calculator.",
       keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for investment calculator page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Investment Growth Calculator",
+      "description": "Project your investment growth over time. See how regular contributions and returns can build your wealth with PawFi's investment calculator.",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Investment"
+    };
+    
     return {
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

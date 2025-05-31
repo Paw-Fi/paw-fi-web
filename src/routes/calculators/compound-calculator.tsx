@@ -9,14 +9,44 @@ import { LessonBackButton } from '@/components/learning/lesson-back-button';
 export const Route = createFileRoute('/calculators/compound-calculator')({
   component: CompoundCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/compound-calculator';
     const meta = seo({
       title: 'Compound Interest Calculator | PawFi',
       description: 'Visualize the power of compound interest. Calculate how your investments can grow over time with our compound interest calculator.',
       keywords: 'compound interest calculator, investment growth, financial planning, compounding, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for the calculator
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Compound Interest Calculator",
+      "description": "Interactive calculator to visualize how investments grow with compound interest over time",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Financial Education Tool"
+    };
+    
     return {
-      meta    
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

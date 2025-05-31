@@ -9,14 +9,44 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/calculators/saving-goals-calculator')({
   component: SavingGoalsCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/saving-goals-calculator';
     const meta = seo({
       title: 'Savings Goal Calculator | PawFi',
       description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with PawFi.',
       keywords: 'savings goal calculator, financial goals, saving plan, regular savings, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for the savings goal calculator
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Savings Goal Calculator",
+      "description": "Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with PawFi.",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Financial Planning Tool"
+    };
+    
     return {
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

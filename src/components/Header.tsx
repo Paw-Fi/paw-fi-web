@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight } from "@fortawesome/free-solid-svg-icons";
@@ -158,6 +158,7 @@ export default function Header() {
   const [isLearningSubmenuOpen, setIsLearningSubmenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location=useLocation();
 
   useEffect(() => {
     if (dropdownRef.current) {
@@ -183,6 +184,10 @@ export default function Header() {
       console.error('Error signing out:', error);
     }
   };
+  if(location.pathname==="/")
+  {
+    return <></>
+  }
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-10">

@@ -14,6 +14,7 @@ import { seo } from "@/utils/seo";
 export const Route = createFileRoute("/learning/")({
   component: LearningPage,
   head: () => {
+    const pageUrl = "https://pawfi.app/learning/";
     const meta = seo({
       title: "PawFi: AI-Powered Financial Learning & Personalized Lessons",
       description:
@@ -21,10 +22,54 @@ export const Route = createFileRoute("/learning/")({
       keywords:
         "AI financial learning, personalized finance lessons, PawFi, financial education, AI finance coach, investment analysis, financial modeling, personal finance, money management, financial literacy tools",
       image: "https://paw-fi.app/og-img.png",
-      url: "https://pawfi.app/learning/",
+      url: pageUrl,
     });
+    
+    // Add structured data for learning page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Financial Education Courses",
+      "description": "Expert-curated financial education courses on investing, personal finance, and money management",
+      "url": pageUrl,
+      "itemListElement": [
+        {
+          "@type": "Course",
+          "name": "Your 2025 Guide to Investing",
+          "description": "Learn the fundamentals of investing with practical strategies for 2025 and beyond",
+          "provider": {
+            "@type": "Organization",
+            "name": "PawFi",
+            "url": "https://pawfi.app/"
+          }
+        },
+        {
+          "@type": "Course",
+          "name": "Personal Finance Fundamentals",
+          "description": "Master the basics of personal finance and build a strong financial foundation",
+          "provider": {
+            "@type": "Organization",
+            "name": "PawFi",
+            "url": "https://pawfi.app/"
+          }
+        }
+      ]
+    };
+    
     return {
       meta,
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

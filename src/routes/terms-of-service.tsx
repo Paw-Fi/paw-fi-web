@@ -1,7 +1,48 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/terms-of-service')({
   component: TermsOfService,
+  head: () => {
+    const pageUrl = 'https://pawfi.app/terms-of-service';
+    const meta = seo({
+      title: 'Terms of Service | PawFi',
+      description: 'Read PawFi\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',
+      keywords: 'terms of service, user agreement, legal terms, PawFi terms',
+      image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
+    });
+    
+    // Add structured data for terms of service page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Terms of Service",
+      "description": "PawFi's terms of service agreement outlining the rules and policies for using our platform",
+      "url": pageUrl,
+      "publisher": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 function TermsOfService() {

@@ -22,18 +22,8 @@ export const Route = createFileRoute("/learning/$courseId/")({
     const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
     try {
-      const storedCourses = localStorage.getItem(COURSES_STORAGE_KEY);
-      let foundCourse: Course | undefined = undefined;
 
-      if (storedCourses) {
-        const courses: Course[] = JSON.parse(storedCourses);
-        foundCourse = courses.find(c => c.course_id === params.courseId);
-      }
-
-      // If not found in localStorage, check basicCourse (assuming it's a single Course object)
-      if (!foundCourse && basicCourse && (basicCourse as Course).course_id === params.courseId) {
-        foundCourse = basicCourse as Course;
-      }
+      const foundCourse = basicCourse
       
       if (foundCourse) {
         courseTitle = foundCourse.title || courseTitle;
@@ -55,8 +45,33 @@ export const Route = createFileRoute("/learning/$courseId/")({
       url: pageUrl,
     });
 
+    // Add structured data for the course
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": courseTitle,
+      "description": courseDescription,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+
     return {
       meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

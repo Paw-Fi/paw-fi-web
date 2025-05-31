@@ -1,7 +1,48 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { seo } from '@/utils/seo';
 
 export const Route = createFileRoute('/privacy-policy')({
   component: PrivacyPolicy,
+  head: () => {
+    const pageUrl = 'https://pawfi.app/privacy-policy';
+    const meta = seo({
+      title: 'Privacy Policy | PawFi',
+      description: 'Learn how PawFi collects, uses, and protects your personal information when you use our financial education services.',
+      keywords: 'privacy policy, data protection, personal information, PawFi privacy',
+      image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
+    });
+    
+    // Add structured data for privacy policy page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Privacy Policy",
+      "description": "PawFi's privacy policy explaining how we collect, use, and protect your personal information",
+      "url": pageUrl,
+      "publisher": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      }
+    };
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 function PrivacyPolicy() {

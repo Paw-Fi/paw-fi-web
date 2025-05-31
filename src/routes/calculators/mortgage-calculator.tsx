@@ -9,14 +9,44 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/calculators/mortgage-calculator')({
   component: MortgageCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/mortgage-calculator';
     const meta = seo({
       title: 'Mortgage Calculator | PawFi',
       description: 'Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan with PawFi.',
       keywords: 'mortgage calculator, home loan calculator, PITI calculator, amortization schedule, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for the mortgage calculator
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Mortgage Calculator",
+      "description": "Interactive calculator to estimate monthly mortgage payments and view amortization schedules",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Financial Education Tool"
+    };
+    
     return {
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

@@ -24,14 +24,44 @@ function AutoLoanCalculatorPage() {
 export const Route = createFileRoute('/calculators/auto-loan-calculator')({
   component: AutoLoanCalculatorPage,
   head: () => {
+    const pageUrl = 'https://pawfi.app/calculators/auto-loan-calculator';
     const meta = seo({
       title: 'Auto Loan Calculator | PawFi',
       description: "Calculate your auto loan payments, interest, and total cost with PawFi's easy-to-use car loan calculator.",
       keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, PawFi',
       image: 'https://paw-fi.app/og-img.png',
+      url: pageUrl,
     });
+    
+    // Add structured data for auto loan calculator page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Auto Loan Calculator",
+      "description": "Calculate your auto loan payments, interest, and total cost with PawFi's easy-to-use car loan calculator.",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "PawFi",
+        "url": "https://pawfi.app/"
+      },
+      "category": "Auto Loan"
+    };
+    
     return {
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });

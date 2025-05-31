@@ -1,49 +1,120 @@
-import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+} from '@tanstack/react-router'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import TanstackQueryLayout from '../integrations/tanstack-query/layout'
-import PageLayout from '../components/layout/page-layout'
-
+import * as React from 'react'
 import type { QueryClient } from '@tanstack/react-query'
+import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
+import { NotFound } from '@/components/NotFound'
+import appCss from '@/styles/app.css?url'
+import { seo } from '@/utils/seo'
+import Header from '@/components/Header'
+// Import ToastContainer dynamically to avoid SSR issues
+import { lazy, Suspense } from 'react'
+const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
+  default: mod.ToastContainer
+})))
+import { AuthProvider } from '@/contexts/auth-context'
+import { ClientOnly } from '@/components/client-only'
 
-interface MyRouterContext {
+export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
-}
-
-export const Route = createRootRouteWithContext<MyRouterContext>()({
-  component: () => (
-    <>
-      <HeadContent />
-        <PageLayout />
-        <TanstackQueryLayout />
-        <TanStackRouterDevtools />
-      <Scripts />
-    </>
-  ),
+}>()({
   head: () => ({
-    title: 'PawFi - Your Financial Companion',
     meta: [
       {
-        name: 'description',
-        content: 'PawFi helps you manage your finances with powerful tools and calculators for investments, mortgages, savings, and more.',
+        charSet: 'utf-8',
       },
       {
-        name: 'keywords',
-        content: 'pawfi, finance, personal finance, financial calculators, investment calculator, mortgage calculator, savings calculator, retirement planning, auto loan',
+        name: 'viewport',
+        content: 'width=device-width, initial-scale=1',
       },
-      { property: 'og:title', content: 'PawFi - Your Financial Companion' },
-      { property: 'og:description', content: 'Powerful financial tools and calculators at your fingertips.' },
-      // { property: 'og:image', content: 'https://pawfi.app/og-image.png' }, // Replace with your actual OG image URL
-      // { property: 'og:url', content: 'https://pawfi.app' }, // Replace with your actual site URL
-      // { name: 'twitter:card', content: 'summary_large_image' },
+      ...seo({
+        title:
+          'TanStack Start | Type-Safe, Client-First, Full-Stack React Framework',
+        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+      }),
     ],
     links: [
-      { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' },
+      { rel: 'stylesheet', href: appCss },
+      {
+        rel: 'apple-touch-icon',
+        sizes: '180x180',
+        href: '/apple-touch-icon.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/favicon-32x32.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '16x16',
+        href: '/favicon-16x16.png',
+      },
+      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
+      { rel: 'icon', href: '/favicon.ico' },
     ],
   }),
-  // Example for global body scripts if needed for SPA
-  // scripts: () => [
-  //   {
-  //     children: 'console.log("Global body script from root route loaded!")',
-  //   },
-  // ],
+  errorComponent: (props) => {
+    return (
+      <RootDocument>
+        <DefaultCatchBoundary {...props} />
+      </RootDocument>
+    )
+  },
+  notFoundComponent: () => <NotFound />,
+  component: RootComponent,
 })
+
+function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  )
+}
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <head>
+        <HeadContent />
+      </head>
+      <body>       
+      <AuthProvider>
+        <Header />
+        
+        {/* Use ClientOnly wrapper to prevent hydration mismatches */}
+        <ClientOnly>
+          <Suspense fallback={null}>
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </Suspense>
+        </ClientOnly>
+        {children}
+        <TanStackRouterDevtools position="bottom-right" />
+        <ReactQueryDevtools buttonPosition="bottom-left" />
+        <Scripts />
+      </AuthProvider>
+      </body>
+    </html>
+  )
+}
