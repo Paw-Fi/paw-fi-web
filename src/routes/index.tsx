@@ -1,7 +1,7 @@
 "use client";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState, useEffect } from "react";
+import React, { useRef,useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 // Import GSAP with plugins already registered
 import { gsap, ScrollTrigger } from "@/lib/gsap-config";
@@ -31,12 +31,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { seo } from '@/utils/seo';
 import basicLessonsData from '@/data/basic-lessons.json';
+import faqData from '@/data/home/home-faq.json';
 
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
-    const title = "PawFi - Learn & Manage Your Finances | Free Financial Education & Tools";
-    const description = "PawFi offers free financial education, interactive lessons, and powerful calculators to help you understand and manage your money. Start your journey to financial literacy today!";
+    const title = "PawFi: Learn Finance with Free Education & AI Tools";
+    const description = "PawFi offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
     const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, PawFi";
     const imageUrl = 'https://paw-fi.app/og-img.png';
     const pageUrl = 'https://pawfi.app/';
@@ -49,8 +50,82 @@ export const Route = createFileRoute("/")({
       url: pageUrl,
     });
 
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "PawFi",
+          "url": pageUrl,
+          "logo": `${pageUrl}icon.svg` // Assuming icon.svg is served from root
+        },
+        {
+          "@type": "WebSite",
+          "name": "PawFi",
+          "url": pageUrl
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is PawFi?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PawFi is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who is PawFi for?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PawFi is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, PawFi has resources for you."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the AI-powered learning work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Our AI analyzes your financial goals and current knowledge to create a customized learning plan. You'll engage with interactive lessons, get instant answers from our AI chat, and practice with real-world scenarios, all tailored to your unique needs."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are the financial courses and tools on PawFi free?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PawFi offers a mix of free and premium content. Many of our foundational lessons, AI chat features, and basic financial calculators are available for free to help you get started. Advanced courses and specialized tools may be part of a premium offering."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What kind of financial tools does PawFi offer?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PawFi provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals."
+              }
+            }
+          ]
+        }
+      ]
+    };
+
     return {
       meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: 'https://pawfi.app/'
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });
@@ -114,7 +189,7 @@ function FeatureCard({
       className={`transform rounded-2xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg ${className}`}
     >
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100">
-        <FontAwesomeIcon icon={icon} size="lg" className="text-purple-600" />
+        <FontAwesomeIcon icon={icon} size="lg" className="text-purple-600" aria-hidden="true" />
       </div>
       <h3 className="mb-2 text-xl font-bold">{title}</h3>
       <p className="text-gray-600">{description}</p>
@@ -176,7 +251,7 @@ function BasicLessonCard({
         </div>
         <h3 className="mb-3 text-xl font-semibold text-slate-800">{title}</h3>
         <p className="text-sm text-slate-600 leading-relaxed mb-6">{description}</p>
-      </div>
+      </div> {/* End of flex-grow div */}
       <div
         className="inline-flex items-center font-medium text-emerald-600 hover:text-emerald-800 mt-auto"
       >
@@ -186,6 +261,8 @@ function BasicLessonCard({
     </Link>
   );
 }
+
+import { FaqSection } from '@/components/ui/faq-section';
 
 function WaitlistForm() {
   const formRef = useRef<HTMLDivElement>(null);
@@ -227,7 +304,7 @@ function WaitlistForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open("https://discord.gg/bWbNbd3q", "_blank");
+    window.open("https://discord.gg/RZdG7GpX", "_blank");
 
     // if (email) {
     //   setIsSubmitting(true);
@@ -505,8 +582,22 @@ export function HomePage() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">
-          <img src={catCoin} alt="PawFi" className="h-10 w-10" />
-          <span className="ml-2 text-xl font-bold">PawFi</span>         
+          <img src={catCoin} alt="PawFi Logo" className="h-10 w-10" width="40" height="40" />
+          <span className="ml-2 text-xl font-bold">PawFi</span> 
+          <div className="flex items-center ml-12 gap-12">
+          <Link
+            to="/learning"
+            className="font-medium text-black hover:text-black hidden lg:block"
+          >
+            Learning
+          </Link>
+          <Link
+            to="/calculators"
+            className="font-medium text-black hover:text-black hidden lg:block"
+          >
+            Calculators
+          </Link>
+          </div>        
         </div>
         <div className="flex items-center gap-4">
           <Link
@@ -538,7 +629,7 @@ export function HomePage() {
               <span className="text-purple-600">AI-Driven Learning</span>
             </h1>
             <p className="hero-subtitle mb-8 text-xl text-gray-700">
-              PawFi understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert
+              PawFi understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert-curated content and AI insights.
             </p>
             <div className="hero-cta flex flex-col gap-4 sm:flex-row">
               <Link to="/intro">
@@ -546,12 +637,12 @@ export function HomePage() {
                 Start Your AI Lesson
                 </Button>
               </Link>
-              <Link to="/learning/guide-to-investing">
+              <Link to="/learning/your-2025-guide-to-investing">
                 <Button
                   variant="outline"
                   className="w-full rounded-lg border-purple-600 px-8 py-3 font-medium text-purple-600 hover:bg-purple-50 sm:w-auto"
                 >
-                  Explore Features
+                  Guide to Investing
                 </Button>
                 </Link>
                 </div>
@@ -560,15 +651,17 @@ export function HomePage() {
             <img
               ref={catRef}
               src={banner}
-              alt="PawFi Cat"
+              alt="Friendly cat mascot illustrating PawFi's AI-driven financial learning platform"
               className="w-72 md:w-96"
+              width="1846"
+              height="2275"
             />
           </div>
         </div>
 
         {/* Wave background at the bottom */}
         <div className="line-height-0 absolute bottom-0 left-0 w-full overflow-hidden">
-          <img src={waveBackground} alt="Wave Background" className="w-full" />
+          <img src={waveBackground} alt="" className="w-full" width="1440" height="1056" loading="lazy" />
         </div>
       </header>
 
@@ -584,47 +677,22 @@ export function HomePage() {
           </h2>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <FeatureCard
-              icon={faBrain} // AI Understanding
-              title="AI-Personalized Lessons"
-              description="Our AI analyzes your goals and knowledge to create a unique learning path just for you."
-              animationDelay={0.1}
-            />
-
-            <FeatureCard
-             icon={faChalkboardTeacher} // Expert Instructor
-             title="Expert-Crafted Courses"
-             description="Learn foundational finance from a CFA, CSC, MBA with 10+ years of experience in simplified lessons."
-             animationDelay={0.2}
-            />
-
-            <FeatureCard
-             icon={faCommentsDollar} // AI Chat
-             title="Interactive AI Chat"
-             description="Ask questions, get explanations, and explore financial scenarios with our intelligent AI assistant."
-             animationDelay={0.3}
-            />
-               <FeatureCard
-              icon={faCalculator} // Calculators
-              title="Practical Financial Calculators"
-              description="Utilize tools for auto loans, compound interest, mortgages, retirement, and savings goals."
-              animationDelay={0.4}
-            />
-
-            <FeatureCard
-               icon={faTasks} // Personalized Path
-               title="Adaptive Learning Path"
-               description="Your curriculum evolves as you learn, ensuring you're always challenged and engaged."
-               animationDelay={0.5}
-            />
-
-            <FeatureCard
-        icon={faGraduationCap} // Learn at your pace
-        title="Flexible Self-Paced Study"
-        description="Master complex financial topics at your own speed, anytime, anywhere."
-              animationDelay={0.6}
-            />
-          
+            {[
+              { icon: faBrain, title: "AI-Personalized Lessons", description: "Our AI analyzes your goals and knowledge to create a unique learning path just for you." },
+              { icon: faChalkboardTeacher, title: "Expert-Crafted Courses", description: "Learn foundational finance from a CFA, CSC, MBA with 10+ years of experience in simplified lessons." },
+              { icon: faCommentsDollar, title: "Interactive AI Chat", description: "Ask questions, get explanations, and explore financial scenarios with our intelligent AI assistant." },
+              { icon: faCalculator, title: "Practical Financial Calculators", description: "Utilize tools for auto loans, compound interest, mortgages, retirement, and savings goals." },
+              { icon: faTasks, title: "Adaptive Learning Path", description: "Your curriculum evolves as you learn, ensuring you're always challenged and engaged." },
+              { icon: faGraduationCap, title: "Flexible Self-Paced Study", description: "Master complex financial topics at your own speed, anytime, anywhere." },
+            ].map((feature, _index) => (
+              <FeatureCard
+                key={feature.title}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                animationDelay={0.1 * (_index + 1)}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -637,7 +705,7 @@ export function HomePage() {
             At PawFi, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
           </p>
           <div className="flex justify-center">
-            <img src={banner3} alt="Cat with Piggy Bank" className="w-56" />
+            <img src={banner3} alt="Illustration of a cat with a piggy bank, symbolizing PawFi's commitment to financial growth and literacy" className="w-56" width="1216" height="1848" loading="lazy" />
           </div>
         </div>
       </section>
@@ -692,7 +760,10 @@ export function HomePage() {
             <img
               className="learning-image w-44 md:w-80"
               src={banner2}
-              alt="Learning process"
+              alt="Visual representation of PawFi's personalized AI learning journey for financial education"
+              width="1084"
+              height="1848"
+              loading="lazy"
             />
           </div>
         </div>
@@ -717,7 +788,7 @@ export function HomePage() {
             <p className="mb-6 text-gray-700">
             Build a strong base with structured courses from our experienced financial instructor.            </p>
             <Link
-              to="/learning/guide-to-investing"
+              to="/learning/your-2025-guide-to-investing"
               className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
             >
               Start learning
@@ -806,6 +877,9 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <FaqSection faqData={faqData} />
+
       {/* Waitlist Section */}
       <section id="waitlist" className="px-6 py-20 md:px-12 lg:px-24">
         <div className="mx-auto max-w-4xl">
@@ -818,7 +892,7 @@ export function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center">
-              <img src={catCoin} alt="PawFi" className="h-8 w-8" />
+              <img src={catCoin} alt="PawFi Logo" className="h-8 w-8" width="32" height="32" loading="lazy" />
               <span className="ml-2 text-xl font-bold">PawFi</span>
             </div>
             <p className="text-gray-400">
@@ -835,7 +909,7 @@ export function HomePage() {
                 </a>
               </li>
               <li>
-                <a href="/learning/guide-to-investing" className="text-gray-400 hover:text-white">
+                <a href="/learning/your-2025-guide-to-investing" className="text-gray-400 hover:text-white">
                 Expert Courses
                 </a>
               </li>
@@ -879,7 +953,7 @@ export function HomePage() {
               Stay up to date with the latest from PawFi.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white">
+              <a href="https://facebook.com/your-pawfi-page" aria-label="PawFi on Facebook" className="text-gray-400 hover:text-white">
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"
@@ -893,7 +967,7 @@ export function HomePage() {
                   />
                 </svg>
               </a>
-              <a href="#" className="text-gray-400 hover:text-white">
+              <a href="https://twitter.com/your-pawfi-handle" aria-label="PawFi on Twitter" className="text-gray-400 hover:text-white">
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"

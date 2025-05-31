@@ -19,3 +19,7 @@ public/PawFi-Pitch.mp4
 .env.development
 
 .env.production
+
+.remember/
+
+.windsurf
