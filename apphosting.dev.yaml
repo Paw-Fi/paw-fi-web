@@ -12,13 +12,13 @@ env:
   # Development Supabase configuration
   # Using secrets for secure environment variables
   - variable: VITE_SUPABASE_URL
-    secret: supabaseUrlSecret  # Reference to a secret in Cloud Secret Manager
+    value: https://qbuynyxyemigtnvdujts.supabase.co  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
     
   - variable: VITE_SUPABASE_ANON_KEY
-    secret: supabaseAnonKeySecret  # Reference to a secret in Cloud Secret Manager
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
