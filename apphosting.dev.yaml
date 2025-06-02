@@ -1,3 +1,5 @@
+backendId: dev-pawfi-web
+
 # Dev environment configuration
 runConfig:
   minInstances: 0

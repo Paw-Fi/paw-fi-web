@@ -1,23 +1,6 @@
 {
-    "hosting": {
-      "public": ".output/public",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "run": {
-            "serviceId": "pawfi-web",
-            "region": "us-central1"
-          }
-        }
-      ]
-    },
     "apphosting": {
-      "backendId": "pawfi-web",
+      "source": "apphosting.yaml",
       "rootDir": "/",
       "ignore": [
         "node_modules",
