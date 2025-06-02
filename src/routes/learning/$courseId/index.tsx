@@ -202,7 +202,7 @@ export default function CourseDetailPage() {
                   className="lesson-card"
                 >
                   <Link
-                    to={`/learning/${courseId}/tutorial/${lesson.lesson_id}`}
+                    to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
                     className="block bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer"
                   >
                   <div className="p-4">
