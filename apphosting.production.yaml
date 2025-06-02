@@ -1,5 +1,3 @@
-backendId: pawfi-web
-
 # Production environment configuration
 runConfig:
   minInstances: 1  # Keep at least one instance warm
