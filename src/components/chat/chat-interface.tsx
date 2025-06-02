@@ -20,7 +20,6 @@ import {
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatMessageItem } from "./chat-message-item";
-import { storeCourse } from "@/data/lessons";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import { sanitizeCourse } from "@/utils/sanitize-course";
@@ -988,7 +987,6 @@ export function ChatInterface() {
                 message={msg}
                 formatTime={formatTime}
                 extractFirstJson={extractFirstJson}
-                storeCourse={storeCourse}
                 navigate={navigate}
               />
             );

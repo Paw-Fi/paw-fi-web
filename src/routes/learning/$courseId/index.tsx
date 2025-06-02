@@ -129,11 +129,11 @@ export default function CourseDetailPage() {
         </>
       )}
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-4  lg:w-[40rem] mx-auto">
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="lesson-card block lg:min-w-128 bg-white rounded-2xl shadow-md overflow-hidden transition-all cursor-pointer p-6 mb-4 animate-pulse"
+              className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all cursor-pointer p-6 mb-4 animate-pulse"
             >
               <div className="flex items-center mb-2">
                 <div className="h-8 w-8 rounded-full bg-gray-200 mr-3" />
@@ -186,7 +186,7 @@ export default function CourseDetailPage() {
               lesson.unlocked ? (
                 <Link
                   key={lesson.lesson_id}
-                  to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
+                  to={`/learning/${courseId}/tutorial/${lesson.lesson_id}`}
                   className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
                 >
                   <div className="p-4">

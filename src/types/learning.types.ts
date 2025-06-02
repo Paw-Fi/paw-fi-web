@@ -144,6 +144,7 @@ export function isImageChoiceQuestion(question: Question): question is Question 
 
 // Lesson structure
 export interface Lesson {
+  id: Key | null | undefined;
   lesson_id: string;
   title: string;
   description: string;

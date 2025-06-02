@@ -3,7 +3,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card"; // Assuming CourseCard is appropriately structured
-import { storeCourse } from "@/data/lessons";
 
 interface Message {
   content: string;
@@ -17,7 +16,6 @@ interface ChatMessageItemProps {
   message: Message;
   formatTime: (timestamp: number) => string;
   extractFirstJson: (text: string) => { json: any; start: number; end: number } | null;
-  storeCourse: (course: any) => void;
   navigate: (opts: { to: string }) => void;
 }
 
@@ -25,7 +23,6 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
   formatTime,
   extractFirstJson,
-  storeCourse,
   navigate,
 }) => {
   const isUser = message.role === "user";
@@ -53,7 +50,6 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
             description={json.description || ""}
             lessonCount={Array.isArray(json.lessons) ? json.lessons.length : (json.lessonCount || 0)}
             onClick={() => {
-              storeCourse(json);
               navigate({ to: "/learning" });
             }}
           />
