@@ -9,10 +9,16 @@ runConfig:
   concurrency: 80
 
 env:
-  # Production Supabase configuration
-  # For production, we recommend using secrets instead of environment variables
+  # Development Supabase configuration
+  # Using secrets for secure environment variables
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecret  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
     
   - variable: VITE_SUPABASE_ANON_KEY
     secret: supabaseAnonKeySecret  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
