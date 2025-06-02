@@ -12,16 +12,23 @@ env:
   # Configure environment variables for Supabase
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
   - variable: VITE_SUPABASE_URL
-    value: ${VITE_SUPABASE_URL}
+    secret: supabaseUrlSecret  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
   
   - variable: VITE_SUPABASE_ANON_KEY
-    value: ${VITE_SUPABASE_ANON_KEY}
+    secret: supabaseAnonKeySecret  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
+  
+  # Alternative approach if you don't want to use secrets:
+  # - variable: VITE_SUPABASE_URL
+  #   value: "https://qbuynyxyemigtnvdujts.supabase.co"  # Direct value, not variable substitution
+  #   availability:
+  #     - BUILD
+  #     - RUNTIME
 
   # For production, you can use secrets instead:
   # - variable: VITE_SUPABASE_URL
