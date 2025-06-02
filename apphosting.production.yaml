@@ -10,15 +10,28 @@ runConfig:
 
 env:
   # Production Supabase configuration
-  # Using secrets for secure environment variables
+  # Using direct values instead of secrets for better compatibility
   - variable: VITE_SUPABASE_URL
-    secret: supabaseUrlSecretProd  # Reference to a secret in Cloud Secret Manager
+    value: https://qbuynyxyemigtnvdujts.supabase.co  # Direct value, not secret reference
     availability:
       - BUILD
       - RUNTIME
-    
+  
   - variable: VITE_SUPABASE_ANON_KEY
-    secret: supabaseAnonKeySecretProd  # Reference to a secret in Cloud Secret Manager
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A  # Direct value, not secret reference
+    availability:
+      - BUILD
+      - RUNTIME
+      
+  # For server-side access (alternative names sometimes used)
+  - variable: SUPABASE_URL
+    value: https://qbuynyxyemigtnvdujts.supabase.co
+    availability:
+      - BUILD
+      - RUNTIME
+  
+  - variable: SUPABASE_ANON_KEY
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A
     availability:
       - BUILD
       - RUNTIME

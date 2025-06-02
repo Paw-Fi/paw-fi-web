@@ -12,23 +12,29 @@ env:
   # Configure environment variables for Supabase
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
   - variable: VITE_SUPABASE_URL
-    secret: supabaseUrlSecret  # Reference to a secret in Cloud Secret Manager
+    value: https://qbuynyxyemigtnvdujts.supabase.co  # Direct value, not secret reference
     availability:
       - BUILD
       - RUNTIME
   
   - variable: VITE_SUPABASE_ANON_KEY
-    secret: supabaseAnonKeySecret  # Reference to a secret in Cloud Secret Manager
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A  # Direct value, not secret reference
     availability:
       - BUILD
       - RUNTIME
   
-  # Alternative approach if you don't want to use secrets:
-  # - variable: VITE_SUPABASE_URL
-  #   value: "https://qbuynyxyemigtnvdujts.supabase.co"  # Direct value, not variable substitution
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+  # For server-side access (alternative names sometimes used)
+  - variable: SUPABASE_URL
+    value: https://qbuynyxyemigtnvdujts.supabase.co
+    availability:
+      - BUILD
+      - RUNTIME
+  
+  - variable: SUPABASE_ANON_KEY
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A
+    availability:
+      - BUILD
+      - RUNTIME
 
 # Custom build and start commands
 customBuildCommand: npm run build

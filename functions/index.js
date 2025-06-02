@@ -3,6 +3,24 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
+// Get environment variables from Firebase config
+const runtimeConfig = functions.config();
+
+// Set environment variables for server-side rendering
+if (runtimeConfig.supabase) {
+  process.env.VITE_SUPABASE_URL = runtimeConfig.supabase.url || process.env.VITE_SUPABASE_URL;
+  process.env.VITE_SUPABASE_ANON_KEY = runtimeConfig.supabase.anon_key || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Also set alternative names that might be used
+  process.env.SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+  process.env.SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+}
+
+// Log environment variables for debugging (redacted for security)
+const hasSupabaseUrl = !!process.env.VITE_SUPABASE_URL;
+const hasSupabaseKey = !!process.env.VITE_SUPABASE_ANON_KEY;
+console.log(`Firebase Function environment: VITE_SUPABASE_URL exists: ${hasSupabaseUrl}, VITE_SUPABASE_ANON_KEY exists: ${hasSupabaseKey}`);
+
 const app = express();
 
 // Serve static assets from the client build directory
