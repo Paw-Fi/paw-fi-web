@@ -56,6 +56,7 @@ const supabaseAnonKey = getEnvVariable('VITE_SUPABASE_ANON_KEY');
 
 // Log environment status (without exposing actual values)
 console.log(`Supabase initialization - URL exists: ${!!supabaseUrl}, Key exists: ${!!supabaseAnonKey}`);
+console.log(`Supabase initialization - URL: ${supabaseUrl}, Key: ${supabaseAnonKey}`);
 
 // Validate that we have the required environment variables
 if (!supabaseUrl || supabaseUrl.includes('${') || !supabaseAnonKey || supabaseAnonKey.includes('${')) {
