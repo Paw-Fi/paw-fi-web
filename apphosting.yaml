@@ -30,12 +30,6 @@ env:
   #     - BUILD
   #     - RUNTIME
 
-  # For production, you can use secrets instead:
-  # - variable: VITE_SUPABASE_URL
-  #   secret: supabaseUrlSecret
-  # - variable: VITE_SUPABASE_ANON_KEY
-  #   secret: supabaseAnonKeySecret
-
 # Custom build and start commands
 customBuildCommand: npm run build
 entryPoint: node .output/server/index.mjs

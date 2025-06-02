@@ -1,11 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 
 import { useParams, Link } from '@tanstack/react-router';
-import { useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useUserCourses } from '@/services/course-service';
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
+import { motion } from 'framer-motion';
 import type { Course, Lesson } from '@/types/learning.types';
 
 
@@ -80,7 +78,6 @@ export const Route = createFileRoute("/learning/$courseId/")({
 
 export default function CourseDetailPage() {
   const { courseId } = useParams({ from: '/learning/$courseId/' });
-  const lessonCardsRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const {
     data: courses = [],
@@ -88,21 +85,29 @@ export default function CourseDetailPage() {
     isError,
     error,
   } = useUserCourses(user?.id ?? '', { enabled: !!user });
-  const course =courseId===basicCourse.id ? basicCourse : courses.find((c) => c.course_id === courseId) || null;
+  const course = courseId === basicCourse.id ? basicCourse : courses.find((c) => c.course_id === courseId) || null;
 
-  useGSAP(() => {
-    if (!lessonCardsRef.current) return;
-    const cards = lessonCardsRef.current.querySelectorAll('.lesson-card');
-    if (cards.length === 0) return;
-    gsap.set(cards, { opacity: 0, y: 20 });
-    gsap.to(cards, {
-      opacity: 1,
-      y: 0,
-      duration: 0.5,
-      stagger: 0.15,
-      ease: 'power2.out',
-    });
-  }, [course]);
+  // Define animation variants for container and lesson cards
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+  
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
 
   const navigate = useNavigate();
 
@@ -167,7 +172,12 @@ export default function CourseDetailPage() {
           ))}
         </div>
       ) : (
-        <div ref={lessonCardsRef} className="max-w-xl mx-auto space-y-6">
+        <motion.div 
+          className="max-w-xl mx-auto space-y-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {!course || course.lessons.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-2xl shadow-md">
               <p className="text-gray-600 mb-4">No lessons available for this course.</p>
@@ -182,13 +192,19 @@ export default function CourseDetailPage() {
               </Link>
             </div>
           ) : (
+            //@ts-ignore expect error
             course.lessons.map((lesson: Lesson) => (
               lesson.unlocked ? (
-                <Link
+                <motion.div
                   key={lesson.lesson_id}
-                  to={`/learning/${courseId}/tutorial/${lesson.lesson_id}`}
-                  className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer transform hover:-translate-y-1"
+                  variants={cardVariants}
+                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                  className="lesson-card"
                 >
+                  <Link
+                    to={`/learning/${courseId}/tutorial/${lesson.lesson_id}`}
+                    className="block bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer"
+                  >
                   <div className="p-4">
                     <div className="flex items-center mb-3">
                       <div className="mr-3 text-3xl" aria-hidden="true">
@@ -216,10 +232,12 @@ export default function CourseDetailPage() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                  </Link>
+                </motion.div>
               ) : (
-                <div
+                <motion.div
                   key={lesson.id}
+                  variants={cardVariants}
                   className="lesson-card block bg-white rounded-2xl shadow-md overflow-hidden brightness-[0.97] cursor-not-allowed"
                 >
                   <div className="p-4">
@@ -255,11 +273,11 @@ export default function CourseDetailPage() {
                       Complete previous lessons to unlock
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )
             ))
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

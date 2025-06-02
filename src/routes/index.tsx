@@ -4,7 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
 import React, { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { useInView } from "@/lib/use-in-view";
+
 import { fadeInUp, fadeInDown, fadeInLeft, scaleUp, elasticScale, staggerContainer, fadeIn, floatAnimation } from "@/lib/motion-variants";
 import { Button } from "@/components/ui/button";
 import banner from "@/assets/images/index/pawfi-banner.png";
@@ -142,17 +142,14 @@ function FeatureCard({
   className?: string;
   animationDelay?: number;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(cardRef, 0.1);
-
   return (
     <motion.div
-      ref={cardRef}
       className={`transform rounded-2xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg ${className}`}
       variants={fadeInUp}
       initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-      custom={animationDelay}
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.1 }}
+      custom={animationDelay}      
     >
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100">
         <FontAwesomeIcon icon={icon} size="lg" className="text-purple-600" aria-hidden="true" />
@@ -176,17 +173,14 @@ function BasicLessonCard({
   linkTo: string;
   animationDelay?: number;
 }) {
-  // Create a wrapper div with ref that will be animated
-  const cardRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(cardRef, 0.1);
-
   return (
-    <div ref={cardRef}>
+    <div>
       <motion.div
         className="transform rounded-2xl bg-white p-8 shadow-md h-full flex flex-col"
         variants={fadeInUp}
         initial="hidden"
-        animate={isInView ? "visible" : "hidden"}
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
         custom={animationDelay}
         whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
         transition={{ type: "spring", stiffness: 300 }}
@@ -238,68 +232,26 @@ function BasicLessonCard({
 import { FaqSection } from '@/components/ui/faq-section';
 
 function WaitlistForm() {
-  const formRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(formRef, 0.1);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open("https://discord.gg/RZdG7GpX", "_blank");
-
-    // if (email) {
-    //   setIsSubmitting(true);
-
-    //   try {
-    //     const { data, error } = await supabase
-    //       .from("waiting-list")
-    //       .insert([{ email }]);
-
-    //     if (error) throw error;
-
-    //     console.log("Email submitted successfully:", data);
-    //     setSubmitted(true);
-
-    //     // Show success toast notification
-    //     toast.success("Thanks for joining our waitlist!", {
-    //       position: "top-right",
-    //       autoClose: 5000,
-    //       hideProgressBar: false,
-    //       closeOnClick: true,
-    //       pauseOnHover: true,
-    //       draggable: true,
-    //     });
-     
-    //   } catch (error) {
-    //     console.error("Error submitting email:", error);
-
-    //     // Show error toast notification
-    //     toast.error("Oops! Something went wrong. Please try again.", {
-    //       position: "top-right",
-    //       autoClose: 5000,
-    //       hideProgressBar: false,
-    //       closeOnClick: true,
-    //       pauseOnHover: true,
-    //       draggable: true,
-    //     });
-    //   } finally {
-    //     setIsSubmitting(false);
-    //   }
-    // }
+    window.open("https://discord.gg/RZdG7GpX", "_blank")
   };
 
   return (
     <motion.div 
-      ref={formRef} 
       className="rounded-3xl bg-purple-100 p-8 shadow-md"
       variants={fadeInUp}
       initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.1 }}
     >    
       <div className="flex flex-col items-center justify-center">
         <motion.h3 
           className="mb-3 text-center text-2xl font-bold"
           variants={fadeInUp}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
           custom={0.1}
         >
           Get Early Access to AI-Powered Learning
@@ -308,7 +260,8 @@ function WaitlistForm() {
           className="mb-6 text-center text-gray-700"
           variants={fadeInUp}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
           custom={0.2}
         >
           Be among the first to experience personalized financial education with PawFi. Join our community for updates and beta access.
@@ -318,7 +271,8 @@ function WaitlistForm() {
           className="mx-auto flex max-w-md flex-col gap-3 md:flex-row"
           variants={fadeInUp}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
           custom={0.3}
         >              
           <Button
@@ -333,33 +287,12 @@ function WaitlistForm() {
   );
 }
 
-export function HomePage() {
-  const headerRef = useRef<HTMLDivElement>(null);
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const missionRef = useRef<HTMLDivElement>(null);
-  const learningSectionRef = useRef<HTMLDivElement>(null);
-  const basicLessonsSectionRef = useRef<HTMLDivElement>(null);
-  const waitlistSectionRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
+export default function HomePage() {
+  // We only need to keep refs that are used for other purposes than animation triggering
   const catRef = useRef<HTMLImageElement>(null);
-  
-  // Use our custom hook to detect when elements enter the viewport
-  const featuresInView = useInView(featuresRef, 0.1);
-  const missionInView = useInView(missionRef, 0.1);
-  const learningInView = useInView(learningSectionRef, 0.1);
-  const basicLessonsInView = useInView(basicLessonsSectionRef, 0.1);
-  const waitlistInView = useInView(waitlistSectionRef, 0.1);
-  const footerInView = useInView(footerRef, 0.1);
   
   // Controls for staggered animations
   const learningControls = useAnimation();
-  
-  // Trigger staggered animations when learning section comes into view
-  useEffect(() => {
-    if (learningInView) {
-      learningControls.start('visible');
-    }
-  }, [learningInView, learningControls]);
   
   // For the cat animation, we need to handle the floating effect separately
   const [catAnimationState, setCatAnimationState] = useState('hidden');
@@ -376,8 +309,8 @@ export function HomePage() {
     return () => clearTimeout(timer);
   }, []);
   
-  // No need for a scroll listener with Framer Motion's useInView hook
-  // Each section now uses its own ref and animation logic
+  // Using Framer Motion's whileInView and viewport props for declarative scroll-triggered animations
+  // Each section now handles its own animation state without needing refs or state variables
 
   return (
     <div className="bg-background flex-1 overflow-hidden">
@@ -403,7 +336,8 @@ export function HomePage() {
         </div>
         <div className="flex items-center gap-4">
           <Link
-            to="/learning/your-2025-guide-to-investing"
+            to="/learning/$courseId"
+            params={{ courseId: 'your-2025-guide-to-investing' }}
             className="font-medium text-purple-600 hover:text-purple-800 hidden lg:block"
           >
             Explore Courses
@@ -421,7 +355,6 @@ export function HomePage() {
 
       {/* Hero Section */}
       <header
-        ref={headerRef}
         className="relative px-6 pt-12 pb-24 md:px-12 lg:px-24"
       >
         <div className="z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
@@ -457,7 +390,7 @@ export function HomePage() {
                   Start Your AI Lesson
                 </Button>
               </Link>
-              <Link to="/learning/your-2025-guide-to-investing">
+              <Link to="/learning/$courseId" params={{ courseId: 'your-2025-guide-to-investing' }}>
                 <Button
                   variant="outline"
                   className="w-full rounded-lg border-purple-600 px-8 py-3 font-medium text-purple-600 hover:bg-purple-50 sm:w-auto"
@@ -502,7 +435,6 @@ export function HomePage() {
 
       {/* Features Section */}
       <section
-        ref={featuresRef}
         className="bg-purple-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto max-w-7xl">
@@ -510,7 +442,8 @@ export function HomePage() {
             className="mb-16 text-center text-3xl font-bold md:text-4xl"
             variants={fadeInDown}
             initial="hidden"
-            animate={featuresInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
           >
             Intelligent Financial Education, 
             <span className="text-purple-600">Tailored For You</span>
@@ -538,13 +471,16 @@ export function HomePage() {
       </section>
 
       {/* Mission Section */}
-      <section ref={missionRef} className="px-6 py-20 md:px-12 lg:px-24">
+      <section 
+        className="px-6 py-20 md:px-12 lg:px-24"
+      >
         <div className="mx-auto max-w-4xl text-center">
           <motion.h2 
             className="mb-8 text-3xl font-bold text-slate-800 md:text-4xl"
             variants={fadeInDown}
             initial="hidden"
-            animate={missionInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
           >
             Our Vision for Your Financial Future
           </motion.h2>
@@ -552,7 +488,8 @@ export function HomePage() {
             className="mb-10 text-lg text-slate-600 leading-relaxed"
             variants={fadeInUp}
             initial="hidden"
-            animate={missionInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
             custom={0.2}
           >
             At PawFi, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
@@ -566,7 +503,6 @@ export function HomePage() {
 
       {/* How It Works Section */}
       <section
-        ref={learningSectionRef}
         className="bg-blue-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
@@ -575,7 +511,8 @@ export function HomePage() {
               className="mb-10 text-3xl font-bold md:text-4xl"
               variants={fadeInDown}
               initial="hidden"
-              animate={learningInView ? "visible" : "hidden"}
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
             >
               How PawFi Works
             </motion.h2>
@@ -584,7 +521,9 @@ export function HomePage() {
               className="space-y-8"
               variants={staggerContainer}
               initial="hidden"
-              animate={learningControls}
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+              onViewportEnter={() => learningControls.start('visible')}
             >
               {[
                 { title: "Tell Us About You", description: "Share your financial goals and current understanding. Our AI listens.", number: 1 },
@@ -629,7 +568,8 @@ export function HomePage() {
               className="mt-12"
               variants={fadeInUp}
               initial="hidden"
-              animate={learningInView ? "visible" : "hidden"}
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
               custom={0.8}
             >
               <Link
@@ -652,7 +592,8 @@ export function HomePage() {
             className="flex justify-center"
             variants={fadeIn}
             initial="hidden"
-            animate={learningInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
             custom={0.5}
           >
             <motion.img
@@ -671,7 +612,6 @@ export function HomePage() {
       </section>
           {/* Learning Journey Section */}
           <section
-        ref={basicLessonsSectionRef}
         title="Start Your Financial Learning Journey"
         className="bg-purple-50 px-6 py-20 md:px-12 lg:px-24"
       >
@@ -680,7 +620,8 @@ export function HomePage() {
               className="mb-16 text-3xl font-bold text-slate-800 md:text-4xl"
               variants={fadeInDown}
               initial="hidden"
-              animate={basicLessonsInView ? "visible" : "hidden"}
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
             >
                 Comprehensive Financial Toolkit
             </motion.h2>
@@ -689,7 +630,8 @@ export function HomePage() {
           className="grid gap-8 md:grid-cols-3"
           variants={staggerContainer}
           initial="hidden"
-          animate={basicLessonsInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
         >
           <motion.div 
             className="rounded-2xl bg-white p-8 shadow-md"
@@ -722,7 +664,8 @@ export function HomePage() {
               custom={0.5}
             >
               <Link
-                to="/learning/your-2025-guide-to-investing"
+                to="/learning/$courseId"
+                params={{ courseId: 'your-2025-guide-to-investing' }}
                 className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
               >
                 Start learning
@@ -833,7 +776,6 @@ export function HomePage() {
 
       {/* Expert-Led Basic Lessons Section */}
       <section
-        ref={basicLessonsSectionRef}
         className="bg-slate-50 px-6 py-20 md:px-12 lg:px-24"
       >
         <div className="mx-auto max-w-7xl">
@@ -841,7 +783,8 @@ export function HomePage() {
             className="mb-6 text-center text-3xl font-bold text-slate-800 md:text-4xl"
             variants={fadeInDown}
             initial="hidden"
-            animate={basicLessonsInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
           >
             Dive Deeper with Expert-Led Lessons
           </motion.h2>
@@ -849,7 +792,8 @@ export function HomePage() {
             className="mb-12 text-center text-lg text-slate-600 md:mx-auto md:max-w-2xl"
             variants={fadeInUp}
             initial="hidden"
-            animate={basicLessonsInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
             custom={0.2}
           >
             Our foundational courses are crafted by a seasoned Financial Instructor (CFA, CSC, MBA) with over 10 years of experience, making complex topics clear and actionable, no matter your background.
@@ -858,7 +802,8 @@ export function HomePage() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
             variants={staggerContainer}
             initial="hidden"
-            animate={basicLessonsInView ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
           >
             {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
               <BasicLessonCard
@@ -918,13 +863,13 @@ export function HomePage() {
       <section 
         id="waitlist" 
         className="px-6 py-20 md:px-12 lg:px-24"
-        ref={waitlistSectionRef}
       >
         <motion.div 
           className="mx-auto max-w-4xl"
           variants={fadeIn}
           initial="hidden"
-          animate={waitlistInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.5 }}
         >
           <WaitlistForm />
@@ -934,13 +879,13 @@ export function HomePage() {
       {/* Footer */}
       <footer 
         className="bg-gray-900 px-6 py-12 text-white md:px-12 lg:px-24"
-        ref={footerRef}
       >
         <motion.div 
           className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
           initial="hidden"
-          animate={footerInView ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
         >
           <motion.div variants={fadeInUp} custom={0.1}>
             <motion.div className="mb-4 flex items-center" variants={fadeInUp} custom={0.2}>
@@ -970,7 +915,7 @@ export function HomePage() {
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.5}>
-                <Link to="/learning/your-2025-guide-to-investing" className="text-gray-400 hover:text-white">
+                <Link to="/learning/$courseId" params={{ courseId: 'your-2025-guide-to-investing' }} className="text-gray-400 hover:text-white">
                 Expert Courses
                 </Link>
               </motion.li>

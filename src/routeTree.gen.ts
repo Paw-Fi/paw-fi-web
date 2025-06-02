@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as TermsOfServiceImport } from './routes/terms-of-service'
-import { Route as ResultsImport } from './routes/results'
 import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
 import { Route as CookiePolicyImport } from './routes/cookie-policy'
@@ -49,12 +48,6 @@ import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning
 const TermsOfServiceRoute = TermsOfServiceImport.update({
   id: '/terms-of-service',
   path: '/terms-of-service',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const ResultsRoute = ResultsImport.update({
-  id: '/results',
-  path: '/results',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -320,13 +313,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyPolicyImport
       parentRoute: typeof rootRoute
     }
-    '/results': {
-      id: '/results'
-      path: '/results'
-      fullPath: '/results'
-      preLoaderRoute: typeof ResultsImport
-      parentRoute: typeof rootRoute
-    }
     '/terms-of-service': {
       id: '/terms-of-service'
       path: '/terms-of-service'
@@ -550,7 +536,6 @@ export interface FileRoutesByFullPath {
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/results': typeof ResultsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -580,7 +565,6 @@ export interface FileRoutesByTo {
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/results': typeof ResultsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -616,7 +600,6 @@ export interface FileRoutesById {
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
-  '/results': typeof ResultsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
@@ -653,7 +636,6 @@ export interface FileRouteTypes {
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/results'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -682,7 +664,6 @@ export interface FileRouteTypes {
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/results'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -716,7 +697,6 @@ export interface FileRouteTypes {
     | '/cookie-policy'
     | '/intro'
     | '/privacy-policy'
-    | '/results'
     | '/terms-of-service'
     | '/author/import'
     | '/calculators/auto-loan-calculator'
@@ -752,7 +732,6 @@ export interface RootRouteChildren {
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
-  ResultsRoute: typeof ResultsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
   CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
@@ -782,7 +761,6 @@ const rootRouteChildren: RootRouteChildren = {
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
-  ResultsRoute: ResultsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,
   CalculatorsAutoLoanCalculatorRoute: CalculatorsAutoLoanCalculatorRoute,
@@ -821,7 +799,6 @@ export const routeTree = rootRoute
         "/cookie-policy",
         "/intro",
         "/privacy-policy",
-        "/results",
         "/terms-of-service",
         "/author/import",
         "/calculators/auto-loan-calculator",
@@ -884,9 +861,6 @@ export const routeTree = rootRoute
     },
     "/privacy-policy": {
       "filePath": "privacy-policy.tsx"
-    },
-    "/results": {
-      "filePath": "results.tsx"
     },
     "/terms-of-service": {
       "filePath": "terms-of-service.tsx"

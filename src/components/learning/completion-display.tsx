@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import gsap from "gsap";
+import { motion, useAnimation, AnimatePresence } from "framer-motion";
 
 // Import the unlockNextLesson function - we'll use this directly in the component
 import { unlockNextLesson } from './hooks/unlock-next-lesson';
@@ -53,156 +53,78 @@ export function CompletionDisplay({
   isSuccess,
   onCustomAction,
 }: CompletionDisplayProps) {
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const descriptionRef = useRef<HTMLParagraphElement>(null);
-  const emojiRef = useRef<HTMLDivElement>(null);
-  const rewardRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLDivElement>(null);
-
-  // Animation for the content when modal is opened
-  useEffect(() => {
-    if (
-      !isOpen ||
-      !titleRef.current ||
-      !descriptionRef.current ||
-      !emojiRef.current ||
-      !buttonRef.current
-    )
-      return;
-
-    const tl = gsap.timeline({ defaults: { ease: "back.out(1.7)" } });
-
-    // Create and animate confetti elements
-    const modalContent = document.querySelector(".modal-content");
-    if (!modalContent) return;
-
-    // Clear any existing confetti container
-    const existingContainer = modalContent.querySelector(".confetti-container");
-    if (existingContainer) existingContainer.remove();
-
-    const confettiContainer = document.createElement("div");
-    confettiContainer.className = "confetti-container";
-    modalContent.appendChild(confettiContainer);
-
-    // Create confetti pieces
-    for (let i = 0; i < 50; i++) {
-      const confetti = document.createElement("div");
-      confetti.className = "confetti";
-      confetti.style.backgroundColor = [
-        "#7458FF",
-        "#9181FF",
-        "#16CDA2",
-        "#FFD166",
-        "#FF6B6B",
-      ][Math.floor(Math.random() * 5)];
-      confetti.style.width = `${Math.random() * 10 + 5}px`;
-      confetti.style.height = `${Math.random() * 10 + 5}px`;
-      confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
-      confetti.style.position = "absolute";
-      confetti.style.top = "-10px";
-      confetti.style.left = `${Math.random() * 100}%`;
-
-      confettiContainer.appendChild(confetti);
-
-      gsap.to(confetti, {
-        y: window.innerHeight,
-        x: `${(Math.random() - 0.5) * 200}`,
-        rotation: Math.random() * 360,
+  // Animation controls for staggered animations
+  const controls = useAnimation();
+  
+  // Define animation variants
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 15 } }
+  };
+  
+  const fadeInScale = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 400, damping: 15 } }
+  };
+  
+  const bounceAnimation = {
+    hidden: { scale: 1 },
+    visible: { scale: 1, y: 0 },
+    bounce: { 
+      y: [-15, 0], 
+      transition: { 
+        repeat: 1, 
+        repeatType: "mirror" as const, 
+        duration: 0.5, 
+        ease: "easeOut" 
+      } 
+    }
+  };
+  
+  // Confetti animation variants
+  const confettiAnimation = {
+    hidden: { opacity: 0, y: -10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: window.innerHeight,
+      x: (Math.random() - 0.5) * 200,
+      rotate: Math.random() * 360,
+      transition: {
         duration: Math.random() * 3 + 2,
-        ease: "none",
-        repeat: -1,
+        repeat: Infinity,
         delay: Math.random() * 2,
-      });
-    }
-
-    // Make sure all elements are visible before animating
-    gsap.set([titleRef.current, descriptionRef.current, buttonRef.current], {
-      visibility: "visible",
-      opacity: 0,
-    });
-
-    // Special handling for emoji which can sometimes not display properly with certain animations
-    if (emojiRef.current) {
-      gsap.set(emojiRef.current, {
-        visibility: "visible",
-        opacity: 1,
-        scale: 1,
-        rotation: 0,
-      });
-
-      // Add a bounce animation
-      gsap.to(emojiRef.current, {
-        y: -15,
-        duration: 0.5,
-        repeat: 1,
-        yoyo: true,
-        ease: "power2.out",
-        delay: 0.3,
-      });
-    }
-
-    if (rewardRef.current) {
-      gsap.set(rewardRef.current, { visibility: "visible", opacity: 0 });
-    }
-
-    tl.from(
-      titleRef.current,
-      {
-        y: 30,
-        opacity: 0,
-        duration: 0.4,
-      },
-      "-=0.3",
-    );
-
-    tl.to(titleRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
-
-    tl.from(
-      descriptionRef.current,
-      {
-        y: 30,
-        opacity: 0,
-        duration: 0.4,
-      },
-      "-=0.2",
-    );
-
-    tl.to(descriptionRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
-
-    if (rewardRef.current) {
-      tl.from(
-        rewardRef.current,
-        {
-          scale: 0.8,
-          opacity: 0,
-          duration: 0.4,
-        },
-        "-=0.2",
-      );
-
-      tl.to(rewardRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
-    }
-
-    tl.from(
-      buttonRef.current,
-      {
-        y: 30,
-        opacity: 0,
-        duration: 0.4,
-      },
-      "-=0.2",
-    );
-
-    tl.to(buttonRef.current, { y: 0, opacity: 1, duration: 0.3 }, "-=0.2");
-
-    return () => {
-      // Clean up confetti and kill animation timeline
-      if (confettiContainer.parentNode) {
-        confettiContainer.remove();
+        ease: "linear"
       }
-      tl.kill();
-    };
-  }, [isOpen]);
+    })
+  };
+  
+  // Start animations when modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      controls.start("visible");
+      
+      // Trigger bounce animation after a short delay
+      setTimeout(() => {
+        controls.start("bounce");
+      }, 300);
+    } else {
+      controls.start("hidden");
+    }
+  }, [isOpen, controls]);
+  
+  // Generate confetti colors
+  const confettiColors = ["#7458FF", "#9181FF", "#16CDA2", "#FFD166", "#FF6B6B"];
+  
+  // Generate confetti pieces
+  const confettiPieces = Array.from({ length: 50 }).map((_, i) => {
+    const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+    const size = Math.random() * 10 + 5;
+    const isCircle = Math.random() > 0.5;
+    const left = `${Math.random() * 100}%`;
+    
+    return { color, size, isCircle, left, id: i };
+  });
+
 
   // Create title based on available information
   const generatedTitle =
@@ -218,10 +140,29 @@ export function CompletionDisplay({
       onClose={onClose}
       contentClassName="modal-content mx-auto max-w-[90vw] lg:max-w-lg flex flex-col rounded-3xl bg-white p-8 text-center relative overflow-hidden"
     >
-      {/* Static confetti particles - only show for success */}
+      {/* Animated confetti particles - only show for success */}
       {isSuccess && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Purple particles */}
+          {/* Animated confetti */}
+          {confettiPieces.map((confetti) => (
+            <motion.div
+              key={confetti.id}
+              className="absolute"
+              style={{
+                width: `${confetti.size}px`,
+                height: `${confetti.size}px`,
+                borderRadius: confetti.isCircle ? '50%' : '0',
+                backgroundColor: confetti.color,
+                top: '-10px',
+                left: confetti.left,
+                position: 'absolute'
+              }}
+              initial="hidden"
+              animate="visible"
+              variants={confettiAnimation}
+              custom={confetti.id}
+            />
+          ))}
           <div className="absolute top-[10%] left-[15%] h-5 w-2 rotate-[-30deg] rounded-sm bg-purple-400"></div>
           <div className="absolute top-[15%] left-[20%] h-4 w-4 rotate-12 rounded-sm bg-purple-500"></div>
           <div className="absolute right-[10%] bottom-[15%] h-6 w-2 rotate-45 bg-purple-300"></div>
@@ -243,7 +184,12 @@ export function CompletionDisplay({
 
       {/* Title and description */}
       <div className="mt-2 flex flex-col items-center justify-center pb-6">
-        <div className="mb-4 flex items-center justify-center">
+        <motion.div 
+          className="mb-4 flex items-center justify-center"
+          initial="hidden"
+          animate={controls}
+          variants={fadeInScale}
+        >
           {isSuccess ? (
             <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
               <svg
@@ -252,6 +198,7 @@ export function CompletionDisplay({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -269,6 +216,7 @@ export function CompletionDisplay({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -279,24 +227,46 @@ export function CompletionDisplay({
               </svg>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Title with XP */}
-        <h2 ref={titleRef} className="mb-2 text-3xl font-bold">
-          {emoji} {generatedTitle}
-        </h2>
+        <motion.h2 
+          className="mb-2 text-3xl font-bold"
+          initial="hidden"
+          animate={controls}
+          variants={fadeInUp}
+          custom={0.1}
+        >
+          <motion.span
+            initial="hidden"
+            animate={controls}
+            variants={bounceAnimation}
+          >
+            {emoji}
+          </motion.span>{" "}
+          {generatedTitle}
+        </motion.h2>
 
         {/* Completed lesson description */}
-        <p ref={descriptionRef} className="mb-8 text-xl text-gray-700">
+        <motion.p 
+          className="mb-8 text-xl text-gray-700"
+          initial="hidden"
+          animate={controls}
+          variants={fadeInUp}
+          custom={0.2}
+        >
           {lessonTitle ? `You've completed ${lessonTitle}.` : description}
-        </p>
+        </motion.p>
       </div>
 
       {/* View rewards section - only show for success */}
       {isSuccess && (
-        <div
-          ref={rewardRef}
+        <motion.div
           className="mb-8 w-full rounded-xl border border-gray-200 p-6"
+          initial="hidden"
+          animate={controls}
+          variants={fadeInScale}
+          custom={0.3}
         >
           <div className="mb-4 flex items-center">
             <div className="mr-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
@@ -338,14 +308,20 @@ export function CompletionDisplay({
               style={{ width: `${rewardsProgress || 10}%` }}
             />
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Next steps section - only show for success */}
       {isSuccess && nextSteps && (
-        <div className="mb-8 w-full">
-          <h3 className="mb-4 text-left text-lg font-bold">Next for you:</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <motion.div 
+          className="mb-8 w-full"
+          initial="hidden"
+          animate={controls}
+          variants={fadeInUp}
+          custom={0.4}
+        >
+          <motion.h3 className="mb-4 text-left text-lg font-bold">Next for you:</motion.h3>
+          <motion.div className="grid grid-cols-2 gap-4">
             {nextSteps?.challenges && (
               <div className="rounded-xl bg-blue-50 p-5">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-400">
@@ -407,26 +383,40 @@ export function CompletionDisplay({
                 </p>
               </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Action buttons */}
-      <div ref={buttonRef} className="flex flex-col space-y-4">
+      <motion.div 
+        className="flex flex-col space-y-4"
+        initial="hidden"
+        animate={controls}
+        variants={fadeInUp}
+        custom={0.5}
+      >
         {!isSuccess && onCustomAction ? (
           <>
-            <Button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={onCustomAction}
-              variant="primary"
-              className="w-full py-4 text-lg font-medium"
+              className="w-full py-4 text-lg font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
               Try Again
-            </Button>
-            <p className="text-center text-sm text-gray-500 underline cursor-pointer" onClick={onClose}>{actionText}</p>
+            </motion.button>
+            <motion.p 
+              className="text-center text-sm text-gray-500 underline cursor-pointer" 
+              onClick={onClose}
+              whileHover={{ scale: 1.05 }}
+            >
+              {actionText}
+            </motion.p>
           </>
-        
         ) : (
-          <Button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -444,19 +434,18 @@ export function CompletionDisplay({
               }
               
               // Use immediate navigation to avoid background help tips interference
-              if (actionText === "Continue Learning") {
-                window.location.href =  `/learning/${courseId}`;
+              if (actionText === "Continue Learning" && courseId) {
+                window.location.href = `/learning/${courseId}`;
               } else {
                 onClose();
               }
             }}
-            variant="primary"
-            className="w-full py-4 text-lg font-medium"
+            className="w-full py-4 text-lg font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >
             {actionText}
-          </Button>
+          </motion.button>
         )}
-      </div>
+      </motion.div>
     </Modal>
   );
 }

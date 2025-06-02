@@ -1,11 +1,9 @@
 "use client";
 
-import { useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { motion } from "framer-motion";
 
 // Import data from separate data file
 
@@ -75,7 +73,6 @@ export const Route = createFileRoute("/learning/")({
 });
 
 function LearningPage() {
-  const lessonCardsRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const {
     data: courses = [],
@@ -83,21 +80,28 @@ function LearningPage() {
     isError,
     error,
   } = useUserCourses(user?.id ?? "", { enabled: !!user });
-
-  // Use GSAP for animations
-  useGSAP(() => {
-    if (!lessonCardsRef.current || !courses) return;
-    const cards = lessonCardsRef.current.querySelectorAll(".course-card");
-    if (cards.length === 0) return;
-    gsap.set(cards, { opacity: 0, y: 20 });
-    gsap.to(cards, {
-      opacity: 1,
-      y: 0,
-      duration: 0.5,
-      stagger: 0.15,
-      ease: "power2.out",
-    });
-  }, [courses]);
+  
+  // Define animation variants for cards
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+  
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
 
   if (!user) {
     return (
@@ -175,9 +179,11 @@ function LearningPage() {
           <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-purple-500"></div>
         </div>
       ) : (
-        <div
-          ref={lessonCardsRef}
+        <motion.div
           className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
           {courses.length === 0 ? (
             <div className="col-span-full rounded-2xl bg-white p-8 text-center shadow-md">
@@ -208,11 +214,15 @@ function LearningPage() {
             </div>
           ) : (
             courses.map((course) => (
-              <Link
+              <motion.div
                 key={course.course_id}
-                to={`/learning/${course.course_id}`}
-                className="course-card block transform cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-lg"
+                variants={cardVariants}
+                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
               >
+                <Link
+                  to={`/learning/${course.course_id}`}
+                  className="course-card block cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md"
+                >
                 <div className="flex h-full flex-col justify-between p-6">
                   <div>
                     <div className="mb-3 flex items-center">
@@ -241,10 +251,11 @@ function LearningPage() {
                     </div>
                   </div>
                 </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

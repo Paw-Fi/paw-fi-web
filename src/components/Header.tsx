@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { useState, useRef } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { gsap } from "gsap";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
 import type { Lesson } from "@/types/learning.types";
@@ -152,6 +152,27 @@ const lessons: Lesson[] = lessonsData.lessons.map((l: any) => ({
   questions: l.questions,
 }));
 
+// Animation variants for dropdown menu
+const dropdownVariants: Variants = {
+  hidden: { opacity: 0, y: -10, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -10, scale: 0.95 }
+};
+
+// Animation variants for mobile menu
+const mobileMenuVariants: Variants = {
+  hidden: { x: "100%" },
+  visible: { x: 0 },
+  exit: { x: "100%" }
+};
+
+// Animation variants for submenu items
+const submenuItemVariants: Variants = {
+  hidden: { opacity: 0, height: 0 },
+  visible: { opacity: 1, height: "auto" },
+  exit: { opacity: 0, height: 0 }
+};
+
 export default function Header() {
   const { user, signOut, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -160,19 +181,7 @@ export default function Header() {
   const navigate = useNavigate();
   const location=useLocation();
 
-  useEffect(() => {
-    if (dropdownRef.current) {
-      if (isMenuOpen) {
-        gsap.fromTo(
-          dropdownRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power2.out" }
-        );
-      } else {
-        gsap.to(dropdownRef.current, { opacity: 0, y: -10, scale: 0.95, duration: 0.3, ease: "power2.out" });
-      }
-    }
-  }, [isMenuOpen]);
+
 
   const handleSignOut = async () => {
     try {
@@ -257,12 +266,18 @@ export default function Header() {
                     </div>
                   )}
                 </button>
-                {isMenuOpen && (
-                  <div 
-                    ref={dropdownRef}
-                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 focus:outline-none z-50 origin-top-right"
-                    onBlur={() => setIsMenuOpen(false)}
-                  >
+                <AnimatePresence>
+                  {isMenuOpen && (
+                    <motion.div 
+                      ref={dropdownRef}
+                      variants={dropdownVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 focus:outline-none z-50 origin-top-right"
+                      onBlur={() => setIsMenuOpen(false)}
+                    >
                     {/* User info section */}
                     <div className="px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex items-center space-x-3">
@@ -320,8 +335,9 @@ export default function Header() {
                         Sign out
                       </button>
                     </div>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <div className="flex space-x-4">
@@ -365,13 +381,19 @@ export default function Header() {
 
       {/* Mobile menu, show/hide based on menu state */}
       {/* Mobile menu overlay */}
-      {isMenuOpen && (
-        <div 
-          className={`fixed inset-0 z-40 flex flex-col bg-white p-4 transition-transform duration-300 ease-in-out sm:hidden transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="mobile-menu-title"
-        >
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            variants={mobileMenuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed inset-0 z-40 flex flex-col bg-white p-4 sm:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-menu-title"
+          >
           <div className="flex justify-between items-center mb-4">
             <h2 id="mobile-menu-title" className="text-lg font-medium text-gray-900 sr-only">Navigation Menu</h2> {/* SR only title for accessibility */}
             <div className="flex-grow"></div> {/* Spacer */} 
@@ -412,11 +434,20 @@ export default function Header() {
               />
             </button>
             {/* Learning Submenu Content */}
-            {isLearningSubmenuOpen && (
-              <div id="learning-submenu" className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-gray-200 ml-3">
+            <AnimatePresence>
+              {isLearningSubmenuOpen && (
+                <motion.div 
+                  id="learning-submenu" 
+                  variants={submenuItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-gray-200 ml-3"
+                >
                 {/* AI Learning Link - Mobile Adapted */}
                 <Link
-                  to="/learning/"
+                  to="/learning"
                   className="group/ai flex w-full items-center gap-3 rounded-md p-3 text-sm font-medium text-white bg-gradient-to-r from-[#7458FF] via-purple-500 to-fuchsia-500 hover:opacity-90"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -469,8 +500,9 @@ export default function Header() {
                     </div>
                   )
                 )}
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
             <Link
               to="/chat"
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
@@ -564,8 +596,9 @@ export default function Header() {
             </div>
           )}
           </div> {/* End of scrollable content wrapper */}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
