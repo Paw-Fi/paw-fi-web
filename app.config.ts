@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
+  server: {
+    preset: 'node-server', // Explicitly set the preset for Vinxi
+  },
   tsr: {
     appDirectory: 'src',
   },
