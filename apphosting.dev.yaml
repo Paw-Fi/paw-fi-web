@@ -1,0 +1,16 @@
+# Dev environment configuration
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
+env:
+  # Production Supabase configuration
+  # For production, we recommend using secrets instead of environment variables
+  - variable: VITE_SUPABASE_URL
+    secret: supabaseUrlSecret  # Reference to a secret in Cloud Secret Manager
+    
+  - variable: VITE_SUPABASE_ANON_KEY
+    secret: supabaseAnonKeySecret  # Reference to a secret in Cloud Secret Manager
