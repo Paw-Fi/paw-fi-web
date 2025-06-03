@@ -56,13 +56,41 @@ serve(async (req: Request) => {
 
     if (questionError) throw questionError;
 
-    // 4. Assemble structure
+    // 4. Fetch all user_tutorials for these lessons
+    const tutorialLessonIds = lessons.map((lesson: any) => lesson.id);
+    console.log("[get-user-courses] Lesson IDs for tutorials:", tutorialLessonIds);
+    
+    const { data: tutorials, error: tutorialError } = await supabase
+      .from("user_tutorials")
+      .select("*")
+      .in("lesson_id", tutorialLessonIds);
+
+    if (tutorialError) {
+      console.error("[get-user-courses] Error fetching tutorials:", tutorialError);
+      throw tutorialError;
+    }
+    
+    console.log(`[get-user-courses] Tutorials fetched: ${tutorials?.length || 0}`);
+    if (tutorials && tutorials.length > 0) {
+      console.log("[get-user-courses] Sample tutorial:", tutorials[0]);
+    }
+
+    // 5. Assemble structure
     const lessonsByCourse = new Map();
     for (const lesson of lessons) {
       if (!lessonsByCourse.has(lesson.course_id)) lessonsByCourse.set(lesson.course_id, []);
       lessonsByCourse.get(lesson.course_id).push(lesson);
     }
 
+    const tutorialsByLesson = new Map();
+    for (const tutorial of tutorials) {
+      if (!tutorialsByLesson.has(tutorial.lesson_id)) tutorialsByLesson.set(tutorial.lesson_id, []);
+      tutorialsByLesson.get(tutorial.lesson_id).push(tutorial);
+    }
+    
+    console.log("[get-user-courses] Tutorial map size:", tutorialsByLesson.size);
+    console.log("[get-user-courses] Lesson IDs with tutorials:", Array.from(tutorialsByLesson.keys()));
+    
     const questionsByLesson = new Map();
     for (const question of questions) {
       if (!questionsByLesson.has(question.lesson_id)) questionsByLesson.set(question.lesson_id, []);
@@ -71,16 +99,38 @@ serve(async (req: Request) => {
 
     const result = Array.isArray(courses)
       ? courses.map((course: any) => {
-          const courseLessons = (lessonsByCourse.get(course.id) || []).map((lesson: any) => ({
-            ...lesson,
-            questions: questionsByLesson.get(lesson.id) || [],
-          }));
+          const courseLessons = (lessonsByCourse.get(course.id) || []).map((lesson: any) => {
+            const lessonTutorials = tutorialsByLesson.get(lesson.id) || [];
+            const lessonQuestions = questionsByLesson.get(lesson.id) || [];
+            
+            console.log(`[get-user-courses] Lesson ${lesson.id} has ${lessonTutorials.length} tutorials and ${lessonQuestions.length} questions`);
+            
+            return {
+              ...lesson,
+              tutorials: lessonTutorials,
+              questions: lessonQuestions,
+            };
+          });
           return {
             ...course,
             lessons: courseLessons,
           };
         })
       : [];
+      
+    if (result.length > 0) {
+      console.log("[get-user-courses] First course structure (truncated):", 
+        JSON.stringify({
+          id: result[0].id,
+          title: result[0].title,
+          lessons: result[0].lessons.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            tutorialsCount: l.tutorials?.length || 0,
+            questionsCount: l.questions?.length || 0
+          }))
+        }, null, 2));
+    }
 
     return new Response(JSON.stringify({ courses: result }), {
       status: 200,

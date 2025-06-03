@@ -4,7 +4,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/auth-context';
 import { useUserCourses } from '@/services/course-service';
 import { motion } from 'framer-motion';
-import type { Course, Lesson } from '@/types/learning.types';
+import type {Lesson } from '@/types/learning.types';
 
 
 import { LessonBackButton } from '@/components/learning/lesson-back-button';
@@ -202,7 +202,7 @@ export default function CourseDetailPage() {
                   className="lesson-card"
                 >
                   <Link
-                    to={`/learning/${courseId}/tutorial/${lesson.lesson_id}`}
+                    to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
                     className="block bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer"
                   >
                   <div className="p-4">

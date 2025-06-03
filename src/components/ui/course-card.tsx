@@ -1,18 +1,20 @@
 interface CardProps {
   title: string;
   description: string;
+  icon: string;
   lessonCount: number;
   className?: string;
   onClick?: () => void;
 }
 
-export function CourseCard({ title, description, lessonCount, className, onClick }: CardProps) {
+export function CourseCard({ title, description, icon, lessonCount, className, onClick }: CardProps) {
   return (
     <div 
       className={`rounded-xl border border-gray-100 bg-white shadow-md hover:shadow-lg transition-all duration-300 p-6 mb-4 ${className || ''} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
+       {icon&& <img src={icon} alt="Course Icon" className="w-16 h-16" />}
         <h2 className="text-lg font-semibold mb-2 text-gray-800">{title}</h2>
         <div className="bg-primary/10 text-primary px-3 py-1 text-xs font-medium rounded-full text-nowrap">
           {lessonCount} {lessonCount === 1 ? 'Lesson' : 'Lessons'}

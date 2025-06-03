@@ -34,27 +34,6 @@ interface Message {
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
 
-// Utility function to extract the first JSON object from a string
-const extractFirstJson = (text: string) => {
-  try {
-    const jsonRegex = /{[\s\S]*?}/g;
-    const matches = text.match(jsonRegex);
-    if (!matches || matches.length === 0) return null;
-    
-    for (const match of matches) {
-      try {
-        return JSON.parse(match);
-      } catch (e) {
-        // This match wasn't valid JSON, try the next one
-        continue;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("Error extracting JSON:", error);
-    return null;
-  }
-};
 
 export function ChatInterface() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);

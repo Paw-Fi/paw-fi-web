@@ -190,7 +190,7 @@ export function LearningDropdown({ lessons }: LearningDropdownProps) {
                       {group.lessons.map(({ lesson, lessonShortform }) => (
                         <li key={lesson.lesson_id}>
                           <Link
-                            to={`/learning/${basicCourse.id}/tutorial/${lesson.lesson_id}`}
+                            to={`/learning/${basicCourse.id}/lesson/${lesson.lesson_id}`}
                             className="hover:bg-primary/10 focus:bg-primary/20 flex items-center gap-2 rounded-lg p-2 transition"
                           >
                             {lesson.icon && (

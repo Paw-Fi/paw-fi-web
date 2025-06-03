@@ -326,10 +326,31 @@ serve(async (req: Request): Promise<Response> => {
             .trim();
         }
       }
+
+      // Parse the wellFormedJsonString to access its properties
+      const parsedJson = typeof wellFormedJsonString === 'string' 
+        ? JSON.parse(wellFormedJsonString) 
+        : wellFormedJsonString;
+      
+      // Create the simplified JSON object
+      const simpleJsonObject = {
+        id: parsedJson.id,
+        title: parsedJson.title,
+        description: parsedJson.description,
+        icon: parsedJson.icon,
+        unlocked: parsedJson.unlocked,
+        lesson_count: parsedJson.lessons ? parsedJson.lessons.length : 0
+      };
+      
+      // Convert the simplified JSON object to a properly formatted string
+      const simpleJsonString = JSON.stringify(simpleJsonObject, null, 2);
+
       // Reconstruct the response with preamble, sanitized JSON, and epilogue
       const fullMessageParts = [
         preamble,
-        `${markdownJsonPrefix}\n${wellFormedJsonString}\n${markdownSuffix}`,
+        `${markdownJsonPrefix}
+${simpleJsonString}
+${markdownSuffix}`,
         epilogue,
       ].filter(Boolean);
       const finalContentForClientResponse = fullMessageParts.join("\n\n");

@@ -40,7 +40,6 @@ import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculato
 import { Route as AuthorImportImport } from './routes/author/import'
 import { Route as LearningCourseIdIndexImport } from './routes/learning/$courseId/index'
 import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
-import { Route as LearningCourseIdTutorialLessonIdImport } from './routes/learning/$courseId/tutorial/$lessonId'
 import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning/$courseId/lesson/$lessonId'
 
 // Create/Update Routes
@@ -224,13 +223,6 @@ const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
   path: '/author/course/$courseId',
   getParentRoute: () => rootRoute,
 } as any)
-
-const LearningCourseIdTutorialLessonIdRoute =
-  LearningCourseIdTutorialLessonIdImport.update({
-    id: '/learning/$courseId/tutorial/$lessonId',
-    path: '/learning/$courseId/tutorial/$lessonId',
-    getParentRoute: () => rootRoute,
-  } as any)
 
 const LearningCourseIdLessonLessonIdRoute =
   LearningCourseIdLessonLessonIdImport.update({
@@ -453,13 +445,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningCourseIdLessonLessonIdImport
       parentRoute: typeof rootRoute
     }
-    '/learning/$courseId/tutorial/$lessonId': {
-      id: '/learning/$courseId/tutorial/$lessonId'
-      path: '/learning/$courseId/tutorial/$lessonId'
-      fullPath: '/learning/$courseId/tutorial/$lessonId'
-      preLoaderRoute: typeof LearningCourseIdTutorialLessonIdImport
-      parentRoute: typeof rootRoute
-    }
   }
 }
 
@@ -556,7 +541,6 @@ export interface FileRoutesByFullPath {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -585,7 +569,6 @@ export interface FileRoutesByTo {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRoutesById {
@@ -620,7 +603,6 @@ export interface FileRoutesById {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId/': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRouteTypes {
@@ -656,7 +638,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -684,7 +665,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   id:
     | '__root__'
     | '/'
@@ -717,7 +697,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId/'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   fileRoutesById: FileRoutesById
 }
 
@@ -747,7 +726,6 @@ export interface RootRouteChildren {
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
   LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
   LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
-  LearningCourseIdTutorialLessonIdRoute: typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -776,7 +754,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
   LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
   LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
-  LearningCourseIdTutorialLessonIdRoute: LearningCourseIdTutorialLessonIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -813,8 +790,7 @@ export const routeTree = rootRoute
         "/learning/",
         "/author/course/$courseId",
         "/learning/$courseId/",
-        "/learning/$courseId/lesson/$lessonId",
-        "/learning/$courseId/tutorial/$lessonId"
+        "/learning/$courseId/lesson/$lessonId"
       ]
     },
     "/": {
@@ -926,9 +902,6 @@ export const routeTree = rootRoute
     },
     "/learning/$courseId/lesson/$lessonId": {
       "filePath": "learning/$courseId/lesson/$lessonId.tsx"
-    },
-    "/learning/$courseId/tutorial/$lessonId": {
-      "filePath": "learning/$courseId/tutorial/$lessonId.tsx"
     }
   }
 }

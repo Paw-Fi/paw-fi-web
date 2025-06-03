@@ -9,9 +9,6 @@ function sanitizeCourseJson(raw: any) {
     id: String(raw.id),
     title: String(raw.title).trim(),
     description: raw.description ? String(raw.description).trim() : "",
-    icon: raw.icon ? String(raw.icon) : null,
-    xp: Number(raw.xp) || 0,
-    unlocked: typeof raw.unlocked === 'boolean' ? raw.unlocked : false,
     lessons: raw.lessons.map((lesson: any, idx: number) => {
       if (!lesson || typeof lesson !== "object" || !lesson.id || !lesson.title || !Array.isArray(lesson.questions))
         throw new Error(`Invalid lesson structure for lesson ID: ${lesson?.id || 'unknown'} at index ${idx}.`);
@@ -24,14 +21,62 @@ function sanitizeCourseJson(raw: any) {
         unlocked: typeof lesson.unlocked === 'boolean' ? lesson.unlocked : false,
         icon: lesson.icon ? String(lesson.icon) : null,
         position: idx,
-        questions: lesson.questions.map((q: any, qidx: number) => {
-          if (!q || typeof q !== "object" || !q.id || !q.type || !q.question)
-            throw new Error(`Invalid question structure for question ID: ${q?.id || 'unknown'} in lesson ID: ${lesson.id}.`);
-
+        tutorials: Array.isArray(lesson.tutorials) ? lesson.tutorials.map((tutorial: any, tidx: number) => {
+          // If tutorial is missing required fields, create a default tutorial with position-based ID
+          if (!tutorial || typeof tutorial !== "object") {
+            console.warn(`[store-course-from-ai] Missing or invalid tutorial at index ${tidx} in lesson ID: ${lesson.id}. Creating default.`);
+            return {
+              id: `tutorial-${tidx + 1}`,
+              title: `Tutorial ${tidx + 1}`,
+              content: "",
+              key_points: [],
+              position: tidx,
+            };
+          }
+          
+          // If tutorial is missing id or title, use position-based values
+          const tutorialId = tutorial.id ? String(tutorial.id) : `tutorial-${tidx + 1}`;
+          const tutorialTitle = tutorial.title ? String(tutorial.title).trim() : `Tutorial ${tidx + 1}`;
+          
           return {
-            id: String(q.id),
-            type: String(q.type),
-            question: String(q.question),
+            id: tutorialId,
+            title: tutorialTitle,
+            content: tutorial.content || tutorial.description ? String(tutorial.content || tutorial.description).trim() : "",
+            key_points: Array.isArray(tutorial.key_points) ? tutorial.key_points.map((kp: any) => String(kp).trim()) : [],
+            position: tidx,
+          };
+        }) : [],
+        questions: Array.isArray(lesson.questions) ? lesson.questions.map((q: any, qidx: number) => {
+          // If question is missing required fields, create a default question with position-based ID
+          if (!q || typeof q !== "object") {
+            console.warn(`[store-course-from-ai] Missing or invalid question at index ${qidx} in lesson ID: ${lesson.id}. Creating default.`);
+            return {
+              id: `question-${qidx + 1}`,
+              type: "text",
+              question: `Question ${qidx + 1}`,
+              options: null,
+              image_options: null,
+              items: null,
+              categories: null,
+              rows: null,
+              columns: null,
+              correct_answers: null,
+              validation: null,
+              explanation: null,
+              incorrect_explanation: null,
+              position: qidx,
+            };
+          }
+          
+          // If question is missing id, type or question text, use position-based values
+          const questionId = q.id ? String(q.id) : `question-${qidx + 1}`;
+          const questionType = q.type ? String(q.type) : "text";
+          const questionText = q.question ? String(q.question) : `Question ${qidx + 1}`;
+          
+          return {
+            id: questionId,
+            type: questionType,
+            question: questionText,
             options: q.options ?? null,
             image_options: q.image_options ?? null,
             items: q.items ?? null,
@@ -42,11 +87,9 @@ function sanitizeCourseJson(raw: any) {
             validation: q.validation ?? null,
             explanation: q.explanation ? String(q.explanation).trim() : null,
             incorrect_explanation: q.incorrect_explanation ? String(q.incorrect_explanation).trim() : null,
-            help_tips: q.help_tips ? String(q.help_tips).trim() : null,
-            content_blocks: q.content_blocks ?? null,
             position: qidx,
           };
-        }),
+        }) : [],
       };
     }),
   };
@@ -89,15 +132,6 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
   // Insert course
-  console.log("[store-course-from-ai] Inserting course row:", {
-    user_id,
-    course_id: sanitized.id,
-    title: sanitized.title,
-    description: sanitized.description,
-    icon: sanitized.icon,
-    xp: sanitized.xp,
-    unlocked: sanitized.unlocked,
-  });
   const { data: courseRow, error: courseErr } = await supabase
     .from("user_courses")
     .insert({
@@ -105,9 +139,6 @@ serve(async (req) => {
       course_id: sanitized.id,
       title: sanitized.title,
       description: sanitized.description,
-      icon: sanitized.icon,
-      xp: sanitized.xp,
-      unlocked: sanitized.unlocked,
     })
     .select("id")
     .single();
@@ -119,7 +150,8 @@ serve(async (req) => {
     );
   }
   const course_id = courseRow.id;
-  // Insert lessons
+
+  // Insert lessons to get their DB IDs
   const lessonsToInsert = sanitized.lessons.map((lesson) => ({
     course_id,
     lesson_id: lesson.id,
@@ -130,27 +162,88 @@ serve(async (req) => {
     icon: lesson.icon,
     position: lesson.position,
   }));
-  console.log("[store-course-from-ai] Inserting lessons:", lessonsToInsert);
-  const { data: lessonRows, error: lessonErr } = await supabase
+  
+  // Insert lessons
+  const insertResult = await supabase
     .from("user_lessons")
-    .insert(lessonsToInsert)
-    .select("id, lesson_id, position");
-  if (lessonErr) {
-    console.error("[store-course-from-ai] Failed to insert lessons", lessonErr);
+    .insert(lessonsToInsert);
+    
+  if (insertResult.error) {
+    console.error("[store-course-from-ai] Failed to insert lessons", insertResult.error);
     return new Response(
-      JSON.stringify({ error: "Failed to insert lessons", details: lessonErr }),
+      JSON.stringify({ error: "Failed to insert lessons", details: insertResult.error }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-  // Map lesson_id to DB id for question FK
+  
+  // Then fetch the inserted lessons to get their DB IDs
+  const selectResult = await supabase
+    .from("user_lessons")
+    .select("id, lesson_id, position")
+    .eq("course_id", course_id);
+    
+  if (selectResult.error) {
+    console.error("[store-course-from-ai] Failed to fetch inserted lessons", selectResult.error);
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch inserted lessons", details: selectResult.error }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  
+  // Type assertion to work around TypeScript errors with Supabase client
+  const lessonRows = selectResult.data || [];
+  
+  // Map lesson_id to DB id for tutorial and question FK
   const lessonIdMap: Record<string, string> = {};
   for (const row of lessonRows) {
     lessonIdMap[row.lesson_id] = row.id;
   }
-  // Insert questions
+  
+  // Insert tutorials using the lesson DB IDs (following the same pattern as questions)
+  const tutorialsToInsert = [];
+  for (const lesson of sanitized.lessons) {
+    const lesson_id = lessonIdMap[lesson.id];
+    if (!lesson_id) {
+      console.error(`[store-course-from-ai] Missing DB ID for lesson ${lesson.id}`);
+      continue;
+    }
+    
+    for (const tutorial of lesson.tutorials) {
+      tutorialsToInsert.push({
+        lesson_id,
+        tutorial_id: tutorial.id,
+        title: tutorial.title,
+        content: tutorial.content,
+        key_points: tutorial.key_points,
+        position: tutorial.position || 0,
+      });
+    }
+  }
+  
+  if (tutorialsToInsert.length > 0) {
+    console.log("[store-course-from-ai] Inserting tutorials:", tutorialsToInsert);
+    const { error: tutorialErr } = await supabase
+      .from("user_tutorials")
+      .insert(tutorialsToInsert);
+    
+    if (tutorialErr) {
+      console.error("[store-course-from-ai] Failed to insert tutorials", tutorialErr);
+      return new Response(
+        JSON.stringify({ error: "Failed to insert tutorials", details: tutorialErr }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+  
+  // Insert questions using the same lesson DB IDs
   const questionsToInsert = [];
   for (const lesson of sanitized.lessons) {
     const lesson_id = lessonIdMap[lesson.id];
+    if (!lesson_id) {
+      console.error(`[store-course-from-ai] Missing DB ID for lesson ${lesson.id}`);
+      continue;
+    }
+    
     for (const q of lesson.questions) {
       questionsToInsert.push({
         lesson_id,
