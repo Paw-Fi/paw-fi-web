@@ -9,6 +9,7 @@ import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
 import { QuestionHeader } from "@/components/learning/question-header";
+import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
 import type { Course, Lesson, Question, Tutorial } from "@/types/learning.types";
@@ -151,15 +152,21 @@ function LessonPage() {
     isError: isCoursesError,
   } = useUserCourses(user?.id ?? "", { enabled: !!user });
 
+  // Adapter function to ensure lesson data conforms to the Lesson interface
+  const adaptLesson = (lessonData: any): Lesson => {
+    return {
+      ...lessonData,
+      id: lessonData.lesson_id, // Map lesson_id to id to satisfy the Lesson interface
+    };
+  };
+
   // Find the course and lesson (handle async loading)
   const course =
     courseId === basicCourse.id
       ? basicCourse
       : courses?.find((c: Course) => c.course_id === courseId);
-  const lesson =
-    courseId === basicCourse.id
-      ? basicCourse.lessons.find((l) => l.lesson_id === lessonId)
-      : course?.lessons?.find((l) => l.lesson_id === lessonId);
+  const lessonData = course?.lessons.find((l) => l.lesson_id === lessonId);
+  const lesson = lessonData ? adaptLesson(lessonData) : undefined;
 
   // Transform questions into flashcard-style content
   const flashcardItems = useMemo(() => {
@@ -205,6 +212,11 @@ function LessonPage() {
     handleBack: previousQuestion,
     handleAnswer,
     showFeedback,
+    setShowFeedback,
+    setCurrentAnswerCorrect,
+    setCountdownSeconds,
+    setShowExplanation,
+    resetQuestionStates,
   } = lessonHook;
 
   // Get current flashcard item
@@ -218,9 +230,59 @@ function LessonPage() {
     }
   };
 
+  // Create a custom check answer function that works with the current flashcard item
+  const checkCurrentAnswer = () => {
+    if (currentItem.type !== "question") return;
+    
+    // Use the current flashcard item's question data for validation
+    const answer = answers[currentItem.data.question_id];
+    const isCorrect = isAnswerCorrect(currentItem.data, answer);
+    
+    // Manually set all the feedback states based on the current answer correctness
+    setShowFeedback(true);
+    setCurrentAnswerCorrect(isCorrect);
+    
+    if (isCorrect) {
+      // Show explanation for correct answer
+      setShowExplanation(true);
+    } else {
+      // Hide explanation for incorrect answers
+      setShowExplanation(false);
+      
+      // Set countdown timer for incorrect answers
+      setCountdownSeconds(5);
+      
+      // Start countdown
+      const interval = setInterval(() => {
+        setCountdownSeconds((prev: number) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  };
+  
   // Handle moving to the next item (content or question)
   const handleNext = () => {
+    // For question items, only allow proceeding if the answer is correct
+    // This prevents skipping questions without answering
+    if (currentItem.type === "question") {
+      // Check if the current question is answered correctly
+      const answer = answers[currentItem.data.question_id];
+      const isCorrect = isAnswerCorrect(currentItem.data, answer);
+      
+      if (!isCorrect) {
+        return; // Don't allow proceeding if the current question isn't answered correctly
+      }
+    }
+    
     if (currentItemIndex < flashcardItems.length - 1) {
+      // Reset answer state when moving to the next item
+      resetQuestionStates();
+      
       setCurrentItemIndex(currentItemIndex + 1);
     } else {
       // If we've reached the end of all items, complete the lesson
@@ -338,9 +400,9 @@ function LessonPage() {
 
                 <ActionButtons
                   currentAnswerCorrect={currentAnswerCorrect}
-                  isCurrentQuestionAnswered={isQuestionAnswered}
+                  isCurrentQuestionAnswered={isCurrentQuestionAnswered(currentItem.data, answers[currentItem.data.question_id])}
                   countdownSeconds={countdownSeconds}
-                  handleCheckAnswer={handleCheckAnswer}
+                  handleCheckAnswer={checkCurrentAnswer}
                   handleNext={handleNext}
                   isLastQuestion={currentItemIndex >= flashcardItems.length - 1}
                 />

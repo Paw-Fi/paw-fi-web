@@ -161,16 +161,21 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
     answers,
     isComplete,
     showFeedback,
+    setShowFeedback,
     earnedXp,
     currentAnswerCorrect,
+    setCurrentAnswerCorrect,
     countdownSeconds,
+    setCountdownSeconds,
     showExplanation,
+    setShowExplanation,
     progressPercentage,
     isQuestionAnswered,
     handleRetry,
     handleCheckAnswer,
     handleNext,
     handleBack,
-    handleAnswer
+    handleAnswer,
+    resetQuestionStates
   };
 }
