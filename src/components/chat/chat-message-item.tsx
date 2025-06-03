@@ -47,8 +47,9 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
           )}
           <CourseCard
             title={json.title || ""}
+            icon={json.icon || ""}
             description={json.description || ""}
-            lessonCount={Array.isArray(json.lessons) ? json.lessons.length : (json.lessonCount || 0)}
+            lessonCount={json.lesson_count || 0}
             onClick={() => {
               navigate({ to: "/learning" });
             }}

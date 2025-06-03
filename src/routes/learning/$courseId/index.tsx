@@ -4,7 +4,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/auth-context';
 import { useUserCourses } from '@/services/course-service';
 import { motion } from 'framer-motion';
-import type { Course, Lesson } from '@/types/learning.types';
+import type {Lesson } from '@/types/learning.types';
 
 
 import { LessonBackButton } from '@/components/learning/lesson-back-button';

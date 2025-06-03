@@ -30,6 +30,7 @@ import { Route as LearningIndexImport } from './routes/learning/index'
 import { Route as FormatIndexImport } from './routes/format/index'
 import { Route as DashboardIndexImport } from './routes/dashboard/index'
 import { Route as CalculatorsIndexImport } from './routes/calculators/index'
+import { Route as BlogsIndexImport } from './routes/blogs/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
 import { Route as CalculatorsSavingGoalsCalculatorImport } from './routes/calculators/saving-goals-calculator'
 import { Route as CalculatorsRetirementCalculatorImport } from './routes/calculators/retirement-calculator'
@@ -37,10 +38,10 @@ import { Route as CalculatorsMortgageCalculatorImport } from './routes/calculato
 import { Route as CalculatorsInvestmentCalculatorImport } from './routes/calculators/investment-calculator'
 import { Route as CalculatorsCompoundCalculatorImport } from './routes/calculators/compound-calculator'
 import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculators/auto-loan-calculator'
+import { Route as BlogsBlogIdImport } from './routes/blogs/$blogId'
 import { Route as AuthorImportImport } from './routes/author/import'
 import { Route as LearningCourseIdIndexImport } from './routes/learning/$courseId/index'
 import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
-import { Route as LearningCourseIdTutorialLessonIdImport } from './routes/learning/$courseId/tutorial/$lessonId'
 import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning/$courseId/lesson/$lessonId'
 
 // Create/Update Routes
@@ -159,6 +160,12 @@ const CalculatorsIndexRoute = CalculatorsIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const BlogsIndexRoute = BlogsIndexImport.update({
+  id: '/blogs/',
+  path: '/blogs/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AuthorIndexRoute = AuthorIndexImport.update({
   id: '/author/',
   path: '/author/',
@@ -207,6 +214,12 @@ const CalculatorsAutoLoanCalculatorRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const BlogsBlogIdRoute = BlogsBlogIdImport.update({
+  id: '/blogs/$blogId',
+  path: '/blogs/$blogId',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AuthorImportRoute = AuthorImportImport.update({
   id: '/author/import',
   path: '/author/import',
@@ -224,13 +237,6 @@ const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
   path: '/author/course/$courseId',
   getParentRoute: () => rootRoute,
 } as any)
-
-const LearningCourseIdTutorialLessonIdRoute =
-  LearningCourseIdTutorialLessonIdImport.update({
-    id: '/learning/$courseId/tutorial/$lessonId',
-    path: '/learning/$courseId/tutorial/$lessonId',
-    getParentRoute: () => rootRoute,
-  } as any)
 
 const LearningCourseIdLessonLessonIdRoute =
   LearningCourseIdLessonLessonIdImport.update({
@@ -327,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorImportImport
       parentRoute: typeof rootRoute
     }
+    '/blogs/$blogId': {
+      id: '/blogs/$blogId'
+      path: '/blogs/$blogId'
+      fullPath: '/blogs/$blogId'
+      preLoaderRoute: typeof BlogsBlogIdImport
+      parentRoute: typeof rootRoute
+    }
     '/calculators/auto-loan-calculator': {
       id: '/calculators/auto-loan-calculator'
       path: '/calculators/auto-loan-calculator'
@@ -374,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/author'
       fullPath: '/author'
       preLoaderRoute: typeof AuthorIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/blogs/': {
+      id: '/blogs/'
+      path: '/blogs'
+      fullPath: '/blogs'
+      preLoaderRoute: typeof BlogsIndexImport
       parentRoute: typeof rootRoute
     }
     '/calculators/': {
@@ -451,13 +471,6 @@ declare module '@tanstack/react-router' {
       path: '/learning/$courseId/lesson/$lessonId'
       fullPath: '/learning/$courseId/lesson/$lessonId'
       preLoaderRoute: typeof LearningCourseIdLessonLessonIdImport
-      parentRoute: typeof rootRoute
-    }
-    '/learning/$courseId/tutorial/$lessonId': {
-      id: '/learning/$courseId/tutorial/$lessonId'
-      path: '/learning/$courseId/tutorial/$lessonId'
-      fullPath: '/learning/$courseId/tutorial/$lessonId'
-      preLoaderRoute: typeof LearningCourseIdTutorialLessonIdImport
       parentRoute: typeof rootRoute
     }
   }
@@ -538,6 +551,7 @@ export interface FileRoutesByFullPath {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
   '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
   '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
@@ -545,6 +559,7 @@ export interface FileRoutesByFullPath {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author': typeof AuthorIndexRoute
+  '/blogs': typeof BlogsIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
@@ -556,7 +571,6 @@ export interface FileRoutesByFullPath {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -567,6 +581,7 @@ export interface FileRoutesByTo {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
   '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
   '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
@@ -574,6 +589,7 @@ export interface FileRoutesByTo {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author': typeof AuthorIndexRoute
+  '/blogs': typeof BlogsIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
@@ -585,7 +601,6 @@ export interface FileRoutesByTo {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRoutesById {
@@ -602,6 +617,7 @@ export interface FileRoutesById {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
   '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
   '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
   '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
@@ -609,6 +625,7 @@ export interface FileRoutesById {
   '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
   '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author/': typeof AuthorIndexRoute
+  '/blogs/': typeof BlogsIndexRoute
   '/calculators/': typeof CalculatorsIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/format/': typeof FormatIndexRoute
@@ -620,7 +637,6 @@ export interface FileRoutesById {
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId/': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-  '/learning/$courseId/tutorial/$lessonId': typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 export interface FileRouteTypes {
@@ -638,6 +654,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
+    | '/blogs/$blogId'
     | '/calculators/auto-loan-calculator'
     | '/calculators/compound-calculator'
     | '/calculators/investment-calculator'
@@ -645,6 +662,7 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/author'
+    | '/blogs'
     | '/calculators'
     | '/dashboard/'
     | '/format'
@@ -656,7 +674,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -666,6 +683,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
+    | '/blogs/$blogId'
     | '/calculators/auto-loan-calculator'
     | '/calculators/compound-calculator'
     | '/calculators/investment-calculator'
@@ -673,6 +691,7 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/author'
+    | '/blogs'
     | '/calculators'
     | '/dashboard'
     | '/format'
@@ -684,7 +703,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   id:
     | '__root__'
     | '/'
@@ -699,6 +717,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
+    | '/blogs/$blogId'
     | '/calculators/auto-loan-calculator'
     | '/calculators/compound-calculator'
     | '/calculators/investment-calculator'
@@ -706,6 +725,7 @@ export interface FileRouteTypes {
     | '/calculators/retirement-calculator'
     | '/calculators/saving-goals-calculator'
     | '/author/'
+    | '/blogs/'
     | '/calculators/'
     | '/dashboard/'
     | '/format/'
@@ -717,7 +737,6 @@ export interface FileRouteTypes {
     | '/author/course/$courseId'
     | '/learning/$courseId/'
     | '/learning/$courseId/lesson/$lessonId'
-    | '/learning/$courseId/tutorial/$lessonId'
   fileRoutesById: FileRoutesById
 }
 
@@ -734,6 +753,7 @@ export interface RootRouteChildren {
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
+  BlogsBlogIdRoute: typeof BlogsBlogIdRoute
   CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
   CalculatorsCompoundCalculatorRoute: typeof CalculatorsCompoundCalculatorRoute
   CalculatorsInvestmentCalculatorRoute: typeof CalculatorsInvestmentCalculatorRoute
@@ -741,13 +761,13 @@ export interface RootRouteChildren {
   CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
   CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
+  BlogsIndexRoute: typeof BlogsIndexRoute
   CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
   LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
   LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
-  LearningCourseIdTutorialLessonIdRoute: typeof LearningCourseIdTutorialLessonIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -763,6 +783,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,
+  BlogsBlogIdRoute: BlogsBlogIdRoute,
   CalculatorsAutoLoanCalculatorRoute: CalculatorsAutoLoanCalculatorRoute,
   CalculatorsCompoundCalculatorRoute: CalculatorsCompoundCalculatorRoute,
   CalculatorsInvestmentCalculatorRoute: CalculatorsInvestmentCalculatorRoute,
@@ -770,13 +791,13 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorsRetirementCalculatorRoute: CalculatorsRetirementCalculatorRoute,
   CalculatorsSavingGoalsCalculatorRoute: CalculatorsSavingGoalsCalculatorRoute,
   AuthorIndexRoute: AuthorIndexRoute,
+  BlogsIndexRoute: BlogsIndexRoute,
   CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
   LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
   LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
-  LearningCourseIdTutorialLessonIdRoute: LearningCourseIdTutorialLessonIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -801,6 +822,7 @@ export const routeTree = rootRoute
         "/privacy-policy",
         "/terms-of-service",
         "/author/import",
+        "/blogs/$blogId",
         "/calculators/auto-loan-calculator",
         "/calculators/compound-calculator",
         "/calculators/investment-calculator",
@@ -808,13 +830,13 @@ export const routeTree = rootRoute
         "/calculators/retirement-calculator",
         "/calculators/saving-goals-calculator",
         "/author/",
+        "/blogs/",
         "/calculators/",
         "/format/",
         "/learning/",
         "/author/course/$courseId",
         "/learning/$courseId/",
-        "/learning/$courseId/lesson/$lessonId",
-        "/learning/$courseId/tutorial/$lessonId"
+        "/learning/$courseId/lesson/$lessonId"
       ]
     },
     "/": {
@@ -868,6 +890,9 @@ export const routeTree = rootRoute
     "/author/import": {
       "filePath": "author/import.tsx"
     },
+    "/blogs/$blogId": {
+      "filePath": "blogs/$blogId.tsx"
+    },
     "/calculators/auto-loan-calculator": {
       "filePath": "calculators/auto-loan-calculator.tsx"
     },
@@ -888,6 +913,9 @@ export const routeTree = rootRoute
     },
     "/author/": {
       "filePath": "author/index.tsx"
+    },
+    "/blogs/": {
+      "filePath": "blogs/index.tsx"
     },
     "/calculators/": {
       "filePath": "calculators/index.tsx"
@@ -926,9 +954,6 @@ export const routeTree = rootRoute
     },
     "/learning/$courseId/lesson/$lessonId": {
       "filePath": "learning/$courseId/lesson/$lessonId.tsx"
-    },
-    "/learning/$courseId/tutorial/$lessonId": {
-      "filePath": "learning/$courseId/tutorial/$lessonId.tsx"
     }
   }
 }

@@ -70,6 +70,15 @@ export type BaseQuestion = {
   caption?: string;
 };
 
+export type Tutorial={
+  id: string;
+  tutorial_id: string;
+  lesson_id: string;
+  title: string;
+  content: string;
+  key_points: string[];
+}
+
 // A fully flexible Question type to accommodate JSON data
 export interface Question {
   question_id: string;
@@ -144,13 +153,14 @@ export function isImageChoiceQuestion(question: Question): question is Question 
 
 // Lesson structure
 export interface Lesson {
-  id: Key | null | undefined;
+  id: string | null | undefined;
   lesson_id: string;
   title: string;
   description: string;
   xp: number;
   unlocked: boolean;
   icon?: string;
+  tutorials: Tutorial[];
   questions: Question[];
   content_blocks?: ContentBlock[] | any[];
   help_tips?: string;
