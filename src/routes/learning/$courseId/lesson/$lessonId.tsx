@@ -24,6 +24,8 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 import { ContentDisplay } from "@/components/learning/lesson/content-display";
+import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
+import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
 
 export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
   component: LessonPage,
@@ -305,6 +307,12 @@ function LessonPage() {
             <div className="rounded-3xl bg-white p-8 shadow-md">
               {/* Render the appropriate question component based on type */}
               <div>
+              <LessonCardTitle
+          lessonTitle={lesson.title}
+          index={currentItemIndex}
+          allItemsTotal={flashcardItems.length}
+          icon={faLightbulb}
+        />     
                 <QuestionHeader
                   question={currentItem.data.question}
                   catIcon={catIcons[currentQuestionIndex % catIcons.length]}
