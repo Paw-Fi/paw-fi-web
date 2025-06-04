@@ -238,7 +238,7 @@ export default function Header() {
               >
                 Calculators
               </Link>
-              <Link 
+              {/* <Link 
                 to="/blogs" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 activeProps={{
@@ -246,7 +246,7 @@ export default function Header() {
                 }}
               >
                 Blogs
-              </Link>
+              </Link> */}
             </nav>
           </div>
 
@@ -533,7 +533,7 @@ export default function Header() {
             >
               Calculators
             </Link>
-            <Link
+            {/* <Link
               to="/blogs"
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
               activeProps={{
@@ -542,7 +542,7 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Blogs
-            </Link>
+            </Link> */}
           </div>
           
           {/* Mobile user menu */}

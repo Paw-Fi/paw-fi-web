@@ -1,10 +1,11 @@
 # Production environment configuration
 runConfig:
   minInstances: 1  # Keep at least one instance warm
-  maxInstances: 10
-  cpu: 2
-  memoryMiB: 1024
-  concurrency: 100
+  maxInstances: 2
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
 
 env:
   # Production Supabase configuration

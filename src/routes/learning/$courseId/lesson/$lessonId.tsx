@@ -4,6 +4,7 @@ import { ActionButtons } from "@/components/learning/action-buttons";
 import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import { useLesson } from "@/components/learning/hooks/use-lesson";
+import { unlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
 import { LessonBackButton } from "@/components/learning/lesson-back-button";
 import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
@@ -95,17 +96,17 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
 const catIcons = [catBottle, catCash, catCoin, catPig];
 
 // Function to transform questions into a flashcard-style format
-function transformQuestionsToFlashcards(lesson: Lesson) {
+function transformQuestionsToFlashcards(lesson: Lesson|undefined) {
   const contentItems: Array<{ type: "tutorials"; data: any }> = [];
   const quizTransitionItem: Array<{
     type: "quiz-transition" | "tutorials";
     data: any;
   }> = [];
   const questionItems: Array<{ type: "question"; data: any }> = [];
-  const tutorials = lesson.tutorials;
+  const tutorials = lesson?.tutorials??[];
 
   // First collect all tutorial items
-  tutorials.forEach((tutorial) => {
+  tutorials?.forEach((tutorial) => {
       contentItems.push({
         type: "tutorials",
         data: {
@@ -170,7 +171,6 @@ function LessonPage() {
 
   // Transform questions into flashcard-style content
   const flashcardItems = useMemo(() => {
-    if (!lesson?.tutorials|| !lesson.questions) return [];
     return transformQuestionsToFlashcards(lesson);
   }, [lesson]);
 
@@ -196,22 +196,22 @@ function LessonPage() {
   }
   // Destructure after all early returns
   const {
-    currentQuestionIndex,
     currentQuestion,
     answers,
     isComplete,
+    setIsComplete,
+    showFeedback,
     earnedXp,
+    setEarnedXp,
     currentAnswerCorrect,
     countdownSeconds,
     showExplanation,
     progressPercentage,
     isQuestionAnswered,
-    handleRetry,
     handleCheckAnswer,
     handleNext: nextQuestion,
     handleBack: previousQuestion,
     handleAnswer,
-    showFeedback,
     setShowFeedback,
     setCurrentAnswerCorrect,
     setCountdownSeconds,
@@ -279,14 +279,22 @@ function LessonPage() {
       }
     }
     
-    if (currentItemIndex < flashcardItems.length - 1) {
-      // Reset answer state when moving to the next item
-      resetQuestionStates();
-      
-      setCurrentItemIndex(currentItemIndex + 1);
+    // Check if this is the last item in the lesson
+    const isLastItem = currentItemIndex >= flashcardItems.length - 1;
+    
+    if (isLastItem) {
+      // If we're on the last item, directly complete the lesson
+      // This ensures the completion modal shows up immediately
+      setEarnedXp(lesson?.xp || 0);
+      // Use lesson_id from the adapted lesson object
+      if (lesson) {
+        unlockNextLesson(lesson.lesson_id, courseId);
+      }
+      setIsComplete(true);
     } else {
-      // If we've reached the end of all items, complete the lesson
-      nextQuestion();
+      // If not the last item, move to the next one
+      resetQuestionStates();
+      setCurrentItemIndex(currentItemIndex + 1);
     }
   };
 
@@ -377,7 +385,7 @@ function LessonPage() {
         />     
                 <QuestionHeader
                   question={currentItem.data.question}
-                  catIcon={catIcons[currentQuestionIndex % catIcons.length]}
+                  catIcon={catIcons[currentItemIndex % catIcons.length]}
                 />
 
                 <QuestionContent
