@@ -16,5 +16,8 @@ export default {
         overlay: 'rgba(0, 0, 0, 0.8)'
       }
     }
-  }
+  },
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

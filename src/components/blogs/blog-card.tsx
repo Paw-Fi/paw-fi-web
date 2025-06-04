@@ -55,7 +55,7 @@ export function BlogCard({ blog, index }: BlogCardProps) {
             ))}
           </div>
 
-          <h2 className={`line-clamp-2 ${blog.isExtraFeatured ? 'text-2xl md:text-3xl' : 'text-xl'} font-bold leading-tight text-gray-900 transition-colors group-hover:text-purple-600 dark:text-white dark:group-hover:text-purple-400`}>
+          <h2 className={` ${blog.isExtraFeatured ? 'text-2xl md:text-3xl' : 'text-xl'} font-bold leading-tight text-gray-900 transition-colors group-hover:text-purple-600 dark:text-white dark:group-hover:text-purple-400`}>
             {blog.title}
           </h2>
 

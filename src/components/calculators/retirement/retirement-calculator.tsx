@@ -176,18 +176,18 @@ function RetirementResults({
 
 export function RetirementCalculator() {
   // State for main inputs
-  const [currentAge, setCurrentAge] = useState(35);
-  const [retirementAge, setRetirementAge] = useState(67);
-  const [lifeExpectancy, setLifeExpectancy] = useState(85);
-  const [currentIncome, setCurrentIncome] = useState(70000);
+  const [currentAge, setCurrentAge] = useState<number | ''>(35);
+  const [retirementAge, setRetirementAge] = useState<number | ''>(67);
+  const [lifeExpectancy, setLifeExpectancy] = useState<number | ''>(85);
+  const [currentIncome, setCurrentIncome] = useState<number | ''>(70000);
   // Assumptions
-  const [incomeIncrease, setIncomeIncrease] = useState(3);
-  const [incomeNeededPct, setIncomeNeededPct] = useState(75);
-  const [investmentReturn, setInvestmentReturn] = useState(6);
+  const [incomeIncrease, setIncomeIncrease] = useState<number | ''>(3);
+  const [incomeNeededPct, setIncomeNeededPct] = useState<number | ''>(75);
+  const [investmentReturn, setInvestmentReturn] = useState<number | ''>(6);
   // Optional
-  const [otherIncome, setOtherIncome] = useState(0);
-  const [retirementSavings, setRetirementSavings] = useState(30000);
-  const [futureSavingsPct, setFutureSavingsPct] = useState(10);
+  const [otherIncome, setOtherIncome] = useState<number | ''>(0);
+  const [retirementSavings, setRetirementSavings] = useState<number | ''>(30000);
+  const [futureSavingsPct, setFutureSavingsPct] = useState<number | ''>(10);
 
   const data = getRetirementProjection(
     currentAge,
@@ -217,50 +217,50 @@ export function RetirementCalculator() {
       <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="currentAge">Your current age</label>
-          <input id="currentAge" type="number" min={0} value={currentAge} onChange={e => setCurrentAge(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="currentAge" type="number" min={0} value={currentAge === '' ? '' : currentAge} onChange={e => setCurrentAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="retirementAge">Your planned retirement age</label>
-          <input id="retirementAge" type="number" min={0} value={retirementAge} onChange={e => setRetirementAge(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="retirementAge" type="number" min={0} value={retirementAge === '' ? '' : retirementAge} onChange={e => setRetirementAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="lifeExpectancy">Your life expectancy</label>
-          <input id="lifeExpectancy" type="number" min={0} value={lifeExpectancy} onChange={e => setLifeExpectancy(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="lifeExpectancy" type="number" min={0} value={lifeExpectancy === '' ? '' : lifeExpectancy} onChange={e => setLifeExpectancy(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="currentIncome">Your current pre-tax income</label>
-          <input id="currentIncome" type="number" min={0} value={currentIncome} onChange={e => setCurrentIncome(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="currentIncome" type="number" min={0} value={currentIncome === '' ? '' : currentIncome} onChange={e => setCurrentIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">/year</span>
         </div>
         {/* Assumptions */}
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="incomeIncrease">Your current income increase</label>
-          <input id="incomeIncrease" type="number" min={0} value={incomeIncrease} onChange={e => setIncomeIncrease(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="incomeIncrease" type="number" min={0} value={incomeIncrease === '' ? '' : incomeIncrease} onChange={e => setIncomeIncrease(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">%/year</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="incomeNeededPct">Income needed after retirement</label>
-          <input id="incomeNeededPct" type="number" min={0} value={incomeNeededPct} onChange={e => setIncomeNeededPct(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="incomeNeededPct" type="number" min={0} value={incomeNeededPct === '' ? '' : incomeNeededPct} onChange={e => setIncomeNeededPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">% of income</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="investmentReturn">Average investment return</label>
-          <input id="investmentReturn" type="number" min={0} value={investmentReturn} onChange={e => setInvestmentReturn(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="investmentReturn" type="number" min={0} value={investmentReturn === '' ? '' : investmentReturn} onChange={e => setInvestmentReturn(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">%/year</span>
         </div>
         {/* Optional inputs */}
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="otherIncome">Other income sources</label>
-          <input id="otherIncome" type="number" min={0} value={otherIncome} onChange={e => setOtherIncome(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="otherIncome" type="number" min={0} value={otherIncome === '' ? '' : otherIncome} onChange={e => setOtherIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">/year</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="retirementSavings">Current retirement savings</label>
-          <input id="retirementSavings" type="number" min={0} value={retirementSavings} onChange={e => setRetirementSavings(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="retirementSavings" type="number" min={0} value={retirementSavings === '' ? '' : retirementSavings} onChange={e => setRetirementSavings(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="futureSavingsPct">Future savings percentage</label>
-          <input id="futureSavingsPct" type="number" min={0} value={futureSavingsPct} onChange={e => setFutureSavingsPct(Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <input id="futureSavingsPct" type="number" min={0} value={futureSavingsPct === '' ? '' : futureSavingsPct} onChange={e => setFutureSavingsPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
           <span className="text-xs text-gray-500">% of income</span>
         </div>
       </form>

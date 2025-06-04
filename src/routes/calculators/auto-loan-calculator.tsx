@@ -5,8 +5,21 @@ import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 import { LessonBackButton } from '@/components/learning/lesson-back-button';
 
+interface AutoLoanInputs {
+  price: number | '';
+  down: number | '';
+  rate: number | '';
+  years: number | '';
+}
+
 function AutoLoanCalculatorPage() {
   const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setInputs((prev) => ({ ...prev, [name]: value === '' ? '' : Number(value) }));
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <LessonBackButton onBack={() => navigate({ to: "/calculators" })} />
@@ -20,7 +33,6 @@ function AutoLoanCalculatorPage() {
   );
 }
 
-
 export const Route = createFileRoute('/calculators/auto-loan-calculator')({
   component: AutoLoanCalculatorPage,
   head: () => {
@@ -32,8 +44,7 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
-    
-    // Add structured data for auto loan calculator page
+
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "FinancialProduct",
@@ -47,7 +58,7 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
       },
       "category": "Auto Loan"
     };
-    
+
     return {
       meta,
       link: [

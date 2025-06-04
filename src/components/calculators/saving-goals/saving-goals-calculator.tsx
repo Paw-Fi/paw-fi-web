@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { LineChart } from '@/components/ui/line-chart';
 
 interface SavingGoalsInputs {
-  targetAmount: number;
-  currentSavings: number;
-  years: number;
-  returnRate: number;
+  targetAmount: number | '';
+  currentSavings: number | '';
+  years: number | '';
+  returnRate: number | '';
   compound: 'annually' | 'quarterly' | 'monthly' | 'daily';
   contributionFrequency: 'month' | 'year';
 }
@@ -58,18 +58,34 @@ export function SavingGoalsCalculator() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setInputs((prev) => ({ ...prev, [name]: name === 'compound' || name === 'contributionFrequency' ? value : Number(value) }));
+    setInputs((prev) => ({
+      ...prev,
+      [name]: name === 'compound' || name === 'contributionFrequency'
+        ? value
+        : value === '' ? '' : Number(value)
+    }));
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setHasError(false);
-    if (inputs.targetAmount <= 0 || inputs.years <= 0) {
+    // Coerce '' to 0 for validation
+    const targetAmount = typeof inputs.targetAmount === 'number' ? inputs.targetAmount : 0;
+    const years = typeof inputs.years === 'number' ? inputs.years : 0;
+    if (targetAmount <= 0 || years <= 0) {
       setHasError(true);
       setResult(null);
       return;
     }
-    setResult(calculateRequiredContribution(inputs));
+    // Coerce '' to 0 for calculation
+    const safeInputs = {
+      ...inputs,
+      targetAmount: typeof inputs.targetAmount === 'number' ? inputs.targetAmount : 0,
+      currentSavings: typeof inputs.currentSavings === 'number' ? inputs.currentSavings : 0,
+      years: typeof inputs.years === 'number' ? inputs.years : 0,
+      returnRate: typeof inputs.returnRate === 'number' ? inputs.returnRate : 0,
+    } as SavingGoalsInputs;
+    setResult(calculateRequiredContribution(safeInputs));
   }
 
   return (
@@ -80,19 +96,19 @@ export function SavingGoalsCalculator() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Target Amount ($)
-            <input type="number" name="targetAmount" value={inputs.targetAmount} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
+            <input type="number" name="targetAmount" value={inputs.targetAmount === '' ? '' : inputs.targetAmount} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Current Savings ($)
-            <input type="number" name="currentSavings" value={inputs.currentSavings} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
+            <input type="number" name="currentSavings" value={inputs.currentSavings === '' ? '' : inputs.currentSavings} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Time Horizon (years)
-            <input type="number" name="years" value={inputs.years} min={1} step={1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
+            <input type="number" name="years" value={inputs.years === '' ? '' : inputs.years} min={1} step={1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Expected Return Rate (%)
-            <input type="number" name="returnRate" value={inputs.returnRate} min={0} step={0.1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
+            <input type="number" name="returnRate" value={inputs.returnRate === '' ? '' : inputs.returnRate} min={0} step={0.1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Compounding
