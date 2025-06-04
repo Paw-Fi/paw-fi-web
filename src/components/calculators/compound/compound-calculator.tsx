@@ -18,10 +18,10 @@ interface CalculationResult {
 
 const CompoundCalculator = () => {
   // Form state
-  const [initialInvestment, setInitialInvestment] = useState<number>(1000);
-  const [annualContribution, setAnnualContribution] = useState<number>(1200);
-  const [annualReturn, setAnnualReturn] = useState<number>(7);
-  const [years, setYears] = useState<number>(40);
+  const [initialInvestment, setInitialInvestment] = useState<number | ''>(1000);
+  const [annualContribution, setAnnualContribution] = useState<number | ''>(1200);
+  const [annualReturn, setAnnualReturn] = useState<number | ''>(7);
+  const [years, setYears] = useState<number | ''>(40);
   const [compoundingFrequency, setCompoundingFrequency] = useState<string>('monthly');
   
   // Chart container ref for sizing
@@ -35,33 +35,38 @@ const CompoundCalculator = () => {
       'quarterly': 4,
       'annually': 1
     };
-    
+    // Coerce '' to 0 for calculations
+    const initialInvestmentNum = typeof initialInvestment === 'number' ? initialInvestment : 0;
+    const annualContributionNum = typeof annualContribution === 'number' ? annualContribution : 0;
+    const annualReturnNum = typeof annualReturn === 'number' ? annualReturn : 0;
+    const yearsNum = typeof years === 'number' ? years : 0;
+
     const periods = frequencyMap[compoundingFrequency];
-    const periodicRate = annualReturn / 100 / periods;
-    const totalPeriods = years * periods;
-    
-    let balance = initialInvestment;
-    let totalContributions = initialInvestment;
-    const periodicContribution = annualContribution / periods;
-    
+    const periodicRate = annualReturnNum / 100 / periods;
+    const totalPeriods = yearsNum * periods;
+
+    let balance = initialInvestmentNum;
+    let totalContributions = initialInvestmentNum;
+    const periodicContribution = annualContributionNum / periods;
+
     // Store yearly data for chart
     const yearlyData = [];
-    
+
     for (let period = 1; period <= totalPeriods; period++) {
       // Add periodic contribution
       balance += periodicContribution;
       totalContributions += periodicContribution;
-      
+
       // Apply interest
       const interestEarned = balance * periodicRate;
       balance += interestEarned;
-      
+
       // Record yearly data
       if (period % periods === 0) {
         const year = period / periods;
-        const yearlyInterest: number = balance - (year === 1 ? initialInvestment : yearlyData[year - 2].totalAmount) - periodicContribution * periods;
+        const yearlyInterest: number = balance - (year === 1 ? initialInvestmentNum : yearlyData[year - 2].totalAmount) - periodicContribution * periods;
         const totalInterest = balance - totalContributions;
-        
+
         yearlyData.push({
           year,
           totalAmount: balance,
@@ -71,7 +76,7 @@ const CompoundCalculator = () => {
         });
       }
     }
-    
+
     return {
       finalAmount: balance,
       contributions: totalContributions,
@@ -131,9 +136,10 @@ const CompoundCalculator = () => {
             <input
               id="initialInvestment"
               type="number"
-              value={initialInvestment}
-              onChange={(e) => setInitialInvestment(parseFloat(e.target.value) || 0)}
+              value={initialInvestment === '' ? '' : initialInvestment}
+              onChange={e => setInitialInvestment(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              min={0}
             />
           </div>
           
@@ -144,9 +150,10 @@ const CompoundCalculator = () => {
             <input
               id="annualContribution"
               type="number"
-              value={annualContribution}
-              onChange={(e) => setAnnualContribution(parseFloat(e.target.value) || 0)}
+              value={annualContribution === '' ? '' : annualContribution}
+              onChange={e => setAnnualContribution(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              min={0}
             />
           </div>
           
@@ -157,9 +164,11 @@ const CompoundCalculator = () => {
             <input
               id="annualReturn"
               type="number"
-              value={annualReturn}
-              onChange={(e) => setAnnualReturn(parseFloat(e.target.value) || 0)}
+              value={annualReturn === '' ? '' : annualReturn}
+              onChange={e => setAnnualReturn(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              min={0}
+              step={0.01}
             />
           </div>
           
@@ -170,9 +179,10 @@ const CompoundCalculator = () => {
             <input
               id="years"
               type="number"
-              value={years}
-              onChange={(e) => setYears(parseInt(e.target.value) || 0)}
+              value={years === '' ? '' : years}
+              onChange={e => setYears(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              min={1}
             />
           </div>
           

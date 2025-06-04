@@ -294,3 +294,30 @@ export const deleteConversation = async (supabase: SupabaseClient, conversationI
     return false;
   }
 };
+
+/**
+ * Get suggested responses based on conversation history
+ */
+export async function getPredictedResponses(
+  supabase: SupabaseClient,
+  message: string,
+  history: any[]
+): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('predict-user-responses', {
+      method: 'POST',
+      body: { message, history }
+    });
+    
+    if (error) {
+      console.error('Error getting predicted responses:', error);
+      return [];
+    }
+    
+    // Return the array of suggested responses or an empty array if no data
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error in getPredictedResponses:', error);
+    return [];
+  }
+}
