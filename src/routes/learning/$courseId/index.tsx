@@ -6,8 +6,6 @@ import { useUserCourses } from '@/services/course-service';
 import { motion } from 'framer-motion';
 import type {Lesson } from '@/types/learning.types';
 
-
-import { LessonBackButton } from '@/components/learning/lesson-back-button';
 import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from '@/utils/seo';
@@ -112,10 +110,7 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="py-12 px-4 relative">
-        {!isLoading && <div className="absolute top-4 left-4">
-          <LessonBackButton onBack={() => navigate({ to: "/learning" })} />
-        </div>}
+    <div className="py-12 px-4 relative">      
       {isLoading ? (
  
           <div className="flex flex-col gap-4 items-center mb-8">

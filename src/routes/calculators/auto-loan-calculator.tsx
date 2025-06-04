@@ -3,7 +3,6 @@ import { AutoLoanCalculatorSEOContent } from '@/components/calculators/auto-loan
 import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
-import { LessonBackButton } from '@/components/learning/lesson-back-button';
 
 interface AutoLoanInputs {
   price: number | '';
@@ -22,7 +21,6 @@ function AutoLoanCalculatorPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <LessonBackButton onBack={() => navigate({ to: "/calculators" })} />
       <h1 className="mb-8 text-3xl font-bold text-center">Auto Loan Calculator</h1>
       <p className="mb-6 text-lg text-center">
         Estimate your monthly auto loan payments, see a full amortization schedule, and learn about car financing.
