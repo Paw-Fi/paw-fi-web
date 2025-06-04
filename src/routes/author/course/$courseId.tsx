@@ -8,6 +8,7 @@ import { CourseForm, LessonList, LessonEditor, QuestionTypeSelector } from '@/co
 import { QuestionEditor } from '@/components/author/question-editor';
 import { seo } from '@/utils/seo';
 import basicLessons from '@/data/basic-lessons.json';
+import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/Breadcrumb';
 
 export const Route = createFileRoute('/author/course/$courseId')({
   component: CourseEditorPage,
@@ -307,6 +308,46 @@ function CourseEditorPage() {
   const handleBackToAuthor = () => {
     navigate({ to: '/author' });
   };
+  
+  // Generate breadcrumb items based on current view
+  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+    const items: BreadcrumbItem[] = [
+      { label: 'Home', href: '/' },
+      { label: 'Author Dashboard', href: '/author' }
+    ];
+    
+    if (course) {
+      items.push({
+        label: course.title,
+        href: `/author/course/${courseId}`,
+        isCurrentPage: view === 'overview'
+      });
+      
+      if (view === 'lesson-edit' && currentLesson) {
+        items.push({
+          label: currentLesson.title,
+          href: `/author/course/${courseId}?lesson=${currentLesson.id}`,
+          isCurrentPage: true
+        });
+      } else if (view === 'question-edit' && currentQuestion && currentLesson) {
+        items.push({
+          label: currentLesson.title,
+          href: `/author/course/${courseId}?lesson=${currentLesson.id}`,
+        });
+        
+        const question = currentLesson.questions.find(q => q.id === currentQuestion.questionId);
+        if (question) {
+          items.push({
+            label: `Question: ${question.question.substring(0, 20)}${question.question.length > 20 ? '...' : ''}`,
+            href: `/author/course/${courseId}?lesson=${currentLesson.id}&question=${question.id}`,
+            isCurrentPage: true
+          });
+        }
+      }
+    }
+    
+    return items;
+  };
 
   if (isLoading) {
     return (
@@ -376,6 +417,12 @@ function CourseEditorPage() {
             </span>
           </div>
         </nav>
+        
+        {/* Breadcrumb navigation */}
+        <Breadcrumb 
+          items={getBreadcrumbItems()}
+          className="mt-4"
+        />
         
         <div className="mt-6">
           <h1 className="text-3xl font-bold mb-2 flex items-center">

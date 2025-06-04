@@ -5,7 +5,6 @@ import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import { useLesson } from "@/components/learning/hooks/use-lesson";
 import { unlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
-import { LessonBackButton } from "@/components/learning/lesson-back-button";
 import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
@@ -305,10 +304,9 @@ function LessonPage() {
   return (
     <div className="flex flex-1 flex-col bg-background px-4 py-8 lg:flex-row">
       <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
-        {/* Back button and progress indicator */}
-        <LessonBackButton onBack={handleBack} />
+        <div></div>
       </div>
-      <div className="flex flex-col gap-4 lg:w-[40rem]">
+      <div className="flex flex-col gap-4 lg:w-[50rem]">
         {/* Progress bar */}
         <LessonProgressBar progressPercentage={calculatedProgressPercentage} />
         {/* Main content */}

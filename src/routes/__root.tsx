@@ -21,6 +21,7 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 })))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientOnly } from '@/components/client-only'
+import PageLayout from '@/components/layout/page-layout'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -91,7 +92,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>       
       <AuthProvider>
         <Header />
-        
+        <PageLayout/>
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
           <Suspense fallback={null}>
