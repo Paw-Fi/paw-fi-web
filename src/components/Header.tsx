@@ -9,139 +9,109 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
 import type { Lesson } from "@/types/learning.types";
+// No JS truncate needed; use CSS line-clamp/truncate for all text truncation.
 
-
+// Grouping logic based on lesson titles/ids
 interface LessonGroup {
   name: string;
   shortform: string;
   lessons: Array<{ lesson: Lesson; lessonShortform: string }>;
 }
 
+// Canonical lesson mappings by ID for robust grouping and SEO
 const lessonMappings = [
-  // Getting Started
+  // Core Concepts
   {
-    group: "Getting Started",
-    groupShort: "GS",
+    group: "Core Concepts",
+    groupShort: "CORE",
     lessonShort: "Key Concepts",
-    lessonId: "L1-beginners-guide-investing-concepts",
+    lessonId: "invest-L1",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
+    group: "Core Concepts",
+    groupShort: "CORE",
     lessonShort: "Risk & Loss",
-    lessonId: "L1b-risk-and-loss",
+    lessonId: "behavfin-L2",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
+    group: "Core Concepts",
+    groupShort: "CORE",
     lessonShort: "Investment Risk",
-    lessonId: "L1d-investment-risk",
+    lessonId: "tvm-L7",
+  },
+  // Markets & Instruments
+  {
+    group: "Markets & Instruments",
+    groupShort: "MARKETS",
+    lessonShort: "Money Markets",
+    lessonId: "moneymarket-L3",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
-    lessonShort: "Diversification",
-    lessonId: "L1c-diversification",
+    group: "Markets & Instruments",
+    groupShort: "MARKETS",
+    lessonShort: "Bonds & Credit",
+    lessonId: "bondmarket-L4",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
-    lessonShort: "Broker vs Dealer",
-    lessonId: "L1e-broker-vs-dealer",
+    group: "Markets & Instruments",
+    groupShort: "MARKETS",
+    lessonShort: "Stocks & IPOs",
+    lessonId: "equitymarket-L5",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
-    lessonShort: "Primary vs Secondary Market",
-    lessonId: "L1f-primary-vs-secondary-market",
+    group: "Markets & Instruments",
+    groupShort: "MARKETS",
+    lessonShort: "Futures & Options",
+    lessonId: "derivatives-L6",
+  },
+  // Analysis & Fundamentals
+  {
+    group: "Analysis & Fundamentals",
+    groupShort: "ANALYSIS",
+    lessonShort: "Investor Statistics",
+    lessonId: "stats-L8",
   },
   {
-    group: "Getting Started",
-    groupShort: "GS",
-    lessonShort: "Behavioral Finance",
-    lessonId: "L2-behavioral-finance-emotions",
-  },
-  // Investment Types
-  {
-    group: "Investment Types",
-    groupShort: "IT",
-    lessonShort: "Money Market",
-    lessonId: "L3-money-market-explained",
+    group: "Analysis & Fundamentals",
+    groupShort: "ANALYSIS",
+    lessonShort: "Economics Basics",
+    lessonId: "econbasics-L9",
   },
   {
-    group: "Investment Types",
-    groupShort: "IT",
-    lessonShort: "Bonds",
-    lessonId: "L4-bond-market-explained",
-  },
-  {
-    group: "Investment Types",
-    groupShort: "IT",
-    lessonShort: "Stocks",
-    lessonId: "L5-equity-market-overview",
-  },
-  {
-    group: "Investment Types",
-    groupShort: "IT",
-    lessonShort: "Derivatives",
-    lessonId: "L6-derivatives-market-simple",
-  },
-  // Financial Concepts
-  {
-    group: "Financial Concepts",
-    groupShort: "FC",
-    lessonShort: "Time Value",
-    lessonId: "L7-time-value-of-money",
-  },
-  {
-    group: "Financial Concepts",
-    groupShort: "FC",
-    lessonShort: "Statistics",
-    lessonId: "L8-statistics-for-investors",
-  },
-  {
-    group: "Financial Concepts",
-    groupShort: "FC",
-    lessonShort: "Economics",
-    lessonId: "L9-economics-basics-for-investors",
-  },
-  {
-    group: "Financial Concepts",
-    groupShort: "FC",
-    lessonShort: "Financial Statement Analysis",
-    lessonId: "L10-financial-statement-analysis",
+    group: "Analysis & Fundamentals",
+    groupShort: "ANALYSIS",
+    lessonShort: "Financial Statements",
+    lessonId: "finstatements-L10",
   },
 ];
 
-function groupLessons(lessonsToGroup: Lesson[]): { groups: LessonGroup[] } {
-  const groupOrder = [
-    { name: "Getting Started", shortform: "GS" },
-    { name: "Investment Types", shortform: "IT" },
-    { name: "Financial Concepts", shortform: "FC" },
-  ];
-  const groups: LessonGroup[] = groupOrder.map((g) => ({ ...g, lessons: [] }));
-
+function groupLessons(lessons: Lesson[]): { groups: LessonGroup[] } {
+  // Step 1: Get first 10 mapped lessons
+  const top10: Array<{ mapping: typeof lessonMappings[0]; lesson: Lesson }> = [];
   for (const mapping of lessonMappings) {
-    const lesson = lessonsToGroup.find((l) => l.lesson_id === mapping.lessonId);
+    const lesson = lessons.find((l) => l.lesson_id === mapping.lessonId);
     if (lesson) {
-      const groupIdx = groupOrder.findIndex((g) => g.name === mapping.group);
-      if (groupIdx !== -1) {
-        groups[groupIdx].lessons.push({ lesson, lessonShortform: mapping.lessonShort });
-      }
+      top10.push({ mapping, lesson });
+      if (top10.length === 10) break;
     }
   }
-  for (const lesson of lessonsToGroup) {
-    const alreadyMapped = lessonMappings.some((m) => m.lessonId === lesson.lesson_id);
-    if (!alreadyMapped) {
-      const gsGroup = groups.find(g => g.name === "Getting Started");
-      if (gsGroup) {
-        gsGroup.lessons.push({ lesson, lessonShortform: "Other" });
-      }
+  // Step 2: Group by category (group/groupShort)
+  const groupMap = new Map<string, LessonGroup>();
+  for (const { mapping, lesson } of top10) {
+    if (!groupMap.has(mapping.group)) {
+      groupMap.set(mapping.group, {
+        name: mapping.group,
+        shortform: mapping.groupShort,
+        lessons: []
+      });
     }
+    groupMap.get(mapping.group)!.lessons.push({ lesson, lessonShortform: mapping.lessonShort });
   }
+  // Step 3: Return groups in order of first appearance in lessonMappings
+  const groupOrder: string[] = top10.map(({ mapping }) => mapping.group).filter((v, i, arr) => arr.indexOf(v) === i);
+  const groups = groupOrder.map((group) => groupMap.get(group)!);
   return { groups };
 }
-
 const lessons: Lesson[] = lessonsData.lessons.map((l: any) => ({
   lesson_id: l.lesson_id,
   title: l.title,
@@ -152,6 +122,7 @@ const lessons: Lesson[] = lessonsData.lessons.map((l: any) => ({
   tutorials: l.tutorials,
   questions: l.questions,
 }));
+const { groups } = groupLessons(lessons);
 
 // Animation variants for dropdown menu
 const dropdownVariants: Variants = {
@@ -219,7 +190,7 @@ export default function Header() {
                 Home
               </Link>
               {/* Learning dropdown */}
-              <LearningDropdown lessons={lessons} />
+              <LearningDropdown groups={groups} />
               <Link 
                 to="/chat" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
