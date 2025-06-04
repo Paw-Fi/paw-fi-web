@@ -5,7 +5,7 @@ import type { FormEvent } from "react"; // For verbatimModuleSyntax
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
+import { faGraduationCap, faLightbulb } from "@fortawesome/free-solid-svg-icons";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "../ui/modal";
@@ -16,10 +16,12 @@ import {
   addMessageToConversation,
   type Message as ServiceMessage,
   type Conversation,
-  getAIResponseFromEdge
+  getAIResponseFromEdge,
+  getPredictedResponses
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatMessageItem } from "./chat-message-item";
+import { ChatSuggestions } from "./chat-suggestions";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import { sanitizeCourse } from "@/utils/sanitize-course";
@@ -37,6 +39,8 @@ const MAX_TIME_TO_SHOW_LOADING = 8;
 
 export function ChatInterface() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const { getCookie, setCookie } = useCookie();
 
   // --- Guest Conversation Utilities ---
@@ -891,6 +895,39 @@ export function ChatInterface() {
     ],
   );
 
+  // Fetch suggested responses when the last message is from the assistant
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (messages.length > 0 &&!lastMsg?.content?.includes('```json')&& lastMsg?.role === 'assistant' && !isLoading) {
+        setIsFetchingSuggestions(true);
+        const lastMessage = messages[messages.length - 1];
+        const contextMessages = messages.map(msg => ({ role: msg.role, content: msg.content }));
+        try {
+          const suggestions = await getPredictedResponses(supabase, lastMessage.content, contextMessages);
+          setSuggestedResponses(suggestions);
+          scrollToBottom();
+        } catch (error) {
+          console.error('Error fetching suggested responses:', error);
+          setSuggestedResponses([]);
+        } finally {
+          setIsFetchingSuggestions(false);
+        }
+      } else {
+        setSuggestedResponses([]);
+      }
+    };
+    fetchSuggestions();
+  }, [messages, isLoading]);
+
+  // Handle clicking on a suggestion button
+  const handleSuggestionClick = (suggestion: string) => {
+    setCurrentMessage(suggestion);
+    setSuggestedResponses([]);
+    
+    // Instantly send the message
+    handleSendMessage(suggestion);
+  };
+
   // Registration prompt logic
   const lastMsg = messages[messages.length - 1];
   const shouldPromptRegister =
@@ -1037,6 +1074,12 @@ export function ChatInterface() {
       {!isBackendProcessing && (
         <div className="border-t border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
           <div className="mx-auto w-full p-3 md:p-4">
+            <ChatSuggestions
+              suggestions={suggestedResponses}
+              onSuggestionClick={handleSuggestionClick}
+              isLoading={isLoading}
+              isSendingMessage={isSendingMessage}
+            />
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <input
                 ref={inputRef}

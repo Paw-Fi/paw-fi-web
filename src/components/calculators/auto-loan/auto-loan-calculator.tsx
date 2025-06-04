@@ -3,42 +3,54 @@ import { PieChart } from '../../../components/ui/pie-chart';
 import { LineChart } from '../../../components/ui/line-chart';
 
 export function AutoLoanCalculator() {
-  const [autoPrice, setAutoPrice] = useState(30000);
-  const [loanTermMonths, setLoanTermMonths] = useState(60);
-  const [interestRate, setInterestRate] = useState(5.0);
-  const [cashIncentives, setCashIncentives] = useState(0);
-  const [downPayment, setDownPayment] = useState(5000);
-  const [tradeInValue, setTradeInValue] = useState(0);
-  const [amountOwedOnTradeIn, setAmountOwedOnTradeIn] = useState(0);
-  const [salesTax, setSalesTax] = useState(7.0);
-  const [titleFees, setTitleFees] = useState(2000);
+  const [autoPrice, setAutoPrice] = useState<number | ''>(30000);
+  const [loanTermMonths, setLoanTermMonths] = useState<number | ''>(60);
+  const [interestRate, setInterestRate] = useState<number | ''>(5.0);
+  const [cashIncentives, setCashIncentives] = useState<number | ''>(0);
+  const [downPayment, setDownPayment] = useState<number | ''>(5000);
+  const [tradeInValue, setTradeInValue] = useState<number | ''>(0);
+  const [amountOwedOnTradeIn, setAmountOwedOnTradeIn] = useState<number | ''>(0);
+  const [salesTax, setSalesTax] = useState<number | ''>(7.0);
+  const [titleFees, setTitleFees] = useState<number | ''>(2000);
   const [includeFeesInLoan, setIncludeFeesInLoan] = useState(false);
   const [state, setState] = useState('');
   const [showAmortizationSchedule, setShowAmortizationSchedule] = useState(false);
 
   // Calculation logic
   // Sale Tax
-  const saleTax = Math.max(0, (autoPrice - cashIncentives - tradeInValue) * (salesTax / 100));
+  // Coerce '' to 0 for calculations
+  const autoPriceNum = typeof autoPrice === 'number' ? autoPrice : 0;
+  const loanTermMonthsNum = typeof loanTermMonths === 'number' ? loanTermMonths : 0;
+  const interestRateNum = typeof interestRate === 'number' ? interestRate : 0;
+  const cashIncentivesNum = typeof cashIncentives === 'number' ? cashIncentives : 0;
+  const downPaymentNum = typeof downPayment === 'number' ? downPayment : 0;
+  const tradeInValueNum = typeof tradeInValue === 'number' ? tradeInValue : 0;
+  const amountOwedOnTradeInNum = typeof amountOwedOnTradeIn === 'number' ? amountOwedOnTradeIn : 0;
+  const salesTaxNum = typeof salesTax === 'number' ? salesTax : 0;
+  const titleFeesNum = typeof titleFees === 'number' ? titleFees : 0;
+
+  // Sale Tax
+  const saleTax = Math.max(0, (autoPriceNum - cashIncentivesNum - tradeInValueNum) * (salesTaxNum / 100));
 
   // Loan Amount
-  const baseLoan = autoPrice - cashIncentives - downPayment - tradeInValue + amountOwedOnTradeIn;
-  const loanAmount = includeFeesInLoan ? baseLoan + saleTax + titleFees : baseLoan;
+  const baseLoan = autoPriceNum - cashIncentivesNum - downPaymentNum - tradeInValueNum + amountOwedOnTradeInNum;
+  const loanAmount = includeFeesInLoan ? baseLoan + saleTax + titleFeesNum : baseLoan;
 
   // Upfront Payment
   const upfrontPayment = includeFeesInLoan
-    ? downPayment + tradeInValue + cashIncentives
-    : downPayment + tradeInValue + cashIncentives + saleTax + titleFees;
+    ? downPaymentNum + tradeInValueNum + cashIncentivesNum
+    : downPaymentNum + tradeInValueNum + cashIncentivesNum + saleTax + titleFeesNum;
 
   // Monthly Payment (Standard Amortization Formula)
   const principal = loanAmount;
-  const monthlyRate = interestRate / 100 / 12;
-  const n = loanTermMonths;
+  const monthlyRate = interestRateNum / 100 / 12;
+  const n = loanTermMonthsNum;
   const monthlyPayment = monthlyRate === 0
-    ? principal / n
+    ? (n === 0 ? 0 : principal / n)
     : (principal * monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
 
   // Total of All Payments
-  const totalPayments = monthlyPayment * loanTermMonths;
+  const totalPayments = monthlyPayment * loanTermMonthsNum;
 
   // Total Interest
   const totalInterest = totalPayments - loanAmount;
@@ -52,42 +64,42 @@ export function AutoLoanCalculator() {
       <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="autoPrice">Auto Price</label>
-          <input id="autoPrice" type="number" min={0} value={autoPrice} onChange={e => setAutoPrice(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="autoPrice" type="number" min={0} value={autoPrice === '' ? '' : autoPrice} onChange={e => setAutoPrice(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="loanTermMonths">Loan Term</label>
-          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths} onChange={e => setLoanTermMonths(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
           <span className="text-xs text-gray-500">months</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="interestRate">Interest Rate</label>
-          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate} onChange={e => setInterestRate(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
           <span className="text-xs text-gray-500">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="cashIncentives">Cash Incentives</label>
-          <input id="cashIncentives" type="number" min={0} value={cashIncentives} onChange={e => setCashIncentives(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="cashIncentives" type="number" min={0} value={cashIncentives === '' ? '' : cashIncentives} onChange={e => setCashIncentives(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="downPayment">Down Payment</label>
-          <input id="downPayment" type="number" min={0} value={downPayment} onChange={e => setDownPayment(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="downPayment" type="number" min={0} value={downPayment === '' ? '' : downPayment} onChange={e => setDownPayment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="tradeInValue">Trade-In Value</label>
-          <input id="tradeInValue" type="number" min={0} value={tradeInValue} onChange={e => setTradeInValue(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="tradeInValue" type="number" min={0} value={tradeInValue === '' ? '' : tradeInValue} onChange={e => setTradeInValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="amountOwedOnTradeIn">Amount Owed on Trade-In</label>
-          <input id="amountOwedOnTradeIn" type="number" min={0} value={amountOwedOnTradeIn} onChange={e => setAmountOwedOnTradeIn(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="amountOwedOnTradeIn" type="number" min={0} value={amountOwedOnTradeIn === '' ? '' : amountOwedOnTradeIn} onChange={e => setAmountOwedOnTradeIn(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="salesTax">Sales Tax</label>
-          <input id="salesTax" type="number" min={0} step={0.01} value={salesTax} onChange={e => setSalesTax(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="salesTax" type="number" min={0} step={0.01} value={salesTax === '' ? '' : salesTax} onChange={e => setSalesTax(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
           <span className="text-xs text-gray-500">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="titleFees">Title Fees</label>
-          <input id="titleFees" type="number" min={0} value={titleFees} onChange={e => setTitleFees(Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <input id="titleFees" type="number" min={0} value={titleFees === '' ? '' : titleFees} onChange={e => setTitleFees(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
         </div>
         <div className="flex items-center">
           <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2" />

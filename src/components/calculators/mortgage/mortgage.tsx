@@ -14,30 +14,36 @@ interface AmortizationRow {
 
 export const MortgageCalculator = () => {
   // Form state
-  const [homePrice, setHomePrice] = useState<number>(300000);
-  const [downPayment, setDownPayment] = useState<number>(60000);
-  const [downPaymentPercent, setDownPaymentPercent] = useState<number>(20);
-  const [loanAmount, setLoanAmount] = useState<number>(240000);
-  const [interestRate, setInterestRate] = useState<number>(4.5);
-  const [loanTerm, setLoanTerm] = useState<number>(30);
+  const [homePrice, setHomePrice] = useState<number | ''>(300000);
+  const [downPayment, setDownPayment] = useState<number | ''>(60000);
+  const [downPaymentPercent, setDownPaymentPercent] = useState<number | ''>(20);
+  const [loanAmount, setLoanAmount] = useState<number | ''>(240000);
+  const [interestRate, setInterestRate] = useState<number | ''>(4.5);
+  const [loanTerm, setLoanTerm] = useState<number | ''>(30);
   const [startDate, setStartDate] = useState<string>(
     new Date().toISOString().substring(0, 7)
   );
   const [showAmortizationTable, setShowAmortizationTable] = useState<boolean>(false);
   const [includePropertyTax, setIncludePropertyTax] = useState<boolean>(false);
-  const [propertyTaxRate, setPropertyTaxRate] = useState<number>(1.2);
+  const [propertyTaxRate, setPropertyTaxRate] = useState<number | ''>(1.2);
   const [includeHomeInsurance, setIncludeHomeInsurance] = useState<boolean>(false);
-  const [homeInsurance, setHomeInsurance] = useState<number>(1200);
+  const [homeInsurance, setHomeInsurance] = useState<number | ''>(1200);
   const [includePMI, setIncludePMI] = useState<boolean>(false);
-  const [pmiRate, setPmiRate] = useState<number>(0.5);
+  const [pmiRate, setPmiRate] = useState<number | ''>(0.5);
 
   // Handle down payment changes
-  const handleDownPaymentChange = (value: number) => {
+  const handleDownPaymentChange = (value: number | '') => {
+    if (value === '' || homePrice === '') {
+      setDownPayment('');
+      setDownPaymentPercent('');
+      setLoanAmount(homePrice === '' ? '' : homePrice);
+      setIncludePMI(false);
+      return;
+    }
     const newDownPayment = Math.min(value, homePrice);
     setDownPayment(newDownPayment);
     setDownPaymentPercent(parseFloat(((newDownPayment / homePrice) * 100).toFixed(2)));
     setLoanAmount(homePrice - newDownPayment);
-    
     // Auto-toggle PMI based on down payment percentage
     if ((newDownPayment / homePrice) < 0.2) {
       setIncludePMI(true);
@@ -47,13 +53,19 @@ export const MortgageCalculator = () => {
   };
 
   // Handle down payment percentage changes
-  const handleDownPaymentPercentChange = (value: number) => {
+  const handleDownPaymentPercentChange = (value: number | '') => {
+    if (value === '' || homePrice === '') {
+      setDownPaymentPercent('');
+      setDownPayment('');
+      setLoanAmount(homePrice === '' ? '' : homePrice);
+      setIncludePMI(false);
+      return;
+    }
     const percentage = Math.min(value, 100);
     setDownPaymentPercent(percentage);
     const newDownPayment = Math.round(homePrice * (percentage / 100));
     setDownPayment(newDownPayment);
     setLoanAmount(homePrice - newDownPayment);
-    
     // Auto-toggle PMI based on down payment percentage
     if (percentage < 20) {
       setIncludePMI(true);
@@ -63,24 +75,39 @@ export const MortgageCalculator = () => {
   };
 
   // Handle home price changes
-  const handleHomePriceChange = (value: number) => {
+  const handleHomePriceChange = (value: number | '') => {
+    if (value === '') {
+      setHomePrice('');
+      setDownPayment('');
+      setDownPaymentPercent('');
+      setLoanAmount('');
+      return;
+    }
     const newHomePrice = Math.max(value, 0);
     setHomePrice(newHomePrice);
-    
     // Maintain the same down payment percentage
-    const newDownPayment = Math.round(newHomePrice * (downPaymentPercent / 100));
+    const percent = downPaymentPercent === '' ? 0 : downPaymentPercent;
+    const newDownPayment = Math.round(newHomePrice * (percent / 100));
     setDownPayment(newDownPayment);
     setLoanAmount(newHomePrice - newDownPayment);
   };
 
 // Calculate mortgage details
   const mortgageDetails = useMemo(() => {
+    // Coerce '' to 0 for all calculations
+    const _homePrice = typeof homePrice === 'number' ? homePrice : 0;
+    const _downPayment = typeof downPayment === 'number' ? downPayment : 0;
+    const _downPaymentPercent = typeof downPaymentPercent === 'number' ? downPaymentPercent : 0;
+    const _loanAmount = typeof loanAmount === 'number' ? loanAmount : 0;
+    const _interestRate = typeof interestRate === 'number' ? interestRate : 0;
+    const _loanTerm = typeof loanTerm === 'number' ? loanTerm : 0;
+    const _propertyTaxRate = typeof propertyTaxRate === 'number' ? propertyTaxRate : 0;
+    const _homeInsurance = typeof homeInsurance === 'number' ? homeInsurance : 0;
+    const _pmiRate = typeof pmiRate === 'number' ? pmiRate : 0;
     // Monthly interest rate
-    const monthlyRate = interestRate / 100 / 12;
-    
+    const monthlyRate = _interestRate / 100 / 12;
     // Total number of payments
-    const totalPayments = loanTerm * 12;
-    
+    const totalPayments = _loanTerm * 12;
     // Monthly principal and interest payment using the formula:
     // M = P [ i(1 + i)^n ] / [ (1 + i)^n - 1]
     // Where:
@@ -88,40 +115,31 @@ export const MortgageCalculator = () => {
     // P = loan amount
     // i = monthly interest rate
     // n = number of payments
-    const monthlyPayment = loanAmount * 
+    const monthlyPayment = _loanAmount * 
       (monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
-      (Math.pow(1 + monthlyRate, totalPayments) - 1);
-    
+      (Math.pow(1 + monthlyRate, totalPayments) - 1) || 0;
     // Calculate additional costs
     const monthlyPropertyTax = includePropertyTax ? 
-      (homePrice * (propertyTaxRate / 100)) / 12 : 0;
-    
+      (_homePrice * (_propertyTaxRate / 100)) / 12 : 0;
     const monthlyHomeInsurance = includeHomeInsurance ? 
-      homeInsurance / 12 : 0;
-    
-    const monthlyPMI = includePMI && (downPaymentPercent < 20) ? 
-      (loanAmount * (pmiRate / 100)) / 12 : 0;
-    
+      _homeInsurance / 12 : 0;
+    const monthlyPMI = includePMI && (_downPaymentPercent < 20) ? 
+      (_loanAmount * (_pmiRate / 100)) / 12 : 0;
     // Total monthly payment
     const totalMonthlyPayment = monthlyPayment + monthlyPropertyTax + 
       monthlyHomeInsurance + monthlyPMI;
-    
     // Generate amortization schedule
     const amortizationSchedule: AmortizationRow[] = [];
-    let remainingBalance = loanAmount;
+    let remainingBalance = _loanAmount;
     let totalInterestPaid = 0;
-    
     for (let i = 1; i <= totalPayments; i++) {
       // Calculate interest for this period
       const interestForThisPeriod = remainingBalance * monthlyRate;
       totalInterestPaid += interestForThisPeriod;
-      
       // Calculate principal for this period
       const principalForThisPeriod = monthlyPayment - interestForThisPeriod;
-      
       // Update remaining balance
       remainingBalance -= principalForThisPeriod;
-      
       // Add row to amortization schedule
       amortizationSchedule.push({
         paymentNumber: i,
@@ -132,7 +150,6 @@ export const MortgageCalculator = () => {
         totalInterestPaid: totalInterestPaid
       });
     }
-    
     return {
       monthlyPrincipalAndInterest: monthlyPayment,
       monthlyPropertyTax,
@@ -140,7 +157,7 @@ export const MortgageCalculator = () => {
       monthlyPMI,
       totalMonthlyPayment,
       totalInterestPaid,
-      totalCostOfLoan: loanAmount + totalInterestPaid,
+      totalCostOfLoan: _loanAmount + totalInterestPaid,
       amortizationSchedule
     };
   }, [
@@ -195,8 +212,8 @@ export const MortgageCalculator = () => {
                 id="homePrice"
                 className="appearance-none block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="0.00"
-                value={homePrice}
-                onChange={(e) => handleHomePriceChange(Number(e.target.value))}
+                value={homePrice === '' ? '' : homePrice}
+                onChange={(e) => handleHomePriceChange(e.target.value === '' ? '' : Number(e.target.value))}
               />
             </div>
           </div>
@@ -214,8 +231,8 @@ export const MortgageCalculator = () => {
                   id="downPayment"
                   className="appearance-none block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="0.00"
-                  value={downPayment}
-                  onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
+                  value={downPayment === '' ? '' : downPayment}
+                  onChange={(e) => handleDownPaymentChange(e.target.value === '' ? '' : Number(e.target.value))}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <span className="text-gray-500 sm:text-sm">or</span>

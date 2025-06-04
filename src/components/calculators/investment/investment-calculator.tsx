@@ -584,11 +584,11 @@ function AdditionalContributionResults({ requiredContribution, endBalance, start
 
 // --- End Amount Mode ---
 interface EndAmountInputs {
-  startingAmount: number;
-  years: number;
-  returnRate: number;
+  startingAmount: number | '';
+  years: number | '';
+  returnRate: number | '';
   compound: "annually" | "quarterly" | "monthly" | "daily";
-  additionalContribution: number;
+  additionalContribution: number | '';
   contributionTiming: "beginning" | "end";
   contributionFrequency: "month" | "year";
 }
@@ -606,7 +606,7 @@ function EndAmountTab() {
   const [submitted, setSubmitted] = useState(false);
 
   function handleChange<T extends keyof EndAmountInputs>(key: T, value: EndAmountInputs[T]) {
-    setInputs((prev) => ({ ...prev, [key]: value }));
+    setInputs((prev) => ({ ...prev, [key]: value === '' ? '' : value }));
     setSubmitted(false);
   }
 
@@ -636,21 +636,21 @@ function EndAmountTab() {
                 <InputField
                   label="Starting Amount"
                   type="number"
-                  value={inputs.startingAmount}
+                  value={inputs.startingAmount === '' ? '' : inputs.startingAmount}
                   min={0}
-                  step={100}
-                  onChange={v => handleChange("startingAmount", Number(v))}
+                  step={1000}
+                  onChange={v => handleChange("startingAmount", v === '' ? '' : Number(v))}
                   prefix="$"
                   description="Your initial investment amount"
                 />
                 <InputField
                   label="Investment Period"
                   type="number"
-                  value={inputs.years}
+                  value={inputs.years === '' ? '' : inputs.years}
                   min={1}
                   max={100}
                   step={1}
-                  onChange={v => handleChange("years", Number(v))}
+                  onChange={v => handleChange("years", v === '' ? '' : Number(v))}
                   suffix="years"
                   description="How long you plan to invest"
                 />
@@ -666,11 +666,11 @@ function EndAmountTab() {
                 <InputField
                   label="Annual Return Rate"
                   type="number"
-                  value={inputs.returnRate}
+                  value={inputs.returnRate === '' ? '' : inputs.returnRate}
                   min={0}
                   max={100}
                   step={0.1}
-                  onChange={v => handleChange("returnRate", Number(v))}
+                  onChange={v => handleChange("returnRate", v === '' ? '' : Number(v))}
                   suffix="%"
                   description="Expected annual return percentage"
                 />
@@ -698,10 +698,10 @@ function EndAmountTab() {
                 <InputField
                   label="Contribution Amount"
                   type="number"
-                  value={inputs.additionalContribution}
+                  value={inputs.additionalContribution === '' ? '' : inputs.additionalContribution}
                   min={0}
                   step={100}
-                  onChange={v => handleChange("additionalContribution", Number(v))}
+                  onChange={v => handleChange("additionalContribution", v === '' ? '' : Number(v))}
                   prefix="$"
                   description="Amount added regularly"
                 />
@@ -895,11 +895,16 @@ interface EndAmountResult {
 function calculateEndAmount(inputs: EndAmountInputs): EndAmountResult {
   const compoundMap = { annually: 1, quarterly: 4, monthly: 12, daily: 365 };
   const n = compoundMap[inputs.compound];
-  const periods = inputs.years * n;
-  const rate = inputs.returnRate / 100 / n;
+  // Coerce '' to 0 for calculations
+  const years = typeof inputs.years === 'number' ? inputs.years : 0;
+  const returnRate = typeof inputs.returnRate === 'number' ? inputs.returnRate : 0;
+  const additionalContribution = typeof inputs.additionalContribution === 'number' ? inputs.additionalContribution : 0;
+  const startingAmount = typeof inputs.startingAmount === 'number' ? inputs.startingAmount : 0;
+  const periods = years * n;
+  const rate = returnRate / 100 / n;
   const contribPeriods = inputs.contributionFrequency === "month" ? 12 : 1;
-  const contribPerPeriod = inputs.additionalContribution / (n / contribPeriods);
-  let balance = inputs.startingAmount;
+  const contribPerPeriod = additionalContribution / (n / contribPeriods);
+  let balance = startingAmount;
   let totalContrib = 0;
   let totalInterest = 0;
   const schedule = [];
@@ -921,7 +926,7 @@ function calculateEndAmount(inputs: EndAmountInputs): EndAmountResult {
   }
   return {
     endBalance: balance,
-    startingAmount: inputs.startingAmount,
+    startingAmount,
     totalContributions: totalContrib,
     totalInterest,
     schedule,
