@@ -20,6 +20,7 @@ import { blogs } from "@/data/blogs/blogs";
 import { Blog } from "@/components/blogs/blogs.typing";
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
+import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,
@@ -199,7 +200,7 @@ function BlogDetailPage() {
         </div>
 
         <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">
-          <ReactMarkdown>{blog.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} >{blog.content}</ReactMarkdown>
         </article>
 
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">

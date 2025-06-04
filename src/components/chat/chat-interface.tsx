@@ -26,6 +26,8 @@ import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import { sanitizeCourse } from "@/utils/sanitize-course";
 
+const INITIAL_SUGGESTIONS = ["Start"];
+
 interface Message {
   content: string;
   role: "user" | "assistant";
@@ -913,6 +915,11 @@ export function ChatInterface() {
           setIsFetchingSuggestions(false);
         }
       } else {
+        if(!isLoading&&!messages.length)
+        {
+          setSuggestedResponses(INITIAL_SUGGESTIONS);
+        }
+        else
         setSuggestedResponses([]);
       }
     };
