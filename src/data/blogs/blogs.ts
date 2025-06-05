@@ -1,28 +1,35 @@
 import { Blog, BlogAuthor, BlogTag } from "@/components/blogs/blogs.typing";
-
+import PawFiIcons from "@assets/images/pawfi-icon.png";
 // --- Reusable Authors ---
 export const authorsData: BlogAuthor[] = [
-    {
-      id: "author-1",
-      name: "Dr. Evelyn Reed",
-      avatar: "https://picsum.photos/200",
-      title: "Chief Market Analyst",
-      bio: "Dr. Reed has over 15 years of experience in financial markets, specializing in macroeconomic trends and investment strategies. She's a regular commentator on global economic shifts.",
-    },
-    {
-      id: "author-2",
-      name: "Marcus \"Future\" Finch",
-      avatar: "https://picsum.photos/300",
-      title: "Lead Tech & Crypto Strategist",
-      bio: "Marcus is at the forefront of emerging technologies, particularly blockchain and AI, and their impact on traditional finance. He's known for his bold predictions.",
-    },
-    {
-      id: "author-3",
-      name: "Olivia Chen",
-      avatar: "https://picsum.photos/400",
-      title: "Personal Finance Guru",
-      bio: "Olivia empowers individuals to take control of their financial future through practical advice on budgeting, saving, and navigating market volatility.",
-    }
+  {
+    id: "pawfi-author-001",
+    name: "Dr. Aris Thorne",
+    avatar: "https://randomuser.me/api/portraits/men/45.jpg", // Professional looking male
+    title: "Chief Investment Strategist, PawFi Insights",
+    bio: "With over two decades in financial markets and a Ph.D. in Economics, Dr. Thorne leads PawFi's market analysis and investment strategy division. He is dedicated to providing data-driven insights to help users navigate complex financial landscapes and make informed investment decisions.",
+  },
+  {
+    id: "pawfi-author-002",
+    name: "Elena Santos",
+    avatar: "https://randomuser.me/api/portraits/women/33.jpg", // Professional looking female
+    title: "Senior Personal Finance Educator, PawFi Learn",
+    bio: "Elena is a Certified Financial Planner (CFP®) with a passion for demystifying personal finance. At PawFi, she develops educational content aimed at empowering individuals to take control of their financial lives, from budgeting basics to advanced retirement planning.",
+  },
+  {
+    id: "pawfi-author-003",
+    name: "Kenji Tanaka",
+    avatar: "https://randomuser.me/api/portraits/men/62.jpg", // Professional looking male, different ethnicity
+    title: "Lead Analyst, Digital Assets & Fintech, PawFi Futures",
+    bio: "Kenji specializes in the rapidly evolving worlds of cryptocurrency, blockchain technology, and financial technology innovations. He provides PawFi users with cutting-edge analysis on alternative investments and the future of finance.",
+  },
+  {
+    id: "pawfi-author-004",
+    name: "Sarah Miller",
+    avatar: "https://randomuser.me/api/portraits/women/50.jpg", // Professional looking female, approachable
+    title: "Head of Content & Community, PawFi",
+    bio: "Sarah oversees PawFi's content strategy, ensuring all materials are clear, accurate, and actionable. With a background in financial journalism, she is committed to fostering an informed and engaged community around sound financial practices.",
+  }
   ];
   
 // --- Reusable Tags (original + new additions) ---
@@ -102,7 +109,7 @@ export const blogs: Blog[] = [
   
   *Disclaimer: This is not financial advice. Do your own research.*
       `,
-      coverImage: "https://picsum.photos/2000/1200",
+      coverImage: "https://images.unsplash.com/photo-1677756119517-756a188d2d94?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
       author: authorsData[0], // Dr. Evelyn Reed
       tags: [tags[0], tags[4], tags[6], tags[10]], // AI Stocks, Investment Strategy, Tech Giants, NVIDIA
       publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
@@ -140,7 +147,7 @@ export const blogs: Blog[] = [
   
   *Disclaimer: This content is for informational purposes only.*
       `,
-      coverImage: "https://picsum.photos/1400/500",
+      coverImage: "https://images.unsplash.com/photo-1747037801878-324eced72f83?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[0], // Dr. Evelyn Reed
       tags: [tags[1], tags[2], tags[4], tags[9]], // Inflation, Federal Reserve, Investment Strategy, Interest Rates
       publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
@@ -177,7 +184,7 @@ export const blogs: Blog[] = [
   
   *Always do thorough research before investing in cryptocurrencies.*
       `,
-      coverImage: "https://picsum.photos/1000/500",
+      coverImage: "https://images.unsplash.com/photo-1609554497580-f7f3443af6ec?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[1], // Marcus "Future" Finch
       tags: [tags[3], tags[5], tags[11]], // Cryptocurrency, Market Volatility, Bitcoin
       publishedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
@@ -214,7 +221,7 @@ export const blogs: Blog[] = [
   
   *This is not financial advice. Speculative trading is highly risky.*
       `,
-      coverImage: "https://picsum.photos/1100/500",
+      coverImage: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
       author: authorsData[2], // Olivia Chen
       tags: [tags[4], tags[5], tags[12]], // Investment Strategy, Market Volatility, Personal Finance
       publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
@@ -255,7 +262,7 @@ export const blogs: Blog[] = [
   
   *Stay informed about global economic trends to navigate these uncertainties.*
       `,
-      coverImage: "https://picsum.photos/800/1200",
+      coverImage: "https://images.unsplash.com/photo-1494961104209-3c223057bd26?q=80&w=2002&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[0], // Dr. Evelyn Reed
       tags: [tags[1], tags[7], tags[13]], // Inflation, Global Economy, Emerging Markets
       publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
@@ -299,7 +306,7 @@ export const blogs: Blog[] = [
   
   *How are you preparing for the AI-driven future of work?*
       `,
-      coverImage: "https://picsum.photos/900/1400",
+      coverImage: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
       author: authorsData[1], // Marcus "Future" Finch
       tags: [tags[0], tags[7], tags[12]], // AI Stocks, Global Economy, Personal Finance
       publishedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
@@ -343,7 +350,7 @@ export const blogs: Blog[] = [
   
   *Consult with a local real estate professional and financial advisor.*
       `,
-      coverImage: "https://picsum.photos/1600/800",
+      coverImage: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
       author: authorsData[2], // Olivia Chen
       tags: [tags[8], tags[9], tags[12]], // Real Estate, Interest Rates, Personal Finance
       publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
@@ -388,7 +395,7 @@ export const blogs: Blog[] = [
   
   *This information is for educational purposes and not investment advice.*
       `,
-      coverImage: "https://picsum.photos/1100/500",
+      coverImage: "https://images.unsplash.com/photo-1618282249295-7cd3eefecbdc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[0], // Dr. Evelyn Reed
       tags: [tags[4], tags[7], tags[13]], // Investment Strategy, Global Economy, Emerging Markets
       publishedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
@@ -431,7 +438,7 @@ export const blogs: Blog[] = [
   
   *Consider your overall financial plan before investing in gold or any other asset.*
       `,
-      coverImage: "https://picsum.photos/1300/700",
+      coverImage: "https://images.unsplash.com/photo-1610375461369-d613b564f4c4?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[2], // Olivia Chen
       tags: [tags[1], tags[4], tags[5], { id: "tag-16", name: "Gold", slug: "gold" }], // Inflation, Investment Strategy, Market Volatility, Gold
       publishedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
@@ -484,7 +491,7 @@ export const blogs: Blog[] = [
   
   *Consider consulting a financial advisor to help navigate market uncertainty.*
       `,
-      coverImage: "https://picsum.photos/700/1300",
+      coverImage: "https://plus.unsplash.com/premium_photo-1723575762141-5a4aea9df2b3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       author: authorsData[2], // Olivia Chen
       tags: [tags[4], tags[5], tags[12], tags[14]], // Investment Strategy, Market Volatility, Personal Finance, Recession Proof
       publishedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
@@ -556,7 +563,7 @@ A general guideline suggests that if an individual's anticipated tenure in a loc
 
 *Disclaimer: This information is for educational purposes only and should not be construed as financial or real estate advice. Market conditions and personal circumstances vary.*
     `,
-    coverImage: "https://picsum.photos/1210/810",
+    coverImage: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Personal Finance", "Homeownership", "Renting", "Housing Affordability", "Interest Rates"]),
     publishedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
@@ -623,7 +630,7 @@ Careful tenant selection, adequate cash reserves, and a clear understanding of l
 
 *Disclaimer: Real estate investing involves risks, and house hacking requires careful planning and adherence to local regulations. This information is for educational purposes and not financial or legal advice.*
     `,
-    coverImage: "https://picsum.photos/1211/811",
+    coverImage: "https://images.unsplash.com/photo-1572120360610-d971b9d7767c?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Personal Finance", "Real Estate Investing", "House Hacking", "Wealth Building", "Homeownership"]),
     publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -686,7 +693,7 @@ The most prudent approach is to determine a home purchase price and mortgage amo
 
 *Disclaimer: These guidelines are for informational purposes. Consult with a qualified financial advisor and mortgage professional to assess your specific housing affordability based on your complete financial situation.*
     `,
-    coverImage: "https://picsum.photos/1212/812",
+    coverImage: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Personal Finance", "Homeownership", "Housing Affordability", "Budgeting", "Mortgage"]),
     publishedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
@@ -746,7 +753,7 @@ Prospective homebuyers should diligently research and incorporate all these pote
 
 *Disclaimer: Estimated costs are illustrative and can vary significantly. Prospective buyers should obtain specific quotes and estimates for their target property and location.*
     `,
-    coverImage: "https://picsum.photos/1213/813",
+    coverImage: "https://images.unsplash.com/photo-1736319666684-a0f1f6b679cc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Personal Finance", "Homeownership", "Budgeting", "Housing Affordability"]),
     publishedAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(),
@@ -805,7 +812,7 @@ It is also possible to adopt hybrid approaches, incorporating elements from both
 
 *Disclaimer: Financial planning is complex and individualized. The information provided is for educational purposes and should not be considered financial advice. Consult with a qualified financial planner to determine the best strategy for your specific circumstances.*
     `,
-    coverImage: "https://picsum.photos/1214/814",
+    coverImage: "https://images.unsplash.com/photo-1501183007986-d0d080b147f9?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Personal Finance", "Financial Independence", "Early Retirement (FIRE)", "Retirement Planning", "Investment Strategy", "Budgeting"]),
     publishedAt: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
@@ -865,7 +872,7 @@ Ultimately, for a new investor, the decision between an index fund and an ETF is
 
 *Disclaimer: Investment decisions should be based on individual financial goals, risk tolerance, and thorough research. Consult with a financial advisor if necessary.*
     `,
-    coverImage: "https://picsum.photos/1215/815",
+    coverImage: "https://images.unsplash.com/photo-1653469894102-5e59f8d13900?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     author: authorsData[1], // Marcus "Future" Finch
     tags: findTags(["Investment Strategy", "Index Funds", "ETFs", "Beginner Investing", "Personal Finance", "Portfolio Diversification"]),
     publishedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
@@ -928,7 +935,7 @@ In 2025, index funds continue to represent a robust and highly effective investm
 
 *Disclaimer: This analysis is for informational purposes and does not constitute investment advice. All investment decisions should be made after careful consideration of individual circumstances and consultation with a qualified financial advisor.*
     `,
-    coverImage: "https://picsum.photos/1216/816",
+    coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[1], // Marcus "Future" Finch
     tags: findTags(["Investment Strategy", "Index Funds", "ETFs", "Beginner Investing", "Personal Finance", "Portfolio Diversification", "Passive Investing"]),
     publishedAt: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000).toISOString(),
@@ -997,7 +1004,7 @@ Investing an initial $1,000 is a commendable first step. By selecting appropriat
 
 *Disclaimer: This guide provides general information and should not be construed as financial advice. Investment decisions should align with individual risk tolerance and financial objectives. Consult a financial professional if needed.*
     `,
-    coverImage: "https://picsum.photos/1217/817",
+    coverImage: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[1], // Marcus "Future" Finch
     tags: findTags(["Beginner Investing", "Investment Strategy", "Personal Finance", "Index Funds", "ETFs", "Wealth Building"]),
     publishedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1067,7 +1074,7 @@ Investing is a continuous journey, not a singular event. This 90-day plan provid
 
 *Disclaimer: This action plan provides general guidance. Individual investment decisions should be tailored to personal financial circumstances, risk tolerance, and objectives. Consult a qualified financial advisor for personalized advice.*
     `,
-    coverImage: "https://picsum.photos/1218/818",
+    coverImage: "https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?q=80&w=1935&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     author: authorsData[1], // Marcus "Future" Finch
     tags: findTags(["Beginner Investing", "Investment Strategy", "Personal Finance", "Financial Goals", "Portfolio Management", "ETFs", "Index Funds"]),
     publishedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1127,7 +1134,7 @@ While it is beneficial to learn from the mistakes of others, even experienced in
 
 *Disclaimer: This information is for educational purposes and does not constitute financial advice. All investment decisions carry risk.*
     `,
-    coverImage: "https://picsum.photos/1219/819",
+    coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[2], // Olivia Chen
     tags: findTags(["Investing Mistakes", "Investment Strategy", "Behavioral Finance", "Risk Management", "Portfolio Management", "Personal Finance"]),
     publishedAt: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1185,7 +1192,7 @@ In 2025, gold may continue to serve a relevant, albeit specific, role within cer
 
 *Disclaimer: This information is for educational purposes only and should not be construed as investment advice. Past performance is not indicative of future results. All investments carry risk.*
     `,
-    coverImage: "https://picsum.photos/1220/820",
+    coverImage: "https://plus.unsplash.com/premium_photo-1680341133750-fa39b8e1d4ba?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     author: authorsData[0], // Dr. Evelyn Reed
     tags: findTags(["Alternative Investments", "Gold", "Inflation", "Investment Strategy", "Portfolio Diversification", "Safe Haven Asset"]),
     publishedAt: new Date(Date.now() - 23 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1252,7 +1259,7 @@ Both gold and cryptocurrencies offer unique characteristics that may appeal to i
 
 *Disclaimer: This analysis is for informational purposes only and does not constitute investment advice. Investing in cryptocurrencies and commodities involves significant risk, including the potential loss of principal.*
     `,
-    coverImage: "https://picsum.photos/1221/821",
+    coverImage: "https://plus.unsplash.com/premium_photo-1681400668073-a1947604dd36?q=80&w=2079&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     author: authorsData[1], // Marcus "Future" Finch
     tags: findTags(["Alternative Investments", "Gold", "Cryptocurrency", "Bitcoin", "Investment Strategy", "Inflation", "Risk Management", "Portfolio Diversification"]),
     publishedAt: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1321,7 +1328,7 @@ Real estate crowdfunding has significantly expanded access to real estate invest
 
 *Disclaimer: Investing in real estate crowdfunding involves substantial risks, including loss of principal and illiquidity. This information is for educational purposes and does not constitute financial or investment advice.*
     `,
-    coverImage: "https://picsum.photos/1222/822",
+    coverImage: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200&fit=max",
     author: authorsData[0], // Dr. Evelyn Reed
     tags: findTags(["Alternative Investments", "Real Estate Investing", "Crowdfunding", "Passive Income", "Portfolio Diversification", "Investment Strategy"]),
     publishedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
