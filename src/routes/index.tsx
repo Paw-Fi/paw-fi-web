@@ -332,6 +332,12 @@ export default function HomePage() {
           >
             Calculators
           </Link>
+          <Link
+            to="/blogs"
+            className="font-medium text-black hover:text-black hidden lg:block"
+          >
+            Blogs
+          </Link>
           </div>        
         </div>
         <div className="flex items-center gap-4">
