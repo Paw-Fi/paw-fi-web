@@ -6,9 +6,9 @@ export const Route = createFileRoute('/terms-of-service')({
   head: () => {
     const pageUrl = 'https://pawfi.app/terms-of-service';
     const meta = seo({
-      title: 'Terms of Service | PawFi',
-      description: 'Read PawFi\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',
-      keywords: 'terms of service, user agreement, legal terms, PawFi terms',
+      title: 'Terms of Service | Moneko',
+      description: 'Read Moneko\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',
+      keywords: 'terms of service, user agreement, legal terms, Moneko terms',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -18,11 +18,11 @@ export const Route = createFileRoute('/terms-of-service')({
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": "Terms of Service",
-      "description": "PawFi's terms of service agreement outlining the rules and policies for using our platform",
+      "description": "Moneko's terms of service agreement outlining the rules and policies for using our platform",
       "url": pageUrl,
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       }
     };
@@ -63,12 +63,12 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">1. Acceptance of Terms</h2>
           <p>
-            By accessing or using PawFi's services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+            By accessing or using Moneko's services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">2. Description of Service</h2>
           <p>
-            PawFi provides an educational platform designed to help users learn financial concepts in an engaging way. Our services may include interactive lessons, quizzes, and personalized learning paths.
+            Moneko provides an educational platform designed to help users learn financial concepts in an engaging way. Our services may include interactive lessons, quizzes, and personalized learning paths.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">3. User Accounts</h2>
@@ -90,7 +90,7 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">5. Intellectual Property</h2>
           <p>
-            All content on PawFi, including text, graphics, logos, and software, is the property of PawFi or its content suppliers and is protected by copyright and other intellectual property laws.
+            All content on Moneko, including text, graphics, logos, and software, is the property of Moneko or its content suppliers and is protected by copyright and other intellectual property laws.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">6. Disclaimer of Warranties</h2>
@@ -100,12 +100,12 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">7. Limitation of Liability</h2>
           <p>
-            PawFi shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
+            Moneko shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">8. Educational Content Disclaimer</h2>
           <p>
-            The educational content provided by PawFi is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
+            The educational content provided by Moneko is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">9. Modification of Terms</h2>
@@ -115,7 +115,7 @@ function TermsOfService() {
           
           <h2 className="mt-8 text-2xl font-semibold">10. Governing Law</h2>
           <p>
-            These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which PawFi operates, without regard to its conflict of law provisions.
+            These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which Moneko operates, without regard to its conflict of law provisions.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">11. Contact Information</h2>

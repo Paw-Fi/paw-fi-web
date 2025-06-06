@@ -32,7 +32,7 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
   component: LessonPage,
   head: ({ params }: { params: { courseId: string; lessonId: string } }) => {
     let lessonTitle = "Lesson";
-    let lessonDescription = "Explore this lesson on PawFi.";
+    let lessonDescription = "Explore this lesson on Moneko.";
     let courseTitle = "Financial Learning";
     const siteOgImage = "https://paw-fi.app/og-img.png"; // Default site OG image
 
@@ -51,10 +51,10 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
     }
 
     const pageUrl = `https://pawfi.app/learning/${params.courseId}/lesson/${params.lessonId}`;
-    const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, PawFi`;
+    const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, Moneko`;
 
     const meta = seo({
-      title: `${lessonTitle} | ${courseTitle} - PawFi Learning`,
+      title: `${lessonTitle} | ${courseTitle} - Moneko Learning`,
       description: lessonDescription,
       keywords: keywords,
       image: siteOgImage,
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
       description: lessonDescription,
       provider: {
         "@type": "Organization",
-        name: "PawFi",
+        name: "Moneko",
         url: "https://pawfi.app/",
       },
     };

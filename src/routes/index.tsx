@@ -35,9 +35,9 @@ import faqData from '@/data/home/home-faq.json';
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
-    const title = "PawFi: Learn Finance with Free Education & AI Tools";
-    const description = "PawFi offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
-    const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, PawFi";
+    const title = "Moneko: Learn Finance with Free Education & AI Tools";
+    const description = "Moneko offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
+    const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = 'https://paw-fi.app/og-img.png';
     const pageUrl = 'https://pawfi.app/';
 
@@ -54,13 +54,13 @@ export const Route = createFileRoute("/")({
       "@graph": [
         {
           "@type": "Organization",
-          "name": "PawFi",
+          "name": "Moneko",
           "url": pageUrl,
           "logo": `${pageUrl}icon.svg` // Assuming icon.svg is served from root
         },
         {
           "@type": "WebSite",
-          "name": "PawFi",
+          "name": "Moneko",
           "url": pageUrl
         },
         {
@@ -68,18 +68,18 @@ export const Route = createFileRoute("/")({
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "What is PawFi?",
+              "name": "What is Moneko?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "PawFi is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more."
+                "text": "Moneko is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more."
               }
             },
             {
               "@type": "Question",
-              "name": "Who is PawFi for?",
+              "name": "Who is Moneko for?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "PawFi is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, PawFi has resources for you."
+                "text": "Moneko is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, Moneko has resources for you."
               }
             },
             {
@@ -92,18 +92,18 @@ export const Route = createFileRoute("/")({
             },
             {
               "@type": "Question",
-              "name": "Are the financial courses and tools on PawFi free?",
+              "name": "Are the financial courses and tools on Moneko free?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "PawFi offers a mix of free and premium content. Many of our foundational lessons, AI chat features, and basic financial calculators are available for free to help you get started. Advanced courses and specialized tools may be part of a premium offering."
+                "text": "Moneko offers a mix of free and premium content. Many of our foundational lessons, AI chat features, and basic financial calculators are available for free to help you get started. Advanced courses and specialized tools may be part of a premium offering."
               }
             },
             {
               "@type": "Question",
-              "name": "What kind of financial tools does PawFi offer?",
+              "name": "What kind of financial tools does Moneko offer?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "PawFi provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals."
+                "text": "Moneko provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals."
               }
             }
           ]
@@ -264,7 +264,7 @@ function WaitlistForm() {
           viewport={{ once: true, amount: 0.1 }}
           custom={0.2}
         >
-          Be among the first to experience personalized financial education with PawFi. Join our community for updates and beta access.
+          Be among the first to experience personalized financial education with Moneko. Join our community for updates and beta access.
         </motion.p>
 
         <motion.div 
@@ -317,8 +317,8 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center">
-          <img src={catCoin} alt="PawFi Logo" className="h-10 w-10" width="40" height="40" />
-          <span className="ml-2 text-xl font-bold">PawFi</span> 
+          <img src={catCoin} alt="Moneko Logo" className="h-10 w-10" width="40" height="40" />
+          <span className="ml-2 text-xl font-bold">Moneko</span> 
           <div className="flex items-center ml-12 gap-12">
           <Link
             to="/learning"
@@ -382,7 +382,7 @@ export default function HomePage() {
               animate="visible"
               custom={0.2}
             >
-              PawFi understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert-curated content and AI insights.
+              Moneko understands your unique financial journey. Our AI crafts tailored lessons, guiding you to financial literacy and confidence, supported by expert-curated content and AI insights.
             </motion.p>
             <motion.div 
               className="flex flex-col gap-4 sm:flex-row"
@@ -409,7 +409,7 @@ export default function HomePage() {
           <div className="relative z-20 flex justify-center lg:justify-end">
             <motion.img
               src={banner}
-              alt="Friendly cat mascot illustrating PawFi's AI-driven financial learning platform"
+              alt="Friendly cat mascot illustrating Moneko's AI-driven financial learning platform"
               className="w-72 md:w-96"
               width="1846"
               height="2275"
@@ -498,10 +498,10 @@ export default function HomePage() {
             viewport={{ once: true, amount: 0.1 }}
             custom={0.2}
           >
-            At PawFi, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
+            At Moneko, we're committed to democratizing financial literacy. We leverage cutting-edge AI to make complex financial concepts accessible, engaging, and actionable for everyone, regardless of their background. Our goal is to empower you with the knowledge and tools to achieve financial independence.
           </motion.p>
           <div className="flex justify-center">
-            <img src={banner3} alt="Illustration of a cat with a piggy bank, symbolizing PawFi's commitment to financial growth and literacy" className="w-56" width="1216" height="1848" loading="lazy" />
+            <img src={banner3} alt="Illustration of a cat with a piggy bank, symbolizing Moneko's commitment to financial growth and literacy" className="w-56" width="1216" height="1848" loading="lazy" />
           </div>
         </div>
       </section>
@@ -520,7 +520,7 @@ export default function HomePage() {
               whileInView="visible"
               viewport={{ once: true, amount: 0.1 }}
             >
-              How PawFi Works
+              How Moneko Works
             </motion.h2>
 
             <motion.div 
@@ -605,7 +605,7 @@ export default function HomePage() {
             <motion.img
               className="w-44 md:w-80"
               src={banner2}
-              alt="Visual representation of PawFi's personalized AI learning journey for financial education"
+              alt="Visual representation of Moneko's personalized AI learning journey for financial education"
               width="1084"
               height="1848"
               loading="lazy"
@@ -703,7 +703,7 @@ export default function HomePage() {
               variants={fadeInUp}
               custom={0.5}
             >
-              Chat with PawFi AI
+              Chat with Moneko AI
             </motion.h3>
             <motion.p 
               className="mb-6 text-gray-700"
@@ -897,7 +897,7 @@ export default function HomePage() {
             <motion.div className="mb-4 flex items-center" variants={fadeInUp} custom={0.2}>
               <motion.img 
                 src={catCoin} 
-                alt="PawFi Logo" 
+                alt="Moneko Logo" 
                 className="h-8 w-8" 
                 width="32" 
                 height="32" 
@@ -905,7 +905,7 @@ export default function HomePage() {
                 variants={elasticScale}
                 custom={0.3}
               />
-              <motion.span className="ml-2 text-xl font-bold" variants={fadeInUp} custom={0.4}>PawFi</motion.span>
+              <motion.span className="ml-2 text-xl font-bold" variants={fadeInUp} custom={0.4}>Moneko</motion.span>
             </motion.div>
             <motion.p className="text-gray-400" variants={fadeInUp} custom={0.5}>
             Empowering your financial journey with intelligent, personalized learning.
@@ -988,7 +988,7 @@ export default function HomePage() {
             <motion.div className="flex justify-center space-x-4 mb-4" variants={staggerContainer}>
               <motion.a 
                 href="https://facebook.com/your-pawfi-page" 
-                aria-label="PawFi on Facebook" 
+                aria-label="Moneko on Facebook" 
                 className="text-gray-400 hover:text-white"
                 variants={fadeInUp}
                 custom={1.0}
@@ -1008,7 +1008,7 @@ export default function HomePage() {
               </motion.a>
               <motion.a 
                 href="https://twitter.com/your-pawfi-handle" 
-                aria-label="PawFi on Twitter" 
+                aria-label="Moneko on Twitter" 
                 className="text-gray-400 hover:text-white"
                 variants={fadeInUp}
                 custom={1.1}
@@ -1024,7 +1024,7 @@ export default function HomePage() {
               </motion.a>
               <motion.a 
                 href="https://instagram.com/your-pawfi-handle" 
-                aria-label="PawFi on Instagram" 
+                aria-label="Moneko on Instagram" 
                 className="text-gray-400 hover:text-white"
                 variants={fadeInUp}
                 custom={1.2}
@@ -1043,7 +1043,7 @@ export default function HomePage() {
                 </svg>
               </motion.a>
             </motion.div>
-            <motion.p variants={fadeInUp} custom={1.3}>© 2025 PawFi. All rights reserved.</motion.p>
+            <motion.p variants={fadeInUp} custom={1.3}>© 2025 Moneko. All rights reserved.</motion.p>
           </motion.div>
         </motion.div>
       </footer>

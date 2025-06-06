@@ -177,7 +177,7 @@ export default function Header() {
           {/* Logo and main navigation */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-xl font-bold text-primary">PawFi</Link>
+              <Link to="/" className="text-xl font-bold text-primary">Moneko</Link>
             </div>
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link 

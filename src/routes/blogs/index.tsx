@@ -14,9 +14,9 @@ import { seo } from "@/utils/seo";
 export const Route = createFileRoute("/blogs/")({
   component: BlogsPage,
   head: () => {
-    const title = "Financial Education Blog | PawFi";
-    const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from PawFi.";
-    const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, PawFi blog";
+    const title = "Financial Education Blog | Moneko";
+    const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from Moneko.";
+    const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, Moneko blog";
     const imageUrl = "https://pawfi.app/og-blog.png";
     const pageUrl = "https://pawfi.app/blogs";
 
@@ -32,12 +32,12 @@ export const Route = createFileRoute("/blogs/")({
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
-      "headline": "Financial Education Blog | PawFi",
+      "headline": "Financial Education Blog | Moneko",
       "description": description,
       "url": pageUrl,
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "logo": {
           "@type": "ImageObject",
           "url": "https://pawfi.app/icon.svg"

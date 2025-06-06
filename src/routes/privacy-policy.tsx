@@ -6,9 +6,9 @@ export const Route = createFileRoute('/privacy-policy')({
   head: () => {
     const pageUrl = 'https://pawfi.app/privacy-policy';
     const meta = seo({
-      title: 'Privacy Policy | PawFi',
-      description: 'Learn how PawFi collects, uses, and protects your personal information when you use our financial education services.',
-      keywords: 'privacy policy, data protection, personal information, PawFi privacy',
+      title: 'Privacy Policy | Moneko',
+      description: 'Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.',
+      keywords: 'privacy policy, data protection, personal information, Moneko privacy',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -18,11 +18,11 @@ export const Route = createFileRoute('/privacy-policy')({
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": "Privacy Policy",
-      "description": "PawFi's privacy policy explaining how we collect, use, and protect your personal information",
+      "description": "Moneko's privacy policy explaining how we collect, use, and protect your personal information",
       "url": pageUrl,
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       }
     };
@@ -63,7 +63,7 @@ function PrivacyPolicy() {
           
           <h2 className="mt-8 text-2xl font-semibold">1. Introduction</h2>
           <p>
-            Welcome to PawFi's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
+            Welcome to Moneko's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
           </p>
           
           <h2 className="mt-8 text-2xl font-semibold">2. Information We Collect</h2>

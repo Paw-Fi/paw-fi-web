@@ -66,7 +66,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
       },
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "logo": {
           "@type": "ImageObject",
           "url": "https://pawfi.app/icon.svg"
@@ -197,6 +197,9 @@ function BlogDetailPage() {
             alt={`Cover image for ${blog.title}`}
             className="h-full w-full object-cover"
           />
+          <a href={blog.coverImage} target="_blank" className="absolute bottom-2 right-2 rounded-sm bg-black bg-opacity-50 px-1 py-0.5 text-xs text-white">
+            Image from Unsplash
+          </a>
         </div>
 
         <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">

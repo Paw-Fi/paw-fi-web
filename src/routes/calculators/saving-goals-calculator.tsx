@@ -10,9 +10,9 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/saving-goals-calculator';
     const meta = seo({
-      title: 'Savings Goal Calculator | PawFi',
-      description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with PawFi.',
-      keywords: 'savings goal calculator, financial goals, saving plan, regular savings, PawFi',
+      title: 'Savings Goal Calculator | Moneko',
+      description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with Moneko.',
+      keywords: 'savings goal calculator, financial goals, saving plan, regular savings, Moneko',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -22,11 +22,11 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
       "@context": "https://schema.org",
       "@type": "FinancialProduct",
       "name": "Savings Goal Calculator",
-      "description": "Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with PawFi.",
+      "description": "Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with Moneko.",
       "url": pageUrl,
       "provider": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       },
       "category": "Financial Planning Tool"

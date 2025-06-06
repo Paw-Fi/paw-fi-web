@@ -168,7 +168,7 @@ export function ChatInterface() {
   }, [isMergingGuestToAuth, messages, guestMessages]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("PawFi is thinking...");
+  const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
@@ -342,7 +342,7 @@ export function ChatInterface() {
       await addMessageMutation.mutateAsync(userMessage);
 
       // Fetch AI response
-      setLoadingMessage("PawFi is thinking...");
+      setLoadingMessage("Moneko is thinking...");
       const aiResponse = await getAIResponseFromEdge(
         supabase,
         firstMessageContent,
@@ -399,7 +399,7 @@ export function ChatInterface() {
     } finally {
       setIsSendingMessage(false);
       setIsLoading(false);
-      setLoadingMessage("PawFi is thinking...");
+      setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
 
       // Clear the loading timer
@@ -411,7 +411,7 @@ export function ChatInterface() {
   }
 
   const authenticatedMessage =
-    "Hi I'm PawFi! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
+    "Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
   const baseWelcomeMessage = authenticatedMessage;
 
   // Scroll to bottom on mount and whenever messages change or loading state changes
@@ -645,7 +645,7 @@ export function ChatInterface() {
       inputRef.current?.focus();
       setTimeout(() => scrollToBottom(), 50);
       setIsLoading(true);
-      setLoadingMessage("PawFi is thinking...");
+      setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
       if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
       loadingTimerRef.current = setInterval(
@@ -697,7 +697,7 @@ export function ChatInterface() {
         });
       } finally {
         setIsLoading(false);
-        setLoadingMessage("PawFi is thinking...");
+        setLoadingMessage("Moneko is thinking...");
         setLoadingDuration(0);
         if (loadingTimerRef.current) {
           clearInterval(loadingTimerRef.current);
@@ -745,7 +745,7 @@ export function ChatInterface() {
     setTimeout(() => scrollToBottom(), 50);
 
     setIsLoading(true);
-    setLoadingMessage("PawFi is thinking...");
+    setLoadingMessage("Moneko is thinking...");
     setLoadingDuration(0);
 
     // Clear any existing timer
@@ -823,7 +823,7 @@ export function ChatInterface() {
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
-      setLoadingMessage("PawFi is thinking...");
+      setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
 
       // Clear the loading timer

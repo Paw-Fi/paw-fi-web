@@ -25,9 +25,9 @@ export const Route = createFileRoute('/calculators/retirement-calculator')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/retirement-calculator';
     const meta = seo({
-      title: 'Retirement Savings Calculator | PawFi',
-      description: "Plan for your retirement. Estimate how much you need to save and how long your savings will last with PawFi's retirement calculator.",
-      keywords: 'retirement calculator, retirement planning, savings goal, 401k, IRA, pension, PawFi',
+      title: 'Retirement Savings Calculator | Moneko',
+      description: "Plan for your retirement. Estimate how much you need to save and how long your savings will last with Moneko's retirement calculator.",
+      keywords: 'retirement calculator, retirement planning, savings goal, 401k, IRA, pension, Moneko',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -37,11 +37,11 @@ export const Route = createFileRoute('/calculators/retirement-calculator')({
       "@context": "https://schema.org",
       "@type": "FinancialProduct",
       "name": "Retirement Savings Calculator",
-      "description": "Plan for your retirement. Estimate how much you need to save and how long your savings will last with PawFi's retirement calculator.",
+      "description": "Plan for your retirement. Estimate how much you need to save and how long your savings will last with Moneko's retirement calculator.",
       "url": pageUrl,
       "provider": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       },
       "category": "Retirement Planning"

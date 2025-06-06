@@ -10,9 +10,9 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 export const Route = createFileRoute("/chat")({
   component: Chat,
   head: () => {
-    const title = "AI Chat | PawFi - Your Financial Assistant";
-    const description = "Chat with PawFi's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
-    const keywords = "AI chat, financial assistant, PawFi, money questions, financial help, chatbot";
+    const title = "AI Chat | Moneko - Your Financial Assistant";
+    const description = "Chat with Moneko's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
+    const keywords = "AI chat, financial assistant, Moneko, money questions, financial help, chatbot";
     const imageUrl = 'https://paw-fi.app/og-img.png';
     const pageUrl = 'https://pawfi.app/chat';
 
@@ -37,7 +37,7 @@ function Chat() {
         <div className="mt-2 mb-2 flex items-center justify-center">
           <img
             src={catIcon}
-            alt="PawFi Cat"
+            alt="Moneko Cat"
             className="size-8 my-2 sm:size-14"
           />
         </div>

@@ -36,9 +36,9 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/auto-loan-calculator';
     const meta = seo({
-      title: 'Auto Loan Calculator | PawFi',
-      description: "Calculate your auto loan payments, interest, and total cost with PawFi's easy-to-use car loan calculator.",
-      keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, PawFi',
+      title: 'Auto Loan Calculator | Moneko',
+      description: "Calculate your auto loan payments, interest, and total cost with Moneko's easy-to-use car loan calculator.",
+      keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, Moneko',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -47,11 +47,11 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
       "@context": "https://schema.org",
       "@type": "FinancialProduct",
       "name": "Auto Loan Calculator",
-      "description": "Calculate your auto loan payments, interest, and total cost with PawFi's easy-to-use car loan calculator.",
+      "description": "Calculate your auto loan payments, interest, and total cost with Moneko's easy-to-use car loan calculator.",
       "url": pageUrl,
       "provider": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       },
       "category": "Auto Loan"

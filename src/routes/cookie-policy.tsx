@@ -6,9 +6,9 @@ export const Route = createFileRoute('/cookie-policy')({
   head: () => {
     const pageUrl = 'https://pawfi.app/cookie-policy';
     const meta = seo({
-      title: 'Cookie Policy | PawFi',
-      description: 'Learn about how PawFi uses cookies and similar technologies on our website to enhance your browsing experience.',
-      keywords: 'cookie policy, cookies, tracking technologies, PawFi cookies',
+      title: 'Cookie Policy | Moneko',
+      description: 'Learn about how Moneko uses cookies and similar technologies on our website to enhance your browsing experience.',
+      keywords: 'cookie policy, cookies, tracking technologies, Moneko cookies',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -18,11 +18,11 @@ export const Route = createFileRoute('/cookie-policy')({
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": "Cookie Policy",
-      "description": "PawFi's cookie policy explaining how we use cookies and similar technologies",
+      "description": "Moneko's cookie policy explaining how we use cookies and similar technologies",
       "url": pageUrl,
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       }
     };
@@ -68,7 +68,7 @@ function CookiePolicy() {
           
           <h2 className="mt-8 text-2xl font-semibold">2. How We Use Cookies</h2>
           <p>
-            PawFi uses cookies for several purposes, including:
+            Moneko uses cookies for several purposes, including:
           </p>
           <ul className="list-disc pl-8">
             <li><strong>Essential cookies:</strong> These are necessary for the website to function properly.</li>
