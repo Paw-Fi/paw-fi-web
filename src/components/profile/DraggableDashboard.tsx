@@ -25,9 +25,8 @@ import { WidgetFactory } from './widgets/WidgetFactory';
 import { WidgetEditModal } from './WidgetEditModal';
 import { AddWidgetModal } from './AddWidgetModal';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateWidgets, toggleExpandedWidget, setExpandedWidgets } from '@/store/slices/dashboardSlice';
+import { updateWidgets } from '@/store/slices/dashboardSlice'; // Removed toggleExpandedWidget, setExpandedWidgets
 
-type ExpandedWidgetsState = Record<string, boolean>;
 
 interface DraggableDashboardProps {
   widgets: Widget[];
@@ -44,35 +43,16 @@ export function DraggableDashboard({
   onUpdateWidgets
 }: DraggableDashboardProps) {
   const dispatch = useAppDispatch();
-  const { data, expandedWidgets } = useAppSelector(state => state.dashboard);
+  const { data } = useAppSelector(state => state.dashboard); // Removed expandedWidgets
+  // Ensure widgets is always an array, using data from store first
+  const currentWidgets = Array.isArray(data) && data.length > 0 ? data : (Array.isArray(initialWidgets) ? initialWidgets : []);
   
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedNodeRect, setDraggedNodeRect] = useState<DOMRect | null>(null);
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
   
-  // Use widgets from Redux store or fallback to props
-  // Ensure widgets is always an array
-  const widgets = Array.isArray(data) ? data : (Array.isArray(initialWidgets) ? initialWidgets : []);
 
-  // Initialize expanded state
-  useEffect(() => {
-    if (Object.keys(expandedWidgets).length === 0 && widgets.length > 0) {
-      const initialExpandedState: ExpandedWidgetsState = {};
-      widgets.forEach(widget => {
-        const shouldBeExpanded = [
-          'barChart',
-          'lineChart',
-          'financialHealthScorecard',
-          'debtVisualizer',
-          'retirementReadiness',
-          'quickCashFlowSummary'
-        ].includes((widget as any).type);
-        initialExpandedState[widget.id] = shouldBeExpanded;
-      });
-      dispatch(setExpandedWidgets(initialExpandedState));
-    }
-  }, [widgets, expandedWidgets, dispatch]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -101,10 +81,10 @@ export function DraggableDashboard({
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      const oldIndex = widgets.findIndex(widget => widget.id === active.id);
-      const newIndex = widgets.findIndex(widget => widget.id === over.id);
+      const oldIndex = currentWidgets.findIndex(widget => widget.id === active.id);
+      const newIndex = currentWidgets.findIndex(widget => widget.id === over.id);
       
-      const newWidgets = arrayMove(widgets, oldIndex, newIndex);
+      const newWidgets = arrayMove(currentWidgets, oldIndex, newIndex);
       
       // Update Redux store
       dispatch(updateWidgets(newWidgets));
@@ -123,13 +103,90 @@ export function DraggableDashboard({
     setActiveId(null);
   };
 
-  const toggleWidgetHeight = (id: string) => {
-    // Update Redux store
-    dispatch(toggleExpandedWidget(id));
+  const handleToggleRowSpan = (id: string) => {
+    const widgetIndex = currentWidgets.findIndex(w => w.id === id);
+    if (widgetIndex === -1) return;
+
+    const updatedWidgets = currentWidgets.map((widget, index) => {
+      if (index === widgetIndex) {
+        const currentRowSpan = widget.rowSpan || 1; // Default to 1 if undefined
+        return {
+          ...widget,
+          rowSpan: (currentRowSpan === 2 ? 1 : 2) as (1 | 2),
+        };
+      }
+      return widget;
+    });
+
+    dispatch(updateWidgets(updatedWidgets));
+    if (onUpdateWidgets) {
+      onUpdateWidgets(updatedWidgets);
+    }
+  };
+
+  const handleToggleColumnSpan = (id: string) => {
+    const widgetIndex = currentWidgets.findIndex(w => w.id === id);
+    if (widgetIndex === -1) return;
+
+    const updatedWidgets = currentWidgets.map((widget, index) => {
+      if (index === widgetIndex) {
+        return {
+          ...widget,
+          columnSpan: (widget.columnSpan === 2 ? 1 : 2) as (1 | 2),
+        };
+      }
+      return widget;
+    });
+
+    dispatch(updateWidgets(updatedWidgets));
+    if (onUpdateWidgets) {
+      onUpdateWidgets(updatedWidgets);
+    }
+  };
+
+  const handleToggleChecklistItem = (widgetId: string, itemId: string, isCompleted: boolean) => {
+    const widgetIndex = currentWidgets.findIndex(w => w.id === widgetId);
+    if (widgetIndex === -1) {
+      console.warn(`handleToggleChecklistItem: Widget with id ${widgetId} not found.`);
+      return;
+    }
+
+    const targetWidget = currentWidgets[widgetIndex] as Widget;
+
+    if ((targetWidget as any).type !== 'checklist' || !Array.isArray((targetWidget as any).items)) {
+      console.warn('handleToggleChecklistItem: Target is not a valid checklist widget or items are missing/not an array.');
+      return;
+    }
+
+    const items = (targetWidget as any).items as { id: string; isCompleted: boolean }[];
+    const itemIndex = items.findIndex(item => item.id === itemId);
+
+    if (itemIndex === -1) {
+      console.warn(`handleToggleChecklistItem: Item with id ${itemId} not found in widget ${widgetId}.`);
+      return;
+    }
+    
+    const updatedItems = items.map(item =>
+      item.id === itemId ? { ...item, isCompleted: isCompleted } : item
+    );
+
+    const updatedWidget = {
+      ...targetWidget,
+      items: updatedItems,
+    };
+
+    const updatedWidgets = currentWidgets.map((w, index) =>
+      index === widgetIndex ? updatedWidget : w
+    );
+
+    dispatch(updateWidgets(updatedWidgets as Widget[]));
+    if (onUpdateWidgets) {
+      onUpdateWidgets(updatedWidgets as Widget[]);
+    }
   };
 
   const handleRemoveWidget = (id: string) => {
-    const updatedWidgets = widgets.filter(widget => widget.id !== id);
+    const updatedWidgets = currentWidgets.filter(widget => widget.id !== id);
     
     // Update Redux store
     dispatch(updateWidgets(updatedWidgets));
@@ -141,14 +198,14 @@ export function DraggableDashboard({
   };
 
   const handleEditWidget = (id: string) => {
-    const widget = widgets.find?.(w => w.id === id);
+    const widget = currentWidgets.find?.(w => w.id === id);
     if (widget) {
       setEditingWidget(widget as Widget);
     }
   };
 
   const handleSaveWidget = (updatedWidget: Widget) => {
-    const updatedWidgets = widgets.map(widget => 
+    const updatedWidgets = currentWidgets.map(widget => 
       widget.id === updatedWidget.id ? updatedWidget : widget
     );
     
@@ -162,11 +219,7 @@ export function DraggableDashboard({
     }
   };
 
-  const handleAddWidget = (newWidget: Widget) => {
-    const updatedWidgets = [...widgets, newWidget];
-    setIsAddWidgetModalOpen(false);
-    
-    // Set initial expanded state for the new widget
+  const handleAddWidget = (newWidgetData: Omit<Widget, 'rowSpan' | 'columnSpan'> & Partial<Pick<Widget, 'rowSpan' | 'columnSpan'>>) => {
     const shouldBeExpanded = [
       'barChart',
       'lineChart',
@@ -174,17 +227,19 @@ export function DraggableDashboard({
       'debtVisualizer',
       'retirementReadiness',
       'quickCashFlowSummary'
-    ].includes((newWidget as any).type);
+    ].includes((newWidgetData as any).type);
+
+    const newWidgetWithLayout: Widget = {
+      ...newWidgetData,
+      rowSpan: newWidgetData.rowSpan ?? (shouldBeExpanded ? 2 : 1),
+      columnSpan: newWidgetData.columnSpan ?? 1, // Default columnSpan to 1 if not provided
+    } as Widget; // Added 'as Widget' to satisfy TypeScript, assuming all required fields are present
+
+    const updatedWidgets = [...currentWidgets, newWidgetWithLayout];
+    setIsAddWidgetModalOpen(false);
     
     // Update Redux store
     dispatch(updateWidgets(updatedWidgets));
-    
-    // Update expanded widgets state in Redux
-    const newExpandedState = {
-      ...expandedWidgets,
-      [newWidget.id]: shouldBeExpanded
-    };
-    dispatch(setExpandedWidgets(newExpandedState));
     
     // Also call the callback if provided
     if (onUpdateWidgets) {
@@ -193,7 +248,7 @@ export function DraggableDashboard({
   };
 
   // Find the active widget for the drag overlay
-  const activeWidget = widgets.find?.(widget => widget.id === activeId);
+  const activeWidget = currentWidgets.find?.(widget => widget.id === activeId);
 
   return (
     <>
@@ -204,18 +259,20 @@ export function DraggableDashboard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[14rem]">
-          <SortableContext items={widgets.map(w => w.id)} strategy={rectSortingStrategy}>
-            {widgets.map((widget) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[14rem]">
+          <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
+            {currentWidgets.map((widget) => (
               isEditMode ? (
                 <EditableWidget
                   key={widget.id}
                   id={widget.id}
                   widget={widget}
-                  isExpanded={!!expandedWidgets[widget.id]}
-                  onToggleHeight={toggleWidgetHeight}
+                  // isExpanded prop removed, EditableWidget now uses widget.rowSpan directly
+                  onToggleRowSpan={handleToggleRowSpan} // Renamed from onToggleHeight
                   onRemoveWidget={handleRemoveWidget}
                   onEditWidget={handleEditWidget}
+                  onToggleColumnSpan={handleToggleColumnSpan}
+                  onToggleChecklistItem={handleToggleChecklistItem} // Added prop
                   isEditMode={isEditMode}
                 />
               ) : (
@@ -223,8 +280,9 @@ export function DraggableDashboard({
                   key={widget.id}
                   id={widget.id}
                   widget={widget}
-                  isExpanded={!!expandedWidgets[widget.id]}
-                  onToggleHeight={toggleWidgetHeight}
+                  // isExpanded is derived from widget.rowSpan
+                  onToggleRowSpan={handleToggleRowSpan} // Renamed prop and confirmed handler
+                  onToggleChecklistItem={handleToggleChecklistItem} // Added prop
                   isEditMode={isEditMode}
                 />
               )
@@ -234,52 +292,52 @@ export function DraggableDashboard({
           {/* Add widget button in edit mode */}
           {isEditMode && (
             <div 
-              className="border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
+              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
               onClick={() => setIsAddWidgetModalOpen(true)}
+              role="button"
+              tabIndex={0}
+              aria-label="Add new widget"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsAddWidgetModalOpen(true); }}
             >
               <div className="text-center p-6">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 </div>
-                <h3 className="font-medium text-gray-700">Add New Widget</h3>
-                <p className="text-sm text-gray-500 mt-1">Click to add a new dashboard widget</p>
+                <p className="font-medium text-gray-700 dark:text-gray-300">Add Widget</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Click to add a new widget to your dashboard</p>
               </div>
             </div>
           )}
         </div>
         
-        {/* Custom drag overlay that maintains the exact appearance of the original widget */}
-        <DragOverlay adjustScale={false}>
+        <DragOverlay dropAnimation={null}>
           {activeId && activeWidget && draggedNodeRect ? (
             <div 
-              className="bg-white rounded-xl shadow-lg overflow-hidden pointer-events-none"
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.columnSpan === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${activeWidget.rowSpan === 2 ? 'md:row-span-2' : 'md:row-span-1'}`}
               style={{
-                // Use the exact width and height from the original node
                 width: draggedNodeRect.width,
                 height: draggedNodeRect.height,
-                opacity: 0.8,
-                transform: 'none',  // Prevent any automatic scaling
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', // Enhanced shadow
               }}
             >
-              <WidgetFactory widget={activeWidget} />
+              <WidgetFactory widget={activeWidget} onToggleChecklistItem={handleToggleChecklistItem} />
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
-      
-      {/* Widget edit modal */}
-      <WidgetEditModal 
-        isOpen={!!editingWidget}
-        onClose={() => setEditingWidget(null)}
-        widget={editingWidget}
-        onSave={handleSaveWidget}
-      />
-      
-      {/* Add widget modal */}
-      <AddWidgetModal
+
+      {/* Modals */}
+      {editingWidget && (
+        <WidgetEditModal
+          isOpen={!!editingWidget}
+          onClose={() => setEditingWidget(null)}
+          widget={editingWidget} 
+          onSave={handleSaveWidget}
+        />
+      )}
+      <AddWidgetModal 
         isOpen={isAddWidgetModalOpen}
         onClose={() => setIsAddWidgetModalOpen(false)}
         onAddWidget={handleAddWidget}

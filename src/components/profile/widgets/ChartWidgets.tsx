@@ -97,30 +97,47 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
 
 // Bar Chart Widget
 export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
-  const { data, title } = widget;
+  const { data: chartDataDefinition, title, icon } = widget;
+
+  if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
+    return (
+      <Widget widget={widget}>
+        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+          No data available for this chart.
+        </div>
+      </Widget>
+    );
+  }
+
+  const labels = chartDataDefinition.dataPoints.map(dp => dp.label);
+  const values = chartDataDefinition.dataPoints.map(dp => dp.value);
   
+  // Use specific colors from dataPoints if available, otherwise use a default palette
+  const backgroundColors = chartDataDefinition.dataPoints.map(dp => dp.color || 'rgba(99, 102, 241, 0.6)');
+  const borderColors = chartDataDefinition.dataPoints.map(dp => dp.color ? dp.color.replace('0.6', '1') : 'rgba(99, 102, 241, 1)');
+  // A more robust color generation/cycling mechanism might be needed if dp.color is often undefined
+  const defaultBackgroundColors = [
+    'rgba(99, 102, 241, 0.6)', // Indigo
+    'rgba(59, 130, 246, 0.6)', // Blue
+    'rgba(16, 185, 129, 0.6)', // Emerald
+    'rgba(239, 68, 68, 0.6)',  // Red
+    'rgba(245, 158, 11, 0.6)', // Amber
+    'rgba(139, 92, 246, 0.6)', // Violet
+  ];
+  const defaultBorderColors = defaultBackgroundColors.map(color => color.replace('0.6', '1'));
+
   const chartData = {
-    labels: data.labels,
+    labels: labels,
     datasets: [
       {
-        label: title,
-        data: data.values,
-        backgroundColor: [
-          'rgba(99, 102, 241, 0.6)',
-          'rgba(79, 70, 229, 0.6)',
-          'rgba(67, 56, 202, 0.6)',
-          'rgba(55, 48, 163, 0.6)',
-          'rgba(49, 46, 129, 0.6)',
-        ],
-        borderColor: [
-          'rgba(99, 102, 241, 1)',
-          'rgba(79, 70, 229, 1)',
-          'rgba(67, 56, 202, 1)',
-          'rgba(55, 48, 163, 1)',
-          'rgba(49, 46, 129, 1)',
-        ],
+        label: chartDataDefinition.yAxisLabel || title, // Use yAxisLabel from data if available
+        data: values,
+        backgroundColor: chartDataDefinition.dataPoints.every(dp => dp.color) ? backgroundColors : defaultBackgroundColors.slice(0, values.length),
+        borderColor: chartDataDefinition.dataPoints.every(dp => dp.color) ? borderColors : defaultBorderColors.slice(0, values.length),
         borderWidth: 1,
         borderRadius: 6,
+        barPercentage: 0.7,
+        categoryPercentage: 0.8,
       },
     ],
   };
@@ -145,14 +162,27 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
 
 // Line Chart Widget
 export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
-  const { data, title } = widget;
-  
+  const { data: chartDataDefinition, title } = widget;
+
+  if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
+    return (
+      <Widget widget={widget}>
+        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+          No data available for this chart.
+        </div>
+      </Widget>
+    );
+  }
+
+  const labels = chartDataDefinition.dataPoints.map(dp => dp.label);
+  const values = chartDataDefinition.dataPoints.map(dp => dp.value);
+
   const chartData = {
-    labels: data.labels,
+    labels: labels,
     datasets: [
       {
-        label: title,
-        data: data.values,
+        label: chartDataDefinition.yAxisLabel || title,
+        data: values,
         borderColor: 'rgba(79, 70, 229, 1)',
         backgroundColor: 'rgba(79, 70, 229, 0.1)',
         fill: true,
@@ -166,7 +196,7 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
     ],
   };
 
-  const chartOptions = getChartOptions(title);
+  const chartOptions = getChartOptions(chartDataDefinition.xAxisLabel || title);
 
   return (
     <Widget widget={widget}>
@@ -186,14 +216,27 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
 
 // Cash Flow Summary Widget
 export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget }) {
-  const { data, title } = widget;
-  
+  const { data: cashFlowData, title } = widget;
+
+  if (!cashFlowData || !cashFlowData.inflows || !cashFlowData.outflows) {
+    return (
+      <Widget widget={widget}>
+        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+          Cash flow data is incomplete.
+        </div>
+      </Widget>
+    );
+  }
+
+  const totalIncome = cashFlowData.inflows.reduce((sum, item) => sum + item.value, 0);
+  const totalExpenses = cashFlowData.outflows.reduce((sum, item) => sum + item.value, 0);
+
   const chartData = {
     labels: ['Income', 'Expenses'],
     datasets: [
       {
-        label: 'Amount ($)',
-        data: [data.income, data.expenses],
+        label: cashFlowData.projectedPeriod ? `${cashFlowData.projectedPeriod} Amount ($)` : 'Amount ($)',
+        data: [totalIncome, totalExpenses],
         backgroundColor: [
           'rgba(16, 185, 129, 0.6)', // Green for income
           'rgba(239, 68, 68, 0.6)',  // Red for expenses
@@ -208,26 +251,26 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
     ],
   };
 
-  const savings = data.income - data.expenses;
-  const savingsRate = ((savings / data.income) * 100).toFixed(1);
+  const savings = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : '0.0';
 
-  const chartOptions = getChartOptions(title);
+  const chartOptions = getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : ''));
 
   return (
     <Widget widget={widget}>
-      <div className="flex flex-col h-full">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">Income</div>
-            <div className="text-xl font-semibold text-green-600">${data.income}</div>
+      <div className="flex flex-col h-full p-1"> {/* Adjusted padding slightly */} 
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-green-50 dark:bg-green-500/10 p-3 rounded-lg shadow-sm">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Income</div>
+            <div className="text-lg font-semibold text-green-600 dark:text-green-400">${totalIncome.toLocaleString()}</div>
           </div>
-          <div className="bg-red-50 p-3 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">Expenses</div>
-            <div className="text-xl font-semibold text-red-600">${data.expenses}</div>
+          <div className="bg-red-50 dark:bg-red-500/10 p-3 rounded-lg shadow-sm">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Expenses</div>
+            <div className="text-lg font-semibold text-red-600 dark:text-red-400">${totalExpenses.toLocaleString()}</div>
           </div>
         </div>
         
-        <div className="flex-grow">
+        <div className="flex-grow h-40"> {/* Added fixed height for chart area */} 
           <Bar 
             data={chartData} 
             options={{

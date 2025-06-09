@@ -1,198 +1,336 @@
+export interface IBaseWidget {
+  id: string; // Unique identifier for the widget itself (Mandatory)
+  title: string; // Title displayed for the widget (Mandatory)
+  icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
+  columnSpan: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
+  rowSpan?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
+}
 
-// Common properties for all widgets
-// --- TypeScript Type Definitions ---
+// =============================================================================
+// ENHANCED DATA TYPES (All are now arrays or contain arrays)
+// Each item within an array data type MUST have a unique 'id' field for modifiability.
+// =============================================================================
 
-// Common properties for all widgets
-export interface BaseWidget {
-    id: string;
-    title: string;
-    icon: string;
-    columnSpan: 1 | 2;
-  }
-  
-  // Data types for specific widgets
-  export interface MetricCardData {
-    value: string;
-    currency: string;
-    unit?: string;
-    trend?: 'up' | 'down';
-    trendPercentage?: string;
-    description?: string;
-    progress?: number;
-    goalLabel?: string;
-  }
-  
-  export interface ProgressBarListItem {
-    label: string;
-    progress: number;
-  }
-  export interface ProgressBarListData extends Array<ProgressBarListItem> {}
-  
-  export interface CountdownCardData {
-    days: number;
-    image: string;
-  }
-  
-  export interface TipCardData {
-    currentTipIndex: number;
-    tips: string[];
-  }
-  
-  export interface DataListItem {
-    label: string;
-    value: string;
-    currency: string;
-  }
-  export interface DataListData extends Array<DataListItem> {}
-  
-  export interface ChartData { // For Recharts BarChartWidget and LineChartWidget
-    labels: string[];
-    values: number[];
-  }
-  
-  export interface FinancialHealthScorecardData {
-    score: number;
-    status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention';
-    explanation: string;
-  }
-  
-  export interface NextBestActionData {
-    message: string;
-    callToAction?: string;
-  }
-  
-  export interface QuickCashFlowSummaryData { // For react-chartjs-2 Bar chart
-    income: number;
-    expenses: number;
-  }
-  
-  // NEW: Debt Visualizer Data
-  export interface DebtItem {
-    name: string;
-    currentBalance: number;
-    originalBalance: number; // Added for progress calculation
-    interestRate: number;
-    minPayment: number;
-    payoffDate: string; // Estimated payoff date
-  }
-  export interface DebtVisualizerData extends Array<DebtItem> {}
-  
-  // NEW: Retirement Readiness Data
-  export interface RetirementReadinessData {
-    score: number;
-    status: 'On Track' | 'Ahead' | 'Behind' | 'Needs Significant Work';
-    projectionAmount: number;
-    projectionDate: string; // e.g., "Age 67"
-    explanation: string;
-  }
-  
-  // NEW: Enhanced Savings Goals Data
-  export interface EnhancedSavingsGoalItem {
-    name: string;
-    savedAmount: number;
-    targetAmount: number;
-    estimatedCompletionDate: string; // e.g., "Dec 2026"
-    status: 'On Track' | 'Ahead' | 'Behind';
-  }
-  export interface EnhancedSavingsGoalsData extends Array<EnhancedSavingsGoalItem> {}
-  
-  // NEW: Insurance Coverage Data
-  export interface InsuranceCoverageItem {
-    type: string; // e.g., "Health", "Life", "Home", "Auto"
-    status: 'Adequate' | 'Potential Gap' | 'Review Recommended';
-    suggestion?: string;
-  }
-  export interface InsuranceCoverageData extends Array<InsuranceCoverageItem> {}
-  
-  
-  // Widget export interfaces (Discriminated Union Members)
-  export interface IMetricCardWidget extends BaseWidget {
-    type: 'metricCard';
-    data: MetricCardData;
-  }
-  
-  export interface IProgressBarListWidget extends BaseWidget {
-    type: 'progressBarList';
-    data: ProgressBarListData;
-  }
-  
-  export interface ICountdownCardWidget extends BaseWidget {
-    type: 'countdownCard';
-    data: CountdownCardData;
-  }
-  
-  export interface ITipCardWidget extends BaseWidget {
-    type: 'tipCard';
-    data: TipCardData;
-  }
-  
-  export interface IDataListWidget extends BaseWidget {
-    type: 'dataList';
-    data: DataListData;
-    tip?: string;
-    footerLink?: { text: string; url: string; icon: string; };
-  }
-  
-  export interface IBarChartWidget extends BaseWidget {
-    type: 'barChart';
-    data: ChartData;
-  }
-  
-  export interface ILineChartWidget extends BaseWidget {
-    type: 'lineChart';
-    data: ChartData;
-  }
-  
-  export interface IFinancialHealthScorecardWidget extends BaseWidget {
-    type: 'financialHealthScorecard';
-    data: FinancialHealthScorecardData;
-  }
-  
-  export interface INextBestActionWidget extends BaseWidget {
-    type: 'nextBestAction';
-    data: NextBestActionData;
-  }
-  
-  export interface IQuickCashFlowSummaryWidget extends BaseWidget {
-    type: 'quickCashFlowSummary';
-    data: QuickCashFlowSummaryData;
-  }
-  
-  // NEW Widget Union Members
-  export interface IDebtVisualizerWidget extends BaseWidget {
-    type: 'debtVisualizer';
-    data: DebtVisualizerData;
-    strategy: 'snowball' | 'avalanche';
-  }
-  
-  export interface IRetirementReadinessWidget extends BaseWidget {
-    type: 'retirementReadiness';
-    data: RetirementReadinessData;
-  }
-  
-  export interface IEnhancedSavingsGoalsWidget extends BaseWidget {
-    type: 'enhancedSavingsGoals';
-    data: EnhancedSavingsGoalsData;
-  }
-  
-  export interface IInsuranceCoverageWidget extends BaseWidget {
-    type: 'insuranceCoverage';
-    data: InsuranceCoverageData;
-  }
-  
-  // Discriminated Union for all possible widget types
-  export type Widget =
-    | IMetricCardWidget
-    | IProgressBarListWidget
-    | ICountdownCardWidget
-    | ITipCardWidget
-    | IDataListWidget
-    | IBarChartWidget
-    | ILineChartWidget
-    | IFinancialHealthScorecardWidget
-    | INextBestActionWidget
-    | IQuickCashFlowSummaryWidget
-    | IDebtVisualizerWidget
-    | IRetirementReadinessWidget
-    | IEnhancedSavingsGoalsWidget
-    | IInsuranceCoverageWidget;
+// 1. METRIC CARD - Now supports multiple metrics
+export interface IMetricCardItem {
+  id: string; // (Mandatory) Unique ID for the metric item
+  value: string; // (Mandatory) e.g., "12,000.00"
+  currency: string; // (Mandatory) e.g., "$"
+  trend?: 'up' | 'down'; // (Optional) Trend direction
+  trendPercentage?: string; // (Optional) Percentage change (e.g., "8.3")
+  description?: string; // (Optional) Brief description
+  progress?: number; // (Optional) 0.0 - 1.0, for progress bars (e.g., 0.75 for 75%)
+  goalLabel?: string; // (Optional) Label for the goal associated with progress
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IMetricCardData extends Array<IMetricCardItem> {}
+
+// 2. PROGRESS BAR LIST - Enhanced with IDs for CRUD
+export interface IProgressBarListItem {
+  id: string; // (Mandatory) Unique ID for the progress bar item
+  label: string; // (Mandatory) Label for the progress bar
+  progress: number; // (Mandatory) 0.0 - 1.0 (e.g., 0.75 for 75%)
+  color?: string; // (Optional) Custom color for the progress bar (e.g., '#4CAF50')
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IProgressBarListData extends Array<IProgressBarListItem> {}
+
+// 3. COUNTDOWN CARD - Now supports multiple countdowns
+export interface ICountdownCardItem {
+  id: string; // (Mandatory) Unique ID for the countdown item
+  title: string; // (Mandatory) Name/description of what we're counting down to
+  days: number; // (Mandatory) Number of days remaining
+  image: string; // (Mandatory) Placeholder URL for an icon or small image
+  targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface ICountdownCardData extends Array<ICountdownCardItem> {}
+
+// 4. TIP CARD - Enhanced with IDs and categories
+export interface ITipItem {
+  id: string; // (Mandatory) Unique ID for the tip item
+  content: string; // (Mandatory) The tip text
+  category?: string; // (Optional) Optional grouping (e.g., "Savings", "Budgeting")
+  priority?: 'low' | 'medium' | 'high'; // (Optional) Priority level
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface ITipCardData {
+  tips: ITipItem[]; // (Mandatory) Array of tip items
+  currentTipIndex: number; // (Mandatory) Index of the currently displayed tip (for auto-cycling)
+  autoRotate?: boolean; // (Optional) Whether to auto-cycle through tips
+}
+
+// 5. DATA LIST - Enhanced with IDs
+export interface IDataListItem {
+  id: string; // (Mandatory) Unique ID for the list item
+  label: string; // (Mandatory) Label for the data point (e.g., "Emergency Fund", "Groceries")
+  value: string; // (Mandatory) The amount or relevant value
+  currency: string; // (Mandatory) Currency symbol (e.g., "$", "€")
+  category?: string; // (Optional) Optional grouping (e.g., "Assets", "Liabilities", "Fixed Expenses")
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IDataListData extends Array<IDataListItem> {}
+
+// 6. CHART DATA - Enhanced with metadata
+export interface IChartDataPoint {
+  id: string; // (Mandatory) Unique ID for the data point
+  label: string; // (Mandatory) Label for the individual bar/point (e.g., "Rent", "Jan")
+  value: number; // (Mandatory) The numerical value for the bar/point
+  color?: string; // (Optional) Custom color for this specific data point
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IChartData {
+  dataPoints: IChartDataPoint[]; // (Mandatory) Array of data points
+  chartType?: 'bar' | 'line'; // (Optional) Explicitly set the chart type if different from widget type
+  xAxisLabel?: string; // (Optional) Label for the X-axis
+  yAxisLabel?: string; // (Optional) Label for the Y-axis
+}
+
+// 7. FINANCIAL HEALTH SCORECARD - Now supports multiple scores
+export interface IFinancialHealthItem {
+  id: string; // (Mandatory) Unique ID for the financial health category
+  category: string; // (Mandatory) e.g., "Budgeting", "Savings", "Debt", "Investments"
+  score: number; // (Mandatory) e.g., 1-100
+  status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // (Mandatory) Assessment status
+  explanation: string; // (Mandatory) Detailed explanation for the score/status
+  weight?: number; // (Optional) Numeric weight for calculating an overall score if multiple items
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IFinancialHealthScorecardData {
+  items: IFinancialHealthItem[]; // (Mandatory) Array of individual financial health assessments
+  overallScore?: number; // (Optional) Calculated overall score
+  overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // (Optional) Overall status
+}
+
+// 8. NEXT BEST ACTION - Now supports multiple actions
+export interface INextBestActionItem {
+  id: string; // (Mandatory) Unique ID for the action item
+  title: string; // (Mandatory) Brief title for the action
+  message: string; // (Mandatory) Detailed message or description of the action
+  priority: 'low' | 'medium' | 'high' | 'urgent'; // (Mandatory) Priority level
+  category?: string; // (Optional) Grouping (e.g., "Budgeting", "Savings", "Debt Payoff")
+  callToAction?: string; // (Optional) Text for the clickable action button
+  actionLink?: string; // (Optional) URL to navigate to when action button is clicked
+  dueDate?: string; // (Optional) Optional deadline (e.g., "2025-06-30")
+  isCompleted?: boolean; // (Optional) Whether the action has been completed
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface INextBestActionData extends Array<INextBestActionItem> {}
+
+// 9. CASH FLOW SUMMARY - Enhanced with IDs and categories
+export interface ICashFlowEntry {
+  id: string; // (Mandatory) Unique ID for the cash flow entry
+  title: string; // (Mandatory) Name of the income/expense item (e.g., "Salary", "Rent")
+  value: number; // (Mandatory) The monetary amount
+  category?: string; // (Optional) Further sub-categorization (e.g., "Primary Income", "Housing")
+  frequency?: 'one-time' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'; // (Optional) How often this entry occurs
+  isRecurring?: boolean; // (Optional) Is this a recurring entry?
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IQuickCashFlowSummaryData {
+  inflows: ICashFlowEntry[]; // (Mandatory) Array of positive cash flow items
+  outflows: ICashFlowEntry[]; // (Mandatory) Array of negative cash flow items
+  projectedPeriod?: string; // (Optional) e.g., "Monthly", "Quarterly" for context
+}
+
+// 10. DEBT VISUALIZER - Enhanced with IDs
+export interface IDebtItem {
+  id: string; // (Mandatory) Unique ID for the debt item
+  name: string; // (Mandatory) Name of the debt (e.g., "Credit Card A", "Student Loan")
+  currentBalance: number; // (Mandatory) Current outstanding balance
+  originalBalance: number; // (Mandatory) Original loan/debt amount (for progress calculation)
+  interestRate: number; // (Mandatory) Annual interest rate (e.g., 18 for 18%)
+  minPayment: number; // (Mandatory) Minimum monthly payment
+  payoffDate: string; // (Mandatory) Estimated payoff date (e.g., "Aug 2025")
+  category?: string; // (Optional) Grouping (e.g., "Credit Card", "Student Loan", "Mortgage")
+  priority?: number; // (Optional) Numeric priority for custom payoff strategies
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IDebtVisualizerData extends Array<IDebtItem> {}
+
+// 11. RETIREMENT READINESS - Now supports multiple scenarios
+export interface IRetirementScenario {
+  id: string; // (Mandatory) Unique ID for the retirement scenario
+  scenarioName: string; // (Mandatory) e.g., "Conservative", "Aggressive", "Current Path"
+  score: number; // (Mandatory) Assessment score for this scenario (e.g., 1-100)
+  status: 'On Track' | 'Ahead' | 'Behind' | 'Needs Significant Work'; // (Mandatory) Status for this scenario
+  projectionAmount: number; // (Mandatory) Projected retirement savings amount
+  projectionDate: string; // (Mandatory) Age or date of projected amount (e.g., "Age 67", "2055")
+  explanation: string; // (Mandatory) Explanation for this scenario's assessment
+  assumptions?: string; // (Optional) What this scenario assumes (e.g., "7% annual return, $500/month contribution")
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IRetirementReadinessData {
+  scenarios: IRetirementScenario[]; // (Mandatory) Array of different retirement scenarios
+  currentScenarioId?: string; // (Optional) ID of the currently active/selected scenario
+}
+
+// 12. ENHANCED SAVINGS GOALS - Already array-based, adding IDs
+export interface IEnhancedSavingsGoalItem {
+  id: string; // (Mandatory) Unique ID for the savings goal
+  name: string; // (Mandatory) Name of the goal (e.g., "Japan Trip", "House Down Payment")
+  savedAmount: number; // (Mandatory) Current amount saved
+  targetAmount: number; // (Mandatory) Total target amount
+  estimatedCompletionDate: string; // (Mandatory) Estimated completion date (e.g., "Oct 2025")
+  status: 'On Track' | 'Ahead' | 'Behind'; // (Mandatory) Current status of the goal
+  category?: string; // (Optional) Grouping (e.g., "Emergency Fund", "Vacation", "Home")
+  priority?: 'low' | 'medium' | 'high'; // (Optional) Priority of the goal
+  autoContribution?: number; // (Optional) Monthly auto-contribution amount
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IEnhancedSavingsGoalsData extends Array<IEnhancedSavingsGoalItem> {}
+
+// 13. INSURANCE COVERAGE - Enhanced with IDs
+export interface IInsuranceCoverageItem {
+  id: string; // (Mandatory) Unique ID for the insurance item
+  type: string; // (Mandatory) e.g., "Health", "Life", "Home", "Auto"
+  provider?: string; // (Optional) Insurance company name
+  policyNumber?: string; // (Optional) Policy number
+  coverage: string; // (Mandatory) Brief details of coverage (e.g., "$500k, comprehensive")
+  premium: number; // (Mandatory) Monthly/annual premium amount
+  status: 'Adequate' | 'Potential Gap' | 'Review Recommended'; // (Mandatory) Assessment status
+  suggestion?: string; // (Optional) Suggestion if status is not 'Adequate'
+  renewalDate?: string; // (Optional) Policy renewal date (e.g., "2026-03-01")
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IInsuranceCoverageData extends Array<IInsuranceCoverageItem> {}
+
+// 14. CHECKLIST - Enhanced (already had IDs)
+export interface IChecklistItem {
+  id: string; // (Mandatory) Unique ID for the task
+  task: string; // (Mandatory) The task description
+  isCompleted: boolean; // (Mandatory) Whether the task is completed
+  dueDate?: string; // (Optional) Optional due date (e.g., "2025-06-30")
+  priority?: 'low' | 'medium' | 'high'; // (Optional) Priority of the task
+  category?: string; // (Optional) Optional grouping within the checklist
+  notes?: string; // (Optional) Additional notes for the task
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IChecklistData extends Array<IChecklistItem> {}
+
+// Removed 'IMultipleChecklistsData' and 'ICategoryChecklist' as they are no longer a distinct type for the widget.
+// Users can use multiple IChecklistWidgets with different IDs and titles to achieve the same effect.
+
+// =============================================================================
+// UPDATED WIDGET export interfaceS (Discriminated Union Members)
+// =============================================================================
+export interface IMetricCardWidget extends IBaseWidget {
+  type: 'metricCard';
+  data: IMetricCardData;
+  displayMode?: 'carousel' | 'grid' | 'list'; // How to display multiple metrics
+}
+export interface IProgressBarListWidget extends IBaseWidget {
+  type: 'progressBarList';
+  data: IProgressBarListData;
+  showPercentages?: boolean;
+  sortBy?: 'progress' | 'alphabetical' | 'custom';
+}
+export interface ICountdownCardWidget extends IBaseWidget {
+  type: 'countdownCard';
+  data: ICountdownCardData;
+  displayMode?: 'carousel' | 'grid';
+}
+export interface ITipCardWidget extends IBaseWidget {
+  type: 'tipCard';
+  data: ITipCardData;
+  filterByCategory?: string; // Show only tips from specific category
+}
+export interface IDataListWidget extends IBaseWidget {
+  type: 'dataList';
+  data: IDataListData;
+  tip?: string;
+  footerLink?: { text: string; url: string; icon: string; };
+  groupByCategory?: boolean;
+  showTotals?: boolean;
+}
+export interface IBarChartWidget extends IBaseWidget {
+  type: 'barChart';
+  data: IChartData;
+  height?: number;
+  showLegend?: boolean;
+}
+export interface ILineChartWidget extends IBaseWidget {
+  type: 'lineChart';
+  data: IChartData;
+  height?: number;
+  showLegend?: boolean;
+  showDataPoints?: boolean;
+}
+export interface IFinancialHealthScorecardWidget extends IBaseWidget {
+  type: 'financialHealthScorecard';
+  data: IFinancialHealthScorecardData;
+  showIndividualScores?: boolean;
+}
+export interface INextBestActionWidget extends IBaseWidget {
+  type: 'nextBestAction';
+  data: INextBestActionData;
+  maxDisplayItems?: number; // Limit how many actions to show
+  filterByPriority?: 'low' | 'medium' | 'high' | 'urgent';
+}
+export interface IQuickCashFlowSummaryWidget extends IBaseWidget {
+  type: 'quickCashFlowSummary';
+  data: IQuickCashFlowSummaryData;
+  showCategories?: boolean;
+  showProjections?: boolean;
+}
+export interface IDebtVisualizerWidget extends IBaseWidget {
+  type: 'debtVisualizer';
+  data: IDebtVisualizerData;
+  strategy: 'snowball' | 'avalanche' | 'custom';
+  showPayoffDates?: boolean;
+}
+export interface IRetirementReadinessWidget extends IBaseWidget {
+  type: 'retirementReadiness';
+  data: IRetirementReadinessData;
+  allowScenarioSwitching?: boolean;
+}
+export interface IEnhancedSavingsGoalsWidget extends IBaseWidget {
+  type: 'enhancedSavingsGoals';
+  data: IEnhancedSavingsGoalsData;
+  groupByCategory?: boolean;
+  showProgress?: boolean;
+}
+export interface IInsuranceCoverageWidget extends IBaseWidget {
+  type: 'insuranceCoverage';
+  data: IInsuranceCoverageData;
+  showPremiums?: boolean;
+  showRenewalDates?: boolean;
+}
+export type Priority = 'low' | 'medium' | 'high';
+
+export interface IChecklistItem {
+  id: string; // (Mandatory) Unique ID for the task
+  task: string; // (Mandatory) The task description
+  isCompleted: boolean; // (Mandatory) Whether the task is completed
+  dueDate?: string; // (Optional) Optional due date (e.g., "2025-06-30")
+  priority?: Priority; // (Optional) Priority of the task
+  category?: string; // (Optional) Optional grouping within the checklist
+  notes?: string; // (Optional) Additional notes for the task
+  displayOrder?: number; // (Optional) Numeric hint for display sorting
+}
+export interface IChecklistWidget extends IBaseWidget {
+  type: 'checklist';
+  data: IChecklistItem[]; // (Mandatory) Array of tasks
+  showCompleted?: boolean; // (Optional) Whether to show completed tasks
+  sortBy?: 'dueDate' | 'priority' | 'alphabetical' | 'custom'; // (Optional) Sorting preference
+  onToggleItem?: (id: string, isCompleted: boolean) => void; // (Optional) Callback for item completion toggle
+}
+// Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
+
+// Discriminated Union for all possible widget types
+export type Widget =
+  | IMetricCardWidget
+  | IProgressBarListWidget
+  | ICountdownCardWidget
+  | ITipCardWidget
+  | IDataListWidget
+  | IBarChartWidget
+  | ILineChartWidget
+  | IFinancialHealthScorecardWidget
+  | INextBestActionWidget
+  | IQuickCashFlowSummaryWidget
+  | IDebtVisualizerWidget
+  | IRetirementReadinessWidget
+  | IEnhancedSavingsGoalsWidget
+  | IInsuranceCoverageWidget
+  | IChecklistWidget;

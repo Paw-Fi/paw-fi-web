@@ -7,16 +7,13 @@ import {
   updateWidgets, 
   cancelEditing,
   setHasUnsavedChanges,
-  setConfirmModalOpen,
-  toggleExpandedWidget,
-  setExpandedWidgets
+  setConfirmModalOpen
 } from '@/store/slices/dashboardSlice';
 import { Widget } from '@/components/profile/types/dashboard-data.typings';
 
 // Define localStorage keys as constants for reuse
 export const STORAGE_KEYS = {
-  DASHBOARD_DATA: 'pawfi-dashboard-data',
-  EXPANDED_WIDGETS: 'pawfi-dashboard-expanded'
+  DASHBOARD_DATA: 'pawfi-dashboard-data'
 };
 
 /**
@@ -27,7 +24,6 @@ export function useDashboard(userId?: string) {
   const { 
     data, 
     originalData, 
-    expandedWidgets,
     status, 
     error, 
     isEditMode, 
@@ -95,15 +91,7 @@ export function useDashboard(userId?: string) {
     dispatch(updateWidgets({ widgets: updatedWidgets }));
   }, [dispatch]);
 
-  // Toggle widget expanded state
-  const toggleWidgetExpanded = useCallback((widgetId: string) => {
-    dispatch(toggleExpandedWidget(widgetId));
-  }, [dispatch]);
 
-  // Set expanded widgets state
-  const setWidgetsExpandedState = useCallback((expandedState: Record<string, boolean>) => {
-    dispatch(setExpandedWidgets(expandedState));
-  }, [dispatch]);
 
   // Check for unsaved changes
   useEffect(() => {
@@ -137,7 +125,6 @@ export function useDashboard(userId?: string) {
     // State
     dashboardData: data,
     originalDashboardData: originalData,
-    expandedWidgets,
     status,
     error,
     isEditMode,
@@ -153,8 +140,6 @@ export function useDashboard(userId?: string) {
     cancelEditing: handleCancelEditing,
     confirmCancelEditing,
     closeConfirmModal,
-    updateWidgets: updateDashboardWidgets,
-    toggleWidgetExpanded,
-    setExpandedWidgets: setWidgetsExpandedState
+    updateWidgets: updateDashboardWidgets
   };
 }

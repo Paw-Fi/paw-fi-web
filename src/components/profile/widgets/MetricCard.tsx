@@ -10,7 +10,20 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ widget }: MetricCardProps) {
-  const { data } = widget;
+  const { data: dataArray, displayMode } = widget;
+
+  if (!dataArray || dataArray.length === 0) {
+    return (
+      <Widget widget={widget}>
+        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+          No metric data available.
+        </div>
+      </Widget>
+    );
+  }
+
+  // For now, display the first metric. Carousel/grid can be implemented later.
+  const data = dataArray[0];
   
   return (
     <Widget widget={widget}>
@@ -21,7 +34,6 @@ export function MetricCard({ widget }: MetricCardProps) {
               <span className="text-2xl font-bold text-gray-800">
                 {data.currency}{data.value}
               </span>
-              {data.unit && <span className="text-sm text-gray-500">{data.unit}</span>}
             </div>
             
             {data.trend && (

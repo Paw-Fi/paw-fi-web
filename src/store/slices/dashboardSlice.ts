@@ -11,7 +11,7 @@ export type DashboardStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 interface DashboardState {
   data: Widget[] | null;
   originalData: Widget[] | null;
-  expandedWidgets: Record<string, boolean>;
+  // expandedWidgets: Record<string, boolean>; // Removed
   status: DashboardStatus;
   error: string | null;
   isEditMode: boolean;
@@ -25,7 +25,7 @@ interface DashboardState {
 const initialState: DashboardState = {
   data: [...initialData],
   originalData: [...initialData],
-  expandedWidgets: {},
+  // expandedWidgets: {}, // Removed
   status: 'idle',
   error: null,
   isEditMode: false,
@@ -100,15 +100,6 @@ const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState,
   reducers: {
-    setExpandedWidgets: (state, action: PayloadAction<Record<string, boolean>>) => {
-      state.expandedWidgets = action.payload;
-      localStorage.setItem(STORAGE_KEYS.EXPANDED_WIDGETS, JSON.stringify(action.payload));
-    },
-    toggleExpandedWidget: (state, action: PayloadAction<string>) => {
-      const widgetId = action.payload;
-      state.expandedWidgets[widgetId] = !state.expandedWidgets[widgetId];
-      localStorage.setItem(STORAGE_KEYS.EXPANDED_WIDGETS, JSON.stringify(state.expandedWidgets));
-    },
     setEditMode: (state, action: PayloadAction<boolean>) => {
       state.isEditMode = action.payload;
       if (!action.payload) {
@@ -169,16 +160,7 @@ const dashboardSlice = createSlice({
         state.status = 'succeeded';
         state.data = action.payload;
         state.originalData = JSON.parse(JSON.stringify(action.payload));
-        
-        // Load expanded state from localStorage
-        const savedExpandedState = localStorage.getItem(STORAGE_KEYS.EXPANDED_WIDGETS);
-        if (savedExpandedState) {
-          try {
-            state.expandedWidgets = JSON.parse(savedExpandedState);
-          } catch (error) {
-            console.error('Failed to parse saved expanded state:', error);
-          }
-        }
+        // Removed logic for loading expanded state from localStorage
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
         state.status = 'failed';
@@ -213,8 +195,6 @@ const dashboardSlice = createSlice({
 
 // Export actions and reducer
 export const { 
-  setExpandedWidgets, 
-  toggleExpandedWidget, 
   setEditMode, 
   updateWidgets,
   reorderWidgets,

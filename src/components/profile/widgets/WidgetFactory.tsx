@@ -1,6 +1,6 @@
 'use client';
 
-import { BaseWidget } from '../types/dashboard-data.typings';
+import { Widget as WidgetType, IBaseWidget } from "../types/dashboard-data.typings";
 import { MetricCard } from './MetricCard';
 import { 
   BarChartWidget, 
@@ -10,6 +10,7 @@ import {
 import { 
   CountdownCardWidget, DataListWidget, ProgressBarListWidget, TipCardWidget
 } from './DataWidgets';
+import { ChecklistWidget } from './ChecklistWidget';
 import { 
   FinancialHealthScorecardWidget,
   DebtVisualizerWidget,
@@ -19,11 +20,14 @@ import {
   RetirementReadinessWidget
 } from './FinancialWidgets';
 
+import { IChecklistWidget } from "../types/dashboard-data.typings"; // Added import
+
 interface WidgetFactoryProps {
-  widget: BaseWidget;
+  widget: IBaseWidget;
+  onToggleChecklistItem?: (widgetId: string, itemId: string, isCompleted: boolean) => void;
 }
 
-export function WidgetFactory({ widget }: WidgetFactoryProps) {
+export function WidgetFactory({ widget, onToggleChecklistItem }: WidgetFactoryProps) {
   // Cast the widget to any to access the type property
   const widgetType = (widget as any).type;
 
@@ -56,6 +60,14 @@ export function WidgetFactory({ widget }: WidgetFactoryProps) {
       return <EnhancedSavingsGoalsWidget widget={widget as any} />;
     case 'insuranceCoverage':
       return <InsuranceCoverageWidget widget={widget as any} />;
+    case 'checklist':
+      return <ChecklistWidget 
+                widget={widget as IChecklistWidget} 
+                onToggleItem={onToggleChecklistItem ? 
+                  (itemId: string, isCompleted: boolean) => onToggleChecklistItem(widget.id, itemId, isCompleted) 
+                  : undefined
+                }
+              />;
     default:
       return (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
