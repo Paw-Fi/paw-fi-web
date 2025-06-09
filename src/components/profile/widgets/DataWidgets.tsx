@@ -1,22 +1,23 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLink, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronRight, faChevronLeft, faLink } from '@fortawesome/free-solid-svg-icons';
 import { 
   IDataListWidget, 
   IProgressBarListWidget, 
   ICountdownCardWidget,
-  ITipCardWidget
+  ITipCardWidget,
+  ITipItem
 } from '../types/dashboard-data.typings';
 import { Widget } from './Widget';
-import { useState } from 'react';
 
 // Data List Widget
 export function DataListWidget({ widget }: { widget: IDataListWidget }) {
   const { data, tip, footerLink } = widget;
   
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-4 p-1"> {/* Adjusted base padding slightly if Widget itself has substantial padding */}
         {data.map((item, index) => (
           <div 
@@ -52,27 +53,68 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
 
 // Progress Bar List Widget
 export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidget }) {
-  const { data } = widget;
+  const { data, showPercentages = true } = widget;
+  
+  // Calculate progress percentage for each item
+  const getProgressPercentage = (current: number, max: number) => {
+    // Ensure both values are valid numbers
+    const currentNum = Number(current) || 0;
+    let maxNum = Number(max) || 0;
+    
+    // If max is 0, we'll treat it as 100% if current is also 0, otherwise use current as percentage
+    if (maxNum <= 0) {
+      return currentNum <= 0 ? 0 : 100;
+    }
+    
+    const progress = (currentNum / maxNum) * 100;
+    return Math.min(100, Math.max(0, progress)); // Clamp between 0-100
+  };
+  
+  // Sort items based on widget settings
+  const sortedItems = [...data].sort((a, b) => {
+    if (widget.sortBy === 'alphabetical') {
+      return a.label.localeCompare(b.label);
+    } else if (widget.sortBy === 'progress') {
+      return (b.current / b.max) - (a.current / a.max);
+    }
+    // Default to displayOrder or original order
+    return (a.displayOrder || 0) - (b.displayOrder || 0);
+  });
   
   return (
-    <Widget widget={widget}>
-      <div className="space-y-5 p-1"> {/* Adjusted base padding slightly */}
-        {data.map((item, index) => (
-          <div key={index}>
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
-              <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
-                {Math.round(item.progress * 100)}%
-              </span>
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="space-y-4 p-1">
+        {sortedItems.map((item, index) => {
+          const progress = getProgressPercentage(item.current, item.max);
+          const progressText = `${Math.round(progress)}%`;
+          const valueText = `${item.current} / ${item.max}`;
+          
+          return (
+            <div key={item.id || index} className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
+                {showPercentages ? (
+                  <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
+                    {progressText}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {valueText}
+                  </span>
+                )}
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                <div 
+                  className="h-2 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: item.color || 'var(--color-primary-600)'
+                  }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-md h-2.5">
-              <div 
-                className="bg-primary h-2.5 rounded-md transition-all duration-500 ease-out"
-                style={{ width: `${item.progress * 100}%` }}
-              ></div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Widget>
   );
@@ -82,15 +124,17 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
 export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }) {
   const { data } = widget;
 
-  if (!data || data.length === 0) {
+  if (!data) {
     return (
-      <Widget widget={widget}>
-        <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-base">No countdown data available.</div>
+      <Widget widget={widget} className="overflow-hidden">
+        <div className="flex items-center justify-center h-full text-center text-slate-500 dark:text-slate-400 text-base">
+          No countdown data available.
+        </div>
       </Widget>
     );
   }
 
-  const currentCountdownItem = data[0]; // Display the first countdown item
+  const currentCountdownItem = data; // Data is now a single object
 
   const calculateDaysRemaining = (targetDateISO: string): number => {
     const target = new Date(targetDateISO);
@@ -106,75 +150,193 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
   let daysRemaining = 0;
   if (currentCountdownItem.targetDate) {
     daysRemaining = calculateDaysRemaining(currentCountdownItem.targetDate);
-  } 
+  }
+
+  const formattedDate = currentCountdownItem.targetDate 
+    ? new Date(currentCountdownItem.targetDate).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    : '';
 
   const displayTitle = currentCountdownItem.title || 'Upcoming Goal';
+  
+  // Determine background gradient based on days remaining
+  let gradientClass = "from-blue-500 to-purple-500"; // Default
+  
+  if (daysRemaining <= 0) {
+    gradientClass = "from-gray-500 to-gray-400"; // Expired
+  } else if (daysRemaining <= 7) {
+    gradientClass = "from-red-500 to-orange-400"; // Urgent (less than a week)
+  } else if (daysRemaining <= 30) {
+    gradientClass = "from-amber-500 to-yellow-400"; // Soon (less than a month)
+  } else if (daysRemaining <= 60) {
+    gradientClass = "from-teal-400 to-emerald-500"; // Approaching (2 months)
+  }
 
   return (
-    <Widget widget={widget}>
-      <div className="flex flex-col items-center p-4 text-center"> {/* Added text-center */}
-        {currentCountdownItem.image && (
-          <img 
-            src={currentCountdownItem.image} 
-            alt={displayTitle}
-            className="w-20 h-20 object-cover rounded-xl mb-4 shadow-md"
-          />
-        )}
-        <div className="text-lg font-medium text-slate-600 dark:text-slate-300 mb-1">
-          {displayTitle}
-        </div>
-        <div className="text-5xl font-bold text-slate-800 dark:text-slate-100">
-          {currentCountdownItem.targetDate ? daysRemaining : '—'}
-        </div>
-        <div className="text-base text-slate-500 dark:text-slate-400 mt-0.5">
-          {currentCountdownItem.targetDate 
-            ? (daysRemaining === 1 ? 'day remaining' : 'days remaining') 
-            : 'No target date set'}
+    <Widget widget={widget} className="overflow-hidden" controls={widget.controls}>
+      {/* Use absolute positioning to ensure no scrollbars */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {/* Background gradient circle - size based on widget dimensions */}
+        <div 
+          className={`absolute rounded-full bg-gradient-to-br ${gradientClass} opacity-10 blur-xl`}
+          style={{
+            width: widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1 ? '12rem' : '10rem',
+            height: widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1 ? '12rem' : '10rem',
+          }}
+        ></div>
+        
+        {/* Content container with responsive sizing based on widget dimensions */}
+        <div className="flex flex-col items-center w-full text-center">
+          {/* Image with responsive sizing */}
+          {currentCountdownItem.image && (
+            <div 
+              className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
+            >
+              <img 
+                src={currentCountdownItem.image} 
+                alt={displayTitle}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
+          {/* Title with responsive sizing */}
+          <h3 
+            className={`font-medium text-slate-700 dark:text-slate-200 ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-base line-clamp-2 mb-1' : 'text-sm line-clamp-1'}`}
+          >
+            {displayTitle}
+          </h3>
+          
+          {/* Days counter with responsive sizing */}
+          <div className="flex flex-col items-center">
+            <div 
+              className={`font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-6xl' : 'text-4xl'}`}
+            >
+              {currentCountdownItem.targetDate 
+                ? (daysRemaining <= 0 ? '0' : daysRemaining)
+                : '—'}
+            </div>
+            <div 
+              className={`text-slate-600 dark:text-slate-300 font-medium ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-sm' : 'text-xs'}`}
+            >
+              {!currentCountdownItem.targetDate 
+                ? 'No target date set'
+                : daysRemaining === 0 
+                  ? 'Today is the day!'
+                  : daysRemaining === 1 
+                    ? 'day remaining' 
+                    : 'days remaining'}
+            </div>
+          </div>
+          
+          {/* Target date - only show if there's room */}
+          {currentCountdownItem.targetDate && (widget.rowSpan ?? 1) > 1 && (
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 bg-slate-100 dark:bg-slate-800/50 py-0.5 px-2 rounded-full">
+              {formattedDate}
+            </div>
+          )}
         </div>
       </div>
     </Widget>
   );
 }
 
-// Tip Card Widget
 export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
   const { data } = widget;
-  const [currentTipIndex, setCurrentTipIndex] = useState(data.currentTipIndex || 0);
+  const [currentTipIndex, setCurrentTipIndex] = useState<number>(data.currentTipIndex || 0);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
   
-  const nextTip = () => {
-    setCurrentTipIndex((prevIndex) => (prevIndex + 1) % data.tips.length);
-  };
+  // Get the current tip to display
+  const currentTip = data.tips?.[currentTipIndex] || data.tips?.[0];
+
+  // Navigate to next tip
+  const nextTip = useCallback(() => {
+    if (!data.tips?.length) return;
+    const nextIndex = (currentTipIndex + 1) % data.tips.length;
+    setCurrentTipIndex(nextIndex);
+  }, [currentTipIndex, data.tips]);
+
+  // Navigate to previous tip
+  const prevTip = useCallback(() => {
+    if (!data.tips?.length) return;
+    const prevIndex = (currentTipIndex - 1 + data.tips.length) % data.tips.length;
+    setCurrentTipIndex(prevIndex);
+  }, [currentTipIndex, data.tips]);
+  
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        nextTip();
+      } else if (e.key === 'ArrowLeft') {
+        prevTip();
+      }
+    };
+  
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nextTip, prevTip]);
+  
+  if (!currentTip || !data.tips?.length) {
+    return (
+      <Widget widget={widget} controls={widget.controls}>
+        <div className="flex items-center justify-center h-full p-6 text-center">
+          <p className="text-gray-500 dark:text-gray-400">No tips available</p>
+        </div>
+      </Widget>
+    );
+  }
   
   return (
-    <Widget widget={widget}>
-      <div className="flex flex-col justify-between h-full p-4"> {/* Added p-4 and h-full */}
-        <div className="text-base text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">
-          <span className="text-2xl font-serif text-primary-500 mr-1 relative -top-1">“</span>
-          {data.tips[currentTipIndex].content}
-          <span className="text-2xl font-serif text-primary-500 ml-1 relative -top-1">”</span>
-        </div>
-        
-        <div className="flex justify-between items-center mt-auto"> {/* Added mt-auto to push to bottom */}
-          <div className="flex space-x-1.5">
-            {data.tips.map((_, index) => (
-              <div 
-                key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${ // Added transition
-                  index === currentTipIndex 
-                    ? 'bg-primary scale-110'  // Slightly scale active dot
-                    : 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500' // Hover effect for inactive
-                }`}
-              ></div>
-            ))}
+    <Widget widget={widget} controls={widget.controls}>
+      <div 
+        className="h-full flex flex-col"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="flex flex-col h-full p-4">
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="relative">
+              <div className="flex items-center justify-center">
+                <span className="absolute -left-6 -top-4 text-5xl font-serif text-primary-300 dark:text-primary-600 opacity-70">"</span>
+                <p className="text-lg md:text-xl text-gray-800 dark:text-gray-100 leading-relaxed px-4 py-2">
+                  {currentTip.content}
+                </p>
+                <span className="absolute -right-6 -bottom-4 text-5xl font-serif text-primary-300 dark:text-primary-600 opacity-70 transform rotate-180">"</span>
+              </div>
+            </div>
           </div>
           
-          <button 
-            onClick={nextTip}
-            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-md transition-colors flex items-center shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50"
-            aria-label="Next tip"
-          >
-            Next <FontAwesomeIcon icon={faArrowRight} className="ml-1.5 h-3 w-3" />
-          </button>
+          {currentTip.category && (
+            <div className="mt-4 text-center">
+              <span className="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-full">
+                {currentTip.category}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-auto pt-4">
+          <div className="flex justify-between items-center px-4">
+            <div className="flex space-x-2">
+              {data.tips.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentTipIndex(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentTipIndex
+                      ? 'bg-primary-600 scale-125'  // Active dot
+                      : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500'  // Inactive dot
+                  }`}
+                  aria-label={`Go to tip ${index + 1}`}
+                />
+              ))}
+            </div>           
+          
+          </div>
         </div>
       </div>
     </Widget>

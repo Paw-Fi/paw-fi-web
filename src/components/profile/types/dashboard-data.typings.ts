@@ -1,9 +1,12 @@
+import { ReactNode } from 'react';
+
 export interface IBaseWidget {
   id: string; // Unique identifier for the widget itself (Mandatory)
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
   columnSpan: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
   rowSpan?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
+  controls?: ReactNode; // Optional React components for widget controls in header
 }
 
 // =============================================================================
@@ -29,7 +32,8 @@ export interface IMetricCardData extends Array<IMetricCardItem> {}
 export interface IProgressBarListItem {
   id: string; // (Mandatory) Unique ID for the progress bar item
   label: string; // (Mandatory) Label for the progress bar
-  progress: number; // (Mandatory) 0.0 - 1.0 (e.g., 0.75 for 75%)
+  current: number; // (Mandatory) Current value (e.g., 15 for 15/20)
+  max: number; // (Mandatory) Maximum value (e.g., 20 for 15/20)
   color?: string; // (Optional) Custom color for the progress bar (e.g., '#4CAF50')
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
@@ -37,14 +41,20 @@ export interface IProgressBarListData extends Array<IProgressBarListItem> {}
 
 // 3. COUNTDOWN CARD - Now supports multiple countdowns
 export interface ICountdownCardItem {
-  id: string; // (Mandatory) Unique ID for the countdown item
+  id: string; // (Mandatory) Unique ID for the countdown
   title: string; // (Mandatory) Name/description of what we're counting down to
   days: number; // (Mandatory) Number of days remaining
-  image: string; // (Mandatory) Placeholder URL for an icon or small image
+  image: string; // (Mandatory) URL for an icon or small image
   targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface ICountdownCardData extends Array<ICountdownCardItem> {}
+
+export interface ICountdownCardData {
+  id: string; // (Mandatory) Unique ID for the countdown
+  title: string; // (Mandatory) Name/description of what we're counting down to
+  days: number; // (Mandatory) Number of days remaining
+  image: string; // (Mandatory) URL for an icon or small image
+  targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
+}
 
 // 4. TIP CARD - Enhanced with IDs and categories
 export interface ITipItem {
@@ -206,6 +216,7 @@ export interface IChecklistItem {
   notes?: string; // (Optional) Additional notes for the task
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
+
 export interface IChecklistData extends Array<IChecklistItem> {}
 
 // Removed 'IMultipleChecklistsData' and 'ICategoryChecklist' as they are no longer a distinct type for the widget.
@@ -228,7 +239,6 @@ export interface IProgressBarListWidget extends IBaseWidget {
 export interface ICountdownCardWidget extends IBaseWidget {
   type: 'countdownCard';
   data: ICountdownCardData;
-  displayMode?: 'carousel' | 'grid';
 }
 export interface ITipCardWidget extends IBaseWidget {
   type: 'tipCard';

@@ -32,14 +32,14 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
   };
 
   if (!data) {
-    return <Widget widget={widget}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No financial health data available.</div></Widget>;
+    return <Widget widget={widget} controls={widget.controls}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No financial health data available.</div></Widget>;
   }
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="flex flex-col p-1">
-        <div className="flex items-center mb-3">
-          <div className="relative w-20 h-20 mr-4 shrink-0">
+        <div className="flex items-center mb-3 justify-center">
+          <div className="relative w-20 h-20 mr-4 shrink-0 translate-x-1/2">
             <svg className="w-full h-full" viewBox="0 0 36 36">
               <path
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -61,7 +61,7 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
               <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{data.overallScore}</div>
             </div>
           </div>
-          <div className="flex-grow">
+          <div className="translate-x-1/2">
             <div className={`text-xl font-semibold ${getStatusColor(data.overallStatus)}`}>
               {data.overallStatus}
             </div>
@@ -99,7 +99,8 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
 
     let filteredActions = [...actionsData];
 
-    if (filterByPriority && filterByPriority !== 'all') {
+    // Only filter if filterByPriority is one of the valid priorities
+    if (filterByPriority && ['low', 'medium', 'high', 'urgent'].includes(filterByPriority as string)) {
       filteredActions = filteredActions.filter(action => action.priority === filterByPriority);
     }
     
@@ -114,11 +115,11 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
   }, [actionsData, maxDisplayItems, filterByPriority]);
 
   if (!actionsToDisplay || actionsToDisplay.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No current actions.</div></Widget>;
+    return <Widget widget={widget} controls={widget.controls}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No current actions.</div></Widget>;
   }
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="flex flex-col p-1 space-y-3">
         {actionsToDisplay.map((action) => (
           <div key={action.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col">
@@ -162,7 +163,7 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
   const progressPercentage = (totalPaid / totalOriginalBalance) * 100;
   
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-4">
         <div className="flex justify-between items-center mb-2">
           <div>
@@ -254,15 +255,15 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
   };
 
   if (!retirementData || !retirementData.scenarios || retirementData.scenarios.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No retirement scenarios available.</div></Widget>;
+    return <Widget widget={widget} controls={widget.controls}><div className="p-4 text-sm text-slate-500 dark:text-slate-400">No retirement scenarios available.</div></Widget>;
   }
 
   if (!currentScenario) {
-    return <Widget widget={widget}><div className="p-4 text-sm text-red-500 dark:text-red-400">Selected retirement scenario not found.</div></Widget>;
+    return <Widget widget={widget} controls={widget.controls}><div className="p-4 text-sm text-red-500 dark:text-red-400">Selected retirement scenario not found.</div></Widget>;
   }
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="flex flex-col p-1">
         {retirementData.scenarios.length > 1 && (
           <div className="mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">
@@ -335,7 +336,7 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
   };
   
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-4">
         {data.map((goal, index) => {
           const progress = (goal.savedAmount / goal.targetAmount) * 100;
@@ -388,7 +389,7 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
   };
   
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-3">
         {data.map((insurance, index) => (
           <div 

@@ -145,7 +145,7 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
   const chartOptions = getChartOptions(title);
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="h-full w-full flex items-center justify-center">
         <Bar 
           data={chartData} 
@@ -199,7 +199,7 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
   const chartOptions = getChartOptions(chartDataDefinition.xAxisLabel || title);
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="h-full w-full flex items-center justify-center">
         <Line 
           data={chartData} 
@@ -220,7 +220,7 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
 
   if (!cashFlowData || !cashFlowData.inflows || !cashFlowData.outflows) {
     return (
-      <Widget widget={widget}>
+      <Widget widget={widget} controls={widget.controls}>
         <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
           Cash flow data is incomplete.
         </div>
@@ -257,7 +257,7 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   const chartOptions = getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : ''));
 
   return (
-    <Widget widget={widget}>
+    <Widget widget={widget} controls={widget.controls}>
       <div className="flex flex-col h-full p-1"> {/* Adjusted padding slightly */} 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="bg-green-50 dark:bg-green-500/10 p-3 rounded-lg shadow-sm">

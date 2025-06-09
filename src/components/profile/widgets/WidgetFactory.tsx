@@ -1,6 +1,6 @@
 'use client';
 
-import { Widget as WidgetType, IBaseWidget } from "../types/dashboard-data.typings";
+import { Widget as WidgetType, IBaseWidget, Widget } from "../types/dashboard-data.typings";
 import { MetricCard } from './MetricCard';
 import { 
   BarChartWidget, 
@@ -25,49 +25,54 @@ import { IChecklistWidget } from "../types/dashboard-data.typings"; // Added imp
 interface WidgetFactoryProps {
   widget: IBaseWidget;
   onToggleChecklistItem?: (widgetId: string, itemId: string, isCompleted: boolean) => void;
+  controls?: React.ReactNode; // Added for control buttons
 }
 
-export function WidgetFactory({ widget, onToggleChecklistItem }: WidgetFactoryProps) {
+export function WidgetFactory({ widget, onToggleChecklistItem, controls }: WidgetFactoryProps) {
   // Cast the widget to any to access the type property
-  const widgetType = (widget as any).type;
+  const widgetType = (widget as Widget).type;
+
+  // Helper function to wrap each widget with the base Widget component
+  const renderWidget = (SpecificWidget: React.ComponentType<{widget: any}>) => {
+    return (
+      <SpecificWidget 
+        widget={{...widget, controls}} 
+      />
+    );
+  };
 
   switch (widgetType) {
     case 'metricCard':
-      return <MetricCard widget={widget as any} />;
+      return renderWidget(MetricCard);
     case 'progressBarList':
-      return <ProgressBarListWidget widget={widget as any} />;
+      return renderWidget(ProgressBarListWidget);
     case 'countdownCard':
-      return <CountdownCardWidget widget={widget as any} />;
+      return renderWidget(CountdownCardWidget);
     case 'tipCard':
-      return <TipCardWidget widget={widget as any} />;
+      return renderWidget(TipCardWidget);
     case 'dataList':
-      return <DataListWidget widget={widget as any} />;
+      return renderWidget(DataListWidget);
     case 'barChart':
-      return <BarChartWidget widget={widget as any} />;
+      return renderWidget(BarChartWidget);
     case 'lineChart':
-      return <LineChartWidget widget={widget as any} />;
+      return renderWidget(LineChartWidget);
     case 'financialHealthScorecard':
-      return <FinancialHealthScorecardWidget widget={widget as any} />;
+      return renderWidget(FinancialHealthScorecardWidget);
     case 'nextBestAction':
-      return <NextBestActionWidget widget={widget as any} />;
+      return renderWidget(NextBestActionWidget);
     case 'quickCashFlowSummary':
-      return <CashFlowWidget widget={widget as any} />;
+      return renderWidget(CashFlowWidget);
     case 'debtVisualizer':
-      return <DebtVisualizerWidget widget={widget as any} />;
+      return renderWidget(DebtVisualizerWidget);
     case 'retirementReadiness':
-      return <RetirementReadinessWidget widget={widget as any} />;
+      return renderWidget(RetirementReadinessWidget);
     case 'enhancedSavingsGoals':
-      return <EnhancedSavingsGoalsWidget widget={widget as any} />;
+      return renderWidget(EnhancedSavingsGoalsWidget);
     case 'insuranceCoverage':
-      return <InsuranceCoverageWidget widget={widget as any} />;
+      return renderWidget(InsuranceCoverageWidget);
     case 'checklist':
-      return <ChecklistWidget 
-                widget={widget as IChecklistWidget} 
-                onToggleItem={onToggleChecklistItem ? 
-                  (itemId: string, isCompleted: boolean) => onToggleChecklistItem(widget.id, itemId, isCompleted) 
-                  : undefined
-                }
-              />;
+      return renderWidget(ChecklistWidget);
+              ;
     default:
       return (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200">

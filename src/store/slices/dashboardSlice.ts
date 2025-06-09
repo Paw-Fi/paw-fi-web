@@ -19,6 +19,7 @@ interface DashboardState {
   isSaving: boolean;
   saveSuccess: boolean;
   isConfirmModalOpen: boolean;
+  hasInitialLoad: boolean;
 }
 
 // Initial state
@@ -32,14 +33,22 @@ const initialState: DashboardState = {
   hasUnsavedChanges: false,
   isSaving: false,
   saveSuccess: false,
-  isConfirmModalOpen: false
+  isConfirmModalOpen: false,
+  hasInitialLoad: false
 };
 
 // Async thunks
 export const fetchDashboard = createAsyncThunk(
   'dashboard/fetchDashboard',
-  async (userId: string, { rejectWithValue }) => {
+  async (userId: string, { getState, rejectWithValue }) => {
     try {
+      const state = getState() as { dashboard: DashboardState };
+      
+      // If we've already loaded the data, return the current data
+      if (state.dashboard.hasInitialLoad && state.dashboard.data) {
+        return state.dashboard.data;
+      }
+      
       // For now, we'll simulate a delay to demonstrate loading state
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -150,23 +159,28 @@ const dashboardSlice = createSlice({
       state.saveSuccess = false;
     }
   },
-  extraReducers: (builder) => {
+  extraReducers(builder) {
     builder
       // Handle fetchDashboard
       .addCase(fetchDashboard.pending, (state) => {
-        state.status = 'loading';
+        // Only set loading status if it's the initial load
+        if (!state.hasInitialLoad) {
+          state.status = 'loading';
+        }
+        state.error = null;
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.data = action.payload;
-        state.originalData = JSON.parse(JSON.stringify(action.payload));
-        // Removed logic for loading expanded state from localStorage
+        state.originalData = action.payload;
+        state.error = null;
+        state.hasInitialLoad = true; // Mark initial load as complete
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload as string;
+        state.error = action.payload as string || 'Failed to load dashboard';
+        state.hasInitialLoad = true; // Even on error, mark as loaded to prevent repeated loading
       })
-      
       // Handle saveDashboard
       .addCase(saveDashboard.pending, (state) => {
         state.isSaving = true;

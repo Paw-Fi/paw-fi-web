@@ -1,75 +1,97 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import { IMetricCardWidget } from '../types/dashboard-data.typings';
+import {
+  faArrowUp,
+  faArrowDown,
+  faMinus,
+  faEllipsisH, // Default/unknown trend
+} from '@fortawesome/free-solid-svg-icons';
+import { IMetricCardWidget, IMetricCardItem } from '../types/dashboard-data.typings';
 import { Widget } from './Widget';
 
 interface MetricCardProps {
   widget: IMetricCardWidget;
 }
 
+// Helper component for trend icon, kept for robustness if trend type expands
+const TrendIcon = ({ trend }: { trend: IMetricCardItem['trend'] }) => {
+  if (trend === 'up') return <FontAwesomeIcon icon={faArrowUp} className="h-3 w-3 text-emerald-500" />;
+  if (trend === 'down') return <FontAwesomeIcon icon={faArrowDown} className="h-3 w-3 text-red-500" />;
+  // 'stable' is not in IMetricCardItem['trend'] but handled defensively
+  if (trend === 'stable') return <FontAwesomeIcon icon={faMinus} className="h-3 w-3 text-slate-500" />;
+  return <FontAwesomeIcon icon={faEllipsisH} className="h-3 w-3 text-slate-400" />;
+};
+
+// Helper function for trend color, kept for robustness
+const getTrendColor = (trend: IMetricCardItem['trend']) => {
+  if (trend === 'up') return 'text-emerald-500';
+  if (trend === 'down') return 'text-red-500';
+  if (trend === 'stable') return 'text-slate-500';
+  return 'text-slate-400';
+};
+
 export function MetricCard({ widget }: MetricCardProps) {
-  const { data: dataArray, displayMode } = widget;
+  const { data: dataArray } = widget;
 
   if (!dataArray || dataArray.length === 0) {
     return (
-      <Widget widget={widget}>
-        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+      <Widget widget={widget} controls={widget.controls}>
+        <div className="flex items-center justify-center h-full p-6 text-sm text-slate-500 dark:text-slate-400">
           No metric data available.
         </div>
       </Widget>
     );
   }
 
-  // For now, display the first metric. Carousel/grid can be implemented later.
+  // Assuming we display the first metric item for now.
   const data = dataArray[0];
-  
+
+  // Calculate progress percentage (progress is 0.0 to 1.0)
+  const progressPercentage = data.progress !== undefined ? data.progress * 100 : 0;
+
   return (
-    <Widget widget={widget}>
-      <div className="flex flex-col h-full justify-between">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-baseline space-x-1">
-              <span className="text-2xl font-bold text-gray-800">
-                {data.currency}{data.value}
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="p-5 flex flex-col h-full justify-between antialiased">
+        {/* Top section: Metric Value and Description/Trend */} 
+        <div>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+              {data.currency}{data.value}
+            </span>
+          </div>
+
+          {data.trend && data.trendPercentage && (
+            <div className={`mt-2 flex items-center text-sm ${getTrendColor(data.trend)}`}>
+              <TrendIcon trend={data.trend} />
+              <span className="ml-1.5 font-medium">
+                {data.trendPercentage} vs last period
               </span>
             </div>
-            
-            {data.trend && (
-              <div className="flex items-center mt-1">
-                <FontAwesomeIcon 
-                  icon={data.trend === 'up' ? faArrowUp : faArrowDown} 
-                  className={`h-3 w-3 mr-1 ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`} 
-                />
-                <span className={`text-sm ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                  {data.trendPercentage}
-                </span>
-              </div>
-            )}
-          </div>
+          )}
           
+          {/* data.description is used here as the primary textual content for the metric item itself */} 
           {data.description && (
-            <div className="text-sm text-gray-500 max-w-[50%]">
+             <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
               {data.description}
-            </div>
+            </p>
           )}
         </div>
-        
+
+        {/* Bottom section: Progress Bar and Goal */} 
         {data.progress !== undefined && (
-          <div className="space-y-1 mt-auto pt-4">
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary rounded-full" 
-                style={{ width: `${data.progress}%` }}
+          <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
+            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span>Progress</span> {/* Static label "Progress" */} 
+              {data.goalLabel && <span>Target: {data.goalLabel}</span>}
+            </div>
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="h-2.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500 ease-out"
+                style={{ width: `${progressPercentage}%` }} // Use calculated progressPercentage
               ></div>
             </div>
-            {data.goalLabel && (
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Progress</span>
-                <span>{data.goalLabel}</span>
-              </div>
-            )}
+            {/* Removed data.progressText as it does not exist on IMetricCardItem */} 
           </div>
         )}
       </div>

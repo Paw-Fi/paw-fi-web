@@ -52,7 +52,7 @@ export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) 
 
   if (!data || data.length === 0) {
     return (
-      <Widget widget={widget}>
+      <Widget widget={widget} controls={widget.controls}>
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
           <FontAwesomeIcon icon={faTasks} className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-6" />
           <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-2">Empty Checklist</h3>
@@ -77,8 +77,8 @@ export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) 
   const filteredData = showCompleted ? sortedData : sortedData.filter(item => !item.isCompleted);
 
   return (
-    <Widget widget={widget}>
-      <ul className="space-y-4 p-4 text-base h-full overflow-y-auto custom-scrollbar">
+    <Widget widget={widget} controls={widget.controls}>
+      <ul className="space-y-4 text-base h-full overflow-y-auto custom-scrollbar">
         {filteredData.map((item: IChecklistItem) => (
           <li 
             key={item.id} 
@@ -109,18 +109,18 @@ export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) 
             </div>
 
             <div className="flex-grow">
-              <p className={`font-semibold text-slate-800 dark:text-slate-100 ${item.isCompleted ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
+              <p className={`font-semibold text-sm text-slate-800 dark:text-slate-100 ${item.isCompleted ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
                 {item.task}
               </p>
 
               {(item.priority || item.dueDate || item.category) && (
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                  {item.priority && (
+                  {/* {item.priority && (
                     <span className={`flex items-center px-2.5 py-1 rounded-full font-medium ${getPriorityTagClasses(item.priority)}`}>
                       <FontAwesomeIcon icon={faExclamationCircle} className="mr-1.5 w-3 h-3" /> 
                       {priorityText[item.priority]}
                     </span>
-                  )}
+                  )} */}
                   {item.dueDate && (
                     <span className="flex items-center text-slate-500 dark:text-slate-400">
                       <FontAwesomeIcon icon={faCalendarAlt} className="mr-1.5 w-3 h-3" />

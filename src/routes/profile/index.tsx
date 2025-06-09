@@ -46,10 +46,10 @@ function Profile() {
 
   // Load saved dashboard configuration on initial render
   useEffect(() => {
-    if (user) {
+    if (user && status === 'idle') {
       loadDashboard();
     }
-  }, [user, loadDashboard]);
+  }, [user, loadDashboard, status]);
 
   // Warn user about unsaved changes when leaving the page
   useEffect(() => {
@@ -65,14 +65,8 @@ function Profile() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Handle widget updates (edit, add, remove)
   const handleUpdateWidgets = (updatedWidgets: Widget[]) => {
     updateWidgets(updatedWidgets);
-  };
-
-  // Handle expanded state changes
-  const handleExpandedStateChange = (newExpandedState: Record<string, boolean>) => {
-    localStorage.setItem(STORAGE_KEYS.EXPANDED_WIDGETS, JSON.stringify(newExpandedState));
   };
 
   // Handle cancel button click
@@ -186,7 +180,7 @@ function Profile() {
         {/* Dashboard with loading state */}
         {(() => {
           // Using an IIFE to handle complex conditional rendering with proper typing
-          if (status === 'loading') {
+          if (status === 'loading' && (!data || data.length === 0)) {
             return (
               <div className="mt-4">
                 <SkeletonDashboard />
@@ -204,7 +198,7 @@ function Profile() {
                 </button>
               </div>
             );
-          } else if (data) {
+          } else if (data && data.length > 0) {
             return (
               <DraggableDashboard 
                 widgets={Array.isArray(data) ? data : []} 

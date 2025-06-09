@@ -45,22 +45,25 @@ export const dashboardData: Widget[] =[
     "data": [
       {
         "id": "goal-read",
-        "label": "Read 20 Books This Year",
-        "progress": 0.65,
+        "label": "Books Read This Year",
+        "current": 13,
+        "max": 20,
         "color": "#4CAF50",
         "displayOrder": 1
       },
       {
         "id": "goal-learn-code",
-        "label": "Complete Coding Course",
-        "progress": 0.80,
+        "label": "Coding Course Progress",
+        "current": 8,
+        "max": 10,
         "color": "#2196F3",
         "displayOrder": 2
       },
       {
         "id": "goal-volunteer",
-        "label": "Volunteer 50 Hours",
-        "progress": 0.40,
+        "label": "Volunteer Hours",
+        "current": 20,
+        "max": 50,
         "color": "#FFC107",
         "displayOrder": 3
       }
@@ -74,25 +77,13 @@ export const dashboardData: Widget[] =[
     "title": "Important Dates",
     "icon": "fas fa-hourglass-half",
     "columnSpan": 1,
-    "data": [
-      {
-        "id": "countdown-trip",
-        "title": "Summer Vacation to Italy",
-        "days": 60,
-        "image": "https://placehold.co/100x50/34D399/ffffff?text=✈️",
-        "targetDate": "2025-08-07",
-        "displayOrder": 1
-      },
-      {
-        "id": "countdown-tax",
-        "title": "Tax Filing Deadline",
-        "days": 20,
-        "image": "https://placehold.co/100x50/EF4444/ffffff?text=📝",
-        "targetDate": "2025-07-05",
-        "displayOrder": 2
-      }
-    ],
-    "displayMode": "carousel"
+    "data": {
+      "id": "countdown-trip",
+      "title": "Summer Vacation to Italy",
+      "days": 60,
+      "image": "https://placehold.co/100x50/34D399/ffffff?text=✈️",
+      "targetDate": "2025-08-07"
+    }
   },
   {
     "id": "financialTips",

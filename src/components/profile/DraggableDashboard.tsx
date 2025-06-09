@@ -25,7 +25,7 @@ import { WidgetFactory } from './widgets/WidgetFactory';
 import { WidgetEditModal } from './WidgetEditModal';
 import { AddWidgetModal } from './AddWidgetModal';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateWidgets } from '@/store/slices/dashboardSlice'; // Removed toggleExpandedWidget, setExpandedWidgets
+import { updateWidgets } from '@/store/slices/dashboardSlice';
 
 
 interface DraggableDashboardProps {

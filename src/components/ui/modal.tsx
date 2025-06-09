@@ -2,7 +2,8 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import classNames from 'classnames';
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
+import { cn } from '@/lib/utils';
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface ModalProps {
   overlayClassName?: string;
   contentClassName?: string;
   disableOverlayClick?: boolean;
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  fullHeight?: boolean;
 }
 
 export function Modal({
@@ -18,65 +21,130 @@ export function Modal({
   onClose,
   children,
   disableOverlayClick = false,
-  overlayClassName = 'bg-overlay',
-  contentClassName = 'mx-auto max-w-md flex flex-col rounded-3xl bg-white p-8'
+  overlayClassName = 'bg-black/50 backdrop-blur-sm',
+  contentClassName = '',
+  maxWidth = '2xl',
+  fullHeight = false,
 }: ModalProps) {
-  // Define animation variants
+  // Lock body scroll when modal is open
+  useLockBodyScroll(isOpen);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  // Animation variants
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
-      transition: { duration: 0.3, ease: 'easeOut' }
+      transition: { 
+        duration: 0.15,
+        ease: [0.16, 1, 0.3, 1],
+      },
     },
     exit: { 
       opacity: 0,
-      transition: { duration: 0.2, ease: 'easeIn' }
-    }
+      transition: { 
+        duration: 0.1,
+        ease: [0.4, 0, 1, 1],
+      },
+    },
   };
   
   const contentVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.9 },
+    hidden: { 
+      opacity: 0, 
+      y: 20, 
+      scale: 0.98,
+    },
     visible: { 
       opacity: 1, 
       y: 0, 
       scale: 1,
       transition: { 
-        duration: 0.4, 
-        ease: [0.175, 0.885, 0.32, 1.275] // Equivalent to GSAP's back.out(1.7)
-      }
+        duration: 0.25, 
+        ease: [0.16, 1, 0.3, 1],
+      },
     },
     exit: { 
       opacity: 0, 
       y: 20, 
-      scale: 0.9,
-      transition: { duration: 0.2, ease: 'easeIn' }
-    }
+      scale: 0.98,
+      transition: { 
+        duration: 0.15, 
+        ease: [0.4, 0, 1, 1],
+      },
+    },
+  };
+
+  const maxWidthClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    full: 'max-w-full',
   };
   
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div 
+          role="dialog" 
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+        >
           {/* Backdrop */}
           <motion.div 
-            className={`absolute inset-0 ${overlayClassName}`}
+            className={cn(
+              'fixed inset-0',
+              overlayClassName
+            )}
             onClick={!disableOverlayClick ? onClose : undefined}
             initial="hidden"
             animate="visible"
             exit="exit"
             variants={overlayVariants}
+            aria-hidden="true"
           />
 
           {/* Modal content */}
-          <motion.div
-            className={classNames(`relative p-6`, contentClassName)}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={contentVariants}
-          >
-            {children}
-          </motion.div>
+          <div className="flex items-center justify-center min-h-full w-full">
+            <motion.div
+              className={cn(
+                'relative w-full bg-white rounded-2xl shadow-2xl overflow-hidden',
+                'flex flex-col max-h-[90vh]',
+                maxWidthClasses[maxWidth],
+                fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',
+                contentClassName
+              )}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={contentVariants}
+              onClick={(e) => e.stopPropagation()}
+              role="document"
+            >
+              {children}
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>

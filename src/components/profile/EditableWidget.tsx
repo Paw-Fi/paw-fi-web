@@ -73,75 +73,79 @@ export function EditableWidget({
         <div className="absolute top-0 left-0 w-full h-full bg-gray-900/5 pointer-events-none"></div>
       )}
       
-      {/* Control overlay - only visible in edit mode */}
-      {isEditMode && (
-        <div className="absolute top-0 right-0 z-10 flex items-center p-2">
-          {/* Edit widget button */}
-          <button 
-            onClick={() => onEditWidget(id)}
-            className="p-1 hover:bg-gray-100/70 rounded-full mr-1 bg-white/70"
-            aria-label="Edit widget"
-            title="Edit widget"
-          >
-            <FontAwesomeIcon 
-              icon={faPencilAlt} 
-              className="h-3 w-3 text-gray-600" 
-            />
-          </button>
-          
-          {/* Remove widget button */}
-          <button 
-            onClick={() => onRemoveWidget(id)}
-            className="p-1 hover:bg-red-100 rounded-full mr-1 bg-white/70"
-            aria-label="Remove widget"
-            title="Remove widget"
-          >
-            <FontAwesomeIcon 
-              icon={faTrash} 
-              className="h-3 w-3 text-red-500" 
-            />
-          </button>
-          
-          {/* Expand/collapse height button */}
-          <button 
-            onClick={() => onToggleRowSpan(id)} // Use onToggleRowSpan
-            className="p-1 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 rounded-full mr-1 bg-white/70 dark:bg-slate-800/70"
-            aria-label={widget.rowSpan === 2 ? "Compress to 1 row" : "Expand to 2 rows"} // Use widget.rowSpan
-            title={widget.rowSpan === 2 ? "Compress to 1 row" : "Expand to 2 rows"} // Use widget.rowSpan
-          >
-            <FontAwesomeIcon 
-              icon={widget.rowSpan === 2 ? faCompress : faExpand} // Use widget.rowSpan
-              className="h-3 w-3 text-gray-600 dark:text-gray-300" 
-            />
-          </button>
-
-          {/* Toggle column span button */}
-          <button 
-            onClick={() => onToggleColumnSpan(id)}
-            className="p-1 hover:bg-gray-100/70 rounded-full mr-1 bg-white/70"
-            aria-label={widget.columnSpan === 2 ? "Set to 1 column width" : "Set to 2 columns width"}
-            title={widget.columnSpan === 2 ? "Set to 1 column width" : "Set to 2 columns width"}
-          >
-            <FontAwesomeIcon 
-              icon={widget.columnSpan === 2 ? faCompressAlt : faExpandAlt} 
-              className="h-3 w-3 text-gray-600" 
-            />
-          </button>
-          
-          <div 
-            {...attributes} 
-            {...listeners}
-            className="cursor-grab p-1 hover:bg-gray-100/70 rounded-full bg-white/70"
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-          >
-            <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 text-gray-600" />
-          </div>
-        </div>
-      )}
+      {/* Control buttons will be passed to Widget through controls prop */}
       
-      <div className="h-full overflow-auto">
-        <WidgetFactory widget={widget} onToggleChecklistItem={onToggleChecklistItem} />
+      {/* Create widget with controls in header instead of overlay */}
+      <div className="h-full">
+        <WidgetFactory 
+          widget={widget} 
+          onToggleChecklistItem={onToggleChecklistItem}
+          controls={isEditMode ? (
+            <div className="flex items-center">
+              {/* Edit widget button */}
+              <button 
+                onClick={() => onEditWidget(id)}
+                className="p-1 hover:bg-gray-100/70 rounded-full mr-1 bg-white/70"
+                aria-label="Edit widget"
+                title="Edit widget"
+              >
+                <FontAwesomeIcon 
+                  icon={faPencilAlt} 
+                  className="h-3 w-3 text-gray-600" 
+                />
+              </button>
+              
+              {/* Remove widget button */}
+              <button 
+                onClick={() => onRemoveWidget(id)}
+                className="p-1 hover:bg-red-100 rounded-full mr-1 bg-white/70"
+                aria-label="Remove widget"
+                title="Remove widget"
+              >
+                <FontAwesomeIcon 
+                  icon={faTrash} 
+                  className="h-3 w-3 text-red-500" 
+                />
+              </button>
+              
+              {/* Expand/collapse height button */}
+              <button 
+                onClick={() => onToggleRowSpan(id)}
+                className="p-1 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 rounded-full mr-1 bg-white/70 dark:bg-slate-800/70"
+                aria-label={widget.rowSpan === 2 ? "Compress to 1 row" : "Expand to 2 rows"}
+                title={widget.rowSpan === 2 ? "Compress to 1 row" : "Expand to 2 rows"}
+              >
+                <FontAwesomeIcon 
+                  icon={widget.rowSpan === 2 ? faCompress : faExpand}
+                  className="h-3 w-3 text-gray-600 dark:text-gray-300" 
+                />
+              </button>
+
+              {/* Toggle column span button */}
+              <button 
+                onClick={() => onToggleColumnSpan(id)}
+                className="p-1 hover:bg-gray-100/70 rounded-full mr-1 bg-white/70"
+                aria-label={widget.columnSpan === 2 ? "Set to 1 column width" : "Set to 2 columns width"}
+                title={widget.columnSpan === 2 ? "Set to 1 column width" : "Set to 2 columns width"}
+              >
+                <FontAwesomeIcon 
+                  icon={widget.columnSpan === 2 ? faCompressAlt : faExpandAlt} 
+                  className="h-3 w-3 text-gray-600" 
+                />
+              </button>
+              
+              <div 
+                {...attributes} 
+                {...listeners}
+                className="cursor-grab p-1 hover:bg-gray-100/70 rounded-full bg-white/70"
+                aria-label="Drag to reorder"
+                title="Drag to reorder"
+              >
+                <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 text-gray-600" />
+              </div>
+            </div>
+          ) : undefined}
+        />
       </div>
     </div>
   );
