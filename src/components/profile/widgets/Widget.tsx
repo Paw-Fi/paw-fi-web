@@ -44,7 +44,17 @@ import {
   faScaleBalanced, 
   faSackXmark, 
   faScaleUnbalanced, 
-  faScaleUnbalancedFlip
+  faScaleUnbalancedFlip,
+  faHourglassHalf,
+  IconDefinition,
+  faHeartPulse,
+  faBolt,
+  faBoltLightning,
+  faGavel,
+  faHeartbeat,
+  faUmbrellaBeach,
+  faShieldAlt,
+  faTasks
 } from '@fortawesome/free-solid-svg-icons';
 
 // Import brand icons from free-brands-svg-icons
@@ -53,6 +63,7 @@ import {
   faEthereum
 } from '@fortawesome/free-brands-svg-icons';
 import { Widget as WidgetType } from '../types/dashboard-data.typings';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 interface WidgetProps {
   widget: WidgetType;
@@ -60,63 +71,76 @@ interface WidgetProps {
   className?: string;
   controls?: ReactNode; // Added to support control buttons from EditableWidget
 }
-
+type FontAwesomePrefix = 'fas' | 'far' | 'fal' | 'fad' | 'fab';
+type FontAwesomeIconClass = `${FontAwesomePrefix} fa-${string}`;
 // Map of icon names to their corresponding Font Awesome icons
-export const iconMap: Record<string, any> = {
+export const iconMap: Record<FontAwesomeIconClass, IconProp> = {
   // Financial Icons
-  'Money Bill': faMoneyBill,
-  'Credit Card': faCreditCard,
-  'Wallet': faWallet,
-  'Piggy Bank': faPiggyBank,
-  'Coins': faCoins,
-  'Sack Dollar': faSackDollar,
-  'Money Bill Wave': faMoneyBillWave,
-  'Hand Holding Dollar': faHandHoldingUsd,
-  'Money Check Dollar': faMoneyCheckDollar,
-  'Receipt': faReceipt,
-  'File Invoice Dollar': faFileInvoiceDollar,
-  'Gift': faGift,
-  'Gem': faGem,
-  'Bitcoin': faBitcoin,
-  'Ethereum': faEthereum,
-  'Dollar Sign': faDollarSign,
-  'Euro Sign': faEuroSign,
-  'Pound Sign': faPoundSign,
-  'Yen Sign': faYenSign,
+  'fas fa-money-bill': faMoneyBill,
+  'fas fa-credit-card': faCreditCard,
+  'fas fa-wallet': faWallet,
+  'fas fa-piggy-bank': faPiggyBank,
+  'fas fa-coins': faCoins,
+  'fas fa-sack-dollar': faSackDollar,
+  'fas fa-money-bill-wave': faMoneyBillWave,
+  'fas fa-hand-holding-usd': faHandHoldingUsd,
+  'fas fa-money-check-dollar': faMoneyCheckDollar,
+  'fas fa-receipt': faReceipt,
+  'fas fa-file-invoice-dollar': faFileInvoiceDollar,
+  'fas fa-gift': faGift,
+  'fas fa-gem': faGem,
+  'fas fa-bitcoin': faBitcoin,
+  'fas fa-ethereum': faEthereum,
+  'fas fa-dollar-sign': faDollarSign,
+  'fas fa-euro-sign': faEuroSign,
+  'fas fa-pound-sign': faPoundSign,
+  'fas fa-yen-sign': faYenSign,
   
   // Chart Icons
-  'Chart Bar': faChartBar,
-  'Chart Line': faChartLine,
-  'Chart Pie': faChartPie,
-  'Chart Area': faChartArea,
-  'Chart Column': faChartColumn,
+  'fas fa-chart-bar': faChartBar,
+  'fas fa-chart-line': faChartLine,
+  'fas fa-chart-pie': faChartPie,
+  'fas fa-chart-area': faChartArea,
+  'fas fa-chart-column': faChartColumn,
   
   // Business & Finance
-  'Building': faBuilding,
-  'University': faUniversity,
-  'Briefcase': faBriefcase,
-  'Calculator': faCalculator,
-  'Percent': faPercent,
-  'Exchange Alt': faExchangeAlt,
-  'Tags': faTags,
-  'Scale Balanced': faScaleBalanced,
-  'Scale Unbalanced': faScaleUnbalanced,
+  'fas fa-building': faBuilding,
+  'fas fa-university': faUniversity,
+  'fas fa-briefcase': faBriefcase,
+  'fas fa-calculator': faCalculator,
+  'fas fa-percent': faPercent,
+  'fas fa-exchange-alt': faExchangeAlt,
+  'fas fa-tags': faTags,
+  'fas fa-scale-balanced': faScaleBalanced,
+  'fas fa-scale-unbalanced': faScaleUnbalanced,
   
   // General Icons
-  'Shield': faShield,
-  'Calendar': faCalendar,
-  'Lightbulb': faLightbulb,
-  'Home': faHome,
-  'Target': faBullseye,
-  'Handshake': faHandshake,
-  'Chevron Right': faChevronRight
+  'fas fa-shield': faShield,
+  'fas fa-calendar': faCalendar,
+  'fas fa-lightbulb': faLightbulb,
+  'fas fa-home': faHome,
+  'fas fa-target': faBullseye,
+  'fas fa-handshake': faHandshake,
+  'fas fa-chevron-right': faChevronRight,
+  'fas fa-hourglass-half': faHourglassHalf,
+  'fas fa-bullseye': faBullseye,
+  'fas fa-heart-pulse': faHeartPulse,
+  'fas fa-heartbeat': faHeartbeat,
+  'fas fa-bolt': faBolt,
+  'fas fa-bolt-lightning': faBoltLightning,
+  'fas fa-gavel': faGavel,
+  'fas fa-umbrella-beach': faUmbrellaBeach,
+  'fas fa-shield-alt': faShieldAlt,
+  'fas fa-tasks': faTasks,
 };
 
 // Sorted list of icon names for the dropdown
 export const iconOptions = Object.keys(iconMap).sort();
 
 export function Widget({ widget, children, className = '', controls }: WidgetProps) {
-  const icon = iconMap[widget.icon] || faChartBar;
+
+  // Safely handle the icon - ensure it exists in our map or use default
+  const icon = widget.icon && iconMap[widget.icon as keyof typeof iconMap] ? iconMap[widget.icon as keyof typeof iconMap] : faChartBar;
 
   return (
     <div 

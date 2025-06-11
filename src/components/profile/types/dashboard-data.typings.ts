@@ -90,10 +90,13 @@ export interface IChartDataPoint {
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
 export interface IChartData {
-  dataPoints: IChartDataPoint[]; // (Mandatory) Array of data points
+  dataPoints: IChartDataPoint[];
   chartType?: 'bar' | 'line'; // (Optional) Explicitly set the chart type if different from widget type
   xAxisLabel?: string; // (Optional) Label for the X-axis
   yAxisLabel?: string; // (Optional) Label for the Y-axis
+  height?: number;
+  showLegend?: boolean;
+  title?: string;
 }
 
 // 7. FINANCIAL HEALTH SCORECARD - Now supports multiple scores

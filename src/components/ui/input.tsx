@@ -1,11 +1,19 @@
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  prefix?: React.ReactNode;
+}
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, prefix, ...props }, ref) => {
     return (
+      <div className="relative">
+        {prefix && (
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            {prefix}
+          </div>
+        )}
       <input
         type={type}
         className={cn(
@@ -15,6 +23,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         {...props}
       />
+      </div>
     );
   }
 );

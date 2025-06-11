@@ -109,7 +109,7 @@ export function Modal({
         <div 
           role="dialog" 
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4  "
         >
           {/* Backdrop */}
           <motion.div 
@@ -129,7 +129,7 @@ export function Modal({
           <div className="flex items-center justify-center min-h-full w-full">
             <motion.div
               className={cn(
-                'relative w-full bg-white rounded-2xl shadow-2xl overflow-hidden',
+                'relative w-full bg-white rounded-2xl shadow-2xl overflow-y-auto',
                 'flex flex-col max-h-[90vh]',
                 maxWidthClasses[maxWidth],
                 fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',

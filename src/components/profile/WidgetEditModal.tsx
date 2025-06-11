@@ -1,38 +1,43 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Modal } from '@/components/ui/modal';
+import { Modal } from '@/components/ui/modal'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash, faTimes, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { IconSelector } from '@/components/ui/icon-selector';
-import { IBaseWidget, Widget } from './types/dashboard-data.typings';
+import {
+  Widget,
+  IProgressBarListWidget,
+  IProgressBarListItem,
+} from './types/dashboard-data.typings';
+
+// --- Widget Type Definitions ---
 
 // Base widget data types
 type WidgetType = 'metricCard' | 'progressBarList' | 'tipCard' | 'dataList' | 'countdownCard' | 'barChart' | 'lineChart' | 'quickCashFlowSummary';
-
-// Button variant type to ensure type safety
-type ButtonVariant = 'text' | 'outline' | 'primary' | 'secondary' | 'dark' | 'ghost'; // Added 'ghost'
 
 // Progress bar item type
 interface ProgressBarItem {
   id: string;
   label: string;
-  value: number;
-  max: number;
+  value: number; // Current progress value
+  max: number;   // Maximum value
   color: string;
+  displayOrder?: number;
 }
 
 // Data list item type
 interface DataListItem {
   id: string;
   label: string;
-  value: string | number;
+  value: string | number; // Can be string (e.g., "$100") or number
   description?: string;
   currency?: string;
   category?: string;
@@ -46,30 +51,41 @@ interface TipCardItem {
   category: string;
 }
 
-// Base widget interface
-interface BaseWidget {
+// Metric card item type
+interface MetricCardItem {
   id: string;
-  type: WidgetType;
-  title?: string;
+  label: string;
+  value: string | number; // Can be string (e.g., "1.5M") or number
+  description?: string;
+  trend?: 'up' | 'down' | 'neutral';
   icon?: string;
-  size?: 'small' | 'medium' | 'large';
-  position?: number;
-  column?: number;
 }
 
-// Type definitions for DataListWidget
-interface DataListWidgetData {
-  type: 'dataList';
-  items: DataListItem[];
+// Bar Chart Data Point type
+interface BarChartDataPoint {
+  id: string;
+  label: string;
+  value: number;
+  color: string;
+  displayOrder?: number;
+}
+
+// --- Widget Data Interfaces (specific to each type) ---
+
+interface MetricCardData {
+  type: 'metricCard';
+  items: MetricCardItem[];
   title?: string;
-  footerLink?: { text: string; url: string; icon: string; }; // Corrected type
-  showIcons?: boolean;
-  tip?: string; // Added from widget usage
-  groupByCategory?: boolean; // Added from widget usage
-  showTotals?: boolean; // Added from widget usage
 }
 
-// Type definitions for TipCardWidget
+interface ProgressBarListData {
+  type: 'progressBarList';
+  items: ProgressBarItem[];
+  title?: string;
+  showPercentages?: boolean;
+  sortBy?: 'value' | 'label' | 'custom';
+}
+
 interface TipCardWidgetData {
   type: 'tipCard';
   tips: TipCardItem[];
@@ -78,26 +94,17 @@ interface TipCardWidgetData {
   title?: string;
 }
 
-// Type definitions for ProgressBarList
-interface ProgressBarListData {
-  type: 'progressBarList';
-  items: ProgressBarItem[];
+interface DataListWidgetData {
+  type: 'dataList';
+  items: DataListItem[];
   title?: string;
-  showPercentages: boolean;
-  sortBy?: 'value' | 'label' | 'custom'; // Added 'custom' from usage
+  footerLink?: { text: string; url: string; icon: string; };
+  showIcons?: boolean;
+  tip?: string;
+  groupByCategory?: boolean;
+  showTotals?: boolean;
 }
 
-// Type definitions for MetricCard
-interface MetricCardData {
-  type: 'metricCard';
-  title: string;
-  value: string | number;
-  description: string;
-  trend?: 'up' | 'down' | 'neutral';
-  trendPercentage?: number;
-}
-
-// Type definitions for CountdownCard
 interface CountdownCardData {
   type: 'countdownCard';
   targetDate: string;
@@ -106,43 +113,41 @@ interface CountdownCardData {
   description?: string;
 }
 
-// Union type for all widget data types
+interface BarChartWidgetData {
+  type: 'barChart';
+  dataPoints: BarChartDataPoint[];
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  height?: number;
+  showLegend?: boolean;
+  title?: string;
+}
+
+// Union type for all widget specific data structures
 type WidgetData =
   | DataListWidgetData
   | TipCardWidgetData
   | ProgressBarListData
   | MetricCardData
   | CountdownCardData
-  | {
-      type: string;
-      [key: string]: any;
-    };
+  | BarChartWidgetData
+  // Fallback for unknown widget types
+  | { type: string; [key: string]: any; };
 
-// Type guards
-function isDataListWidgetData(data: WidgetData): data is DataListWidgetData {
-  return data.type === 'dataList';
-}
+// --- Type Guards (for safer type assertions) ---
 
-function isTipCardWidgetData(data: WidgetData): data is TipCardWidgetData {
-  return data.type === 'tipCard';
-}
+const isDataListWidgetData = (data: WidgetData): data is DataListWidgetData => data.type === 'dataList';
+const isTipCardWidgetData = (data: WidgetData): data is TipCardWidgetData => data.type === 'tipCard';
+const isProgressBarListData = (data: WidgetData): data is ProgressBarListData => data.type === 'progressBarList';
+const isMetricCardData = (data: WidgetData): data is MetricCardData => data.type === 'metricCard';
+const isCountdownCardData = (data: WidgetData): data is CountdownCardData => data.type === 'countdownCard';
+const isBarChartWidgetData = (data: WidgetData): data is BarChartWidgetData => data.type === 'barChart';
 
-function isProgressBarListData(data: WidgetData): data is ProgressBarListData {
-  return data.type === 'progressBarList';
-}
-
-function isMetricCardData(data: WidgetData): data is MetricCardData {
-  return data.type === 'metricCard';
-}
-
-function isCountdownCardData(data: WidgetData): data is CountdownCardData {
-  return data.type === 'countdownCard';
-}
 
 interface WidgetEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  widget: Widget;
+  widget: Widget; // The widget being edited
   onSave: (updatedWidget: Widget) => void;
 }
 
@@ -152,19 +157,20 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
   const [widgetData, setWidgetData] = useState<WidgetData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Helper function to safely update widget data with type checking
+  // Helper to safely update the nested widgetData state
   const updateWidgetData = useCallback(
     <T extends WidgetData>(updates: Partial<T> | ((prev: T) => T)) => {
       setWidgetData(prev => {
-        if (!prev) return null;
-        const updated = typeof updates === 'function' ? updates(prev as T) : { ...(prev as T), ...updates };
-        return { ...updated, type: prev.type } as WidgetData; // Ensure type is preserved and correct
+        if (!prev) return prev; // If prev is null, don't update
+        // Apply updates based on whether 'updates' is an object or a function
+        const updated = typeof updates === 'function' ? updates(prev as T) : { ...prev, ...updates };
+        return updated;
       });
     },
     []
   );
 
-  // Initialize form when widget changes
+  // Initialize form state when the widget prop changes
   useEffect(() => {
     if (!widget) {
       setTitle('');
@@ -176,37 +182,43 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
     setTitle(widget.title || '');
     setIcon(widget.icon || '');
 
-    // Initialize widgetData based on widget.type, handling existing data if present
+    // Deep initialization of widgetData based on type
     let initialWidgetData: WidgetData | null = null;
 
     switch (widget.type) {
       case 'metricCard':
         initialWidgetData = {
           type: 'metricCard',
-          ...(Array.isArray(widget.data) && widget.data.length > 0 ? widget.data[0] : {}),
-          title: (widget.data && Array.isArray(widget.data) && widget.data.length > 0 && widget.data[0].title) || '',
-          value: (widget.data && Array.isArray(widget.data) && widget.data.length > 0 && widget.data[0].value) || '',
-          description: (widget.data && Array.isArray(widget.data) && widget.data.length > 0 && widget.data[0].description) || '',
+          // Ensure items is always an array, mapping existing data if present
+          items: Array.isArray(widget.data?.items) ? widget.data.items.map((item: any) => ({
+            id: item.id || String(Math.random()),
+            label: item.label || '',
+            value: item.value || 0,
+            description: item.description || '',
+            trend: item.trend || 'neutral',
+            icon: item.icon || ''
+          })) : [], // Initialize as empty array if no data
+          title: widget.data?.title || widget.title || ''
         } as MetricCardData;
         break;
 
       case 'progressBarList':
-        // Map the widget data to match the ProgressBarItem interface
-        const progressItems = Array.isArray(widget.data) 
-          ? widget.data.map(item => ({
-              id: item.id || `item-${Date.now()}`,
-              label: item.label || '',
-              value: typeof item.current === 'number' ? item.current : 0,
-              max: typeof item.max === 'number' ? item.max : 100,
-              color: item.color || '#3b82f6'
-            }))
-          : [];
-          
         initialWidgetData = {
           type: 'progressBarList',
-          items: progressItems,
-          showPercentages: widget.data?.showPercentages !== false,
-          sortBy: widget.data?.sortBy || 'custom',
+          items: Array.isArray(widget.data?.items)
+            ? widget.data.items.map((item: any) => ({
+                id: item.id || `item-${Date.now()}-${Math.random()}`,
+                label: item.label || '',
+                // Use 'current' from backend type, map to 'value' for frontend
+                value: typeof item.current === 'number' ? item.current : 0,
+                max: typeof item.max === 'number' ? item.max : 100,
+                color: item.color || '#3b82f6',
+                displayOrder: item.displayOrder // Preserve displayOrder if exists
+              }))
+            : [], // Initialize as empty array
+          showPercentages: widget.data?.showPercentages ?? true, // Default to true if undefined
+          sortBy: widget.data?.sortBy === 'progress' ? 'value' :
+                  widget.data?.sortBy === 'alphabetical' ? 'label' : 'custom',
           title: widget.data?.title || widget.title || '',
         } as ProgressBarListData;
         break;
@@ -214,26 +226,33 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
       case 'tipCard':
         initialWidgetData = {
           type: 'tipCard',
-          tips: (widget.data?.tips && Array.isArray(widget.data.tips) ? widget.data.tips : []),
+          tips: Array.isArray(widget.data?.tips) ? widget.data.tips.map((tip: any) => ({
+            id: tip.id || `tip-${Date.now()}-${Math.random()}`,
+            title: tip.title || '',
+            content: tip.content || '',
+            category: tip.category || ''
+          })) : [], // Initialize as empty array
           currentTipIndex: widget.data?.currentTipIndex || 0,
-          autoRotate: widget.data?.autoRotate || false,
-          title: widget.data?.title || '',
+          autoRotate: widget.data?.autoRotate ?? false, // Default to false if undefined
+          title: widget.data?.title || widget.title || '',
         } as TipCardWidgetData;
         break;
 
       case 'dataList':
-        // Handle widget data which is an array of items directly
-        const dataListItems = Array.isArray(widget.data) 
-          ? widget.data 
-          : (widget.data?.items && Array.isArray(widget.data.items) ? widget.data.items : []);
-          
         initialWidgetData = {
           type: 'dataList',
-          items: dataListItems,
-          tip: widget.data?.tip || widget.tip || '',
-          footerLink: widget.data?.footerLink || widget.footerLink || { text: '', url: '', icon: 'link' },
-          groupByCategory: widget.data?.groupByCategory || widget.groupByCategory || false,
-          showTotals: widget.data?.showTotals || widget.showTotals || false,
+          items: Array.isArray(widget.data?.items) ? widget.data.items.map((item: any) => ({
+            id: item.id || `data-item-${Date.now()}-${Math.random()}`,
+            label: item.label || '',
+            value: item.value || '',
+            description: item.description || '',
+            currency: item.currency || '',
+            category: item.category || ''
+          })) : [], // Initialize as empty array
+          tip: widget.data?.tip || '',
+          footerLink: widget.data?.footerLink || { text: '', url: '', icon: 'link' },
+          groupByCategory: widget.data?.groupByCategory ?? false,
+          showTotals: widget.data?.showTotals ?? false,
           title: widget.data?.title || widget.title || '',
         } as DataListWidgetData;
         break;
@@ -241,62 +260,285 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
       case 'countdownCard':
         initialWidgetData = {
           type: 'countdownCard',
-          ...(widget.data || {}),
-          targetDate: widget.data?.targetDate || new Date().toISOString(),
+          targetDate: widget.data?.targetDate || new Date().toISOString().split('T')[0], // Default to today
           title: widget.data?.title || '',
+          image: widget.data?.image || '',
+          description: widget.data?.description || '',
         } as CountdownCardData;
         break;
 
+      case 'barChart':
+        initialWidgetData = {
+          type: 'barChart',
+          dataPoints: Array.isArray(widget.data?.dataPoints)
+            ? widget.data.dataPoints.map((point: any) => ({
+                id: point.id || `point-${Date.now()}-${Math.random()}`,
+                label: point.label || '',
+                value: typeof point.value === 'number' ? point.value : 0,
+                color: point.color || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
+                displayOrder: point.displayOrder
+              }))
+            : [], // Initialize as empty array
+          xAxisLabel: widget.data?.xAxisLabel || '',
+          yAxisLabel: widget.data?.yAxisLabel || '',
+          height: widget.data?.height || 300,
+          showLegend: widget.data?.showLegend ?? true, // Default to true
+          title: widget.data?.title || widget.title || '',
+        } as BarChartWidgetData;
+        break;
+
       default:
-        // For other widget types, just use the existing data or an empty object
+        // Handle other/unknown widget types gracefully
         initialWidgetData = {
           type: widget.type,
-          ...(widget.data || {}),
+          ...widget.data, // Spread existing data if any
         };
     }
     setWidgetData(initialWidgetData);
-  }, [widget]);
+  }, [widget]); // Dependency array: re-run if widget changes
 
-
-  // Handle save button click
+  // Handle saving the widget data
   const handleSave = useCallback(() => {
-    if (!widget || !widgetData) return;
+    if (!widget || !widgetData) {
+      console.error("Attempted to save with missing widget or widgetData.");
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      // Special handling for progressBarList to match backend IProgressBarListWidget type
+      if (isProgressBarListData(widgetData)) {
+        // Map frontend ProgressBarItem to backend IProgressBarListItem
+        const progressBarItems: IProgressBarListItem[] = widgetData.items.map(item => ({
+          id: item.id,
+          label: item.label,
+          current: item.value, // Map 'value' back to 'current'
+          max: item.max,
+          color: item.color,
+          ...(item.displayOrder !== undefined ? { displayOrder: item.displayOrder } : {})
+        }));
 
+        // The IProgressBarListWidget type expects showPercentages and sortBy as direct properties,
+        // not nested inside 'data'.
+        const progressBarListBackendWidget: IProgressBarListWidget = {
+          id: widget.id,
+          title: title, // Use the shared title state
+          icon: icon,   // Use the shared icon state
+          type: 'progressBarList',
+          data: progressBarItems, // This is the array of items
+          showPercentages: widgetData.showPercentages ?? false,
+          sortBy: widgetData.sortBy === 'value' ? 'progress' :
+                  widgetData.sortBy === 'label' ? 'alphabetical' : 'custom',
+          // Preserve other base widget properties if they exist on the original widget
+          size: widget.size,
+          position: widget.position,
+          column: widget.column,
+        };
+        onSave(progressBarListBackendWidget);
+        onClose();
+        return; // Exit early as we've already saved and closed
+      }
+
+      // For all other widget types, construct the updated widget generically
       const updatedWidget: Widget = {
-        ...widget,
-        title: title || undefined,
-        icon: icon || undefined,
-        data: widgetData,
+        ...widget, // Spread original widget properties
+        title: title, // Use the shared title state
+        icon: icon,   // Use the shared icon state
+        data: widgetData, // The widgetData state holds the specific data structure
       };
 
       onSave(updatedWidget);
       onClose();
     } catch (error: unknown) {
       console.error('Error saving widget:', error);
+      // Optionally show a user-friendly error message
     } finally {
       setIsSubmitting(false);
     }
   }, [widget, title, icon, widgetData, onSave, onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission
     handleSave();
   };
 
-  // Helper function to calculate progress percentage
+  // Helper function to calculate progress percentage for display
   const getProgressPercentage = (current: number, target: number): number => {
     if (target <= 0) return 0;
     return Math.min(Math.round((current / target) * 100), 100);
   };
 
+  // --- Bar Chart Specific Functions ---
+  const updateBarChartDataPoint = useCallback((index: number, field: keyof BarChartDataPoint, value: any) => {
+    if (!isBarChartWidgetData(widgetData)) return; // Type guard
+
+    updateWidgetData<BarChartWidgetData>(prev => {
+      const newDataPoints = [...(prev.dataPoints || [])]; // Ensure it's an array
+      if (!newDataPoints[index]) return prev; // Item not found, return previous state
+
+      newDataPoints[index] = {
+        ...newDataPoints[index],
+        [field]: field === 'value' ? Number(value) : value // Convert value to number if applicable
+      };
+      return { ...prev, dataPoints: newDataPoints };
+    });
+  }, [widgetData, updateWidgetData]); // Dependency on widgetData to trigger re-render and updateWidgetData
+
+  const addBarChartDataPoint = useCallback(() => {
+    if (!isBarChartWidgetData(widgetData)) return;
+
+    const newId = `item-${Date.now()}-${Math.random()}`; // More robust ID
+    const newColor = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`; // Ensure 6 chars
+    const newDataPoint: BarChartDataPoint = {
+      id: newId,
+      label: '',
+      value: 0,
+      color: newColor,
+      displayOrder: (widgetData.dataPoints?.length || 0) + 1
+    };
+
+    updateWidgetData<BarChartWidgetData>(prev => ({
+      ...prev,
+      dataPoints: [...(prev.dataPoints || []), newDataPoint]
+    }));
+  }, [widgetData, updateWidgetData]);
+
+  const removeBarChartDataPoint = useCallback((index: number) => {
+    if (!isBarChartWidgetData(widgetData)) return;
+
+    updateWidgetData<BarChartWidgetData>(prev => {
+      const newDataPoints = [...(prev.dataPoints || [])];
+      newDataPoints.splice(index, 1); // Remove item at index
+      return { ...prev, dataPoints: newDataPoints };
+    });
+  }, [widgetData, updateWidgetData]);
+
+  // Render bar chart specific fields
+  const renderBarChartFields = () => {
+    if (!isBarChartWidgetData(widgetData)) return null;
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="xAxisLabel">X-Axis Label</Label>
+            <Input
+              id="xAxisLabel"
+              value={widgetData.xAxisLabel || ''}
+              onChange={(e) => updateWidgetData<BarChartWidgetData>({ xAxisLabel: e.target.value })}
+              placeholder="e.g., Categories"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="yAxisLabel">Y-Axis Label</Label>
+            <Input
+              id="yAxisLabel"
+              value={widgetData.yAxisLabel || ''}
+              onChange={(e) => updateWidgetData<BarChartWidgetData>({ yAxisLabel: e.target.value })}
+              placeholder="e.g., Amount"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label>Data Points</Label>
+            <Button type="button" size="sm" onClick={addBarChartDataPoint}>
+              Add Data Point
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <AnimatePresence> {/* Wrap mapped items for animation */}
+              {widgetData.dataPoints?.map((item, index) => (
+                <motion.div
+                  key={item.id} // Essential for lists in React and AnimatePresence
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="grid grid-cols-12 gap-2 items-center p-2 border rounded-md" // Added styling for clarity
+                >
+                  <div className="col-span-4">
+                    <Input
+                      value={item.label}
+                      onChange={(e) => updateBarChartDataPoint(index, 'label', e.target.value)}
+                      placeholder="Label"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      value={item.value}
+                      onChange={(e) => updateBarChartDataPoint(index, 'value', e.target.value)}
+                      placeholder="Value"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="color"
+                      value={item.color}
+                      onChange={(e) => updateBarChartDataPoint(index, 'color', e.target.value)}
+                      className="p-0 h-10 w-full"
+                    />
+                  </div>
+                  <div className="col-span-3 flex items-center">
+                    <div
+                      className="w-4 h-4 rounded mr-2"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm text-gray-500">{item.color}</span>
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="text"
+                      size="icon"
+                      onClick={() => removeBarChartDataPoint(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="chartHeight">Chart Height (px)</Label>
+            <Input
+              id="chartHeight"
+              type="number"
+              min="100"
+              max="1000"
+              step="10"
+              value={widgetData.height || 300}
+              onChange={(e) => updateWidgetData<BarChartWidgetData>({ height: Number(e.target.value) })}
+            />
+          </div>
+          <div className="flex items-end space-x-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="showLegend"
+                checked={widgetData.showLegend ?? true} // Default to true
+                onCheckedChange={(checked) => updateWidgetData<BarChartWidgetData>({ showLegend: !!checked })}
+              />
+              <Label htmlFor="showLegend">Show Legend</Label>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render the form based on widget type
   const renderWidgetFields = () => {
-    if (!widget || !widgetData) return null;
+    if (!widget || !widgetData) return null; // Ensure data is loaded
 
-    // Derive specific widget data using type guards
+    // Cast widgetData to specific types for easier access
     const dataListData = isDataListWidgetData(widgetData) ? widgetData : null;
     const tipCardData = isTipCardWidgetData(widgetData) ? widgetData : null;
     const progressBarData = isProgressBarListData(widgetData) ? widgetData : null;
@@ -327,8 +569,9 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   size="sm"
                   onClick={() => {
                     updateWidgetData<DataListWidgetData>(prev => {
+                      const newId = `item-${Date.now()}-${Math.random()}`; // Unique ID
                       const newItem: DataListItem = {
-                        id: `item-${Date.now()}`,
+                        id: newId,
                         label: `Item ${(prev.items?.length || 0) + 1}`,
                         value: '0',
                         currency: 'USD',
@@ -336,7 +579,7 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                       };
                       return {
                         ...prev,
-                        items: [...(prev.items || []), newItem],
+                        items: [...(prev.items || []), newItem], // Ensure items is always an array
                       };
                     });
                   }}
@@ -344,11 +587,12 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Item
                 </Button>
               </div>
-              <div className="space-y-2">
-                <AnimatePresence>
+              {/* AnimatePresence must have a single direct child */}
+              <AnimatePresence>
+                <div className="space-y-2"> {/* This div is the single child */}
                   {dataListData.items?.map((item, index) => (
                     <motion.div
-                      key={item.id}
+                      key={item.id} // Important for list rendering and animations
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
@@ -359,7 +603,7 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                         <h4 className="font-medium">Item {index + 1}</h4>
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="text"
                           size="sm"
                           onClick={() => {
                             updateWidgetData<DataListWidgetData>(prev => ({
@@ -390,7 +634,7 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                           <Label htmlFor={`dataListItemValue-${item.id}`}>Value</Label>
                           <Input
                             id={`dataListItemValue-${item.id}`}
-                            type="text" // Keep as text to allow mixed types, parse if numerical ops needed
+                            type="text" // Value can be string or number
                             value={item.value}
                             onChange={(e) => {
                               updateWidgetData<DataListWidgetData>(prev => {
@@ -432,8 +676,8 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                       </div>
                     </motion.div>
                   ))}
-                </AnimatePresence>
-              </div>
+                </div>
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -452,8 +696,9 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   size="sm"
                   onClick={() => {
                     updateWidgetData<TipCardWidgetData>(prev => {
+                      const newId = `tip-${Date.now()}-${Math.random()}`;
                       const newTip: TipCardItem = {
-                        id: `tip-${Date.now()}`,
+                        id: newId,
                         title: 'New Tip',
                         content: 'New tip content',
                         category: 'General',
@@ -468,8 +713,8 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Tip
                 </Button>
               </div>
-              <div className="space-y-2">
-                <AnimatePresence>
+              <AnimatePresence>
+                <div className="space-y-2"> {/* Single child for AnimatePresence */}
                   {tipCardData.tips?.map((tip, index) => (
                     <motion.div
                       key={tip.id}
@@ -483,7 +728,7 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                         <h4 className="font-medium">Tip {index + 1}</h4>
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="text"
                           size="sm"
                           onClick={() => {
                             updateWidgetData<TipCardWidgetData>(prev => ({
@@ -522,7 +767,7 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                                  return { ...prev, tips: newTips };
                                });
                              }}
-                          />                        
+                          />
                         </div>
                         <div>
                           <Label htmlFor={`tipCategory-${tip.id}`}>Category</Label>
@@ -541,8 +786,8 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                       </div>
                     </motion.div>
                   ))}
-                </AnimatePresence>
-              </div>
+                </div>
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -562,8 +807,9 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   size="sm"
                   onClick={() => {
                     updateWidgetData<ProgressBarListData>(prev => {
+                      const newId = `item-${Date.now()}-${Math.random()}`;
                       const newItem: ProgressBarItem = {
-                        id: `item-${Date.now()}`,
+                        id: newId,
                         label: `Progress ${(prev.items?.length || 0) + 1}`,
                         value: 50,
                         max: 100,
@@ -579,8 +825,8 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                   <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Progress Bar
                 </Button>
               </div>
-              <div className="space-y-2">
-                <AnimatePresence>
+              <AnimatePresence>
+                <div className="space-y-2"> {/* Single child for AnimatePresence */}
                   {currentProgressBarItems.map((item, index) => {
                     const progress = getProgressPercentage(item.value, item.max);
                     return (
@@ -593,10 +839,10 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                         className="p-3 border rounded-md space-y-2"
                       >
                         <div className="flex justify-between items-center">
-                          <h4 className="font-medium">{item.label || `Progress ${index + 1}`}</h4>
+                          <h4 className="font-medium">Progress Bar {index + 1}</h4>
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="text"
                             size="sm"
                             onClick={() => {
                               updateWidgetData<ProgressBarListData>(prev => ({
@@ -608,11 +854,11 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                             <FontAwesomeIcon icon={faTimes} className="mr-1" /> Remove
                           </Button>
                         </div>
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <Label htmlFor={`progressBarLabel-${item.id}`}>Label</Label>
+                            <Label htmlFor={`progressLabel-${item.id}`}>Label</Label>
                             <Input
-                              id={`progressBarLabel-${item.id}`}
+                              id={`progressLabel-${item.id}`}
                               value={item.label}
                               onChange={(e) => {
                                 updateWidgetData<ProgressBarListData>(prev => {
@@ -623,97 +869,88 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
                               }}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label htmlFor={`progressBarValue-${item.id}`}>Value</Label>
-                              <Input
-                                id={`progressBarValue-${item.id}`}
-                                type="number"
-                                min={0}
-                                max={item.max}
-                                value={item.value}
-                                onChange={(e) => {
-                                  updateWidgetData<ProgressBarListData>(prev => {
-                                    const newItems = [...prev.items];
-                                    const newValue = Math.min(Number(e.target.value), newItems[index].max);
-                                    newItems[index] = { ...newItems[index], value: newValue };
-                                    return { ...prev, items: newItems };
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor={`progressBarMaxValue-${item.id}`}>Max Value</Label>
-                              <Input
-                                id={`progressBarMaxValue-${item.id}`}
-                                type="number"
-                                min={1}
-                                value={item.max}
-                                onChange={(e) => {
-                                  updateWidgetData<ProgressBarListData>(prev => {
-                                    const newItems = [...prev.items];
-                                    const newMax = Math.max(1, Number(e.target.value));
-                                    newItems[index] = {
-                                      ...newItems[index],
-                                      max: newMax,
-                                      value: Math.min(newItems[index].value, newMax),
-                                    };
-                                    return { ...prev, items: newItems };
-                                  });
-                                }}
-                              />
-                            </div>
+                          <div>
+                            <Label htmlFor={`progressValue-${item.id}`}>Current Value</Label>
+                            <Input
+                              id={`progressValue-${item.id}`}
+                              type="number"
+                              value={item.value}
+                              onChange={(e) => {
+                                updateWidgetData<ProgressBarListData>(prev => {
+                                  const newItems = [...prev.items];
+                                  newItems[index] = { ...newItems[index], value: Number(e.target.value) };
+                                  return { ...prev, items: newItems };
+                                });
+                              }}
+                            />
                           </div>
                           <div>
-                            <Label htmlFor={`progressBarColor-${item.id}`}>Color</Label>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                id={`progressBarColorPicker-${item.id}`}
-                                type="color"
-                                value={item.color || '#3b82f6'}
-                                onChange={(e) => {
-                                  updateWidgetData<ProgressBarListData>(prev => {
-                                    const newItems = [...prev.items];
-                                    newItems[index] = { ...newItems[index], color: e.target.value };
-                                    return { ...prev, items: newItems };
-                                  });
-                                }}
-                                className="h-10 w-10 rounded border border-gray-300"
-                              />
-                              <Input
-                                id={`progressBarColorInput-${item.id}`}
-                                value={item.color || ''}
-                                onChange={(e) => {
-                                  updateWidgetData<ProgressBarListData>(prev => {
-                                    const newItems = [...prev.items];
-                                    newItems[index] = { ...newItems[index], color: e.target.value };
-                                    return { ...prev, items: newItems };
-                                  });
-                                }}
-                                placeholder="#3b82f6"
-                              />
-                            </div>
+                            <Label htmlFor={`progressMax-${item.id}`}>Max Value</Label>
+                            <Input
+                              id={`progressMax-${item.id}`}
+                              type="number"
+                              value={item.max}
+                              onChange={(e) => {
+                                updateWidgetData<ProgressBarListData>(prev => {
+                                  const newItems = [...prev.items];
+                                  newItems[index] = { ...newItems[index], max: Number(e.target.value) };
+                                  return { ...prev, items: newItems };
+                                });
+                              }}
+                            />
                           </div>
                           <div>
-                            <Label>Progress</Label>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div
-                                className="h-2.5 rounded-full transition-all duration-300 ease-out"
-                                style={{
-                                  width: `${progress}%`,
-                                  backgroundColor: item.color || '#3b82f6',
-                                }}
-                              />
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {progress}% ({item.value} / {item.max})
-                            </div>
+                            <Label htmlFor={`progressColor-${item.id}`}>Color</Label>
+                            <Input
+                              id={`progressColor-${item.id}`}
+                              type="color"
+                              value={item.color}
+                              onChange={(e) => {
+                                updateWidgetData<ProgressBarListData>(prev => {
+                                  const newItems = [...prev.items];
+                                  newItems[index] = { ...newItems[index], color: e.target.value };
+                                  return { ...prev, items: newItems };
+                                });
+                              }}
+                              className="p-0 h-10 w-full"
+                            />
                           </div>
                         </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                          <div
+                            className="h-2.5 rounded-full"
+                            style={{ width: `${progress}%`, backgroundColor: item.color }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-gray-500">{progress}% Complete</span>
                       </motion.div>
                     );
                   })}
-                </AnimatePresence>
+                </div>
+              </AnimatePresence>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="showPercentages"
+                  checked={progressBarData.showPercentages ?? true} // Default to true
+                  onCheckedChange={(checked) => updateWidgetData<ProgressBarListData>({ showPercentages: !!checked })}
+                />
+                <Label htmlFor="showPercentages">Show Percentages</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sortBy">Sort By</Label>
+                {/* Assuming 'Select' component takes 'onValueChange' directly */}
+                <Select
+                  id="sortBy"
+                  value={progressBarData.sortBy || 'custom'}
+                  onValueChange={(value: 'value' | 'label' | 'custom') => updateWidgetData<ProgressBarListData>({ sortBy: value })}
+                  options={[
+                    { value: 'custom', label: 'Custom' },
+                    { value: 'value', label: 'Value (Progress)' },
+                    { value: 'label', label: 'Label (Alphabetical)' },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -724,160 +961,211 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Metric Card Configuration</h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="metricTitle">Title</Label>
-                <Input
-                  id="metricTitle"
-                  value={metricCardData.title || ''}
-                  onChange={(e) => updateWidgetData<MetricCardData>(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="metricValue">Value</Label>
-                <Input
-                  id="metricValue"
-                  value={metricCardData.value}
-                  onChange={(e) => updateWidgetData<MetricCardData>(prev => ({ ...prev, value: e.target.value }))}
-                  placeholder="Enter value"
-                />
-              </div>
-              <div>
-                <Label htmlFor="metricDescription">Description</Label>
-                <Input
-                  id="metricDescription"
-                  value={metricCardData.description || ''}
-                  onChange={(e) => updateWidgetData<MetricCardData>(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter description"
-                />
-              </div>
-              <div>
-                <Label htmlFor="metricTrend">Trend</Label>
-                <Select
-                  value={metricCardData.trend || 'neutral'}
-                  onValueChange={(value: 'up' | 'down' | 'neutral') =>
-                    updateWidgetData<MetricCardData>(prev => ({ ...prev, trend: value }))
-                  }
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label>Metrics</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    updateWidgetData<MetricCardData>(prev => {
+                      const newId = `metric-${Date.now()}-${Math.random()}`;
+                      const newItem: MetricCardItem = {
+                        id: newId,
+                        label: 'New Metric',
+                        value: 0,
+                        trend: 'neutral',
+                        icon: 'chart-line'
+                      };
+                      return {
+                        ...prev,
+                        items: [...(prev.items || []), newItem],
+                      };
+                    });
+                  }}
                 >
-                  <SelectTrigger id="metricTrend">
-                    <SelectValue placeholder="Select trend" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="up">Up</SelectItem>
-                    <SelectItem value="down">Down</SelectItem>
-                    <SelectItem value="neutral">Neutral</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Metric
+                </Button>
               </div>
-              {metricCardData.trend && metricCardData.trend !== 'neutral' && (
-                <div>
-                  <Label htmlFor="metricTrendPercentage">Trend Percentage</Label>
-                  <Input
-                    id="metricTrendPercentage"
-                    type="number"
-                    value={metricCardData.trendPercentage || ''}
-                    onChange={(e) => updateWidgetData<MetricCardData>(prev => ({ ...prev, trendPercentage: Number(e.target.value) }))}
-                    placeholder="Enter percentage"
-                  />
+              <AnimatePresence>
+                <div className="space-y-2"> {/* Single child for AnimatePresence */}
+                  {metricCardData.items?.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-3 border rounded-md space-y-2"
+                    >
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Metric {index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="text"
+                          size="sm"
+                          onClick={() => {
+                            updateWidgetData<MetricCardData>(prev => ({
+                              ...prev,
+                              items: (prev.items || []).filter((_, i) => i !== index),
+                            }));
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="mr-1" /> Remove
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor={`metricLabel-${item.id}`}>Label</Label>
+                          <Input
+                            id={`metricLabel-${item.id}`}
+                            value={item.label}
+                            onChange={(e) => {
+                              updateWidgetData<MetricCardData>(prev => {
+                                const newItems = [...prev.items];
+                                newItems[index] = { ...newItems[index], label: e.target.value };
+                                return { ...prev, items: newItems };
+                              });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`metricValue-${item.id}`}>Value</Label>
+                          <Input
+                            id={`metricValue-${item.id}`}
+                            type="text" // Can be string or number (e.g. "1.5M")
+                            value={item.value}
+                            onChange={(e) => {
+                              updateWidgetData<MetricCardData>(prev => {
+                                const newItems = [...prev.items];
+                                newItems[index] = { ...newItems[index], value: e.target.value };
+                                return { ...prev, items: newItems };
+                              });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`metricDescription-${item.id}`}>Description</Label>
+                          <Input
+                            id={`metricDescription-${item.id}`}
+                            value={item.description || ''}
+                            onChange={(e) => {
+                              updateWidgetData<MetricCardData>(prev => {
+                                const newItems = [...prev.items];
+                                newItems[index] = { ...newItems[index], description: e.target.value };
+                                return { ...prev, items: newItems };
+                              });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`metricTrend-${item.id}`}>Trend</Label>
+                          <Select
+                            id={`metricTrend-${item.id}`}
+                            value={item.trend || 'neutral'}
+                            // Assuming Select component takes onValueChange directly AND an options prop
+                            onValueChange={(value: 'up' | 'down' | 'neutral') => {
+                              updateWidgetData<MetricCardData>(prev => {
+                                const newItems = [...prev.items];
+                                newItems[index] = { ...newItems[index], trend: value };
+                                return { ...prev, items: newItems };
+                              });
+                            }}
+                            options={[
+                              { value: 'up', label: 'Up' },
+                              { value: 'down', label: 'Down' },
+                              { value: 'neutral', label: 'Neutral' },
+                            ]}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`metricIcon-${item.id}`}>Icon</Label>
+                          <IconSelector
+                            selectedIcon={item.icon}
+                            onSelectIcon={(selectedIcon) => {
+                              updateWidgetData<MetricCardData>(prev => {
+                                const newItems = [...prev.items];
+                                newItems[index] = { ...newItems[index], icon: selectedIcon };
+                                return { ...prev, items: newItems };
+                              });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              )}
+              </AnimatePresence>
             </div>
           </div>
         );
 
       case 'countdownCard':
         if (!countdownData) return null;
-        const targetDate = countdownData.targetDate ? new Date(countdownData.targetDate) : new Date();
-        const formattedDate = targetDate.toISOString().split('T')[0];
-
-        // Calculate days remaining for countdown
-        let daysRemaining: number | null = null;
-        if (countdownData?.targetDate) {
-          const target = new Date(countdownData.targetDate);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0); // Normalize today's date to start of day
-          daysRemaining = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        }
-
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Countdown Configuration</h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="countdownTitle">Title</Label>
-                <Input
-                  id="countdownTitle"
-                  value={countdownData.title || ''}
-                  onChange={(e) => updateWidgetData<CountdownCardData>(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="countdownTargetDate">Target Date</Label>
-                <Input
-                  id="countdownTargetDate"
-                  type="date"
-                  value={formattedDate}
-                  onChange={(e) => {
-                    const newDate = e.target.value ? new Date(e.target.value) : new Date();
-                    updateWidgetData<CountdownCardData>(prev => ({
-                      ...prev,
-                      targetDate: newDate.toISOString(),
-                    }));
-                  }}
-                />
-              </div>
-              {daysRemaining !== null && (
-                <div className="p-4 bg-gray-50 rounded-md">
-                  <p className="text-sm text-gray-600">
-                    {daysRemaining > 0
-                      ? `${daysRemaining} days until ${countdownData.title || 'target date'}`
-                      : daysRemaining === 0
-                        ? `Today is the ${countdownData.title || 'target date'}!`
-                        : `${Math.abs(daysRemaining)} days since ${countdownData.title || 'target date'}`}
-                  </p>
-                </div>
-              )}
+            <h3 className="text-lg font-medium">Countdown Card Configuration</h3>
+            <div className="space-y-2">
+              <Label htmlFor="countdownTitle">Title</Label>
+              <Input
+                id="countdownTitle"
+                value={countdownData.title || ''}
+                onChange={(e) => updateWidgetData<CountdownCardData>({ title: e.target.value })}
+                placeholder="Enter title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetDate">Target Date</Label>
+              <Input
+                id="targetDate"
+                type="date"
+                // Ensure date format is compatible with input type="date" (YYYY-MM-DD)
+                value={countdownData.targetDate ? new Date(countdownData.targetDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => updateWidgetData<CountdownCardData>({ targetDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="countdownImage">Image URL</Label>
+              <Input
+                id="countdownImage"
+                value={countdownData.image || ''}
+                onChange={(e) => updateWidgetData<CountdownCardData>({ image: e.target.value })}
+                placeholder="Optional image URL"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="countdownDescription">Description</Label>
+              <Input
+                id="countdownDescription"
+                value={countdownData.description || ''}
+                onChange={(e) => updateWidgetData<CountdownCardData>({ description: e.target.value })}
+                placeholder="Optional description"
+              />
             </div>
           </div>
         );
 
+      case 'barChart':
+        return renderBarChartFields();
+
       default:
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Widget Configuration</h3>
-            <p className="text-sm text-gray-600">
-              No specific configuration options available for this widget type.
-            </p>
-          </div>
+          <p className="text-gray-500">No specific configuration options for this widget type.</p>
         );
     }
   };
 
-  if (!widget) return null;
-
   return (
     <Modal
+      title={`Edit ${widget?.title || 'Widget'}`}
+      description={`Configure the settings for your ${widget?.type} widget.`}
       isOpen={isOpen}
       onClose={onClose}
-      contentClassName="mx-auto max-w-lg flex flex-col rounded-xl bg-white p-6"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Edit Widget</h2>
-        <button
-          type="button" // Added type button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full"
-        >
-          <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
-        </button>
-      </div>
-
-      {/* Main form for general widget properties */}
-      <form onSubmit={handleSubmit} className="space-y-6 flex-grow overflow-y-auto">
+      <form onSubmit={handleSubmit} className="space-y-6 p-4">
         <div className="space-y-2">
-          <Label htmlFor="widgetTitle">Title</Label>
+          <Label htmlFor="widgetTitle">Widget Title</Label>
           <Input
             id="widgetTitle"
             value={title}
@@ -885,32 +1173,30 @@ export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditM
             placeholder="Enter widget title"
           />
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="widgetIcon">Icon</Label>
+          <Label htmlFor="widgetIcon">Widget Icon</Label>
           <IconSelector
-            id="widgetIcon"
             selectedIcon={icon}
             onSelectIcon={setIcon}
           />
+          {icon && (
+            <div className="flex items-center space-x-2 text-sm text-gray-600 mt-2">
+              <FontAwesomeIcon icon={icon as any} />
+              <span>Selected Icon: {icon}</span>
+            </div>
+          )}
         </div>
 
-        {/* Render specific widget data fields */}
-        {renderWidgetFields()}
+        <div className="border-t pt-4">
+          {renderWidgetFields()} {/* Render widget-specific fields */}
+        </div>
 
-        <div className="flex justify-end gap-2 mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
+        <div className="flex justify-end space-x-2 mt-6">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>

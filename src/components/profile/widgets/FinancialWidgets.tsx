@@ -169,7 +169,7 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
           <div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Total Debt</div>
             <div className="text-xl font-bold text-gray-800 dark:text-white">
-              ${totalCurrentBalance.toLocaleString()}
+              ${totalCurrentBalance?.toLocaleString()}
             </div>
           </div>
           <div>
@@ -309,7 +309,7 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
               {currentScenario.status}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Projected: <strong>${currentScenario.projectionAmount.toLocaleString()}</strong> by {currentScenario.projectionDate}
+              Projected: <strong>${currentScenario.projectedSavingsAmount?.toLocaleString()}</strong> by {currentScenario.projectionDate}
             </div>
           </div>
         </div>
@@ -353,7 +353,7 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
               </div>
               
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>${goal.savedAmount.toLocaleString()} of ${goal.targetAmount.toLocaleString()}</span>
+                <span>${goal.savedAmount?.toLocaleString()} of ${goal?.targetAmount?.toLocaleString()}</span>
                 <span>Est. completion: {goal.estimatedCompletionDate}</span>
               </div>
               
