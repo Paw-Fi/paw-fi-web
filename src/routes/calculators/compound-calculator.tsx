@@ -10,9 +10,9 @@ export const Route = createFileRoute('/calculators/compound-calculator')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/compound-calculator';
     const meta = seo({
-      title: 'Compound Interest Calculator | PawFi',
+      title: 'Compound Interest Calculator | Moneko',
       description: 'Visualize the power of compound interest. Calculate how your investments can grow over time with our compound interest calculator.',
-      keywords: 'compound interest calculator, investment growth, financial planning, compounding, PawFi',
+      keywords: 'compound interest calculator, investment growth, financial planning, compounding, Moneko',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/calculators/compound-calculator')({
       "url": pageUrl,
       "provider": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       },
       "category": "Financial Education Tool"

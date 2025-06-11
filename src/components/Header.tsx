@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/auth-context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faTableCells, faSignOut, faChevronDown, faTimes, faArrowRight, faGear } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
@@ -171,13 +171,13 @@ export default function Header() {
   }
 
   return (
-    <header className="container bg-white shadow-sm sticky top-0 z-10">
+    <header className=" bg-white shadow-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo and main navigation */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-xl font-bold text-primary">PawFi</Link>
+              <Link to="/" className="text-xl font-bold text-primary">Moneko</Link>
             </div>
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link 
@@ -209,7 +209,7 @@ export default function Header() {
               >
                 Calculators
               </Link>
-              {/* <Link 
+              <Link 
                 to="/blogs" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 activeProps={{
@@ -217,7 +217,7 @@ export default function Header() {
                 }}
               >
                 Blogs
-              </Link> */}
+              </Link>
             </nav>
           </div>
 
@@ -277,6 +277,18 @@ export default function Header() {
                     {/* Menu items */}
                     <div className="py-1">
                       <Link
+                        to="/user-settings"
+                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <FontAwesomeIcon 
+                          icon={faGear} 
+                          className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" 
+                          fixedWidth 
+                        />
+                        Settings
+                      </Link>
+                      <Link
                         to="/profile"
                         className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                         onClick={() => setIsMenuOpen(false)}
@@ -286,19 +298,7 @@ export default function Header() {
                           className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" 
                           fixedWidth 
                         />
-                        Your Profile
-                      </Link>
-                      <Link
-                        to="/dashboard"
-                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <FontAwesomeIcon 
-                          icon={faTableCells} 
-                          className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" 
-                          fixedWidth 
-                        />
-                        Dashboard
+                        Profile
                       </Link>
                       <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                       <button
@@ -504,7 +504,7 @@ export default function Header() {
             >
               Calculators
             </Link>
-            {/* <Link
+            <Link
               to="/blogs"
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
               activeProps={{
@@ -513,7 +513,7 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Blogs
-            </Link> */}
+            </Link>
           </div>
           
           {/* Mobile user menu */}
@@ -542,18 +542,18 @@ export default function Header() {
               </div>
               <div className="mt-3 space-y-1">
                 <Link
+                  to="/user-settings"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Settings
+                </Link>
+                <Link
                   to="/profile"
                   className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Your Profile
-                </Link>
-                <Link
-                  to="/dashboard"
-                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
+                  Profile
                 </Link>
                 <button
                   className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"

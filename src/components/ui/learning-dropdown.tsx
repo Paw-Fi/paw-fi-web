@@ -19,7 +19,7 @@ export function LearningDropdown({ groups }: any) {
         aria-haspopup="true"
       >
         Learning
-        <FontAwesomeIcon icon={faChevronDown} className="-mr-1 h-5 w-5 text-gray-400" aria-hidden="true" />
+        <FontAwesomeIcon icon={faChevronDown} className="-mr-1 h-3 text-gray-400" aria-hidden="true" />
       </button>
 
       {/* Dropdown panel, show/hide based on group-hover/focus-within state */}

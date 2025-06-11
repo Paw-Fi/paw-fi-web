@@ -14,11 +14,11 @@ export const Route = createFileRoute("/learning/")({
   head: () => {
     const pageUrl = "https://pawfi.app/learning/";
     const meta = seo({
-      title: "PawFi: AI-Powered Financial Learning & Personalized Lessons",
+      title: "Moneko: AI-Powered Financial Learning & Personalized Lessons",
       description:
-        "Unlock your financial potential with PawFi. Our AI understands your needs to deliver personalized financial lessons, complemented by expert-written courses and powerful calculators.",
+        "Unlock your financial potential with Moneko. Our AI understands your needs to deliver personalized financial lessons, complemented by expert-written courses and powerful calculators.",
       keywords:
-        "AI financial learning, personalized finance lessons, PawFi, financial education, AI finance coach, investment analysis, financial modeling, personal finance, money management, financial literacy tools",
+        "AI financial learning, personalized finance lessons, Moneko, financial education, AI finance coach, investment analysis, financial modeling, personal finance, money management, financial literacy tools",
       image: "https://paw-fi.app/og-img.png",
       url: pageUrl,
     });
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/learning/")({
           "description": "Learn the fundamentals of investing with practical strategies for 2025 and beyond",
           "provider": {
             "@type": "Organization",
-            "name": "PawFi",
+            "name": "Moneko",
             "url": "https://pawfi.app/"
           }
         },
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/learning/")({
           "description": "Master the basics of personal finance and build a strong financial foundation",
           "provider": {
             "@type": "Organization",
-            "name": "PawFi",
+            "name": "Moneko",
             "url": "https://pawfi.app/"
           }
         }

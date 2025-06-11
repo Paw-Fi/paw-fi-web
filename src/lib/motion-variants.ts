@@ -1,5 +1,5 @@
 /**
- * Framer Motion animation variants for the PawFi application
+ * Framer Motion animation variants for the Moneko application
  * These variants define reusable animations that can be applied to components
  */
 

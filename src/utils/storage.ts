@@ -5,7 +5,7 @@
 const STORAGE_PREFIX = 'pawfi_';
 
 /**
- * Save data to localStorage with the PawFi prefix
+ * Save data to localStorage with the Moneko prefix
  */
 export function saveToStorage<T>(key: string, data: T): void {
   try {
@@ -16,7 +16,7 @@ export function saveToStorage<T>(key: string, data: T): void {
 }
 
 /**
- * Get data from localStorage with the PawFi prefix
+ * Get data from localStorage with the Moneko prefix
  */
 export function getFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -30,7 +30,7 @@ export function getFromStorage<T>(key: string, fallback: T): T {
 }
 
 /**
- * Remove data from localStorage with the PawFi prefix
+ * Remove data from localStorage with the Moneko prefix
  */
 export function removeFromStorage(key: string): void {
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {

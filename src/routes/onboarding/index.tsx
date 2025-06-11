@@ -19,19 +19,19 @@ export function Onboarding() {
   }
   
   const handleComplete = () => {
-    navigate({ to: '/dashboard' });
+    navigate({ to: '/profile' });
   };
 
   return (
     <div className="flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-center mb-6">Welcome to PawFi!</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">Welcome to Moneko!</h1>
         
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Let's get to know you better</h2>
             <p className="text-gray-600">
-              PawFi is your personal finance learning companion. We'll help you understand financial concepts
+              Moneko is your personal finance learning companion. We'll help you understand financial concepts
               through interactive lessons tailored to your interests and goals.
             </p>
             <div className="flex justify-end">

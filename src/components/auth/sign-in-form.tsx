@@ -20,7 +20,7 @@ export function SignInForm() {
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        navigate({ to: '/dashboard' });
+        navigate({ to: '/profile' });
       }
     } catch (error: any) {
       setError(error.message || 'Invalid email or password');

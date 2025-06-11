@@ -16,19 +16,19 @@ import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
 import { Route as IntroImport } from './routes/intro'
 import { Route as CookiePolicyImport } from './routes/cookie-policy'
 import { Route as ChatImport } from './routes/chat'
+import { Route as UserSettingsRouteImport } from './routes/user-settings/route'
 import { Route as RegisterRouteImport } from './routes/register/route'
 import { Route as ProfileRouteImport } from './routes/profile/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding/route'
 import { Route as LoginRouteImport } from './routes/login/route'
-import { Route as DashboardRouteImport } from './routes/dashboard/route'
 import { Route as IndexImport } from './routes/index'
+import { Route as UserSettingsIndexImport } from './routes/user-settings/index'
 import { Route as RegisterIndexImport } from './routes/register/index'
 import { Route as ProfileIndexImport } from './routes/profile/index'
 import { Route as OnboardingIndexImport } from './routes/onboarding/index'
 import { Route as LoginIndexImport } from './routes/login/index'
 import { Route as LearningIndexImport } from './routes/learning/index'
 import { Route as FormatIndexImport } from './routes/format/index'
-import { Route as DashboardIndexImport } from './routes/dashboard/index'
 import { Route as CalculatorsIndexImport } from './routes/calculators/index'
 import { Route as BlogsIndexImport } from './routes/blogs/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
@@ -76,6 +76,12 @@ const ChatRoute = ChatImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const UserSettingsRouteRoute = UserSettingsRouteImport.update({
+  id: '/user-settings',
+  path: '/user-settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const RegisterRouteRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -100,16 +106,16 @@ const LoginRouteRoute = LoginRouteImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const DashboardRouteRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const UserSettingsIndexRoute = UserSettingsIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => UserSettingsRouteRoute,
 } as any)
 
 const RegisterIndexRoute = RegisterIndexImport.update({
@@ -146,12 +152,6 @@ const FormatIndexRoute = FormatIndexImport.update({
   id: '/format/',
   path: '/format/',
   getParentRoute: () => rootRoute,
-} as any)
-
-const DashboardIndexRoute = DashboardIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DashboardRouteRoute,
 } as any)
 
 const CalculatorsIndexRoute = CalculatorsIndexImport.update({
@@ -256,13 +256,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -289,6 +282,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/user-settings': {
+      id: '/user-settings'
+      path: '/user-settings'
+      fullPath: '/user-settings'
+      preLoaderRoute: typeof UserSettingsRouteImport
       parentRoute: typeof rootRoute
     }
     '/chat': {
@@ -403,13 +403,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalculatorsIndexImport
       parentRoute: typeof rootRoute
     }
-    '/dashboard/': {
-      id: '/dashboard/'
-      path: '/'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof DashboardIndexImport
-      parentRoute: typeof DashboardRouteImport
-    }
     '/format/': {
       id: '/format/'
       path: '/format'
@@ -452,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterIndexImport
       parentRoute: typeof RegisterRouteImport
     }
+    '/user-settings/': {
+      id: '/user-settings/'
+      path: '/'
+      fullPath: '/user-settings/'
+      preLoaderRoute: typeof UserSettingsIndexImport
+      parentRoute: typeof UserSettingsRouteImport
+    }
     '/author/course/$courseId': {
       id: '/author/course/$courseId'
       path: '/author/course/$courseId'
@@ -477,18 +477,6 @@ declare module '@tanstack/react-router' {
 }
 
 // Create and export the route tree
-
-interface DashboardRouteRouteChildren {
-  DashboardIndexRoute: typeof DashboardIndexRoute
-}
-
-const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
-  DashboardIndexRoute: DashboardIndexRoute,
-}
-
-const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
-  DashboardRouteRouteChildren,
-)
 
 interface LoginRouteRouteChildren {
   LoginIndexRoute: typeof LoginIndexRoute
@@ -538,13 +526,24 @@ const RegisterRouteRouteWithChildren = RegisterRouteRoute._addFileChildren(
   RegisterRouteRouteChildren,
 )
 
+interface UserSettingsRouteRouteChildren {
+  UserSettingsIndexRoute: typeof UserSettingsIndexRoute
+}
+
+const UserSettingsRouteRouteChildren: UserSettingsRouteRouteChildren = {
+  UserSettingsIndexRoute: UserSettingsIndexRoute,
+}
+
+const UserSettingsRouteRouteWithChildren =
+  UserSettingsRouteRoute._addFileChildren(UserSettingsRouteRouteChildren)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
+  '/user-settings': typeof UserSettingsRouteRouteWithChildren
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
@@ -561,13 +560,13 @@ export interface FileRoutesByFullPath {
   '/author': typeof AuthorIndexRoute
   '/blogs': typeof BlogsIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
-  '/dashboard/': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
+  '/user-settings/': typeof UserSettingsIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
@@ -591,13 +590,13 @@ export interface FileRoutesByTo {
   '/author': typeof AuthorIndexRoute
   '/blogs': typeof BlogsIndexRoute
   '/calculators': typeof CalculatorsIndexRoute
-  '/dashboard': typeof DashboardIndexRoute
   '/format': typeof FormatIndexRoute
   '/learning': typeof LearningIndexRoute
   '/login': typeof LoginIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/register': typeof RegisterIndexRoute
+  '/user-settings': typeof UserSettingsIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
@@ -606,11 +605,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
+  '/user-settings': typeof UserSettingsRouteRouteWithChildren
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
@@ -627,13 +626,13 @@ export interface FileRoutesById {
   '/author/': typeof AuthorIndexRoute
   '/blogs/': typeof BlogsIndexRoute
   '/calculators/': typeof CalculatorsIndexRoute
-  '/dashboard/': typeof DashboardIndexRoute
   '/format/': typeof FormatIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
+  '/user-settings/': typeof UserSettingsIndexRoute
   '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId/': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
@@ -643,11 +642,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dashboard'
     | '/login'
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/user-settings'
     | '/chat'
     | '/cookie-policy'
     | '/intro'
@@ -664,13 +663,13 @@ export interface FileRouteTypes {
     | '/author'
     | '/blogs'
     | '/calculators'
-    | '/dashboard/'
     | '/format'
     | '/learning'
     | '/login/'
     | '/onboarding/'
     | '/profile/'
     | '/register/'
+    | '/user-settings/'
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
@@ -693,24 +692,24 @@ export interface FileRouteTypes {
     | '/author'
     | '/blogs'
     | '/calculators'
-    | '/dashboard'
     | '/format'
     | '/learning'
     | '/login'
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/user-settings'
     | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
   id:
     | '__root__'
     | '/'
-    | '/dashboard'
     | '/login'
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/user-settings'
     | '/chat'
     | '/cookie-policy'
     | '/intro'
@@ -727,13 +726,13 @@ export interface FileRouteTypes {
     | '/author/'
     | '/blogs/'
     | '/calculators/'
-    | '/dashboard/'
     | '/format/'
     | '/learning/'
     | '/login/'
     | '/onboarding/'
     | '/profile/'
     | '/register/'
+    | '/user-settings/'
     | '/author/course/$courseId'
     | '/learning/$courseId/'
     | '/learning/$courseId/lesson/$lessonId'
@@ -742,11 +741,11 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   LoginRouteRoute: typeof LoginRouteRouteWithChildren
   OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
   ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
   RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
+  UserSettingsRouteRoute: typeof UserSettingsRouteRouteWithChildren
   ChatRoute: typeof ChatRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
@@ -772,11 +771,11 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRouteRoute: DashboardRouteRouteWithChildren,
   LoginRouteRoute: LoginRouteRouteWithChildren,
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
   ProfileRouteRoute: ProfileRouteRouteWithChildren,
   RegisterRouteRoute: RegisterRouteRouteWithChildren,
+  UserSettingsRouteRoute: UserSettingsRouteRouteWithChildren,
   ChatRoute: ChatRoute,
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
@@ -811,11 +810,11 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/dashboard",
         "/login",
         "/onboarding",
         "/profile",
         "/register",
+        "/user-settings",
         "/chat",
         "/cookie-policy",
         "/intro",
@@ -842,12 +841,6 @@ export const routeTree = rootRoute
     "/": {
       "filePath": "index.tsx"
     },
-    "/dashboard": {
-      "filePath": "dashboard/route.tsx",
-      "children": [
-        "/dashboard/"
-      ]
-    },
     "/login": {
       "filePath": "login/route.tsx",
       "children": [
@@ -870,6 +863,12 @@ export const routeTree = rootRoute
       "filePath": "register/route.tsx",
       "children": [
         "/register/"
+      ]
+    },
+    "/user-settings": {
+      "filePath": "user-settings/route.tsx",
+      "children": [
+        "/user-settings/"
       ]
     },
     "/chat": {
@@ -920,10 +919,6 @@ export const routeTree = rootRoute
     "/calculators/": {
       "filePath": "calculators/index.tsx"
     },
-    "/dashboard/": {
-      "filePath": "dashboard/index.tsx",
-      "parent": "/dashboard"
-    },
     "/format/": {
       "filePath": "format/index.tsx"
     },
@@ -945,6 +940,10 @@ export const routeTree = rootRoute
     "/register/": {
       "filePath": "register/index.tsx",
       "parent": "/register"
+    },
+    "/user-settings/": {
+      "filePath": "user-settings/index.tsx",
+      "parent": "/user-settings"
     },
     "/author/course/$courseId": {
       "filePath": "author/course/$courseId.tsx"

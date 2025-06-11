@@ -14,7 +14,7 @@ export const Route = createFileRoute('/author/course/$courseId')({
   component: CourseEditorPage,
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'New Course'; // Default title
-    let courseDescription = 'Manage your course content on PawFi.'; // Default description
+    let courseDescription = 'Manage your course content on Moneko.'; // Default description
     let courseImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
 
     try {
@@ -31,10 +31,10 @@ export const Route = createFileRoute('/author/course/$courseId')({
     }
 
     const pageUrl = `https://pawfi.app/author/course/${params.courseId}`;
-    const keywords = `course authoring, edit course, manage lessons, PawFi, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}`;
+    const keywords = `course authoring, edit course, manage lessons, Moneko, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}`;
 
     const meta = seo({
-      title: `Editing: ${courseTitle} | PawFi Authoring`,
+      title: `Editing: ${courseTitle} | Moneko Authoring`,
       description: `Edit and manage course content for "${courseTitle}". ${courseDescription}`,
       keywords: keywords,
       image: courseImage,
@@ -49,7 +49,7 @@ export const Route = createFileRoute('/author/course/$courseId')({
       "description": `Edit and manage course content for "${courseTitle}".`,
       "publisher": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       }
     };

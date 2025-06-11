@@ -18,7 +18,7 @@ export const Route = createFileRoute('/calculators/')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators';
     const meta = seo({
-      title: 'Financial Calculators | PawFi',
+      title: 'Financial Calculators | Moneko',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
       keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization',
       image: 'https://paw-fi.app/og-img.png',

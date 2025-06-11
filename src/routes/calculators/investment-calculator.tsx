@@ -9,9 +9,9 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/investment-calculator';
     const meta = seo({
-      title: 'Investment Growth Calculator | PawFi',
-      description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with PawFi's investment calculator.",
-      keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, PawFi',
+      title: 'Investment Growth Calculator | Moneko',
+      description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
+      keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, Moneko',
       image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
@@ -21,11 +21,11 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
       "@context": "https://schema.org",
       "@type": "FinancialProduct",
       "name": "Investment Growth Calculator",
-      "description": "Project your investment growth over time. See how regular contributions and returns can build your wealth with PawFi's investment calculator.",
+      "description": "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
       "url": pageUrl,
       "provider": {
         "@type": "Organization",
-        "name": "PawFi",
+        "name": "Moneko",
         "url": "https://pawfi.app/"
       },
       "category": "Investment"
