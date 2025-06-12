@@ -95,30 +95,26 @@ export const dashboardData: Widget[] =[
       "tips": [
         {
           "id": "tip-budget",
+          "title": "Budgeting Tip",
           "content": "Regularly review your budget to identify areas for savings.",
-          "category": "Budgeting",
-          "priority": "high",
           "displayOrder": 1
         },
         {
           "id": "tip-emergency",
+          "title": "Emergency Fund",
           "content": "Aim for 3-6 months of living expenses in your emergency fund.",
-          "category": "Savings",
-          "priority": "high",
           "displayOrder": 2
         },
         {
           "id": "tip-debt",
+          "title": "Debt Management",
           "content": "Prioritize high-interest debts for faster payoff.",
-          "category": "Debt Management",
-          "priority": "medium",
           "displayOrder": 3
         }
       ],
       "currentTipIndex": 0,
       "autoRotate": true
-    },
-    "filterByCategory": "Budgeting"
+    }
   },
   {
     "id": "savingsBreakdown",

@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronRight, faChevronLeft, faLink } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight, faChevronRight, faChevronLeft, faLink, faLightbulb, faQuoteLeft, faQuoteRight } from '@fortawesome/free-solid-svg-icons';
+import { AnimatePresence, motion } from 'framer-motion';
 import { 
   IDataListWidget, 
   IProgressBarListWidget, 
   ICountdownCardWidget,
   ITipCardWidget,
-  ITipItem
+  ITipCardListItem, // Changed from ITipItem
 } from '../types/dashboard-data.typings';
 import { Widget } from './Widget';
 
 // Data List Widget
 export function DataListWidget({ widget }: { widget: IDataListWidget }) {
   const { data, tip, footerLink } = widget;
+  if (!data || data.length === 0) {
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+  }
   
   return (
     <Widget widget={widget} controls={widget.controls}>
@@ -54,6 +58,9 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
 // Progress Bar List Widget
 export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidget }) {
   const { data, showPercentages = true } = widget;
+  if (!data || data.length === 0) {
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+  }
   
   // Calculate progress percentage for each item
   const getProgressPercentage = (current: number, max: number) => {
@@ -244,101 +251,3 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
   );
 }
 
-export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
-  const { data } = widget;
-  const [currentTipIndex, setCurrentTipIndex] = useState<number>(data.currentTipIndex || 0);
-  const [isHovered, setIsHovered] = useState<boolean>(false);
-  
-  // Get the current tip to display
-  const currentTip = data.tips?.[currentTipIndex] || data.tips?.[0];
-
-  // Navigate to next tip
-  const nextTip = useCallback(() => {
-    if (!data.tips?.length) return;
-    const nextIndex = (currentTipIndex + 1) % data.tips.length;
-    setCurrentTipIndex(nextIndex);
-  }, [currentTipIndex, data.tips]);
-
-  // Navigate to previous tip
-  const prevTip = useCallback(() => {
-    if (!data.tips?.length) return;
-    const prevIndex = (currentTipIndex - 1 + data.tips.length) % data.tips.length;
-    setCurrentTipIndex(prevIndex);
-  }, [currentTipIndex, data.tips]);
-  
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        nextTip();
-      } else if (e.key === 'ArrowLeft') {
-        prevTip();
-      }
-    };
-  
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextTip, prevTip]);
-  
-  if (!currentTip || !data.tips?.length) {
-    return (
-      <Widget widget={widget} controls={widget.controls}>
-        <div className="flex items-center justify-center h-full p-6 text-center">
-          <p className="text-gray-500 dark:text-gray-400">No tips available</p>
-        </div>
-      </Widget>
-    );
-  }
-  
-  return (
-    <Widget widget={widget} controls={widget.controls}>
-      <div 
-        className="h-full flex flex-col"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div className="flex flex-col h-full p-4">
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative">
-              <div className="flex items-center justify-center">
-                <span className="absolute -left-6 -top-4 text-5xl font-serif text-primary-300 dark:text-primary-600 opacity-70">"</span>
-                <p className="text-lg md:text-xl text-gray-800 dark:text-gray-100 leading-relaxed px-4 py-2">
-                  {currentTip.content}
-                </p>
-                <span className="absolute -right-6 -bottom-4 text-5xl font-serif text-primary-300 dark:text-primary-600 opacity-70 transform rotate-180">"</span>
-              </div>
-            </div>
-          </div>
-          
-          {currentTip.category && (
-            <div className="mt-4 text-center">
-              <span className="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-full">
-                {currentTip.category}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-auto pt-4">
-          <div className="flex justify-between items-center px-4">
-            <div className="flex space-x-2">
-              {data.tips.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentTipIndex(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === currentTipIndex
-                      ? 'bg-primary-600 scale-125'  // Active dot
-                      : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500'  // Inactive dot
-                  }`}
-                  aria-label={`Go to tip ${index + 1}`}
-                />
-              ))}
-            </div>           
-          
-          </div>
-        </div>
-      </div>
-    </Widget>
-  );
-}

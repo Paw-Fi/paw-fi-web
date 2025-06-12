@@ -39,6 +39,25 @@ export interface IProgressBarListItem {
 }
 export interface IProgressBarListData extends Array<IProgressBarListItem> {}
 
+// Tip Card Widget
+export interface ITipCardListItem {
+  id: string;
+  title: string;
+  content: string;
+  image?: string;
+  link?: string;
+  displayOrder: number;
+}
+export interface ITipCardData {
+  tips: ITipCardListItem[];
+  currentTipIndex: number;
+  autoRotate?: boolean; // (Optional) Whether to auto-cycle through tips
+}
+export interface ITipCardWidget extends IBaseWidget {
+  type: 'tipCard';
+  data: ITipCardData;
+}
+
 // 3. COUNTDOWN CARD - Now supports multiple countdowns
 export interface ICountdownCardItem {
   id: string; // (Mandatory) Unique ID for the countdown
@@ -56,20 +75,6 @@ export interface ICountdownCardData {
   targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
 }
 
-// 4. TIP CARD - Enhanced with IDs and categories
-export interface ITipItem {
-  id: string; // (Mandatory) Unique ID for the tip item
-  content: string; // (Mandatory) The tip text
-  category?: string; // (Optional) Optional grouping (e.g., "Savings", "Budgeting")
-  priority?: 'low' | 'medium' | 'high'; // (Optional) Priority level
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
-}
-export interface ITipCardData {
-  tips: ITipItem[]; // (Mandatory) Array of tip items
-  currentTipIndex: number; // (Mandatory) Index of the currently displayed tip (for auto-cycling)
-  autoRotate?: boolean; // (Optional) Whether to auto-cycle through tips
-}
-
 // 5. DATA LIST - Enhanced with IDs
 export interface IDataListItem {
   id: string; // (Mandatory) Unique ID for the list item
@@ -77,7 +82,7 @@ export interface IDataListItem {
   value: string; // (Mandatory) The amount or relevant value
   currency: string; // (Mandatory) Currency symbol (e.g., "$", "€")
   category?: string; // (Optional) Optional grouping (e.g., "Assets", "Liabilities", "Fixed Expenses")
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
+  displayOrder: number; // (Mandatory) Numeric hint for display sorting
 }
 export interface IDataListData extends Array<IDataListItem> {}
 

@@ -39,7 +39,6 @@ import { Route as CalculatorsAutoLoanCalculatorRouteImport } from './routes/calc
 import { Route as BlogsBlogIdRouteImport } from './routes/blogs/$blogId'
 import { Route as AuthorImportRouteImport } from './routes/author/import'
 import { Route as LearningCourseIdIndexRouteImport } from './routes/learning/$courseId/index'
-import { Route as AuthorCourseCourseIdRouteImport } from './routes/author/course/$courseId'
 import { Route as LearningCourseIdLessonLessonIdRouteImport } from './routes/learning/$courseId/lesson/$lessonId'
 
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
@@ -198,11 +197,6 @@ const LearningCourseIdIndexRoute = LearningCourseIdIndexRouteImport.update({
   path: '/learning/$courseId/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthorCourseCourseIdRoute = AuthorCourseCourseIdRouteImport.update({
-  id: '/author/course/$courseId',
-  path: '/author/course/$courseId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LearningCourseIdLessonLessonIdRoute =
   LearningCourseIdLessonLessonIdRouteImport.update({
     id: '/learning/$courseId/lesson/$lessonId',
@@ -240,7 +234,6 @@ export interface FileRoutesByFullPath {
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/user-settings/': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
@@ -269,7 +262,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileIndexRoute
   '/register': typeof RegisterIndexRoute
   '/user-settings': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
@@ -304,7 +296,6 @@ export interface FileRoutesById {
   '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/user-settings/': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
   '/learning/$courseId/': typeof LearningCourseIdIndexRoute
   '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
 }
@@ -340,7 +331,6 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/register/'
     | '/user-settings/'
-    | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
   fileRoutesByTo: FileRoutesByTo
@@ -369,7 +359,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/user-settings'
-    | '/author/course/$courseId'
     | '/learning/$courseId'
     | '/learning/$courseId/lesson/$lessonId'
   id:
@@ -403,7 +392,6 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/register/'
     | '/user-settings/'
-    | '/author/course/$courseId'
     | '/learning/$courseId/'
     | '/learning/$courseId/lesson/$lessonId'
   fileRoutesById: FileRoutesById
@@ -433,7 +421,6 @@ export interface RootRouteChildren {
   CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
-  AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
   LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
   LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
 }
@@ -650,13 +637,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningCourseIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/author/course/$courseId': {
-      id: '/author/course/$courseId'
-      path: '/author/course/$courseId'
-      fullPath: '/author/course/$courseId'
-      preLoaderRoute: typeof AuthorCourseCourseIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/learning/$courseId/lesson/$lessonId': {
       id: '/learning/$courseId/lesson/$lessonId'
       path: '/learning/$courseId/lesson/$lessonId'
@@ -751,7 +731,6 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
-  AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
   LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
   LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
 }
