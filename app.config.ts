@@ -1,4 +1,5 @@
-import { defineConfig } from '@tanstack/react-start/config'
+// Import directly from the config package to ensure compatibility
+import { defineConfig } from '@tanstack/react-start-config'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'

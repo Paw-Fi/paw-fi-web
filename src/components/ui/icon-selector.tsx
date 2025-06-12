@@ -72,19 +72,16 @@ export function IconSelector({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full justify-between px-1 py-1 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           {selectedValue && iconMap[selectedValue] ? (
             <FontAwesomeIcon 
               icon={iconMap[selectedValue]||faChartBar} 
-              className="h-4 w-4 text-inherit " 
+              className="" 
             />
           ) : (
             <div className="h-4 w-4" />
-          )}
-          {selectedValue}
-          <span className="truncate">
-            {!selectedValue && "Select an icon"}
-          </span>
+          )}        
+        
         </div>      
       </Button>
 

@@ -204,9 +204,15 @@ export function DraggableDashboard({
     }
   };
 
-  const handleSaveWidget = (updatedWidget: Widget) => {
+  const handleSaveWidget = (updatedWidget: Omit<Widget, 'id'> & { id?: string }) => {
+    // Ensure we have a valid ID
+    if (!updatedWidget.id) {
+      console.error('Cannot save widget: Missing ID');
+      return;
+    }
+    
     const updatedWidgets = currentWidgets.map(widget => 
-      widget.id === updatedWidget.id ? updatedWidget : widget
+      widget.id === updatedWidget.id ? { ...widget, ...updatedWidget } as Widget : widget
     );
     
     // Update Redux store

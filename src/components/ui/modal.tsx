@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
-import { cn } from '@/lib/utils';
+import classNames from 'classnames';
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,6 +14,8 @@ interface ModalProps {
   disableOverlayClick?: boolean;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
   fullHeight?: boolean;
+  title?: string;
+  description?: string;
 }
 
 export function Modal({
@@ -23,8 +25,9 @@ export function Modal({
   disableOverlayClick = false,
   overlayClassName = 'bg-black/50 backdrop-blur-sm',
   contentClassName = '',
-  maxWidth = '2xl',
   fullHeight = false,
+  title = '',
+  description = '',
 }: ModalProps) {
   // Lock body scroll when modal is open
   useLockBodyScroll(isOpen);
@@ -113,7 +116,7 @@ export function Modal({
         >
           {/* Backdrop */}
           <motion.div 
-            className={cn(
+            className={classNames(
               'fixed inset-0',
               overlayClassName
             )}
@@ -126,12 +129,11 @@ export function Modal({
           />
 
           {/* Modal content */}
-          <div className="flex items-center justify-center min-h-full w-full">
+          <div className="flex items-center justify-center min-h-full ">
             <motion.div
-              className={cn(
-                'relative w-full bg-white rounded-2xl shadow-2xl overflow-y-auto',
+              className={classNames(
+                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto max-w-[90vw] lg:max-w-[40rem] px-6 py-4',
                 'flex flex-col max-h-[90vh]',
-                maxWidthClasses[maxWidth],
                 fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',
                 contentClassName
               )}
@@ -142,6 +144,8 @@ export function Modal({
               onClick={(e) => e.stopPropagation()}
               role="document"
             >
+              {title && <h2 className="text-xl font-semibold">{title}</h2>}
+              {description && <p className="text-sm text-gray-500">{description}</p>}
               {children}
             </motion.div>
           </div>
