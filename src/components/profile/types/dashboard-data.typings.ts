@@ -9,6 +9,8 @@ export interface IBaseWidget {
   controls?: ReactNode; // Optional React components for widget controls in header
 }
 
+export type IMetricTrend = 'up' | 'down' | 'neutral' | 'stable';
+
 // =============================================================================
 // ENHANCED DATA TYPES (All are now arrays or contain arrays)
 // Each item within an array data type MUST have a unique 'id' field for modifiability.
@@ -19,7 +21,7 @@ export interface IMetricCardItem {
   id: string; // (Mandatory) Unique ID for the metric item
   value: string; // (Mandatory) e.g., "12,000.00"
   currency: string; // (Mandatory) e.g., "$"
-  trend?: 'up' | 'down'; // (Optional) Trend direction
+  trend?: IMetricTrend; // (Optional) Trend direction
   trendPercentage?: string; // (Optional) Percentage change (e.g., "8.3")
   description?: string; // (Optional) Brief description
   progress?: number; // (Optional) 0.0 - 1.0, for progress bars (e.g., 0.75 for 75%)

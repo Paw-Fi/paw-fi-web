@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+// import { Select } from '@/components/ui/select'; // Select component not found, commented out for now
 import { Label } from '@/components/ui/label';
-import { Widget, IMetricCardWidget, IProgressBarListWidget, ICountdownCardWidget, IDataListWidget, ITipCardWidget, IChecklistWidget, IDataListItem, IProgressBarListItem, ITipCardListItem, IChecklistItem, ICountdownCardData, IMetricCardItem } from './types/dashboard-data.typings'; 
+import { Widget, IMetricCardWidget, IProgressBarListWidget, ICountdownCardWidget, IDataListWidget, ITipCardWidget, IChecklistWidget, IDataListItem, IProgressBarListItem, ITipCardListItem, IChecklistItem, ICountdownCardData, IMetricCardItem, IBarChartWidget, ILineChartWidget, IChartData, IChartDataPoint, IQuickCashFlowSummaryWidget, IQuickCashFlowSummaryData, ICashFlowEntry, IDebtVisualizerWidget, IDebtItem, IDebtVisualizerData, IFinancialHealthScorecardWidget, IFinancialHealthScorecardData, IFinancialHealthItem, IMetricTrend } from './types/dashboard-data.typings'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faGripVertical, 
@@ -23,7 +24,11 @@ import {
   faCalendarAlt,
   faCheckSquare,
   faCog,
-  faTasks
+  faTasks,
+  faChartBar,
+  faExchangeAlt,
+  faCreditCard,
+  faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 import {
   DndContext,
@@ -33,6 +38,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  UniqueIdentifier
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -42,9 +48,33 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { DraggableSyntheticListeners, DraggableAttributes } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import { Modal } from '../ui/modal';
 import { IconSelector } from '../ui/icon-selector';
+
+interface WidgetEditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  widget: Widget | null;
+  onSave: (widget: Widget) => void;
+}
+
+const availableIcons = [
+  { name: 'List', value: 'faList', icon: faList },
+  { name: 'Tasks', value: 'faTasks', icon: faTasks },
+  { name: 'Chart Line', value: 'faChartLine', icon: faChartLine },
+  { name: 'Lightbulb', value: 'faLightbulb', icon: faLightbulb },
+  { name: 'Calendar Alt', value: 'faCalendarAlt', icon: faCalendarAlt },
+  { name: 'Chart Bar', value: 'faChartBar', icon: faChartBar },
+  { name: 'Exchange Alt', value: 'faExchangeAlt', icon: faExchangeAlt },
+  { name: 'Credit Card', value: 'faCreditCard', icon: faCreditCard },
+  { name: 'Shield Alt', value: 'faShieldAlt', icon: faShieldAlt },
+  { name: 'Check Square', value: 'faCheckSquare', icon: faCheckSquare },
+  { name: 'Cog', value: 'faCog', icon: faCog },
+  { name: 'Calendar', value: 'faCalendar', icon: faCalendar },
+  { name: 'Percent', value: 'faPercent', icon: faPercent },
+];
 
 // Type definitions
 type WidgetData = Widget['data'];
@@ -150,19 +180,328 @@ function SortableListItem({ id, children }: SortableListItemProps) {
 
 // ProgressBarListForm with Drag-and-Drop
 function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps<IProgressBarListWidget>) {
+  // Initialize formData with processed items, ensuring IDs and displayOrder
   const [formData, setFormData] = useState<IProgressBarListWidget>(() => {
-    const itemsArray = widgetData.data || []; // widgetData.data is IProgressBarListData (the array itself)
-    const processedItems = itemsArray.map((item: IProgressBarListItem, index: number) => ({
-      ...item,
-      id: item.id || `pbl-item-${Date.now()}-${index}`,
-      displayOrder: item.displayOrder !== undefined ? item.displayOrder : index,
-    })).sort((a: IProgressBarListItem, b: IProgressBarListItem) => (a.displayOrder || 0) - (b.displayOrder || 0));
-    
+    const itemsArray: IProgressBarListItem[] = widgetData.data || [];
+    const processedItems: IProgressBarListItem[] = itemsArray
+      .map((item, index) => ({
+        ...item,
+        id: item.id || `pbl-item-${Date.now()}-${index}`,
+        displayOrder: item.displayOrder !== undefined ? item.displayOrder : index,
+      }))
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     return {
-      ...widgetData, // Spread the base widget props (id, title, type etc.)
-      data: processedItems, // Assign the processed array to data
+      ...widgetData,
+      data: processedItems,
     };
   });
+
+  // Effect to update formData if widgetData.data changes externally (e.g., discard changes)
+  useEffect(() => {
+    const itemsArray: IProgressBarListItem[] = widgetData.data || [];
+    const processedItems: IProgressBarListItem[] = itemsArray
+      .map((item, index) => ({
+        ...item,
+        id: item.id || `pbl-item-${Date.now()}-${index}`,
+        displayOrder: item.displayOrder !== undefined ? item.displayOrder : index,
+      }))
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    
+    // Only update if there's an actual difference to avoid infinite loops
+    if (JSON.stringify(formData.data) !== JSON.stringify(processedItems) || 
+        formData.showPercentages !== widgetData.showPercentages || 
+        formData.sortBy !== widgetData.sortBy) {
+      setFormData({
+        ...widgetData,
+        data: processedItems,
+      });
+    }
+  }, [widgetData, formData.data]); // Add formData.data to dependencies to allow internal updates to reflect if needed
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleWidgetSettingChange = (field: keyof Omit<IProgressBarListWidget, 'data' | 'id' | 'type' | 'title' | 'icon' | 'gridWidth' | 'gridHeight' | 'minWidth' | 'minHeight' | 'maxWidth' | 'maxHeight'>, value: any) => {
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = formData.data.findIndex(item => item.id === active.id);
+      const newIndex = formData.data.findIndex(item => item.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const movedItems = arrayMove(formData.data, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+        const newFormData = { ...formData, data: movedItems, sortBy: 'custom' as const }; // Set sortBy to custom on manual reorder
+        setFormData(newFormData);
+        onDataChange(newFormData);
+      }
+    }
+  };
+
+  const handleItemChange = (itemId: string, field: keyof Omit<IProgressBarListItem, 'id' | 'displayOrder'>, value: string | number | undefined) => {
+    const newItems = formData.data.map(item =>
+      item.id === itemId ? { ...item, [field]: (field === 'current' || field === 'max') ? Number(value) : value } : item
+    );
+    const newFormData = { ...formData, data: newItems };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleAddItem = () => {
+    const newItem: IProgressBarListItem = {
+      id: `pbi-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      label: 'New Goal',
+      current: 0,
+      max: 100,
+      color: '#3b82f6', // Default blue
+      displayOrder: formData.data.length,
+    };
+    const newItems = [...formData.data, newItem];
+    const newFormData = { ...formData, data: newItems };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    const newItems = formData.data.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
+    const newFormData = { ...formData, data: newItems };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const sortByOptions: { value: IProgressBarListWidget['sortBy'], label: string }[] = [
+    { value: 'custom', label: 'Custom Order' },
+    { value: 'progress', label: 'By Progress (Highest First)' },
+    { value: 'alphabetical', label: 'Alphabetical (A-Z)' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Widget-level settings */}
+      <div className="space-y-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-700/30">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">List Settings</h4>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="showPercentages-pbl"
+            checked={formData.showPercentages || false}
+            onChange={(e) => handleWidgetSettingChange('showPercentages', e.target.checked)}
+            className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
+          />
+          <Label htmlFor="showPercentages-pbl" className="ml-2 text-sm text-slate-600 dark:text-slate-300">Show Percentages</Label>
+        </div>
+        <div>
+          <Label htmlFor="sortBy-pbl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort By</Label>
+          <select
+            id="sortBy-pbl"
+            value={formData.sortBy || 'custom'}
+            onChange={(e) => handleWidgetSettingChange('sortBy', e.target.value as IProgressBarListWidget['sortBy'])}
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2"
+          >
+            {sortByOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Item-level settings */}
+      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress Items ({formData.data.length})</h4>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={formData.data.map(i => i.id)} strategy={verticalListSortingStrategy}>
+          {formData.data.map(item => (
+            <SortableProgressBarItem key={item.id} id={item.id}>
+              {(listeners, _attributes) => ( // _attributes not used directly on Button for this layout
+                <div className="flex items-start p-3">
+                  <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
+                  <div className="flex-grow space-y-2 ml-1">
+                    <div className="flex items-center">
+                      <div className="flex-grow space-y-1">
+                        <Label htmlFor={`pbi-${item.id}-label`} className="text-xs text-slate-500 dark:text-slate-400">Label</Label>
+                        <Input id={`pbi-${item.id}-label`} value={item.label} onChange={e => handleItemChange(item.id, 'label', e.target.value)} placeholder="Progress Label" className="w-full" />
+                      </div>
+                      <Button type="button" variant="text" size="sm" onClick={() => handleRemoveItem(item.id)} className="ml-2 text-red-500 flex-shrink-0"><FontAwesomeIcon icon={faTrash} /></Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor={`pbi-${item.id}-current`} className="text-xs text-slate-500 dark:text-slate-400">Current Value</Label>
+                        <Input id={`pbi-${item.id}-current`} type="number" value={item.current} onChange={e => handleItemChange(item.id, 'current', e.target.valueAsNumber)} placeholder="Current" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`pbi-${item.id}-max`} className="text-xs text-slate-500 dark:text-slate-400">Target Value (Max)</Label>
+                        <Input id={`pbi-${item.id}-max`} type="number" value={item.max} onChange={e => handleItemChange(item.id, 'max', e.target.valueAsNumber)} placeholder="Max" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`pbi-${item.id}-color`} className="text-xs text-slate-500 dark:text-slate-400">Color</Label>
+                      <Input
+                        id={`pbi-${item.id}-color`}
+                        type="color"
+                        value={item.color || '#3b82f6'}
+                        onChange={e => handleItemChange(item.id, 'color', e.target.value)}
+                        className="w-full h-10 p-1 border-slate-300 dark:border-slate-600 rounded cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </SortableProgressBarItem>
+          ))}
+        </SortableContext>
+      </DndContext>
+      {formData.data.length === 0 && (
+        <p className="text-sm text-center text-slate-500 dark:text-slate-400 py-4">No progress items yet. Add one below!</p>
+      )}
+      <Button type="button" onClick={handleAddItem} variant="outline" className="w-full border-dashed border-gray-400 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-500">
+        <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Progress Item
+      </Button>
+    </div>
+  );
+}
+
+// ProgressBarListForm specific: Sortable Item for Progress Bars
+interface SortableProgressBarItemProps {
+  id: UniqueIdentifier;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
+
+function SortableProgressBarItem({ id, children }: SortableProgressBarItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="bg-white dark:bg-slate-800 shadow rounded-lg mb-3 touch-manipulation">
+      {children(listeners, attributes)}
+    </div>
+  );
+}
+
+// FinancialHealthScorecardForm specific: Sortable Item
+interface SortableFinancialHealthItemProps {
+  id: UniqueIdentifier;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
+
+function SortableFinancialHealthItem({ id, children }: SortableFinancialHealthItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="bg-white dark:bg-slate-800 shadow rounded-lg mb-3 touch-manipulation">
+      {children(listeners, attributes)}
+    </div>
+  );
+}
+
+// Define SortableBarChartItem component and its props
+interface SortableBarChartItemProps {
+  id: UniqueIdentifier;
+  // Children is a function that receives listeners and attributes and returns ReactNode
+  children: (listeners: DraggableSyntheticListeners, attributesForDraggableNode: DraggableAttributes) => React.ReactNode;
+}
+
+function SortableBarChartItem({ id, children }: SortableBarChartItemProps) {
+  const { 
+    attributes, // These attributes are for the draggable node itself (the div we render here)
+    listeners,  // These listeners are for the drag handle
+    setNodeRef, 
+    transform, 
+    transition, 
+    isDragging 
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  // The outer div is the draggable node, it gets setNodeRef and attributes from useSortable.
+  // The children function is called with listeners (for the handle) and attributes (if the content needs them, though usually not).
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm">
+      {children(listeners, attributes)} 
+    </div>
+  );
+}
+
+function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps<IBarChartWidget>) {
+  const [formData, setFormData] = useState<IBarChartWidget>(widgetData);
+
+  const handleInputChange = (field: keyof IBarChartWidget | keyof IChartData, value: any) => {
+    let newFormData: IBarChartWidget;
+    if (['title', 'icon', 'columnSpan', 'rowSpan'].includes(field as string)) {
+      newFormData = { ...formData, [field]: value };
+    } else if (['xAxisLabel', 'yAxisLabel', 'showLegend'].includes(field as string)) {
+      newFormData = { 
+        ...formData, 
+        data: { 
+          ...formData.data, 
+          [field as keyof IChartData]: value 
+        } 
+      };
+    } else {
+      // This case should ideally not be hit for these fields
+      newFormData = { ...formData, [field as keyof IBarChartWidget]: value };
+    }
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: any) => {
+    const newItems = formData.data.dataPoints.map(item => 
+      item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
+    );
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleAddItem = () => {
+    const newItemId = `chartitem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const newItem: IChartDataPoint = {
+      id: newItemId,
+      label: 'New Item',
+      value: 10,
+      color: '#CCCCCC',
+      displayOrder: formData.data.dataPoints.length,
+    };
+    const newItems = [...formData.data.dataPoints, newItem];
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    const newItems = formData.data.dataPoints.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  // Ensure items have IDs and displayOrder for dnd-kit
+  const items = 
+    formData.data.dataPoints.map((item, index) => ({
+      ...item,
+      id: item.id || `chartitem-init-${index}-${Math.random().toString(36).substring(2,9)}`,
+      displayOrder: item.displayOrder !== undefined ? item.displayOrder : index
+    })).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -174,133 +513,593 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = formData.data.findIndex((item: IProgressBarListItem) => item.id === active.id);
-      const newIndex = formData.data.findIndex((item: IProgressBarListItem) => item.id === over.id);
-      
+      const oldIndex = items.findIndex((item) => item.id === active.id.toString());
+      const newIndex = items.findIndex((item) => item.id === over.id.toString());
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newSortedItems = arrayMove(formData.data, oldIndex, newIndex);
-        const updatedItemsWithOrder: IProgressBarListItem[] = newSortedItems.map((item: IProgressBarListItem, index: number) => ({
+        const newOrderedItems = arrayMove(items, oldIndex, newIndex);
+        const updatedDataPoints = newOrderedItems.map((item, index) => ({
           ...item,
           displayOrder: index,
         }));
-
-        const newItemsArray = updatedItemsWithOrder;
-        // Clear sortBy to ensure manual displayOrder is respected
-        const newData = { ...formData, data: newItemsArray, sortBy: undefined };
-        setFormData(newData);
-        onDataChange(newData);
+        const newFormData = { ...formData, data: { ...formData.data, dataPoints: updatedDataPoints } };
+        setFormData(newFormData);
+        onDataChange(newFormData);
       }
     }
   };
 
-  const handleItemChange = (itemId: string, field: keyof Omit<IProgressBarListItem, 'id' | 'displayOrder'>, value: string | number) => {
-    const updatedItems = formData.data.map((item: IProgressBarListItem) =>
-      item.id === itemId ? { ...item, [field]: field === 'current' || field === 'max' ? Number(value) : value } : item
-    );
-    const newData = { ...formData, data: updatedItems };
-    setFormData(newData);
-    onDataChange(newData);
-  };
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="bar-chart-title">Widget Title</Label>
+        <Input
+          id="bar-chart-title"
+          value={formData.title}
+          onChange={(e) => handleInputChange('title', e.target.value)}
+          placeholder="Bar Chart Title"
+        />
+      </div>
+      <div>
+        <Label htmlFor="bar-chart-xaxis-label">X-Axis Label</Label>
+        <Input
+          id="bar-chart-xaxis-label"
+          value={formData.data.xAxisLabel || ''}
+          onChange={(e) => handleInputChange('xAxisLabel', e.target.value)}
+          placeholder="X-Axis Label (e.g., Month)"
+        />
+      </div>
+      <div>
+        <Label htmlFor="bar-chart-yaxis-label">Y-Axis Label</Label>
+        <Input
+          id="bar-chart-yaxis-label"
+          value={formData.data.yAxisLabel || ''}
+          onChange={(e) => handleInputChange('yAxisLabel', e.target.value)}
+          placeholder="Y-Axis Label (e.g., Sales)"
+        />
+      </div>
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="bar-chart-show-legend"
+          checked={formData.data.showLegend || false}
+          onChange={(e) => handleInputChange('showLegend', e.target.checked)}
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        <Label htmlFor="bar-chart-show-legend" className="mb-0">Show Legend</Label>
+      </div>
+      <div>
+        <Label className="block mb-2 font-medium">Data Points</Label>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <SortableBarChartItem key={item.id} id={item.id}>
+                  {(handleListeners, draggableNodeAttributes) => (
+                    // The SortableBarChartItem renders the main draggable div and applies draggableNodeAttributes to it.
+                    // We only need to render the content *inside* that div here.
+                    // The handleListeners are passed to the specific drag handle button.
+                    <div className="p-3"> {/* This inner div no longer needs draggableNodeAttributes, as the parent SortableBarChartItem handles it */}
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        <div className="md:col-span-1 flex items-center justify-center">
+                          <Button {...handleListeners} variant="text" size="sm" className="cursor-grab p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 touch-manipulation">
+                            <FontAwesomeIcon icon={faGripVertical} />
+                          </Button>
+                        </div>
+                        <div className="md:col-span-4">
+                          <Label htmlFor={`chartitem-label-${item.id}`} className="text-xs">Label</Label>
+                          <Input
+                            id={`chartitem-label-${item.id}`}
+                            value={item.label}
+                            onChange={(e) => handleItemChange(item.id, 'label', e.target.value)}
+                            placeholder="E.g., Sales Q1"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <Label htmlFor={`chartitem-value-${item.id}`} className="text-xs">Value</Label>
+                          <Input
+                            id={`chartitem-value-${item.id}`}
+                            type="number"
+                            value={item.value}
+                            onChange={(e) => handleItemChange(item.id, 'value', e.target.value)}
+                            placeholder="E.g., 1500"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <Label htmlFor={`chartitem-color-${item.id}`} className="text-xs">Color</Label>
+                          <Input
+                            id={`chartitem-color-${item.id}`}
+                            type="color"
+                            value={item.color || '#CCCCCC'}
+                            onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+                            className="w-full h-9 p-0.5 border-slate-300 dark:border-slate-600 rounded cursor-pointer mt-1"
+                          />
+                        </div>
+                        <div className="md:col-span-1 flex items-center justify-self-end self-center h-9">
+                          <Button
+                            type="button"
+                            variant="text"
+                            size="sm"
+                            onClick={() => handleRemoveItem(item.id)}
+                            aria-label="Remove chart item"
+                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </SortableBarChartItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+        <Button onClick={handleAddItem} variant="outline" size="sm" className="mt-4">
+          <FontAwesomeIcon icon={faPlus} className="mr-2" />Add Data Point
+        </Button>
+      </div>
+    </div>
+  );
+}
+interface SortableLineChartItemProps {
+  id: UniqueIdentifier;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
 
-  const handleAddItem = () => {
-    const newItemId = `pbl-new-item-${Date.now()}`;
-    const newItem: IProgressBarListItem = {
-      id: newItemId,
-      label: 'New Progress',
-      current: 0, // Corrected from value
-      max: 100,   // Corrected from maxValue
-      color: '#3B82F6',
-      displayOrder: formData.data.length,
-    };
-    const updatedItems = [...formData.data, newItem];
-    const newData = { ...formData, data: updatedItems };
-    setFormData(newData);
-    onDataChange(newData);
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    const updatedItems = formData.data
-      .filter((item: IProgressBarListItem) => item.id !== itemId)
-      .map((item: IProgressBarListItem, index: number) => ({ ...item, displayOrder: index }));
-    const newData = { ...formData, data: updatedItems };
-    setFormData(newData);
-    onDataChange(newData);
+function SortableLineChartItem({ id, children }: SortableLineChartItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 10 : undefined,
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="space-y-1">
-        <SortableContext items={formData.data.map((i: IProgressBarListItem) => i.id)} strategy={verticalListSortingStrategy}>
-          {formData.data.map((item: IProgressBarListItem) => (
-            <SortableListItem key={item.id} id={item.id}>
-              {/* Item Content Grid */}
-              <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_minmax(60px,auto)_minmax(60px,auto)_minmax(70px,auto)_auto] items-end gap-x-2.5 gap-y-2 w-full">
-                {/* Label Input */}
-                <div className="col-span-2 sm:col-span-1">
-                  <Label htmlFor={`pbl-label-${item.id}`} className="text-xs mb-0.5 block">Label</Label>
-                  <Input
-                    id={`pbl-label-${item.id}`}
-                    value={item.label}
-                    onChange={(e) => handleItemChange(item.id, 'label', e.target.value)}
-                    placeholder="Progress Label"
-                    className="w-full text-sm h-9"
-                  />
-                </div>
-                {/* Current Value Input */}
-                <div className="min-w-[60px]">
-                  <Label htmlFor={`pbl-current-${item.id}`} className="text-xs mb-0.5 block">Current</Label>
-                  <Input
-                    id={`pbl-current-${item.id}`}
-                    type="number"
-                    value={item.current} 
-                    onChange={(e) => handleItemChange(item.id, 'current', parseInt(e.target.value, 10) || 0)}
-                    placeholder="Val"
-                    className="w-full text-sm h-9"
-                  />
-                </div>
-                {/* Max Value Input */}
-                <div className="min-w-[60px]">
-                  <Label htmlFor={`pbl-max-${item.id}`} className="text-xs mb-0.5 block">Max</Label>
-                  <Input
-                    id={`pbl-max-${item.id}`}
-                    type="number"
-                    value={item.max} 
-                    onChange={(e) => handleItemChange(item.id, 'max', parseInt(e.target.value, 10) || 100)}
-                    placeholder="Max"
-                    className="w-full text-sm h-9"
-                  />
-                </div>
-                {/* Color Picker */}
-                <div className="min-w-[70px]">
-                  <Label htmlFor={`pbl-color-${item.id}`} className="text-xs mb-0.5 block">Color</Label>
-                  <Input
-                    id={`pbl-color-${item.id}`}
-                    type="color"
-                    value={item.color}
-                    onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
-                    className="w-full h-9 p-0.5 border-slate-300 dark:border-slate-600 rounded cursor-pointer"
-                  />
-                </div>
-                {/* Remove Button */}
-                <div className="flex items-center self-center sm:self-end h-9">
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="sm" 
-                    onClick={() => handleRemoveItem(item.id)}
-                    aria-label="Remove progress bar item"
-                    className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 p-2 h-full"
-                  >
-                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4"/>
-                  </Button>
-                </div>
-              </div>
-            </SortableListItem>
-          ))}
-        </SortableContext>
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm">
+      {children(listeners, attributes)}
+    </div>
+  );
+}
+
+function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProps<ILineChartWidget>) {
+  const [formData, setFormData] = useState<ILineChartWidget>(widgetData);
+
+  const handleInputChange = (field: keyof ILineChartWidget | keyof IChartData, value: any) => {
+    let newFormData: ILineChartWidget;
+    if (['title', 'icon', 'columnSpan', 'rowSpan', 'showDataPoints'].includes(field as string)) {
+      newFormData = { ...formData, [field]: value };
+    } else {
+      newFormData = { ...formData, data: { ...formData.data, [field as keyof IChartData]: value } };
+    }
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: any) => {
+    const newItems = formData.data.dataPoints.map(item =>
+      item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
+    );
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleAddItem = () => {
+    const newItemId = `lineitem-${Date.now()}`;
+    const newItem: IChartDataPoint = {
+      id: newItemId,
+      label: 'New Point',
+      value: 100,
+      displayOrder: formData.data.dataPoints.length,
+    };
+    const newItems = [...formData.data.dataPoints, newItem];
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    const newItems = formData.data.dataPoints.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
+    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const items = useMemo(() =>
+    [...(formData.data.dataPoints || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    [formData.data.dataPoints]
+  );
+
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex(item => item.id === active.id);
+      const newIndex = items.findIndex(item => item.id === over.id);
+      const newOrderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+      const newFormData = { ...formData, data: { ...formData.data, dataPoints: newOrderedItems } };
+      setFormData(newFormData);
+      onDataChange(newFormData);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Input id="line-chart-title" value={formData.title} onChange={e => handleInputChange('title', e.target.value)} placeholder="Line Chart Title" />
+      <Input id="line-chart-xaxis-label" value={formData.data.xAxisLabel || ''} onChange={e => handleInputChange('xAxisLabel', e.target.value)} placeholder="X-Axis Label" />
+      <Input id="line-chart-yaxis-label" value={formData.data.yAxisLabel || ''} onChange={e => handleInputChange('yAxisLabel', e.target.value)} placeholder="Y-Axis Label" />
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" id="line-chart-show-legend" checked={formData.data.showLegend || false} onChange={e => handleInputChange('showLegend', e.target.checked)} />
+        <Label htmlFor="line-chart-show-legend">Show Legend</Label>
       </div>
-      <Button onClick={handleAddItem} variant="outline" size="sm"><FontAwesomeIcon icon={faPlus} className="mr-2" />Add Item</Button>
-    </DndContext>
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" id="line-chart-show-points" checked={formData.showDataPoints || false} onChange={e => handleInputChange('showDataPoints', e.target.checked)} />
+        <Label htmlFor="line-chart-show-points">Show Data Points</Label>
+      </div>
+      <div>
+        <Label className="block mb-2 font-medium">Data Points (X, Y)</Label>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {items.map(item => (
+                <SortableLineChartItem key={item.id} id={item.id}>
+                  {(listeners, attributes) => (
+                    <div className="p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <div className="md:col-span-1 flex items-center justify-center"><Button {...listeners} variant="text" size="sm" className="cursor-grab"><FontAwesomeIcon icon={faGripVertical} /></Button></div>
+                        <div className="md:col-span-5"><Input value={item.label} onChange={e => handleItemChange(item.id, 'label', e.target.value)} placeholder="X Value (Label)" /></div>
+                        <div className="md:col-span-5"><Input type="number" value={item.value} onChange={e => handleItemChange(item.id, 'value', e.target.value)} placeholder="Y Value" /></div>
+                        <div className="md:col-span-1"><Button type="button" variant="text" size="sm" onClick={() => handleRemoveItem(item.id)} className="text-red-500"><FontAwesomeIcon icon={faTrash} /></Button></div>
+                      </div>
+                    </div>
+                  )}
+                </SortableLineChartItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+        <Button onClick={handleAddItem} variant="outline" size="sm" className="mt-4"><FontAwesomeIcon icon={faPlus} className="mr-2" />Add Data Point</Button>
+      </div>
+    </div>
+  );
+}
+
+interface SortableCashFlowItemProps {
+  id: UniqueIdentifier;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
+
+function SortableCashFlowItem({ id, children }: SortableCashFlowItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm mb-3">
+      {children(listeners, attributes)}
+    </div>
+  );
+}
+
+const cashFlowFrequencies = ['one-time', 'weekly', 'monthly', 'quarterly', 'yearly'];
+
+interface SortableDebtItemProps {
+  id: UniqueIdentifier;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
+
+function SortableDebtItem({ id, children }: SortableDebtItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm mb-3">
+      {children(listeners, attributes)}
+    </div>
+  );
+}
+
+const debtStrategyOptions = ['snowball', 'avalanche', 'custom'];
+
+function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<IDebtVisualizerWidget>) {
+  const [formData, setFormData] = useState<IDebtVisualizerWidget>(widgetData);
+
+  const handleInputChange = (field: keyof IDebtVisualizerWidget, value: any) => {
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleDebtItemChange = (itemId: string, field: keyof IDebtItem, value: any) => {
+    const newItems = formData.data.map(item =>
+      item.id === itemId ? { ...item, [field]: (field === 'currentBalance' || field === 'originalBalance' || field === 'interestRate' || field === 'minPayment' || field === 'priority') ? parseFloat(value) || 0 : value } : item
+    );
+    const newFormData = { ...formData, data: newItems as IDebtVisualizerData }; // Cast because map might infer IDebtItem[]
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleAddDebtItem = () => {
+    const newItemId = `debt-${Date.now()}`;
+    const newItem: IDebtItem = {
+      id: newItemId,
+      name: 'New Debt',
+      currentBalance: 0,
+      originalBalance: 0,
+      interestRate: 0,
+      minPayment: 0,
+      payoffDate: '',
+      category: '',
+      priority: formData.data.length + 1,
+      displayOrder: formData.data.length,
+    };
+    const newItems = [...formData.data, newItem];
+    const newFormData = { ...formData, data: newItems as IDebtVisualizerData }; 
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleRemoveDebtItem = (itemId: string) => {
+    const newItems = formData.data.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
+    const newFormData = { ...formData, data: newItems as IDebtVisualizerData };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = formData.data.findIndex(item => item.id === active.id);
+      const newIndex = formData.data.findIndex(item => item.id === over.id);
+      const newOrderedItems = arrayMove(formData.data, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+      const newFormData = { ...formData, data: newOrderedItems as IDebtVisualizerData };
+      setFormData(newFormData);
+      onDataChange(newFormData);
+    }
+  };
+  
+  const debtItems =
+    [...(formData.data || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+        <div className="space-y-1">
+          <Label htmlFor="debt-strategy">Payoff Strategy</Label>
+          <select id="debt-strategy" value={formData.strategy} onChange={e => handleInputChange('strategy', e.target.value as IDebtVisualizerWidget['strategy'])} className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2">
+            {debtStrategyOptions.map(opt => <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center space-x-2">
+          <input type="checkbox" id="debt-show-payoff-dates" checked={formData.showPayoffDates || false} onChange={e => handleInputChange('showPayoffDates', e.target.checked)} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+          <Label htmlFor="debt-show-payoff-dates" className="text-sm text-slate-600 dark:text-slate-300">Show Payoff Dates</Label>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4 border border-slate-200 dark:border-slate-700 rounded-md">
+        <h4 className="text-md font-semibold text-slate-700 dark:text-slate-200">Debt Items</h4>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={debtItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            {debtItems.map(item => (
+              <SortableDebtItem key={item.id} id={item.id}>
+                {(listeners, attributes) => (
+                  <div className="flex items-start p-3"> {/* Outer flex for handle and content block */}
+                    <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
+                    <div className="flex-grow space-y-3 ml-1"> {/* Main content block for fields */}
+                      <div className="flex items-center">
+                        <div className="flex-grow space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-name`} className="text-xs text-slate-500 dark:text-slate-400">Debt Name</Label>
+                          <Input id={`debt-item-${item.id}-name`} value={item.name} onChange={e => handleDebtItemChange(item.id, 'name', e.target.value)} placeholder="e.g., Visa Card" className="w-full" />
+                        </div>
+                        <Button type="button" variant="text" size="sm" onClick={() => handleRemoveDebtItem(item.id)} className="ml-2 text-red-500 flex-shrink-0"><FontAwesomeIcon icon={faTrash} /></Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-currentBalance`} className="text-xs text-slate-500 dark:text-slate-400">Current Balance ($)</Label>
+                          <Input id={`debt-item-${item.id}-currentBalance`} type="number" value={item.currentBalance} onChange={e => handleDebtItemChange(item.id, 'currentBalance', e.target.value)} placeholder="0.00" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-originalBalance`} className="text-xs text-slate-500 dark:text-slate-400">Original Balance ($)</Label>
+                          <Input id={`debt-item-${item.id}-originalBalance`} type="number" value={item.originalBalance} onChange={e => handleDebtItemChange(item.id, 'originalBalance', e.target.value)} placeholder="0.00" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-interestRate`} className="text-xs text-slate-500 dark:text-slate-400">Interest Rate (%)</Label>
+                          <Input id={`debt-item-${item.id}-interestRate`} type="number" value={item.interestRate} onChange={e => handleDebtItemChange(item.id, 'interestRate', e.target.value)} placeholder="e.g., 18.5" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-minPayment`} className="text-xs text-slate-500 dark:text-slate-400">Minimum Payment ($)</Label>
+                          <Input id={`debt-item-${item.id}-minPayment`} type="number" value={item.minPayment} onChange={e => handleDebtItemChange(item.id, 'minPayment', e.target.value)} placeholder="0.00" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-payoffDate`} className="text-xs text-slate-500 dark:text-slate-400">Est. Payoff Date</Label>
+                          <Input id={`debt-item-${item.id}-payoffDate`} value={item.payoffDate} onChange={e => handleDebtItemChange(item.id, 'payoffDate', e.target.value)} placeholder="e.g., Aug 2025" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`debt-item-${item.id}-category`} className="text-xs text-slate-500 dark:text-slate-400">Category</Label>
+                          <Input id={`debt-item-${item.id}-category`} value={item.category || ''} onChange={e => handleDebtItemChange(item.id, 'category', e.target.value)} placeholder="e.g., Credit Card" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`debt-item-${item.id}-priority`} className="text-xs text-slate-500 dark:text-slate-400">Priority (for 'Custom' strategy)</Label>
+                        <Input id={`debt-item-${item.id}-priority`} type="number" value={item.priority || ''} onChange={e => handleDebtItemChange(item.id, 'priority', e.target.value)} placeholder="e.g., 1" />
+                      </div>
+                    </div> {/* Closing flex-grow space-y-3 ml-1 */}
+                  </div>   /* Closing flex items-start p-3 */
+                )}
+              </SortableDebtItem>
+            ))}
+          </SortableContext>
+        </DndContext>
+        <Button onClick={handleAddDebtItem} variant="outline" size="sm" className="mt-2"><FontAwesomeIcon icon={faPlus} className="mr-2" />Add Debt Item</Button>
+      </div>
+    </div>
+  );
+}
+
+function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetFormProps<IQuickCashFlowSummaryWidget>) {
+  const [formData, setFormData] = useState<IQuickCashFlowSummaryWidget>(widgetData);
+
+  const handleInputChange = (field: keyof IQuickCashFlowSummaryWidget | keyof IQuickCashFlowSummaryData, value: any) => {
+    let newFormData: IQuickCashFlowSummaryWidget;
+    if (['title', 'icon', 'columnSpan', 'rowSpan', 'showCategories', 'showProjections'].includes(field as string)) {
+      newFormData = { ...formData, [field]: value };
+    } else {
+      newFormData = { ...formData, data: { ...formData.data, [field as keyof IQuickCashFlowSummaryData]: value } };
+    }
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleFlowItemChange = (flowType: 'inflows' | 'outflows', itemId: string, field: keyof ICashFlowEntry, value: any) => {
+    const items = formData.data[flowType];
+    const newItems = items.map(item =>
+      item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
+    );
+    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newFormData = { ...formData, data: newFlowData };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleAddFlowItem = (flowType: 'inflows' | 'outflows') => {
+    const newItemId = `${flowType.slice(0, -1)}-${Date.now()}`;
+    const newItem: ICashFlowEntry = {
+      id: newItemId,
+      title: 'New Item',
+      value: 0,
+      category: '',
+      frequency: 'monthly',
+      isRecurring: true,
+      displayOrder: formData.data[flowType].length,
+    };
+    const newItems = [...formData.data[flowType], newItem];
+    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newFormData = { ...formData, data: newFlowData };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const handleRemoveFlowItem = (flowType: 'inflows' | 'outflows', itemId: string) => {
+    const items = formData.data[flowType];
+    const newItems = items.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
+    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newFormData = { ...formData, data: newFlowData };
+    setFormData(newFormData);
+    onDataChange(newFormData);
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  const handleDragEnd = (flowType: 'inflows' | 'outflows', event: DragEndEvent) => {
+    const { active, over } = event;
+    const currentItems = formData.data[flowType];
+    if (over && active.id !== over.id) {
+      const oldIndex = currentItems.findIndex(item => item.id === active.id);
+      const newIndex = currentItems.findIndex(item => item.id === over.id);
+      const newOrderedItems = arrayMove(currentItems, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+      const newFlowData = { ...formData.data, [flowType]: newOrderedItems };
+      const newFormData = { ...formData, data: newFlowData };
+      setFormData(newFormData);
+      onDataChange(newFormData);
+    }
+  };
+
+  const renderFlowSection = (flowType: 'inflows' | 'outflows', title: string) => {
+    const items = useMemo(() => 
+      [...(formData.data[flowType] || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)), 
+      [formData.data, flowType]
+    );
+
+    return (
+      <div className="space-y-3 p-4 border border-slate-200 dark:border-slate-700 rounded-md">
+        <h4 className="text-md font-semibold text-slate-700 dark:text-slate-200">{title}</h4>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(flowType, e)}>
+          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            {items.map(item => (
+              <SortableCashFlowItem key={item.id} id={item.id}>
+                {(listeners, attributes) => (
+                  <div className="flex items-start p-3"> {/* Outer flex for handle and content block */}
+                    <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
+                    <div className="flex-grow space-y-2 ml-1"> {/* Main content block for fields */}
+                      <div className="flex items-center">
+                        <div className="flex-grow space-y-1">
+                          <Label htmlFor={`${flowType}-${item.id}-title`} className="text-xs text-slate-500 dark:text-slate-400">Title</Label>
+                          <Input id={`${flowType}-${item.id}-title`} value={item.title} onChange={e => handleFlowItemChange(flowType, item.id, 'title', e.target.value)} placeholder="Item Title" className="w-full" />
+                        </div>
+                        <Button type="button" variant="text" size="sm" onClick={() => handleRemoveFlowItem(flowType, item.id)} className="ml-2 text-red-500 flex-shrink-0"><FontAwesomeIcon icon={faTrash} /></Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`${flowType}-${item.id}-value`} className="text-xs text-slate-500 dark:text-slate-400">Amount</Label>
+                          <Input id={`${flowType}-${item.id}-value`} type="number" value={item.value} onChange={e => handleFlowItemChange(flowType, item.id, 'value', e.target.value)} placeholder="Amount" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`${flowType}-${item.id}-category`} className="text-xs text-slate-500 dark:text-slate-400">Category</Label>
+                          <Input id={`${flowType}-${item.id}-category`} value={item.category || ''} onChange={e => handleFlowItemChange(flowType, item.id, 'category', e.target.value)} placeholder="Category (e.g., Salary, Rent)" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                        <div className="space-y-1">
+                          <Label htmlFor={`${flowType}-${item.id}-frequency`} className="text-xs text-slate-500 dark:text-slate-400">Frequency</Label>
+                          <select id={`${flowType}-${item.id}-frequency`} value={item.frequency || 'monthly'} onChange={e => handleFlowItemChange(flowType, item.id, 'frequency', e.target.value)} className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2">
+                            {cashFlowFrequencies.map(freq => <option key={freq} value={freq}>{freq.charAt(0).toUpperCase() + freq.slice(1)}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id={`${flowType}-${item.id}-recurring`} checked={item.isRecurring || false} onChange={e => handleFlowItemChange(flowType, item.id, 'isRecurring', e.target.checked)} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+                          <Label htmlFor={`${flowType}-${item.id}-recurring`} className="ml-2 text-sm text-slate-600 dark:text-slate-300">Recurring</Label>
+                        </div>
+                      </div>
+                    </div> {/* Closing flex-grow space-y-2 ml-1 */}
+                  </div>   /* Closing flex items-start p-3 */
+                )}
+              </SortableCashFlowItem>
+            ))}
+          </SortableContext>
+        </DndContext>
+        <Button onClick={() => handleAddFlowItem(flowType)} variant="outline" size="sm" className="mt-2"><FontAwesomeIcon icon={faPlus} className="mr-2" />Add {flowType.slice(0, -1)}</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="qcf-show-categories">Show Categories</Label>
+          <input type="checkbox" id="qcf-show-categories" checked={formData.showCategories || false} onChange={e => handleInputChange('showCategories', e.target.checked)} className="ml-2 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+        </div>
+        <div>
+          <Label htmlFor="qcf-show-projections">Show Projections</Label>
+          <input type="checkbox" id="qcf-show-projections" checked={formData.showProjections || false} onChange={e => handleInputChange('showProjections', e.target.checked)} className="ml-2 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="qcf-projected-period">Projected Period (e.g., Monthly)</Label>
+        <Input id="qcf-projected-period" value={formData.data.projectedPeriod || ''} onChange={e => handleInputChange('projectedPeriod', e.target.value)} placeholder="Monthly, Annually" />
+      </div>
+      {renderFlowSection('inflows', 'Inflows')}
+      {renderFlowSection('outflows', 'Outflows')}
+    </div>
   );
 }
 
@@ -362,9 +1161,7 @@ function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCar
             <Input id={`tip-link-${item.id}`} value={item.link || ''} onChange={(e) => handleItemChange(index, 'link', e.target.value)} placeholder="https://example.com/learn-more" />
           </div>
           <div className="flex justify-end">
-            <Button variant="text" size="sm" onClick={() => removeItem(index)} className="text-red-500 hover:text-red-700 dark:hover:text-red-400">
-              <FontAwesomeIcon icon={faTrash} className="mr-2" />Remove Tip
-            </Button>
+              <FontAwesomeIcon onClick={() => removeItem(index)} icon={faTrash} className="mr-2 text-red-500 hover:text-red-700 dark:hover:text-red-400" />Remove Tip
           </div>
         </motion.div>
       ))}
@@ -391,150 +1188,266 @@ function CountdownCardForm({ data: widgetData, onDataChange }: WidgetFormProps<I
 }
 
 function MetricCardForm({ data: widgetData, onDataChange }: WidgetFormProps<IMetricCardWidget>) {
-  const item: IMetricCardItem = (Array.isArray(widgetData.data) && widgetData.data[0]) || { id: 'metric-1', value: '', currency: '$', description: '' };
+  // IMetricCardData is an array of IMetricCardItem. This form edits the first item.
+  const item = (widgetData.data && widgetData.data[0]) || { 
+    id: `metric-${Date.now()}`,
+    description: 'New Metric', // Maps to IMetricCardItem.description
+    value: '0', 
+    currency: '', // Maps to IMetricCardItem.currency
+    trend: 'neutral' as IMetricTrend 
+  };
 
-  const handleFieldChange = (field: keyof IMetricCardItem, value: any) => {
-    onDataChange({ ...widgetData, data: [{ ...item, [field]: value }] });
+  const handleFieldChange = (field: keyof IMetricCardItem, value: string | number | IMetricTrend) => {
+    const updatedItem = { ...item, [field]: value };
+    // Update the first item in the array, preserve other items if they exist
+    const newData = [updatedItem, ...(widgetData.data?.slice(1) || [])];
+    onDataChange({ ...widgetData, data: newData as IMetricCardItem[] });
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Metric Card Settings</h3>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800">
+      <h3 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-3">Metric Card Settings (First Item)</h3>
+      <div>
+        <Label htmlFor={`metric-description-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</Label>
+        <Input
+          id={`metric-description-${item.id}`}
+          value={item.description || ''} // Use description
+          onChange={(e) => handleFieldChange('description', e.target.value)}
+          placeholder="e.g., Total Revenue, Active Users"
+          className="w-full"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="metric-description">Description</Label>
-          <Input id="metric-description" value={item.description || ''} onChange={(e) => handleFieldChange('description', e.target.value)} placeholder="e.g., Total Balance" />
+          <Label htmlFor={`metric-value-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Value</Label>
+          <Input
+            id={`metric-value-${item.id}`}
+            value={item.value}
+            onChange={(e) => handleFieldChange('value', e.target.value)}
+            placeholder="e.g., 12,500"
+            className="w-full"
+          />
         </div>
         <div>
-          <Label htmlFor="metric-value">Value</Label>
-          <Input id="metric-value" value={item.value} onChange={(e) => handleFieldChange('value', e.target.value)} placeholder="e.g., 10,000" />
+          <Label htmlFor={`metric-currency-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency (Optional)</Label>
+          <Input
+            id={`metric-currency-${item.id}`}
+            value={item.currency || ''} // Use currency
+            onChange={(e) => handleFieldChange('currency', e.target.value)}
+            placeholder="e.g., USD, kg, %"
+            className="w-full"
+          />
         </div>
+        {/* Select component for Trend is commented out as 'Select' is not found
         <div>
-          <Label htmlFor="metric-currency">Currency</Label>
-          <Input id="metric-currency" value={item.currency} onChange={(e) => handleFieldChange('currency', e.target.value)} placeholder="e.g., $" />
+          <Label htmlFor={`metric-trend-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trend (Optional)</Label>
+          <Select
+            id={`metric-trend-${item.id}`}
+            value={item.trend || 'neutral'}
+            onChange={(e) => handleFieldChange('trend', e.target.value as IMetricTrend)}
+            className="w-full"
+          >
+            <option value="neutral">Neutral</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+            <option value="stable">Stable</option>
+          </Select>
         </div>
-        <div>
-          <Label htmlFor="metric-trend">Trend</Label>
-          <Input id="metric-trend" type="text" value={item.trend || ''} onChange={(e) => handleFieldChange('trend', e.target.value)} placeholder="up or down" />
-        </div>
+        */}
       </div>
     </div>
   );
 }
 
-// Props interface
-interface WidgetEditModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  widget: Widget;
-  onSave: (updatedWidget: Widget) => void | Promise<void>; // Changed Omit to full Widget for simplicity, can be Omit if needed
+const widgetTypeConfig: Record<string, { title: string; icon: any; form: React.FC<WidgetFormProps<any>> | null; defaultData: Omit<Widget, 'id'> }> ={
+  dataList: {
+    title: 'Data List',
+    icon: faList,
+    form: DataListForm,
+    defaultData: { type: 'dataList', title: 'New Data List', icon: 'faList', columnSpan: 2, rowSpan: 1, data: [] }
+  },
+  progressBarList: {
+    title: 'Progress Bar List',
+    icon: faTasks,
+    form: ProgressBarListForm,
+    defaultData: { type: 'progressBarList', title: 'My Progress', icon: 'faTasks', columnSpan: 1, rowSpan: 1, data: [], showPercentages: true, sortBy: 'custom' }
+  },
+  metricCard: {
+    title: 'Metric Card',
+    icon: faChartLine,
+    form: MetricCardForm,
+    defaultData: { type: 'metricCard', title: 'Key Metric', icon: 'faChartLine', columnSpan: 1, rowSpan: 1, data: [{ id: 'm1', description: 'Metric Label', value: '0', currency: '', trend: 'neutral' as IMetricTrend }] }
+  },
+  tipCard: {
+    title: 'Tip Card',
+    icon: faLightbulb,
+    form: TipCardForm,
+    defaultData: { type: 'tipCard', title: 'Helpful Tip', icon: 'faLightbulb', columnSpan: 1, rowSpan: 1, data: { tips: [{id: 'tip-1', title: 'Save Regularly', content: 'Try to save a portion of your income each month.', displayOrder: 0}], currentTipIndex: 0, autoRotate: true } }
+  },
+  countdownCard: {
+    title: 'Countdown Card',
+    icon: faCalendarAlt,
+    form: CountdownCardForm,
+    defaultData: { type: 'countdownCard', title: 'Event Countdown', icon: 'faCalendarAlt', columnSpan: 1, rowSpan: 1, data: { id: 'cd-1', title: 'Next Holiday', days: 30, image: 'default_icon_url', targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], eventName: 'Upcoming Event' } }
+  },
+  barChart: {
+    title: 'Bar Chart',
+    icon: faChartBar,
+    form: BarChartForm,
+    defaultData: { type: 'barChart', title: 'Sample Bar Chart', icon: 'faChartBar', columnSpan: 2, rowSpan: 1, data: { dataPoints: [{id:'dp1', label: 'A', value: 10, color: '#4CAF50'}, {id:'dp2', label: 'B', value: 20, color: '#FFC107'}], chartType: 'bar', xAxisLabel: 'Category', yAxisLabel: 'Value' } }
+  },
+  lineChart: {
+    title: 'Line Chart',
+    icon: faChartLine,
+    form: LineChartForm,
+    defaultData: { type: 'lineChart', title: 'Sample Line Chart', icon: 'faChartLine', columnSpan: 2, rowSpan: 1, data: { dataPoints: [{id:'dp1', label: 'Jan', value: 5}, {id:'dp2', label: 'Feb', value: 15}], chartType: 'line', xAxisLabel: 'Month', yAxisLabel: 'Value', tension: 0.1, pointRadius: 3 } }
+  },
+  quickCashFlowSummary: {
+    title: 'Quick Cash Flow',
+    icon: faExchangeAlt,
+    form: QuickCashFlowSummaryForm,
+    defaultData: { type: 'quickCashFlowSummary', title: 'Cash Flow', icon: 'faExchangeAlt', columnSpan: 2, rowSpan: 1, data: { inflows: [{id:'in1', title: 'Salary', value: 3000, category: 'Income'}], outflows: [{id:'out1', title: 'Rent', value: 1000, category: 'Housing'}], projectedPeriod: 'Monthly' }, showCategories: true, showProjections: true }
+  },
+  debtVisualizer: {
+    title: 'Debt Visualizer',
+    icon: faCreditCard,
+    form: DebtVisualizerForm,
+    defaultData: { type: 'debtVisualizer', title: 'My Debts', icon: 'faCreditCard', columnSpan: 2, rowSpan: 1, data: [{id:'d1', name: 'Credit Card', currentBalance: 5000, originalBalance: 5000, interestRate: 18, minPayment: 100, payoffDate: '2026-01-01', type: 'Credit Card', displayOrder: 0}], strategy: 'snowball' }
+  },
+  financialHealthScorecard: {
+    title: 'Financial Health Scorecard',
+    icon: faShieldAlt,
+    form: null, // FinancialHealthScorecardForm, // Commented out as component is not found
+    defaultData: {
+      type: 'financialHealthScorecard',
+      title: 'My Financial Health',
+      icon: 'faShieldAlt',
+      columnSpan: 2, rowSpan: 1,
+      data: {
+        items: [
+          { id: 'fhs-1', category: 'Budget Adherence', score: 80, status: 'Good', explanation: 'Generally sticking to budget.', weight: 1, displayOrder: 0 },
+          { id: 'fhs-2', category: 'Emergency Fund', score: 60, status: 'Fair', explanation: 'Fund covers 2 months of expenses.', weight: 1.5, displayOrder: 1 },
+        ],
+        overallScore: 72,
+        overallStatus: 'Good',
+      },
+      showIndividualScores: true,
+    }
+  },
+  checklist: { 
+    title: 'Checklist', 
+    icon: faCheckSquare, 
+    form: null, // Placeholder for ChecklistForm
+    defaultData: { type: 'checklist', title: 'My Checklist', icon: 'faCheckSquare', columnSpan: 1, rowSpan: 1, data: [{id:'cl1', task: 'Pay bills', isCompleted: false, displayOrder: 0 }] }
+  },
 }
 
-// Main Component
-export function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditModalProps): JSX.Element {
-  const [formData, setFormData] = useState<Widget>(widget);
-
-  // This useEffect handles updates if the `widget` prop instance itself changes while the modal is open.
-  useEffect(() => {
-    setFormData(widget);
-  }, [widget]);
-
-  const handleFormChange = (field: keyof Widget, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }) as Widget);
-  };
-
-  // This function is passed to the specific form components (DataListForm, etc.)
-  // Those forms will call it with the full, updated specific widget object (e.g., IDataListWidget)
-  const handleDataChange = (updatedSubFormWidget: Widget) => { 
-    setFormData(updatedSubFormWidget);
-  };
-
-  const widgetTypeConfig = useMemo(() => ({
-    'DataList': { icon: faList, title: 'Data List' },
-    'ProgressBarList': { icon: faTasks, title: 'Progress Bar List' }, // faTasks or faPercent
-    'TipCard': { icon: faLightbulb, title: 'Tip Card' },
-    'CountdownCard': { icon: faCalendarAlt, title: 'Countdown' }, // faCalendarAlt or faCalendar
-    'MetricCard': { icon: faChartLine, title: 'Metric Card' },
-    'Checklist': { icon: faCheckSquare, title: 'Checklist' }, // faCheckSquare or faListCheck
-    // Add other widget types here
-  }), []);
-
-  const currentConfig = widgetTypeConfig[widget.type as keyof typeof widgetTypeConfig] || { icon: faCog, title: 'Widget Settings' };
-  const formTitle = currentConfig.title;
-  const formIcon = currentConfig.icon;
-
+export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditModalProps) {
+  const [formData, setFormData] = useState<Widget | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (widget) {
+      setFormData(JSON.parse(JSON.stringify(widget))); // Deep copy
+    } else {
+      setFormData(null);
+    }
+  }, [widget]);
+
+  const handleGlobalSettingChange = useCallback((field: keyof Widget, value: any) => {
+    setFormData(prev => prev ? { ...prev, [field]: value } : null);
+  }, []);
+
+  const handleDataChange = useCallback((updatedWidgetSpecificData: any) => {
+    setFormData(prev => {
+      if (!prev) return null;
+      // This logic ensures that the 'data' field is correctly updated based on its type (array or object)
+      // It's a simplified approach; more complex data structures might need more specific handling.
+      return { ...prev, data: updatedWidgetSpecificData }; 
+    });
+  }, []);
+
+  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formData) return;
     setIsSubmitting(true);
     try {
-            await onSave(formData); // formData now holds the complete updated widget
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      onSave(formData);
       onClose();
     } catch (error) {
-      console.error('Error saving widget:', error);
+      console.error('Failed to save widget:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [widget, formData, onSave, onClose]);
+  }, [formData, onSave, onClose]);
 
-  const renderActiveForm = () => {
-    if (!formData) return null;
-    switch (formData.type) {
-      case 'dataList':
-        return <DataListForm data={formData as IDataListWidget} onDataChange={handleDataChange as (data: IDataListWidget) => void} />;
-      case 'progressBarList':
-        return <ProgressBarListForm data={formData as IProgressBarListWidget} onDataChange={handleDataChange as (data: IProgressBarListWidget) => void} />;
-      case 'tipCard':
-        return <TipCardForm data={formData as ITipCardWidget} onDataChange={handleDataChange as (data: ITipCardWidget) => void} />;
-      case 'countdownCard':
-        return <CountdownCardForm data={formData as ICountdownCardWidget} onDataChange={handleDataChange as (data: ICountdownCardWidget) => void} />;
-      case 'metricCard':
-        return <MetricCardForm data={formData as IMetricCardWidget} onDataChange={handleDataChange as (data: IMetricCardWidget) => void} />;
-      case 'checklist':
-        // Assuming ChecklistForm exists and is imported, and IChecklistWidget is imported
-        // return <ChecklistForm data={formData as IChecklistWidget} onDataChange={handleDataChange as (data: IChecklistWidget) => void} />;
-        return null; // Placeholder for ChecklistForm
-      default:
-        // Optionally, handle unknown widget types or return a default message
-        // const _exhaustiveCheck: never = formData.type;
-        return <p>Unsupported widget type: {formData.type}</p>;
-    }
-  };
+  const ActiveForm = useMemo(() => {
+    if (!formData || !formData.type || !widgetTypeConfig[formData.type]) return () => <p>Widget configuration or form data is missing.</p>;
+    const config = widgetTypeConfig[formData.type];
+    const FormComponent = config.form;
+    if (!FormComponent) return () => <p>Edit form for widget type "{formData.type}" is not available.</p>;
+    return FormComponent;
+  }, [formData, widgetTypeConfig]);
+
+  if (!isOpen || !formData) return null;
+
+  const currentDisplayConfig = widgetTypeConfig[formData.type] || { icon: faCog, title: 'Widget Settings' };
+  const displayFormTitle = formData.title || currentDisplayConfig.title;
+  const displayFormIcon = currentDisplayConfig.icon;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
-        <header className="flex items-center justify-between pb-4 border-b dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <FontAwesomeIcon icon={formIcon} className="text-xl text-gray-500" />
-            <h2 className="text-xl font-semibold">Edit {formTitle}</h2>
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="2xl">
+      <form onSubmit={handleSubmit} className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="py-4 px-5 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10 border-b dark:border-gray-700">
+          <div className="flex items-center">
+            <FontAwesomeIcon icon={displayFormIcon} className="text-xl text-primary-600 dark:text-primary-400 mr-3" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit {displayFormTitle}</h2>
           </div>
-        </header>
+        </div>
 
-        <main className="flex-grow overflow-y-auto py-6 space-y-6">
-          {/* General Settings - now part of the single column flow */}
-          <div className="space-y-4">
+        <div className="py-6 px-5 space-y-6 max-h-[calc(100vh-220px)] overflow-y-auto">
+          <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-700/30">
+            <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">General Settings</h3>
             <div>
-              <Label htmlFor="widget-title">Widget Title</Label>
-              <Input id="widget-title" value={formData.title || ''} onChange={(e) => handleFormChange('title', e.target.value)} placeholder="Enter widget title" />
+              <Label htmlFor="widget-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Widget Title</Label>
+              <Input
+                id="widget-title"
+                value={formData.title || ''}
+                onChange={(e) => handleGlobalSettingChange('title', e.target.value)}
+                placeholder={`E.g., ${currentDisplayConfig.title}`}
+              />
             </div>
             <div>
-              <Label>Icon</Label>
-              <IconSelector selectedIcon={formData.icon || 'faCog'} onSelectIcon={(iconName) => handleFormChange('icon', iconName)} />
+              <Label htmlFor="widget-icon" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icon</Label>
+              <IconSelector
+                selectedIcon={formData.icon || ''}
+                onSelectIcon={(iconName) => handleGlobalSettingChange('icon', iconName)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="widget-columnSpan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Column Span</Label>
+                    <Input id="widget-columnSpan" type="number" min="1" max="2" value={formData.columnSpan || 1} onChange={(e) => handleGlobalSettingChange('columnSpan', parseInt(e.target.value,10) as 1 | 2 || 1)} />
+                </div>
+                <div>
+                    <Label htmlFor="widget-rowSpan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Row Span (Optional)</Label>
+                    <Input id="widget-rowSpan" type="number" min="1" max="2" value={formData.rowSpan || ''} onChange={(e) => handleGlobalSettingChange('rowSpan', parseInt(e.target.value,10) as 1 | 2 || undefined)} placeholder="Auto"/>
+                </div>
             </div>
           </div>
 
-          {/* Widget-Specific Settings - now part of the single column flow */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            {renderActiveForm()}
-          </div>
-        </main>
+          {formData && formData.type && widgetTypeConfig[formData.type]?.form && <ActiveForm data={formData} onDataChange={handleDataChange as any} />}
+        </div>
 
-        <footer className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
-        </footer>
+        <div className="py-4 px-5 flex justify-end space-x-3 bg-gray-50 dark:bg-gray-800/50 sticky bottom-0 z-10 border-t dark:border-gray-700">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </form>
     </Modal>
   );

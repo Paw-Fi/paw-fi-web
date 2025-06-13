@@ -22,7 +22,7 @@ import { SortableWidget } from './SortableWidget';
 import { EditableWidget } from './EditableWidget';
 import { Widget } from './types/dashboard-data.typings';
 import { WidgetFactory } from './widgets/WidgetFactory';
-import { WidgetEditModal } from './WidgetEditModal';
+import WidgetEditModal from './WidgetEditModal';
 import { AddWidgetModal } from './AddWidgetModal';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { updateWidgets } from '@/store/slices/dashboardSlice';
