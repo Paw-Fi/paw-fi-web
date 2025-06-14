@@ -8,475 +8,644 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as IntroRouteImport } from './routes/intro'
+import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as UserSettingsRouteRouteImport } from './routes/user-settings/route'
+import { Route as RegisterRouteRouteImport } from './routes/register/route'
+import { Route as ProfileRouteRouteImport } from './routes/profile/route'
+import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
+import { Route as LoginRouteRouteImport } from './routes/login/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as UserSettingsIndexRouteImport } from './routes/user-settings/index'
+import { Route as RegisterIndexRouteImport } from './routes/register/index'
+import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+import { Route as LoginIndexRouteImport } from './routes/login/index'
+import { Route as LearningIndexRouteImport } from './routes/learning/index'
+import { Route as FormatIndexRouteImport } from './routes/format/index'
+import { Route as CalculatorsIndexRouteImport } from './routes/calculators/index'
+import { Route as BlogsIndexRouteImport } from './routes/blogs/index'
+import { Route as AuthorIndexRouteImport } from './routes/author/index'
+import { Route as CalculatorsSavingGoalsCalculatorRouteImport } from './routes/calculators/saving-goals-calculator'
+import { Route as CalculatorsRetirementCalculatorRouteImport } from './routes/calculators/retirement-calculator'
+import { Route as CalculatorsMortgageCalculatorRouteImport } from './routes/calculators/mortgage-calculator'
+import { Route as CalculatorsInvestmentCalculatorRouteImport } from './routes/calculators/investment-calculator'
+import { Route as CalculatorsCompoundCalculatorRouteImport } from './routes/calculators/compound-calculator'
+import { Route as CalculatorsAutoLoanCalculatorRouteImport } from './routes/calculators/auto-loan-calculator'
+import { Route as BlogsBlogIdRouteImport } from './routes/blogs/$blogId'
+import { Route as AuthorImportRouteImport } from './routes/author/import'
+import { Route as LearningCourseIdIndexRouteImport } from './routes/learning/$courseId/index'
+import { Route as LearningCourseIdLessonLessonIdRouteImport } from './routes/learning/$courseId/lesson/$lessonId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as TermsOfServiceImport } from './routes/terms-of-service'
-import { Route as PrivacyPolicyImport } from './routes/privacy-policy'
-import { Route as IntroImport } from './routes/intro'
-import { Route as CookiePolicyImport } from './routes/cookie-policy'
-import { Route as ChatImport } from './routes/chat'
-import { Route as UserSettingsRouteImport } from './routes/user-settings/route'
-import { Route as RegisterRouteImport } from './routes/register/route'
-import { Route as ProfileRouteImport } from './routes/profile/route'
-import { Route as OnboardingRouteImport } from './routes/onboarding/route'
-import { Route as LoginRouteImport } from './routes/login/route'
-import { Route as IndexImport } from './routes/index'
-import { Route as UserSettingsIndexImport } from './routes/user-settings/index'
-import { Route as RegisterIndexImport } from './routes/register/index'
-import { Route as ProfileIndexImport } from './routes/profile/index'
-import { Route as OnboardingIndexImport } from './routes/onboarding/index'
-import { Route as LoginIndexImport } from './routes/login/index'
-import { Route as LearningIndexImport } from './routes/learning/index'
-import { Route as FormatIndexImport } from './routes/format/index'
-import { Route as CalculatorsIndexImport } from './routes/calculators/index'
-import { Route as BlogsIndexImport } from './routes/blogs/index'
-import { Route as AuthorIndexImport } from './routes/author/index'
-import { Route as CalculatorsSavingGoalsCalculatorImport } from './routes/calculators/saving-goals-calculator'
-import { Route as CalculatorsRetirementCalculatorImport } from './routes/calculators/retirement-calculator'
-import { Route as CalculatorsMortgageCalculatorImport } from './routes/calculators/mortgage-calculator'
-import { Route as CalculatorsInvestmentCalculatorImport } from './routes/calculators/investment-calculator'
-import { Route as CalculatorsCompoundCalculatorImport } from './routes/calculators/compound-calculator'
-import { Route as CalculatorsAutoLoanCalculatorImport } from './routes/calculators/auto-loan-calculator'
-import { Route as BlogsBlogIdImport } from './routes/blogs/$blogId'
-import { Route as AuthorImportImport } from './routes/author/import'
-import { Route as LearningCourseIdIndexImport } from './routes/learning/$courseId/index'
-import { Route as AuthorCourseCourseIdImport } from './routes/author/course/$courseId'
-import { Route as LearningCourseIdLessonLessonIdImport } from './routes/learning/$courseId/lesson/$lessonId'
-
-// Create/Update Routes
-
-const TermsOfServiceRoute = TermsOfServiceImport.update({
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   id: '/terms-of-service',
   path: '/terms-of-service',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const PrivacyPolicyRoute = PrivacyPolicyImport.update({
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IntroRoute = IntroImport.update({
+const IntroRoute = IntroRouteImport.update({
   id: '/intro',
   path: '/intro',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CookiePolicyRoute = CookiePolicyImport.update({
+const CookiePolicyRoute = CookiePolicyRouteImport.update({
   id: '/cookie-policy',
   path: '/cookie-policy',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const ChatRoute = ChatImport.update({
+const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const UserSettingsRouteRoute = UserSettingsRouteImport.update({
+const UserSettingsRouteRoute = UserSettingsRouteRouteImport.update({
   id: '/user-settings',
   path: '/user-settings',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const RegisterRouteRoute = RegisterRouteImport.update({
+const RegisterRouteRoute = RegisterRouteRouteImport.update({
   id: '/register',
   path: '/register',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const ProfileRouteRoute = ProfileRouteImport.update({
+const ProfileRouteRoute = ProfileRouteRouteImport.update({
   id: '/profile',
   path: '/profile',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const OnboardingRouteRoute = OnboardingRouteImport.update({
+const OnboardingRouteRoute = OnboardingRouteRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const LoginRouteRoute = LoginRouteImport.update({
+const LoginRouteRoute = LoginRouteRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const UserSettingsIndexRoute = UserSettingsIndexImport.update({
+const UserSettingsIndexRoute = UserSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => UserSettingsRouteRoute,
 } as any)
-
-const RegisterIndexRoute = RegisterIndexImport.update({
+const RegisterIndexRoute = RegisterIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => RegisterRouteRoute,
 } as any)
-
-const ProfileIndexRoute = ProfileIndexImport.update({
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ProfileRouteRoute,
 } as any)
-
-const OnboardingIndexRoute = OnboardingIndexImport.update({
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
-
-const LoginIndexRoute = LoginIndexImport.update({
+const LoginIndexRoute = LoginIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LoginRouteRoute,
 } as any)
-
-const LearningIndexRoute = LearningIndexImport.update({
+const LearningIndexRoute = LearningIndexRouteImport.update({
   id: '/learning/',
   path: '/learning/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const FormatIndexRoute = FormatIndexImport.update({
+const FormatIndexRoute = FormatIndexRouteImport.update({
   id: '/format/',
   path: '/format/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CalculatorsIndexRoute = CalculatorsIndexImport.update({
+const CalculatorsIndexRoute = CalculatorsIndexRouteImport.update({
   id: '/calculators/',
   path: '/calculators/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const BlogsIndexRoute = BlogsIndexImport.update({
+const BlogsIndexRoute = BlogsIndexRouteImport.update({
   id: '/blogs/',
   path: '/blogs/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AuthorIndexRoute = AuthorIndexImport.update({
+const AuthorIndexRoute = AuthorIndexRouteImport.update({
   id: '/author/',
   path: '/author/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
 const CalculatorsSavingGoalsCalculatorRoute =
-  CalculatorsSavingGoalsCalculatorImport.update({
+  CalculatorsSavingGoalsCalculatorRouteImport.update({
     id: '/calculators/saving-goals-calculator',
     path: '/calculators/saving-goals-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
 const CalculatorsRetirementCalculatorRoute =
-  CalculatorsRetirementCalculatorImport.update({
+  CalculatorsRetirementCalculatorRouteImport.update({
     id: '/calculators/retirement-calculator',
     path: '/calculators/retirement-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
 const CalculatorsMortgageCalculatorRoute =
-  CalculatorsMortgageCalculatorImport.update({
+  CalculatorsMortgageCalculatorRouteImport.update({
     id: '/calculators/mortgage-calculator',
     path: '/calculators/mortgage-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
 const CalculatorsInvestmentCalculatorRoute =
-  CalculatorsInvestmentCalculatorImport.update({
+  CalculatorsInvestmentCalculatorRouteImport.update({
     id: '/calculators/investment-calculator',
     path: '/calculators/investment-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
 const CalculatorsCompoundCalculatorRoute =
-  CalculatorsCompoundCalculatorImport.update({
+  CalculatorsCompoundCalculatorRouteImport.update({
     id: '/calculators/compound-calculator',
     path: '/calculators/compound-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
 const CalculatorsAutoLoanCalculatorRoute =
-  CalculatorsAutoLoanCalculatorImport.update({
+  CalculatorsAutoLoanCalculatorRouteImport.update({
     id: '/calculators/auto-loan-calculator',
     path: '/calculators/auto-loan-calculator',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
-const BlogsBlogIdRoute = BlogsBlogIdImport.update({
+const BlogsBlogIdRoute = BlogsBlogIdRouteImport.update({
   id: '/blogs/$blogId',
   path: '/blogs/$blogId',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AuthorImportRoute = AuthorImportImport.update({
+const AuthorImportRoute = AuthorImportRouteImport.update({
   id: '/author/import',
   path: '/author/import',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const LearningCourseIdIndexRoute = LearningCourseIdIndexImport.update({
+const LearningCourseIdIndexRoute = LearningCourseIdIndexRouteImport.update({
   id: '/learning/$courseId/',
   path: '/learning/$courseId/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AuthorCourseCourseIdRoute = AuthorCourseCourseIdImport.update({
-  id: '/author/course/$courseId',
-  path: '/author/course/$courseId',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const LearningCourseIdLessonLessonIdRoute =
-  LearningCourseIdLessonLessonIdImport.update({
+  LearningCourseIdLessonLessonIdRouteImport.update({
     id: '/learning/$courseId/lesson/$lessonId',
     path: '/learning/$courseId/lesson/$lessonId',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
 
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/login': typeof LoginRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/profile': typeof ProfileRouteRouteWithChildren
+  '/register': typeof RegisterRouteRouteWithChildren
+  '/user-settings': typeof UserSettingsRouteRouteWithChildren
+  '/chat': typeof ChatRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
+  '/author': typeof AuthorIndexRoute
+  '/blogs': typeof BlogsIndexRoute
+  '/calculators': typeof CalculatorsIndexRoute
+  '/format': typeof FormatIndexRoute
+  '/learning': typeof LearningIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/register/': typeof RegisterIndexRoute
+  '/user-settings/': typeof UserSettingsIndexRoute
+  '/learning/$courseId': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
+  '/author': typeof AuthorIndexRoute
+  '/blogs': typeof BlogsIndexRoute
+  '/calculators': typeof CalculatorsIndexRoute
+  '/format': typeof FormatIndexRoute
+  '/learning': typeof LearningIndexRoute
+  '/login': typeof LoginIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/register': typeof RegisterIndexRoute
+  '/user-settings': typeof UserSettingsIndexRoute
+  '/learning/$courseId': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/login': typeof LoginRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/profile': typeof ProfileRouteRouteWithChildren
+  '/register': typeof RegisterRouteRouteWithChildren
+  '/user-settings': typeof UserSettingsRouteRouteWithChildren
+  '/chat': typeof ChatRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/intro': typeof IntroRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
+  '/author/import': typeof AuthorImportRoute
+  '/blogs/$blogId': typeof BlogsBlogIdRoute
+  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
+  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
+  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
+  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
+  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
+  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
+  '/author/': typeof AuthorIndexRoute
+  '/blogs/': typeof BlogsIndexRoute
+  '/calculators/': typeof CalculatorsIndexRoute
+  '/format/': typeof FormatIndexRoute
+  '/learning/': typeof LearningIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/register/': typeof RegisterIndexRoute
+  '/user-settings/': typeof UserSettingsIndexRoute
+  '/learning/$courseId/': typeof LearningCourseIdIndexRoute
+  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
+    | '/user-settings'
+    | '/chat'
+    | '/cookie-policy'
+    | '/intro'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/author/import'
+    | '/blogs/$blogId'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
+    | '/author'
+    | '/blogs'
+    | '/calculators'
+    | '/format'
+    | '/learning'
+    | '/login/'
+    | '/onboarding/'
+    | '/profile/'
+    | '/register/'
+    | '/user-settings/'
+    | '/learning/$courseId'
+    | '/learning/$courseId/lesson/$lessonId'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/chat'
+    | '/cookie-policy'
+    | '/intro'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/author/import'
+    | '/blogs/$blogId'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
+    | '/author'
+    | '/blogs'
+    | '/calculators'
+    | '/format'
+    | '/learning'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
+    | '/user-settings'
+    | '/learning/$courseId'
+    | '/learning/$courseId/lesson/$lessonId'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/profile'
+    | '/register'
+    | '/user-settings'
+    | '/chat'
+    | '/cookie-policy'
+    | '/intro'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/author/import'
+    | '/blogs/$blogId'
+    | '/calculators/auto-loan-calculator'
+    | '/calculators/compound-calculator'
+    | '/calculators/investment-calculator'
+    | '/calculators/mortgage-calculator'
+    | '/calculators/retirement-calculator'
+    | '/calculators/saving-goals-calculator'
+    | '/author/'
+    | '/blogs/'
+    | '/calculators/'
+    | '/format/'
+    | '/learning/'
+    | '/login/'
+    | '/onboarding/'
+    | '/profile/'
+    | '/register/'
+    | '/user-settings/'
+    | '/learning/$courseId/'
+    | '/learning/$courseId/lesson/$lessonId'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  LoginRouteRoute: typeof LoginRouteRouteWithChildren
+  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
+  ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
+  RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
+  UserSettingsRouteRoute: typeof UserSettingsRouteRouteWithChildren
+  ChatRoute: typeof ChatRoute
+  CookiePolicyRoute: typeof CookiePolicyRoute
+  IntroRoute: typeof IntroRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
+  AuthorImportRoute: typeof AuthorImportRoute
+  BlogsBlogIdRoute: typeof BlogsBlogIdRoute
+  CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
+  CalculatorsCompoundCalculatorRoute: typeof CalculatorsCompoundCalculatorRoute
+  CalculatorsInvestmentCalculatorRoute: typeof CalculatorsInvestmentCalculatorRoute
+  CalculatorsMortgageCalculatorRoute: typeof CalculatorsMortgageCalculatorRoute
+  CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
+  CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
+  AuthorIndexRoute: typeof AuthorIndexRoute
+  BlogsIndexRoute: typeof BlogsIndexRoute
+  CalculatorsIndexRoute: typeof CalculatorsIndexRoute
+  FormatIndexRoute: typeof FormatIndexRoute
+  LearningIndexRoute: typeof LearningIndexRoute
+  LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
+  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/user-settings': {
-      id: '/user-settings'
-      path: '/user-settings'
-      fullPath: '/user-settings'
-      preLoaderRoute: typeof UserSettingsRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatImport
-      parentRoute: typeof rootRoute
-    }
-    '/cookie-policy': {
-      id: '/cookie-policy'
-      path: '/cookie-policy'
-      fullPath: '/cookie-policy'
-      preLoaderRoute: typeof CookiePolicyImport
-      parentRoute: typeof rootRoute
-    }
-    '/intro': {
-      id: '/intro'
-      path: '/intro'
-      fullPath: '/intro'
-      preLoaderRoute: typeof IntroImport
-      parentRoute: typeof rootRoute
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/privacy-policy': {
       id: '/privacy-policy'
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
-      preLoaderRoute: typeof PrivacyPolicyImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/terms-of-service': {
-      id: '/terms-of-service'
-      path: '/terms-of-service'
-      fullPath: '/terms-of-service'
-      preLoaderRoute: typeof TermsOfServiceImport
-      parentRoute: typeof rootRoute
+    '/intro': {
+      id: '/intro'
+      path: '/intro'
+      fullPath: '/intro'
+      preLoaderRoute: typeof IntroRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/author/import': {
-      id: '/author/import'
-      path: '/author/import'
-      fullPath: '/author/import'
-      preLoaderRoute: typeof AuthorImportImport
-      parentRoute: typeof rootRoute
+    '/cookie-policy': {
+      id: '/cookie-policy'
+      path: '/cookie-policy'
+      fullPath: '/cookie-policy'
+      preLoaderRoute: typeof CookiePolicyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/blogs/$blogId': {
-      id: '/blogs/$blogId'
-      path: '/blogs/$blogId'
-      fullPath: '/blogs/$blogId'
-      preLoaderRoute: typeof BlogsBlogIdImport
-      parentRoute: typeof rootRoute
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/auto-loan-calculator': {
-      id: '/calculators/auto-loan-calculator'
-      path: '/calculators/auto-loan-calculator'
-      fullPath: '/calculators/auto-loan-calculator'
-      preLoaderRoute: typeof CalculatorsAutoLoanCalculatorImport
-      parentRoute: typeof rootRoute
+    '/user-settings': {
+      id: '/user-settings'
+      path: '/user-settings'
+      fullPath: '/user-settings'
+      preLoaderRoute: typeof UserSettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/compound-calculator': {
-      id: '/calculators/compound-calculator'
-      path: '/calculators/compound-calculator'
-      fullPath: '/calculators/compound-calculator'
-      preLoaderRoute: typeof CalculatorsCompoundCalculatorImport
-      parentRoute: typeof rootRoute
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/investment-calculator': {
-      id: '/calculators/investment-calculator'
-      path: '/calculators/investment-calculator'
-      fullPath: '/calculators/investment-calculator'
-      preLoaderRoute: typeof CalculatorsInvestmentCalculatorImport
-      parentRoute: typeof rootRoute
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/mortgage-calculator': {
-      id: '/calculators/mortgage-calculator'
-      path: '/calculators/mortgage-calculator'
-      fullPath: '/calculators/mortgage-calculator'
-      preLoaderRoute: typeof CalculatorsMortgageCalculatorImport
-      parentRoute: typeof rootRoute
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/retirement-calculator': {
-      id: '/calculators/retirement-calculator'
-      path: '/calculators/retirement-calculator'
-      fullPath: '/calculators/retirement-calculator'
-      preLoaderRoute: typeof CalculatorsRetirementCalculatorImport
-      parentRoute: typeof rootRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/calculators/saving-goals-calculator': {
-      id: '/calculators/saving-goals-calculator'
-      path: '/calculators/saving-goals-calculator'
-      fullPath: '/calculators/saving-goals-calculator'
-      preLoaderRoute: typeof CalculatorsSavingGoalsCalculatorImport
-      parentRoute: typeof rootRoute
-    }
-    '/author/': {
-      id: '/author/'
-      path: '/author'
-      fullPath: '/author'
-      preLoaderRoute: typeof AuthorIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/blogs/': {
-      id: '/blogs/'
-      path: '/blogs'
-      fullPath: '/blogs'
-      preLoaderRoute: typeof BlogsIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/calculators/': {
-      id: '/calculators/'
-      path: '/calculators'
-      fullPath: '/calculators'
-      preLoaderRoute: typeof CalculatorsIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/format/': {
-      id: '/format/'
-      path: '/format'
-      fullPath: '/format'
-      preLoaderRoute: typeof FormatIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/learning/': {
-      id: '/learning/'
-      path: '/learning'
-      fullPath: '/learning'
-      preLoaderRoute: typeof LearningIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/login/': {
-      id: '/login/'
+    '/': {
+      id: '/'
       path: '/'
-      fullPath: '/login/'
-      preLoaderRoute: typeof LoginIndexImport
-      parentRoute: typeof LoginRouteImport
-    }
-    '/onboarding/': {
-      id: '/onboarding/'
-      path: '/'
-      fullPath: '/onboarding/'
-      preLoaderRoute: typeof OnboardingIndexImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/profile/': {
-      id: '/profile/'
-      path: '/'
-      fullPath: '/profile/'
-      preLoaderRoute: typeof ProfileIndexImport
-      parentRoute: typeof ProfileRouteImport
-    }
-    '/register/': {
-      id: '/register/'
-      path: '/'
-      fullPath: '/register/'
-      preLoaderRoute: typeof RegisterIndexImport
-      parentRoute: typeof RegisterRouteImport
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/user-settings/': {
       id: '/user-settings/'
       path: '/'
       fullPath: '/user-settings/'
-      preLoaderRoute: typeof UserSettingsIndexImport
-      parentRoute: typeof UserSettingsRouteImport
+      preLoaderRoute: typeof UserSettingsIndexRouteImport
+      parentRoute: typeof UserSettingsRouteRoute
     }
-    '/author/course/$courseId': {
-      id: '/author/course/$courseId'
-      path: '/author/course/$courseId'
-      fullPath: '/author/course/$courseId'
-      preLoaderRoute: typeof AuthorCourseCourseIdImport
-      parentRoute: typeof rootRoute
+    '/register/': {
+      id: '/register/'
+      path: '/'
+      fullPath: '/register/'
+      preLoaderRoute: typeof RegisterIndexRouteImport
+      parentRoute: typeof RegisterRouteRoute
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof ProfileRouteRoute
+    }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/login/': {
+      id: '/login/'
+      path: '/'
+      fullPath: '/login/'
+      preLoaderRoute: typeof LoginIndexRouteImport
+      parentRoute: typeof LoginRouteRoute
+    }
+    '/learning/': {
+      id: '/learning/'
+      path: '/learning'
+      fullPath: '/learning'
+      preLoaderRoute: typeof LearningIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/format/': {
+      id: '/format/'
+      path: '/format'
+      fullPath: '/format'
+      preLoaderRoute: typeof FormatIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/': {
+      id: '/calculators/'
+      path: '/calculators'
+      fullPath: '/calculators'
+      preLoaderRoute: typeof CalculatorsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blogs/': {
+      id: '/blogs/'
+      path: '/blogs'
+      fullPath: '/blogs'
+      preLoaderRoute: typeof BlogsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/author/': {
+      id: '/author/'
+      path: '/author'
+      fullPath: '/author'
+      preLoaderRoute: typeof AuthorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/saving-goals-calculator': {
+      id: '/calculators/saving-goals-calculator'
+      path: '/calculators/saving-goals-calculator'
+      fullPath: '/calculators/saving-goals-calculator'
+      preLoaderRoute: typeof CalculatorsSavingGoalsCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/retirement-calculator': {
+      id: '/calculators/retirement-calculator'
+      path: '/calculators/retirement-calculator'
+      fullPath: '/calculators/retirement-calculator'
+      preLoaderRoute: typeof CalculatorsRetirementCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/mortgage-calculator': {
+      id: '/calculators/mortgage-calculator'
+      path: '/calculators/mortgage-calculator'
+      fullPath: '/calculators/mortgage-calculator'
+      preLoaderRoute: typeof CalculatorsMortgageCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/investment-calculator': {
+      id: '/calculators/investment-calculator'
+      path: '/calculators/investment-calculator'
+      fullPath: '/calculators/investment-calculator'
+      preLoaderRoute: typeof CalculatorsInvestmentCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/compound-calculator': {
+      id: '/calculators/compound-calculator'
+      path: '/calculators/compound-calculator'
+      fullPath: '/calculators/compound-calculator'
+      preLoaderRoute: typeof CalculatorsCompoundCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculators/auto-loan-calculator': {
+      id: '/calculators/auto-loan-calculator'
+      path: '/calculators/auto-loan-calculator'
+      fullPath: '/calculators/auto-loan-calculator'
+      preLoaderRoute: typeof CalculatorsAutoLoanCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blogs/$blogId': {
+      id: '/blogs/$blogId'
+      path: '/blogs/$blogId'
+      fullPath: '/blogs/$blogId'
+      preLoaderRoute: typeof BlogsBlogIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/author/import': {
+      id: '/author/import'
+      path: '/author/import'
+      fullPath: '/author/import'
+      preLoaderRoute: typeof AuthorImportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/learning/$courseId/': {
       id: '/learning/$courseId/'
       path: '/learning/$courseId'
       fullPath: '/learning/$courseId'
-      preLoaderRoute: typeof LearningCourseIdIndexImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof LearningCourseIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/learning/$courseId/lesson/$lessonId': {
       id: '/learning/$courseId/lesson/$lessonId'
       path: '/learning/$courseId/lesson/$lessonId'
       fullPath: '/learning/$courseId/lesson/$lessonId'
-      preLoaderRoute: typeof LearningCourseIdLessonLessonIdImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof LearningCourseIdLessonLessonIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-// Create and export the route tree
 
 interface LoginRouteRouteChildren {
   LoginIndexRoute: typeof LoginIndexRoute
@@ -537,238 +706,6 @@ const UserSettingsRouteRouteChildren: UserSettingsRouteRouteChildren = {
 const UserSettingsRouteRouteWithChildren =
   UserSettingsRouteRoute._addFileChildren(UserSettingsRouteRouteChildren)
 
-export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRouteRouteWithChildren
-  '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/profile': typeof ProfileRouteRouteWithChildren
-  '/register': typeof RegisterRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRouteRouteWithChildren
-  '/chat': typeof ChatRoute
-  '/cookie-policy': typeof CookiePolicyRoute
-  '/intro': typeof IntroRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
-  '/terms-of-service': typeof TermsOfServiceRoute
-  '/author/import': typeof AuthorImportRoute
-  '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/author': typeof AuthorIndexRoute
-  '/blogs': typeof BlogsIndexRoute
-  '/calculators': typeof CalculatorsIndexRoute
-  '/format': typeof FormatIndexRoute
-  '/learning': typeof LearningIndexRoute
-  '/login/': typeof LoginIndexRoute
-  '/onboarding/': typeof OnboardingIndexRoute
-  '/profile/': typeof ProfileIndexRoute
-  '/register/': typeof RegisterIndexRoute
-  '/user-settings/': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
-  '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
-  '/cookie-policy': typeof CookiePolicyRoute
-  '/intro': typeof IntroRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
-  '/terms-of-service': typeof TermsOfServiceRoute
-  '/author/import': typeof AuthorImportRoute
-  '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/author': typeof AuthorIndexRoute
-  '/blogs': typeof BlogsIndexRoute
-  '/calculators': typeof CalculatorsIndexRoute
-  '/format': typeof FormatIndexRoute
-  '/learning': typeof LearningIndexRoute
-  '/login': typeof LoginIndexRoute
-  '/onboarding': typeof OnboardingIndexRoute
-  '/profile': typeof ProfileIndexRoute
-  '/register': typeof RegisterIndexRoute
-  '/user-settings': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
-  '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/login': typeof LoginRouteRouteWithChildren
-  '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/profile': typeof ProfileRouteRouteWithChildren
-  '/register': typeof RegisterRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRouteRouteWithChildren
-  '/chat': typeof ChatRoute
-  '/cookie-policy': typeof CookiePolicyRoute
-  '/intro': typeof IntroRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
-  '/terms-of-service': typeof TermsOfServiceRoute
-  '/author/import': typeof AuthorImportRoute
-  '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
-  '/author/': typeof AuthorIndexRoute
-  '/blogs/': typeof BlogsIndexRoute
-  '/calculators/': typeof CalculatorsIndexRoute
-  '/format/': typeof FormatIndexRoute
-  '/learning/': typeof LearningIndexRoute
-  '/login/': typeof LoginIndexRoute
-  '/onboarding/': typeof OnboardingIndexRoute
-  '/profile/': typeof ProfileIndexRoute
-  '/register/': typeof RegisterIndexRoute
-  '/user-settings/': typeof UserSettingsIndexRoute
-  '/author/course/$courseId': typeof AuthorCourseCourseIdRoute
-  '/learning/$courseId/': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/login'
-    | '/onboarding'
-    | '/profile'
-    | '/register'
-    | '/user-settings'
-    | '/chat'
-    | '/cookie-policy'
-    | '/intro'
-    | '/privacy-policy'
-    | '/terms-of-service'
-    | '/author/import'
-    | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
-    | '/author'
-    | '/blogs'
-    | '/calculators'
-    | '/format'
-    | '/learning'
-    | '/login/'
-    | '/onboarding/'
-    | '/profile/'
-    | '/register/'
-    | '/user-settings/'
-    | '/author/course/$courseId'
-    | '/learning/$courseId'
-    | '/learning/$courseId/lesson/$lessonId'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/chat'
-    | '/cookie-policy'
-    | '/intro'
-    | '/privacy-policy'
-    | '/terms-of-service'
-    | '/author/import'
-    | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
-    | '/author'
-    | '/blogs'
-    | '/calculators'
-    | '/format'
-    | '/learning'
-    | '/login'
-    | '/onboarding'
-    | '/profile'
-    | '/register'
-    | '/user-settings'
-    | '/author/course/$courseId'
-    | '/learning/$courseId'
-    | '/learning/$courseId/lesson/$lessonId'
-  id:
-    | '__root__'
-    | '/'
-    | '/login'
-    | '/onboarding'
-    | '/profile'
-    | '/register'
-    | '/user-settings'
-    | '/chat'
-    | '/cookie-policy'
-    | '/intro'
-    | '/privacy-policy'
-    | '/terms-of-service'
-    | '/author/import'
-    | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
-    | '/author/'
-    | '/blogs/'
-    | '/calculators/'
-    | '/format/'
-    | '/learning/'
-    | '/login/'
-    | '/onboarding/'
-    | '/profile/'
-    | '/register/'
-    | '/user-settings/'
-    | '/author/course/$courseId'
-    | '/learning/$courseId/'
-    | '/learning/$courseId/lesson/$lessonId'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  LoginRouteRoute: typeof LoginRouteRouteWithChildren
-  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
-  ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
-  RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
-  UserSettingsRouteRoute: typeof UserSettingsRouteRouteWithChildren
-  ChatRoute: typeof ChatRoute
-  CookiePolicyRoute: typeof CookiePolicyRoute
-  IntroRoute: typeof IntroRoute
-  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
-  TermsOfServiceRoute: typeof TermsOfServiceRoute
-  AuthorImportRoute: typeof AuthorImportRoute
-  BlogsBlogIdRoute: typeof BlogsBlogIdRoute
-  CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
-  CalculatorsCompoundCalculatorRoute: typeof CalculatorsCompoundCalculatorRoute
-  CalculatorsInvestmentCalculatorRoute: typeof CalculatorsInvestmentCalculatorRoute
-  CalculatorsMortgageCalculatorRoute: typeof CalculatorsMortgageCalculatorRoute
-  CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
-  CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
-  AuthorIndexRoute: typeof AuthorIndexRoute
-  BlogsIndexRoute: typeof BlogsIndexRoute
-  CalculatorsIndexRoute: typeof CalculatorsIndexRoute
-  FormatIndexRoute: typeof FormatIndexRoute
-  LearningIndexRoute: typeof LearningIndexRoute
-  AuthorCourseCourseIdRoute: typeof AuthorCourseCourseIdRoute
-  LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
-  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
-}
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRouteRoute: LoginRouteRouteWithChildren,
@@ -794,166 +731,9 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
-  AuthorCourseCourseIdRoute: AuthorCourseCourseIdRoute,
   LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
   LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/login",
-        "/onboarding",
-        "/profile",
-        "/register",
-        "/user-settings",
-        "/chat",
-        "/cookie-policy",
-        "/intro",
-        "/privacy-policy",
-        "/terms-of-service",
-        "/author/import",
-        "/blogs/$blogId",
-        "/calculators/auto-loan-calculator",
-        "/calculators/compound-calculator",
-        "/calculators/investment-calculator",
-        "/calculators/mortgage-calculator",
-        "/calculators/retirement-calculator",
-        "/calculators/saving-goals-calculator",
-        "/author/",
-        "/blogs/",
-        "/calculators/",
-        "/format/",
-        "/learning/",
-        "/author/course/$courseId",
-        "/learning/$courseId/",
-        "/learning/$courseId/lesson/$lessonId"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/login": {
-      "filePath": "login/route.tsx",
-      "children": [
-        "/login/"
-      ]
-    },
-    "/onboarding": {
-      "filePath": "onboarding/route.tsx",
-      "children": [
-        "/onboarding/"
-      ]
-    },
-    "/profile": {
-      "filePath": "profile/route.tsx",
-      "children": [
-        "/profile/"
-      ]
-    },
-    "/register": {
-      "filePath": "register/route.tsx",
-      "children": [
-        "/register/"
-      ]
-    },
-    "/user-settings": {
-      "filePath": "user-settings/route.tsx",
-      "children": [
-        "/user-settings/"
-      ]
-    },
-    "/chat": {
-      "filePath": "chat.tsx"
-    },
-    "/cookie-policy": {
-      "filePath": "cookie-policy.tsx"
-    },
-    "/intro": {
-      "filePath": "intro.tsx"
-    },
-    "/privacy-policy": {
-      "filePath": "privacy-policy.tsx"
-    },
-    "/terms-of-service": {
-      "filePath": "terms-of-service.tsx"
-    },
-    "/author/import": {
-      "filePath": "author/import.tsx"
-    },
-    "/blogs/$blogId": {
-      "filePath": "blogs/$blogId.tsx"
-    },
-    "/calculators/auto-loan-calculator": {
-      "filePath": "calculators/auto-loan-calculator.tsx"
-    },
-    "/calculators/compound-calculator": {
-      "filePath": "calculators/compound-calculator.tsx"
-    },
-    "/calculators/investment-calculator": {
-      "filePath": "calculators/investment-calculator.tsx"
-    },
-    "/calculators/mortgage-calculator": {
-      "filePath": "calculators/mortgage-calculator.tsx"
-    },
-    "/calculators/retirement-calculator": {
-      "filePath": "calculators/retirement-calculator.tsx"
-    },
-    "/calculators/saving-goals-calculator": {
-      "filePath": "calculators/saving-goals-calculator.tsx"
-    },
-    "/author/": {
-      "filePath": "author/index.tsx"
-    },
-    "/blogs/": {
-      "filePath": "blogs/index.tsx"
-    },
-    "/calculators/": {
-      "filePath": "calculators/index.tsx"
-    },
-    "/format/": {
-      "filePath": "format/index.tsx"
-    },
-    "/learning/": {
-      "filePath": "learning/index.tsx"
-    },
-    "/login/": {
-      "filePath": "login/index.tsx",
-      "parent": "/login"
-    },
-    "/onboarding/": {
-      "filePath": "onboarding/index.tsx",
-      "parent": "/onboarding"
-    },
-    "/profile/": {
-      "filePath": "profile/index.tsx",
-      "parent": "/profile"
-    },
-    "/register/": {
-      "filePath": "register/index.tsx",
-      "parent": "/register"
-    },
-    "/user-settings/": {
-      "filePath": "user-settings/index.tsx",
-      "parent": "/user-settings"
-    },
-    "/author/course/$courseId": {
-      "filePath": "author/course/$courseId.tsx"
-    },
-    "/learning/$courseId/": {
-      "filePath": "learning/$courseId/index.tsx"
-    },
-    "/learning/$courseId/lesson/$lessonId": {
-      "filePath": "learning/$courseId/lesson/$lessonId.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

@@ -132,7 +132,7 @@ export function Modal({
           <div className="flex items-center justify-center min-h-full ">
             <motion.div
               className={classNames(
-                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto max-w-[90vw] lg:max-w-[40rem] px-6 py-4',
+                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto w-[90vw] lg:w-[40rem] px-6 py-4',
                 'flex flex-col max-h-[90vh]',
                 fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',
                 contentClassName

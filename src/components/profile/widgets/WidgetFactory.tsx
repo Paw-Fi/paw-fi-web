@@ -8,7 +8,7 @@ import {
   CashFlowWidget,
 } from './ChartWidgets';
 import { 
-  CountdownCardWidget, DataListWidget, ProgressBarListWidget, TipCardWidget
+  CountdownCardWidget, DataListWidget, ProgressBarListWidget
 } from './DataWidgets';
 import { ChecklistWidget } from './ChecklistWidget';
 import { 
@@ -21,6 +21,7 @@ import {
 } from './FinancialWidgets';
 
 import { IChecklistWidget } from "../types/dashboard-data.typings"; // Added import
+import { TipCardWidget } from "./tip-card-widget";
 
 interface WidgetFactoryProps {
   widget: IBaseWidget;

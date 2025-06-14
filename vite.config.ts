@@ -1,21 +1,18 @@
 // Import directly from the config package to ensure compatibility
-import { defineConfig } from '@tanstack/react-start-config'
+import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { VitePluginRadar } from 'vite-plugin-radar';
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
   server: {
-    preset: 'node-server', // Explicitly set the preset for Vinxi
+    port: 3000,
   },
-  tsr: {
-    appDirectory: 'src',
-  },
-  vite: {
     plugins: [
       tsConfigPaths({
         projects: ['./tsconfig.json'],
@@ -24,7 +21,8 @@ export default defineConfig({
         analytics: {
           id: 'G-KVHTSD1MF1',
         },
-      })
+      }),
+      tanstackStart(),
     ],
     resolve: {
       alias: {
@@ -36,6 +34,5 @@ export default defineConfig({
         '@assets': resolve(__dirname, './src/assets'),
         '@styles': resolve(__dirname, './src/styles'),
       },
-    },
-  },
+    },  
 })
