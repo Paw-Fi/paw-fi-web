@@ -1,26 +1,72 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Component } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 // import { Select } from '@/components/ui/select'; // Select component not found, commented out for now
 import { Label } from '@/components/ui/label';
-import { Widget, IMetricCardWidget, IProgressBarListWidget, ICountdownCardWidget, IDataListWidget, ITipCardWidget, IChecklistWidget, IDataListItem, IProgressBarListItem, ITipCardListItem, IChecklistItem, ICountdownCardData, IMetricCardItem, IBarChartWidget, ILineChartWidget, IChartData, IChartDataPoint, IQuickCashFlowSummaryWidget, IQuickCashFlowSummaryData, ICashFlowEntry, IDebtVisualizerWidget, IDebtItem, IDebtVisualizerData, IFinancialHealthScorecardWidget, IFinancialHealthScorecardData, IFinancialHealthItem, IMetricTrend } from './types/dashboard-data.typings'; 
+import { 
+  Widget, 
+  IDataListWidget, 
+  IProgressBarListWidget, 
+  IBarChartWidget, 
+  ILineChartWidget, 
+  IDebtVisualizerWidget, 
+  IQuickCashFlowSummaryWidget, 
+  ITipCardWidget, 
+  ICountdownCardWidget, 
+  IMetricCardWidget,
+  IDataListItem,
+  IProgressBarListItem,
+  IChartData,
+  IChartDataPoint,
+  IDebtItem,
+  IDebtVisualizerData,
+  ICashFlowEntry,
+  IQuickCashFlowSummaryData,
+  ITipCardListItem,
+  ICountdownCardData,
+  IMetricCardItem,
+  IMetricTrend,
+  ITipCardData,
+  IChecklistData,
+  IFinancialHealthScorecardData,
+  IMetricCardData,
+  IProgressBarListData,
+  IChecklistWidget, 
+  IFinancialHealthScorecardWidget 
+} from './types/dashboard-data.typings'; 
+// DnD Kit imports
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  DragEndEvent,
+  type DraggableSyntheticListeners,
+  type DraggableAttributes,
+  type UniqueIdentifier 
+} from '@dnd-kit/core';
+import { 
+  SortableContext, 
+  arrayMove, 
+  sortableKeyboardCoordinates, 
+  useSortable, 
+  verticalListSortingStrategy 
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Font Awesome imports
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faGripVertical, 
   faPlusCircle, 
   faPalette, 
   faCheck, 
   faTimes, 
-  faPen, 
-  faPlus, 
-  faTrash, 
-  faCalendar, 
-  faChartLine, 
   faList, 
-  faPercent, 
-  faLightbulb,
+  faChartLine,
   faCalendarAlt,
   faCheckSquare,
   faCog,
@@ -28,27 +74,33 @@ import {
   faChartBar,
   faExchangeAlt,
   faCreditCard,
-  faShieldAlt
+  faShieldAlt,
+  faLightbulb,
+  faCalendar,
+  faGripVertical,
+  faPen,
+  faPlus,
+  faTrash,
+  faPercent,
+  faPiggyBank,
+  faHeartbeat,
+  faListCheck
 } from '@fortawesome/free-solid-svg-icons';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  UniqueIdentifier
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { DraggableSyntheticListeners, DraggableAttributes } from '@dnd-kit/core';
+
+// Import form components with aliases to avoid conflicts
+import { DataListForm as DataListFormExt } from './widget-forms/DataListForm';
+import { ProgressBarListForm as ProgressBarListFormExt } from './widget-forms/ProgressBarListForm';
+import { BarChartForm as BarChartFormExt, SortableBarChartItem } from './widget-forms/BarChartForm';
+import { LineChartForm as LineChartFormExt } from './widget-forms/LineChartForm';
+import { DebtVisualizerForm as DebtVisualizerFormExt } from './widget-forms/DebtVisualizerForm';
+import { QuickCashFlowSummaryForm as QuickCashFlowSummaryFormExt } from './widget-forms/QuickCashFlowSummaryForm';
+import { TipCardForm as TipCardFormExt } from './widget-forms/TipCardForm';
+import { CountdownCardForm as CountdownCardFormExt } from './widget-forms/CountdownCardForm';
+import { MetricCardForm as MetricCardFormExt } from './widget-forms/MetricCardForm';
+
+// Import IconDefinition type from @fortawesome/fontawesome-common-types
+import type { IconDefinition } from '@fortawesome/fontawesome-common-types';
+
 import { motion } from 'framer-motion';
 import { Modal } from '../ui/modal';
 import { IconSelector } from '../ui/icon-selector';
@@ -142,6 +194,11 @@ interface SortableListItemProps {
   children: React.ReactNode;
 }
 
+interface SortableProgressBarItemProps {
+  id: string;
+  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
+}
+
 function SortableListItem({ id, children }: SortableListItemProps) {
   const {
     attributes,
@@ -154,13 +211,36 @@ function SortableListItem({ id, children }: SortableListItemProps) {
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
+    transition: transition || undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+}
+
+function SortableProgressBarItem({ id, children }: SortableProgressBarItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
     transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || undefined,
     zIndex: isDragging ? 100 : 'auto',
     opacity: isDragging ? 0.8 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="bg-white dark:bg-slate-700/50 rounded-lg shadow mb-2 last:mb-0">
+    <div ref={setNodeRef} style={style} className="bg-white dark:bg-slate-700/50 rounded-lg shadow mb-2 last:mb-0">
       <div className="flex items-center p-3">
         <button 
           {...listeners} 
@@ -171,7 +251,7 @@ function SortableListItem({ id, children }: SortableListItemProps) {
           <FontAwesomeIcon icon={faGripVertical} />
         </button>
         <div className="flex-grow">
-          {children}
+          {children(listeners, attributes)}
         </div>
       </div>
     </div>
@@ -180,7 +260,6 @@ function SortableListItem({ id, children }: SortableListItemProps) {
 
 // ProgressBarListForm with Drag-and-Drop
 function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps<IProgressBarListWidget>) {
-  // Initialize formData with processed items, ensuring IDs and displayOrder
   const [formData, setFormData] = useState<IProgressBarListWidget>(() => {
     const itemsArray: IProgressBarListItem[] = widgetData.data || [];
     const processedItems: IProgressBarListItem[] = itemsArray
@@ -196,7 +275,6 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
     };
   });
 
-  // Effect to update formData if widgetData.data changes externally (e.g., discard changes)
   useEffect(() => {
     const itemsArray: IProgressBarListItem[] = widgetData.data || [];
     const processedItems: IProgressBarListItem[] = itemsArray
@@ -207,7 +285,6 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
       }))
       .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     
-    // Only update if there's an actual difference to avoid infinite loops
     if (JSON.stringify(formData.data) !== JSON.stringify(processedItems) || 
         formData.showPercentages !== widgetData.showPercentages || 
         formData.sortBy !== widgetData.sortBy) {
@@ -216,7 +293,7 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
         data: processedItems,
       });
     }
-  }, [widgetData, formData.data]); // Add formData.data to dependencies to allow internal updates to reflect if needed
+  }, [widgetData, formData.data]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -236,7 +313,7 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
       const newIndex = formData.data.findIndex(item => item.id === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
         const movedItems = arrayMove(formData.data, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
-        const newFormData = { ...formData, data: movedItems, sortBy: 'custom' as const }; // Set sortBy to custom on manual reorder
+        const newFormData = { ...formData, data: movedItems, sortBy: 'custom' as const }; 
         setFormData(newFormData);
         onDataChange(newFormData);
       }
@@ -258,7 +335,7 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
       label: 'New Goal',
       current: 0,
       max: 100,
-      color: '#3b82f6', // Default blue
+      color: '#3b82f6', 
       displayOrder: formData.data.length,
     };
     const newItems = [...formData.data, newItem];
@@ -280,9 +357,16 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
     { value: 'alphabetical', label: 'Alphabetical (A-Z)' },
   ];
 
+  const items = useMemo(() =>
+    formData.data.map((item, index) => ({
+      ...item,
+      displayOrder: item.displayOrder ?? index,
+    })),
+    [formData.data]
+  );
+
   return (
     <div className="space-y-6">
-      {/* Widget-level settings */}
       <div className="space-y-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-700/30">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">List Settings</h4>
         <div className="flex items-center">
@@ -308,13 +392,12 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
         </div>
       </div>
 
-      {/* Item-level settings */}
       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress Items ({formData.data.length})</h4>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={formData.data.map(i => i.id)} strategy={verticalListSortingStrategy}>
-          {formData.data.map(item => (
+        <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+          {items.map(item => (
             <SortableProgressBarItem key={item.id} id={item.id}>
-              {(listeners, _attributes) => ( // _attributes not used directly on Button for this layout
+              {(listeners, _attributes) => ( 
                 <div className="flex items-start p-3">
                   <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
                   <div className="flex-grow space-y-2 ml-1">
@@ -328,11 +411,11 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label htmlFor={`pbi-${item.id}-current`} className="text-xs text-slate-500 dark:text-slate-400">Current Value</Label>
-                        <Input id={`pbi-${item.id}-current`} type="number" value={item.current} onChange={e => handleItemChange(item.id, 'current', e.target.valueAsNumber)} placeholder="Current" />
+                        <Input id={`pbi-${item.id}-current`} type="number" value={item.current} onChange={e => handleItemChange(item.id, 'current', e.target.value)} placeholder="Current" />
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor={`pbi-${item.id}-max`} className="text-xs text-slate-500 dark:text-slate-400">Target Value (Max)</Label>
-                        <Input id={`pbi-${item.id}-max`} type="number" value={item.max} onChange={e => handleItemChange(item.id, 'max', e.target.valueAsNumber)} placeholder="Max" />
+                        <Input id={`pbi-${item.id}-max`} type="number" value={item.max} onChange={e => handleItemChange(item.id, 'max', e.target.value)} placeholder="Max" />
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -362,146 +445,397 @@ function ProgressBarListForm({ data: widgetData, onDataChange }: WidgetFormProps
   );
 }
 
-// ProgressBarListForm specific: Sortable Item for Progress Bars
-interface SortableProgressBarItemProps {
-  id: UniqueIdentifier;
-  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
-}
-
-function SortableProgressBarItem({ id, children }: SortableProgressBarItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
-    opacity: isDragging ? 0.8 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} className="bg-white dark:bg-slate-800 shadow rounded-lg mb-3 touch-manipulation">
-      {children(listeners, attributes)}
-    </div>
-  );
-}
-
-// FinancialHealthScorecardForm specific: Sortable Item
-interface SortableFinancialHealthItemProps {
-  id: UniqueIdentifier;
-  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
-}
-
-function SortableFinancialHealthItem({ id, children }: SortableFinancialHealthItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
-    opacity: isDragging ? 0.8 : 1,
-  };
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} className="bg-white dark:bg-slate-800 shadow rounded-lg mb-3 touch-manipulation">
-      {children(listeners, attributes)}
-    </div>
-  );
-}
-
-// Define SortableBarChartItem component and its props
-interface SortableBarChartItemProps {
-  id: UniqueIdentifier;
-  // Children is a function that receives listeners and attributes and returns ReactNode
-  children: (listeners: DraggableSyntheticListeners, attributesForDraggableNode: DraggableAttributes) => React.ReactNode;
-}
-
-function SortableBarChartItem({ id, children }: SortableBarChartItemProps) {
-  const { 
-    attributes, // These attributes are for the draggable node itself (the div we render here)
-    listeners,  // These listeners are for the drag handle
-    setNodeRef, 
-    transform, 
-    transition, 
-    isDragging 
-  } = useSortable({ id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  // The outer div is the draggable node, it gets setNodeRef and attributes from useSortable.
-  // The children function is called with listeners (for the handle) and attributes (if the content needs them, though usually not).
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm">
-      {children(listeners, attributes)} 
-    </div>
-  );
-}
 
 function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps<IBarChartWidget>) {
   const [formData, setFormData] = useState<IBarChartWidget>(widgetData);
 
-  const handleInputChange = (field: keyof IBarChartWidget | keyof IChartData, value: any) => {
-    let newFormData: IBarChartWidget;
-    if (['title', 'icon', 'columnSpan', 'rowSpan'].includes(field as string)) {
-      newFormData = { ...formData, [field]: value };
-    } else if (['xAxisLabel', 'yAxisLabel', 'showLegend'].includes(field as string)) {
-      newFormData = { 
-        ...formData, 
-        data: { 
-          ...formData.data, 
-          [field as keyof IChartData]: value 
-        } 
+  const handleInputChange = useCallback((field: keyof IBarChartWidget | keyof IChartData, value: any) => {
+    setFormData(prevData => {
+      if (!prevData) return prevData;
+
+      if (['title', 'icon', 'columnSpan', 'rowSpan', 'height', 'showLegend'].includes(field as string) && !(field in prevData.data)) {
+        const newData = { ...prevData, [field]: value };
+        onDataChange(newData as IBarChartWidget);
+        return newData as IBarChartWidget;
+      }
+
+      if (['xAxisLabel', 'yAxisLabel', 'showLegend', 'dataPoints', 'title', 'height', 'chartType'].includes(field as string)) {
+         const newChartData = {
+            ...(prevData.data),
+            [field as keyof IChartData]: value,
+          };
+        const newData = {
+          ...prevData,
+          data: newChartData
+        };
+        onDataChange(newData);
+        return newData;
+      }
+
+      return prevData;
+    });
+  }, [onDataChange]);
+
+  const handleItemChange = useCallback((itemId: string, field: keyof IChartDataPoint, value: any) => {
+    setFormData(prevData => {
+      if (!prevData?.data?.dataPoints) return prevData;
+
+      const newItems = prevData.data.dataPoints.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              [field]: field === 'value' ? parseFloat(value) || 0 : value,
+            }
+          : item
+      );
+
+      const newData = {
+        ...prevData,
+        data: {
+          ...prevData.data,
+          dataPoints: newItems,
+        },
       };
-    } else {
-      // This case should ideally not be hit for these fields
-      newFormData = { ...formData, [field as keyof IBarChartWidget]: value };
-    }
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
+      
+      onDataChange(newData);
+      return newData;
+    });
+  }, [onDataChange]);
 
-const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: any) => {
-    const newItems = formData.data.dataPoints.map(item => 
-      item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
-    );
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
-
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     const newItemId = `chartitem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newItem: IChartDataPoint = {
       id: newItemId,
       label: 'New Item',
       value: 10,
-      color: '#CCCCCC',
-      displayOrder: formData.data.dataPoints.length,
+      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+      displayOrder: formData.data?.dataPoints?.length || 0,
     };
-    const newItems = [...formData.data.dataPoints, newItem];
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
+
+    setFormData(prevData => {
+      if (!prevData?.data) return prevData;
+
+      const newItems = [...(prevData.data.dataPoints || []), newItem];
+      const newData = {
+        ...prevData,
+        data: {
+          ...prevData.data,
+          dataPoints: newItems,
+        },
+      };
+      
+      onDataChange(newData);
+      return newData;
+    });
+  }, [formData.data?.dataPoints?.length, onDataChange, formData.data]);
+
+  const handleRemoveItem = useCallback((itemId: string) => {
+    setFormData(prevData => {
+      if (!prevData?.data?.dataPoints) return prevData;
+
+      const newItems = prevData.data.dataPoints
+        .filter(item => item.id !== itemId)
+        .map((item, index) => ({ ...item, displayOrder: index }));
+
+      const newData = {
+        ...prevData,
+        data: {
+          ...prevData.data,
+          dataPoints: newItems,
+        },
+      };
+      
+      onDataChange(newData);
+      return newData;
+    });
+  }, [onDataChange]);
+
+  const items = useMemo(() => {
+    return [...(formData.data?.dataPoints || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  }, [formData.data?.dataPoints]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !formData.data?.dataPoints) return;
+
+    const oldIndex = formData.data.dataPoints.findIndex(item => item.id === active.id);
+    const newIndex = formData.data.dataPoints.findIndex(item => item.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) { 
+      const newItems = arrayMove(formData.data.dataPoints, oldIndex, newIndex).map((item, idx) => ({
+        ...item,
+        displayOrder: idx
+      }));
+
+      setFormData(prevData => {
+        if (!prevData?.data) return prevData;
+        const newData = {
+          ...prevData,
+          data: {
+            ...prevData.data,
+            dataPoints: newItems,
+          },
+        };
+        onDataChange(newData);
+        return newData;
+      });
+    }
+  }, [onDataChange, formData.data?.dataPoints]); 
+
+  if (!formData.data) return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="chart-title-barchart-widget">Chart Title (Widget)</Label>
+          <Input
+            id="chart-title-barchart-widget"
+            value={formData.title || ''}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Widget Title"
+          />
+        </div>
+        <div>
+          <Label htmlFor="chart-icon-barchart">Icon</Label>
+          <select
+            id="chart-icon-barchart"
+            value={formData.icon || ''}
+            onChange={(e) => handleInputChange('icon', e.target.value)}
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2"
+          >
+            {availableIcons.map((icon) => (
+              <option key={icon.value} value={icon.value}>
+                {icon.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+       <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="chart-title-barchart-data">Chart Title (Data)</Label>
+          <Input
+            id="chart-title-barchart-data"
+            value={formData.data.title || ''}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Data Title (e.g. Sales)"
+          />
+        </div>
+        <div>
+          <Label htmlFor="chart-height-barchart">Chart Height</Label>
+          <Input
+            id="chart-height-barchart"
+            type="number"
+            value={formData.data.height || 300}
+            onChange={(e) => handleInputChange('height', parseInt(e.target.value) || 300)}
+            placeholder="300"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="x-axis-label-bc">X-Axis Label</Label>
+          <Input
+            id="x-axis-label-bc"
+            value={formData.data.xAxisLabel || ''}
+            onChange={(e) => handleInputChange('xAxisLabel', e.target.value)}
+            placeholder="X-Axis Label"
+          />
+        </div>
+        <div>
+          <Label htmlFor="y-axis-label-bc">Y-Axis Label</Label>
+          <Input
+            id="y-axis-label-bc"
+            value={formData.data.yAxisLabel || ''}
+            onChange={(e) => handleInputChange('yAxisLabel', e.target.value)}
+            placeholder="Y-Axis"
+          />
+        </div>
+      </div>
+       <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="barchart-showLegend"
+            checked={formData.data.showLegend || false}
+            onChange={(e) => handleInputChange('showLegend', e.target.checked)}
+            className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+          />
+          <Label htmlFor="barchart-showLegend" className="ml-2 text-sm text-slate-600 dark:text-slate-300">Show Legend</Label>
+        </div>
+
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <Label>Data Points</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddItem}
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Add Data Point
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {items.map((item) => (
+                <SortableBarChartItem key={item.id} id={item.id}>
+                  {(listeners, attributes) => (
+                    <div className="grid grid-cols-12 gap-2 items-center p-2 border rounded bg-white dark:bg-slate-800">
+                      <div className="col-span-1">
+                        <button
+                          {...attributes}
+                          {...listeners}
+                          type="button"
+                          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-grab active:cursor-grabbing"
+                        >
+                          <FontAwesomeIcon icon={faGripVertical} />
+                        </button>
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label htmlFor={`chartitem-label-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">Label</Label>
+                        <Input
+                            id={`chartitem-label-${item.id}`}
+                            value={item.label}
+                            onChange={(e) => handleItemChange(item.id, 'label', e.target.value)}
+                            className="w-full text-sm mt-1"
+                            placeholder="Label"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label htmlFor={`chartitem-value-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">Value</Label>
+                        <Input
+                            id={`chartitem-value-${item.id}`}
+                            type="number"
+                            value={item.value}
+                            onChange={(e) => handleItemChange(item.id, 'value', e.target.value)}
+                            className="w-full text-sm mt-1"
+                            placeholder="Value"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label htmlFor={`chartitem-color-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">Color</Label>
+                        <Input
+                          id={`chartitem-color-${item.id}`}
+                          type="color"
+                          value={item.color || '#CCCCCC'}
+                          onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+                          className="w-full h-9 p-0.5 border-slate-300 dark:border-slate-600 rounded cursor-pointer mt-1"
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-center justify-self-end self-center h-9">
+                          <Button
+                            type="button"
+                            variant="text"
+                            size="sm"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="text-red-500"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </SortableBarChartItem>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      </div>
+  );
+}
+
+function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProps<ILineChartWidget>) {
+  const [formData, setFormData] = useState<ILineChartWidget>(widgetData);
+
+  const handleInputChange = (field: keyof ILineChartWidget | keyof IChartData, value: any) => {
+    setFormData(prev => {
+        if (!prev) return prev;
+        // Check if the field is a direct property of ILineChartWidget (excluding 'data')
+        if (['title', 'icon', 'columnSpan', 'rowSpan', 'gridWidth', 'gridHeight', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight'].includes(field as string) && !(prev.data && field in prev.data)) {
+         return { ...prev, [field]: value };
+        } else if (prev.data && ['xAxisLabel', 'yAxisLabel', 'showLegend', 'dataPoints', 'title', 'height', 'chartType'].includes(field as string)) { 
+          // Check if field is part of the 'data' object (IChartData)
+         return {
+            ...prev,
+            data: {
+              ...(prev.data),
+              [field as keyof IChartData]: value 
+            }
+          };
+        }
+        return prev; // Should not reach here if logic is correct
+      });
   };
 
-  const handleRemoveItem = (itemId: string) => {
-    const newItems = formData.data.dataPoints.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
+
+  const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: any) => {
+    setFormData(prev => {
+      if (!prev.data?.dataPoints) return prev;
+      
+      const updatedDataPoints = prev.data.dataPoints.map(item => 
+        item.id === itemId ? { ...item, [field]: (field === 'value' || field === 'y' || (field === 'x' && typeof value === 'string' && !isNaN(parseFloat(value)))) ? parseFloat(value) : value } : item
+      );
+      
+      return {
+        ...prev,
+        data: {
+          ...prev.data,
+          dataPoints: updatedDataPoints
+        }
+      };
+    });
   };
 
-  // Ensure items have IDs and displayOrder for dnd-kit
-  const items = 
-    formData.data.dataPoints.map((item, index) => ({
-      ...item,
-      id: item.id || `chartitem-init-${index}-${Math.random().toString(36).substring(2,9)}`,
-      displayOrder: item.displayOrder !== undefined ? item.displayOrder : index
-    })).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+  const handleAddItem = useCallback(() => {
+    const newItemId = `chartitem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const newItem: IChartDataPoint = {
+      id: newItemId,
+      x: `Point ${(formData.data?.dataPoints?.length || 0) + 1}`, 
+      y: Math.floor(Math.random() * 100), 
+      label: `Point ${(formData.data?.dataPoints?.length || 0) + 1}`,
+      value: Math.floor(Math.random() * 100), 
+      displayOrder: formData.data?.dataPoints?.length || 0,
+      color: '#3b82f6' 
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      data: {
+        ...(prev.data!), 
+        dataPoints: [...(prev.data?.dataPoints || []), newItem]
+      }
+    }));
+  }, [formData.data?.dataPoints]);
+
+  const handleRemoveItem = useCallback((itemId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      data: {
+        ...(prev.data!), 
+        dataPoints: prev.data?.dataPoints?.filter(item => item.id !== itemId).map((item, index) => ({...item, displayOrder: index })) || []
+      }
+    }));
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -512,259 +846,206 @@ const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: a
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex((item) => item.id === active.id.toString());
-      const newIndex = items.findIndex((item) => item.id === over.id.toString());
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrderedItems = arrayMove(items, oldIndex, newIndex);
-        const updatedDataPoints = newOrderedItems.map((item, index) => ({
-          ...item,
-          displayOrder: index,
-        }));
-        const newFormData = { ...formData, data: { ...formData.data, dataPoints: updatedDataPoints } };
-        setFormData(newFormData);
-        onDataChange(newFormData);
-      }
+    if (!over || !formData.data?.dataPoints) return;
+
+    const oldIndex = formData.data.dataPoints.findIndex(item => item.id === active.id);
+    const newIndex = formData.data.dataPoints.findIndex(item => item.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      const newItems = arrayMove(formData.data.dataPoints, oldIndex, newIndex).map((item, idx) => ({
+        ...item,
+        displayOrder: idx
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        data: {
+          ...(prev.data!),
+          dataPoints: newItems
+        }
+      }));
     }
   };
 
+  useEffect(() => {
+    onDataChange(formData);
+  }, [formData, onDataChange]);
+
+  if (!formData.data) return <p>Loading chart data configuration...</p>;
+
+  const items = [...(formData.data?.dataPoints || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="bar-chart-title">Widget Title</Label>
-        <Input
-          id="bar-chart-title"
-          value={formData.title}
-          onChange={(e) => handleInputChange('title', e.target.value)}
-          placeholder="Bar Chart Title"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="linechart-title-widget">Chart Title (Widget Level)</Label>
+          <Input
+            id="linechart-title-widget"
+            value={formData.title || ''}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Chart Title"
+          />
+        </div>
+        <div>
+          <Label htmlFor="linechart-icon-widget">Icon (Widget Level)</Label>
+          <select
+            id="linechart-icon-widget"
+            value={formData.icon || ''}
+            onChange={(e) => handleInputChange('icon', e.target.value)}
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2"
+          >
+            {availableIcons.map((icon) => (
+              <option key={icon.value} value={icon.value}>
+                {icon.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div>
-        <Label htmlFor="bar-chart-xaxis-label">X-Axis Label</Label>
-        <Input
-          id="bar-chart-xaxis-label"
-          value={formData.data.xAxisLabel || ''}
-          onChange={(e) => handleInputChange('xAxisLabel', e.target.value)}
-          placeholder="X-Axis Label (e.g., Month)"
-        />
+       <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="linechart-data-title-lc">Chart Title (Data Level)</Label>
+          <Input
+            id="linechart-data-title-lc"
+            value={formData.data.title || ''}
+            onChange={(e) => handleInputChange('title', e.target.value)} 
+            placeholder="Data Title (e.g. Monthly Sales)"
+          />
+        </div>
+        <div>
+          <Label htmlFor="linechart-height-lc">Chart Height</Label>
+          <Input
+            id="linechart-height-lc"
+            type="number"
+            value={formData.data.height || 300}
+            onChange={(e) => handleInputChange('height', parseInt(e.target.value) || 300)}
+            placeholder="300"
+          />
+        </div>
       </div>
-      <div>
-        <Label htmlFor="bar-chart-yaxis-label">Y-Axis Label</Label>
-        <Input
-          id="bar-chart-yaxis-label"
-          value={formData.data.yAxisLabel || ''}
-          onChange={(e) => handleInputChange('yAxisLabel', e.target.value)}
-          placeholder="Y-Axis Label (e.g., Sales)"
-        />
+
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="x-axis-label-lc">X-Axis Label</Label>
+          <Input
+            id="x-axis-label-lc"
+            value={formData.data.xAxisLabel || ''}
+            onChange={(e) => handleInputChange('xAxisLabel', e.target.value)}
+            placeholder="X-Axis Label (e.g., Month)"
+          />
+        </div>
+        <div>
+          <Label htmlFor="y-axis-label-lc">Y-Axis Label</Label>
+          <Input
+            id="y-axis-label-lc"
+            value={formData.data.yAxisLabel || ''}
+            onChange={(e) => handleInputChange('yAxisLabel', e.target.value)}
+            placeholder="Y-Axis Label (e.g., Value)"
+          />
+        </div>
       </div>
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="bar-chart-show-legend"
-          checked={formData.data.showLegend || false}
-          onChange={(e) => handleInputChange('showLegend', e.target.checked)}
-          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-        />
-        <Label htmlFor="bar-chart-show-legend" className="mb-0">Show Legend</Label>
-      </div>
+       <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="linechart-showLegend-lc"
+            checked={formData.data.showLegend || false}
+            onChange={(e) => handleInputChange('showLegend', e.target.checked)}
+            className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+          />
+          <Label htmlFor="linechart-showLegend-lc" className="ml-2 text-sm text-slate-600 dark:text-slate-300">Show Legend</Label>
+        </div>
+
       <div>
-        <Label className="block mb-2 font-medium">Data Points</Label>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
+        <div className="flex justify-between items-center mb-2">
+          <Label>Data Points</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddItem}
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Add Data Point
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
               {items.map((item) => (
-                <SortableBarChartItem key={item.id} id={item.id}>
-                  {(handleListeners, draggableNodeAttributes) => (
-                    // The SortableBarChartItem renders the main draggable div and applies draggableNodeAttributes to it.
-                    // We only need to render the content *inside* that div here.
-                    // The handleListeners are passed to the specific drag handle button.
-                    <div className="p-3"> {/* This inner div no longer needs draggableNodeAttributes, as the parent SortableBarChartItem handles it */}
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                        <div className="md:col-span-1 flex items-center justify-center">
-                          <Button {...handleListeners} variant="text" size="sm" className="cursor-grab p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 touch-manipulation">
-                            <FontAwesomeIcon icon={faGripVertical} />
-                          </Button>
-                        </div>
-                        <div className="md:col-span-4">
-                          <Label htmlFor={`chartitem-label-${item.id}`} className="text-xs">Label</Label>
-                          <Input
-                            id={`chartitem-label-${item.id}`}
-                            value={item.label}
-                            onChange={(e) => handleItemChange(item.id, 'label', e.target.value)}
-                            placeholder="E.g., Sales Q1"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="md:col-span-3">
-                          <Label htmlFor={`chartitem-value-${item.id}`} className="text-xs">Value</Label>
-                          <Input
-                            id={`chartitem-value-${item.id}`}
+                <SortableBarChartItem key={item.id} id={item.id}> 
+                  {(listeners, attributes) => (
+                    <div className="grid grid-cols-12 gap-2 items-center p-2 border rounded bg-white dark:bg-slate-800">
+                      <div className="col-span-1">
+                        <button
+                          {...attributes}
+                          {...listeners}
+                          type="button"
+                          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-grab active:cursor-grabbing"
+                        >
+                          <FontAwesomeIcon icon={faGripVertical} />
+                        </button>
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label htmlFor={`lcitem-x-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">X Value/Label</Label>
+                        <Input
+                            id={`lcitem-x-${item.id}`}
+                            value={item.x as string || item.label || ''} 
+                            onChange={(e) => handleItemChange(item.id, 'x', e.target.value)}
+                            className="w-full text-sm mt-1"
+                            placeholder="X (e.g., Jan, 2023-01)"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label htmlFor={`lcitem-y-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">Y Value</Label>
+                        <Input
+                            id={`lcitem-y-${item.id}`}
                             type="number"
-                            value={item.value}
-                            onChange={(e) => handleItemChange(item.id, 'value', e.target.value)}
-                            placeholder="E.g., 1500"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="md:col-span-3">
-                          <Label htmlFor={`chartitem-color-${item.id}`} className="text-xs">Color</Label>
-                          <Input
-                            id={`chartitem-color-${item.id}`}
-                            type="color"
-                            value={item.color || '#CCCCCC'}
-                            onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
-                            className="w-full h-9 p-0.5 border-slate-300 dark:border-slate-600 rounded cursor-pointer mt-1"
-                          />
-                        </div>
-                        <div className="md:col-span-1 flex items-center justify-self-end self-center h-9">
+                            value={item.y as number || item.value || 0} 
+                            onChange={(e) => handleItemChange(item.id, 'y', parseFloat(e.target.value))}
+                            className="w-full text-sm mt-1"
+                            placeholder="Y Value"
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label htmlFor={`lcitem-color-${item.id}`} className="text-xs text-slate-500 dark:text-slate-400">Color</Label>
+                        <Input
+                          id={`lcitem-color-${item.id}`}
+                          type="color"
+                          value={item.color || '#3B82F6'}
+                          onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+                          className="w-full h-9 p-0.5 border-slate-300 dark:border-slate-600 rounded cursor-pointer mt-1"
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-center justify-self-end self-center h-9">
                           <Button
                             type="button"
                             variant="text"
                             size="sm"
                             onClick={() => handleRemoveItem(item.id)}
-                            aria-label="Remove chart item"
-                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1"
+                            className="text-red-500"
                           >
                             <FontAwesomeIcon icon={faTrash} />
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </SortableBarChartItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-        <Button onClick={handleAddItem} variant="outline" size="sm" className="mt-4">
-          <FontAwesomeIcon icon={faPlus} className="mr-2" />Add Data Point
-        </Button>
+                    )}
+                  </SortableBarChartItem>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
-interface SortableLineChartItemProps {
-  id: UniqueIdentifier;
-  children: (listeners: DraggableSyntheticListeners, attributes: DraggableAttributes) => React.ReactNode;
-}
-
-function SortableLineChartItem({ id, children }: SortableLineChartItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} className="touch-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm">
-      {children(listeners, attributes)}
-    </div>
-  );
-}
-
-function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProps<ILineChartWidget>) {
-  const [formData, setFormData] = useState<ILineChartWidget>(widgetData);
-
-  const handleInputChange = (field: keyof ILineChartWidget | keyof IChartData, value: any) => {
-    let newFormData: ILineChartWidget;
-    if (['title', 'icon', 'columnSpan', 'rowSpan', 'showDataPoints'].includes(field as string)) {
-      newFormData = { ...formData, [field]: value };
-    } else {
-      newFormData = { ...formData, data: { ...formData.data, [field as keyof IChartData]: value } };
-    }
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
-
-  const handleItemChange = (itemId: string, field: keyof IChartDataPoint, value: any) => {
-    const newItems = formData.data.dataPoints.map(item =>
-      item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
-    );
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
-
-  const handleAddItem = () => {
-    const newItemId = `lineitem-${Date.now()}`;
-    const newItem: IChartDataPoint = {
-      id: newItemId,
-      label: 'New Point',
-      value: 100,
-      displayOrder: formData.data.dataPoints.length,
-    };
-    const newItems = [...formData.data.dataPoints, newItem];
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    const newItems = formData.data.dataPoints.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
-    const newFormData = { ...formData, data: { ...formData.data, dataPoints: newItems } };
-    setFormData(newFormData);
-    onDataChange(newFormData);
-  };
-
-  const items = useMemo(() =>
-    [...(formData.data.dataPoints || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
-    [formData.data.dataPoints]
-  );
-
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex(item => item.id === active.id);
-      const newIndex = items.findIndex(item => item.id === over.id);
-      const newOrderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
-      const newFormData = { ...formData, data: { ...formData.data, dataPoints: newOrderedItems } };
-      setFormData(newFormData);
-      onDataChange(newFormData);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Input id="line-chart-title" value={formData.title} onChange={e => handleInputChange('title', e.target.value)} placeholder="Line Chart Title" />
-      <Input id="line-chart-xaxis-label" value={formData.data.xAxisLabel || ''} onChange={e => handleInputChange('xAxisLabel', e.target.value)} placeholder="X-Axis Label" />
-      <Input id="line-chart-yaxis-label" value={formData.data.yAxisLabel || ''} onChange={e => handleInputChange('yAxisLabel', e.target.value)} placeholder="Y-Axis Label" />
-      <div className="flex items-center space-x-2">
-        <input type="checkbox" id="line-chart-show-legend" checked={formData.data.showLegend || false} onChange={e => handleInputChange('showLegend', e.target.checked)} />
-        <Label htmlFor="line-chart-show-legend">Show Legend</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <input type="checkbox" id="line-chart-show-points" checked={formData.showDataPoints || false} onChange={e => handleInputChange('showDataPoints', e.target.checked)} />
-        <Label htmlFor="line-chart-show-points">Show Data Points</Label>
-      </div>
-      <div>
-        <Label className="block mb-2 font-medium">Data Points (X, Y)</Label>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {items.map(item => (
-                <SortableLineChartItem key={item.id} id={item.id}>
-                  {(listeners, attributes) => (
-                    <div className="p-3">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                        <div className="md:col-span-1 flex items-center justify-center"><Button {...listeners} variant="text" size="sm" className="cursor-grab"><FontAwesomeIcon icon={faGripVertical} /></Button></div>
-                        <div className="md:col-span-5"><Input value={item.label} onChange={e => handleItemChange(item.id, 'label', e.target.value)} placeholder="X Value (Label)" /></div>
-                        <div className="md:col-span-5"><Input type="number" value={item.value} onChange={e => handleItemChange(item.id, 'value', e.target.value)} placeholder="Y Value" /></div>
-                        <div className="md:col-span-1"><Button type="button" variant="text" size="sm" onClick={() => handleRemoveItem(item.id)} className="text-red-500"><FontAwesomeIcon icon={faTrash} /></Button></div>
-                      </div>
-                    </div>
-                  )}
-                </SortableLineChartItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-        <Button onClick={handleAddItem} variant="outline" size="sm" className="mt-4"><FontAwesomeIcon icon={faPlus} className="mr-2" />Add Data Point</Button>
-      </div>
-    </div>
   );
 }
 
@@ -827,7 +1108,7 @@ function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<
     const newItems = formData.data.map(item =>
       item.id === itemId ? { ...item, [field]: (field === 'currentBalance' || field === 'originalBalance' || field === 'interestRate' || field === 'minPayment' || field === 'priority') ? parseFloat(value) || 0 : value } : item
     );
-    const newFormData = { ...formData, data: newItems as IDebtVisualizerData }; // Cast because map might infer IDebtItem[]
+    const newFormData = { ...formData, data: newItems as IDebtVisualizerData }; 
     setFormData(newFormData);
     onDataChange(newFormData);
   };
@@ -866,15 +1147,20 @@ function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<
     if (over && active.id !== over.id) {
       const oldIndex = formData.data.findIndex(item => item.id === active.id);
       const newIndex = formData.data.findIndex(item => item.id === over.id);
-      const newOrderedItems = arrayMove(formData.data, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
-      const newFormData = { ...formData, data: newOrderedItems as IDebtVisualizerData };
-      setFormData(newFormData);
-      onDataChange(newFormData);
+      if (oldIndex !== -1 && newIndex !== -1) { 
+        const newOrderedItems = arrayMove(formData.data, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+        const newFormData = { ...formData, data: newOrderedItems as IDebtVisualizerData };
+        setFormData(newFormData);
+        onDataChange(newFormData);
+      }
     }
   };
   
-  const debtItems =
-    [...(formData.data || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+  const debtItems = useMemo(() => 
+    [...(formData.data || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    [formData.data]
+  );
+
 
   return (
     <div className="space-y-6">
@@ -898,9 +1184,9 @@ function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<
             {debtItems.map(item => (
               <SortableDebtItem key={item.id} id={item.id}>
                 {(listeners, attributes) => (
-                  <div className="flex items-start p-3"> {/* Outer flex for handle and content block */}
-                    <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
-                    <div className="flex-grow space-y-3 ml-1"> {/* Main content block for fields */}
+                  <div className="flex items-start p-3"> 
+                    <Button {...listeners} {...attributes} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
+                    <div className="flex-grow space-y-3 ml-1"> 
                       <div className="flex items-center">
                         <div className="flex-grow space-y-1">
                           <Label htmlFor={`debt-item-${item.id}-name`} className="text-xs text-slate-500 dark:text-slate-400">Debt Name</Label>
@@ -942,8 +1228,8 @@ function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<
                         <Label htmlFor={`debt-item-${item.id}-priority`} className="text-xs text-slate-500 dark:text-slate-400">Priority (for 'Custom' strategy)</Label>
                         <Input id={`debt-item-${item.id}-priority`} type="number" value={item.priority || ''} onChange={e => handleDebtItemChange(item.id, 'priority', e.target.value)} placeholder="e.g., 1" />
                       </div>
-                    </div> {/* Closing flex-grow space-y-3 ml-1 */}
-                  </div>   /* Closing flex items-start p-3 */
+                    </div> 
+                  </div>   
                 )}
               </SortableDebtItem>
             ))}
@@ -963,18 +1249,18 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
     if (['title', 'icon', 'columnSpan', 'rowSpan', 'showCategories', 'showProjections'].includes(field as string)) {
       newFormData = { ...formData, [field]: value };
     } else {
-      newFormData = { ...formData, data: { ...formData.data, [field as keyof IQuickCashFlowSummaryData]: value } };
+      newFormData = { ...formData, data: { ...(formData.data!), [field as keyof IQuickCashFlowSummaryData]: value } };
     }
     setFormData(newFormData);
     onDataChange(newFormData);
   };
 
   const handleFlowItemChange = (flowType: 'inflows' | 'outflows', itemId: string, field: keyof ICashFlowEntry, value: any) => {
-    const items = formData.data[flowType];
+    const items = formData.data![flowType];
     const newItems = items.map(item =>
       item.id === itemId ? { ...item, [field]: field === 'value' ? parseFloat(value) || 0 : value } : item
     );
-    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newFlowData = { ...formData.data!, [flowType]: newItems };
     const newFormData = { ...formData, data: newFlowData };
     setFormData(newFormData);
     onDataChange(newFormData);
@@ -989,19 +1275,19 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
       category: '',
       frequency: 'monthly',
       isRecurring: true,
-      displayOrder: formData.data[flowType].length,
+      displayOrder: formData.data![flowType].length,
     };
-    const newItems = [...formData.data[flowType], newItem];
-    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newItems = [...formData.data![flowType], newItem];
+    const newFlowData = { ...formData.data!, [flowType]: newItems };
     const newFormData = { ...formData, data: newFlowData };
     setFormData(newFormData);
     onDataChange(newFormData);
   };
 
   const handleRemoveFlowItem = (flowType: 'inflows' | 'outflows', itemId: string) => {
-    const items = formData.data[flowType];
+    const items = formData.data![flowType];
     const newItems = items.filter(item => item.id !== itemId).map((item, index) => ({ ...item, displayOrder: index }));
-    const newFlowData = { ...formData.data, [flowType]: newItems };
+    const newFlowData = { ...formData.data!, [flowType]: newItems };
     const newFormData = { ...formData, data: newFlowData };
     setFormData(newFormData);
     onDataChange(newFormData);
@@ -1011,21 +1297,23 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
 
   const handleDragEnd = (flowType: 'inflows' | 'outflows', event: DragEndEvent) => {
     const { active, over } = event;
-    const currentItems = formData.data[flowType];
+    const currentItems = formData.data![flowType];
     if (over && active.id !== over.id) {
       const oldIndex = currentItems.findIndex(item => item.id === active.id);
       const newIndex = currentItems.findIndex(item => item.id === over.id);
-      const newOrderedItems = arrayMove(currentItems, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
-      const newFlowData = { ...formData.data, [flowType]: newOrderedItems };
-      const newFormData = { ...formData, data: newFlowData };
-      setFormData(newFormData);
-      onDataChange(newFormData);
+      if (oldIndex !== -1 && newIndex !== -1) { 
+        const newOrderedItems = arrayMove(currentItems, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
+        const newFlowData = { ...formData.data!, [flowType]: newOrderedItems };
+        const newFormData = { ...formData, data: newFlowData };
+        setFormData(newFormData);
+        onDataChange(newFormData);
+      }
     }
   };
 
   const renderFlowSection = (flowType: 'inflows' | 'outflows', title: string) => {
     const items = useMemo(() => 
-      [...(formData.data[flowType] || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)), 
+      [...(formData.data![flowType] || [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)), 
       [formData.data, flowType]
     );
 
@@ -1037,9 +1325,9 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
             {items.map(item => (
               <SortableCashFlowItem key={item.id} id={item.id}>
                 {(listeners, attributes) => (
-                  <div className="flex items-start p-3"> {/* Outer flex for handle and content block */}
-                    <Button {...listeners} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
-                    <div className="flex-grow space-y-2 ml-1"> {/* Main content block for fields */}
+                  <div className="flex items-start p-3"> 
+                    <Button {...listeners} {...attributes} variant="text" size="sm" className="cursor-grab p-1 mr-2 mt-5 text-slate-400 dark:text-slate-500 flex-shrink-0"><FontAwesomeIcon icon={faGripVertical} /></Button>
+                    <div className="flex-grow space-y-2 ml-1"> 
                       <div className="flex items-center">
                         <div className="flex-grow space-y-1">
                           <Label htmlFor={`${flowType}-${item.id}-title`} className="text-xs text-slate-500 dark:text-slate-400">Title</Label>
@@ -1069,8 +1357,8 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
                           <Label htmlFor={`${flowType}-${item.id}-recurring`} className="ml-2 text-sm text-slate-600 dark:text-slate-300">Recurring</Label>
                         </div>
                       </div>
-                    </div> {/* Closing flex-grow space-y-2 ml-1 */}
-                  </div>   /* Closing flex items-start p-3 */
+                    </div> 
+                  </div>   
                 )}
               </SortableCashFlowItem>
             ))}
@@ -1095,7 +1383,7 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
       </div>
       <div>
         <Label htmlFor="qcf-projected-period">Projected Period (e.g., Monthly)</Label>
-        <Input id="qcf-projected-period" value={formData.data.projectedPeriod || ''} onChange={e => handleInputChange('projectedPeriod', e.target.value)} placeholder="Monthly, Annually" />
+        <Input id="qcf-projected-period" value={formData.data!.projectedPeriod || ''} onChange={e => handleInputChange('projectedPeriod', e.target.value)} placeholder="Monthly, Annually" />
       </div>
       {renderFlowSection('inflows', 'Inflows')}
       {renderFlowSection('outflows', 'Outflows')}
@@ -1104,20 +1392,21 @@ function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: WidgetForm
 }
 
 function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCardWidget>) {
-  // data is ITipCardData. Ensure data and data.tips are properly handled if they might be undefined initially.
   const items: ITipCardListItem[] = widgetData.data?.tips?.map((tip: ITipCardListItem) => ({...tip, id: tip.id || `tip-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`})) || [];
   const currentTipIndex = typeof widgetData.data?.currentTipIndex === 'number' ? widgetData.data.currentTipIndex : 0;
+  const autoRotate = typeof widgetData.data?.autoRotate === 'boolean' ? widgetData.data.autoRotate : true;
+
 
   const handleItemChange = (index: number, field: keyof ITipCardListItem, value: string) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex } }); 
+    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex, autoRotate } }); 
   };
 
   const addItem = () => {
     const newTip: ITipCardListItem = { id: `tip-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, title: '', content: '', image: '', link: '', displayOrder: items.length };
     const newItems = [...items, newTip];
-    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex } });
+    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex, autoRotate } });
   };
 
   const removeItem = (index: number) => {
@@ -1127,13 +1416,27 @@ function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCar
     if (newCurrentTipIndex >= newItems.length && newItems.length > 0) {
       newCurrentTipIndex = newItems.length - 1;
     } else if (newItems.length === 0) {
-      newCurrentTipIndex = 0;
+      newCurrentTipIndex = 0; 
     }
-    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex: newCurrentTipIndex } });
+    onDataChange({ ...widgetData, data: { tips: newItems, currentTipIndex: newCurrentTipIndex, autoRotate } });
   };
+  
+  const handleAutoRotateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onDataChange({ ...widgetData, data: { tips: items, currentTipIndex, autoRotate: e.target.checked } });
+  }
 
   return (
     <div className="space-y-6">
+       <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="tipcard-autorotate"
+          checked={autoRotate}
+          onChange={handleAutoRotateChange}
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        <Label htmlFor="tipcard-autorotate" className="ml-2 text-sm text-slate-600 dark:text-slate-300">Auto-rotate tips</Label>
+      </div>
       <h3 className="text-lg font-medium text-gray-900 dark:text-white">Tip Card Items</h3>
       {items.map((item, index) => (
         <motion.div key={item.id} layout className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3 bg-gray-50 dark:bg-gray-700/30">
@@ -1161,7 +1464,9 @@ function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCar
             <Input id={`tip-link-${item.id}`} value={item.link || ''} onChange={(e) => handleItemChange(index, 'link', e.target.value)} placeholder="https://example.com/learn-more" />
           </div>
           <div className="flex justify-end">
-              <FontAwesomeIcon onClick={() => removeItem(index)} icon={faTrash} className="mr-2 text-red-500 hover:text-red-700 dark:hover:text-red-400" />Remove Tip
+            <Button variant="text" size="sm" onClick={() => removeItem(index)} className="text-red-500 hover:text-red-700 dark:hover:text-red-400">
+              <FontAwesomeIcon icon={faTrash} className="mr-2" />Remove Tip
+            </Button>
           </div>
         </motion.div>
       ))}
@@ -1171,7 +1476,7 @@ function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCar
 }
 
 function CountdownCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ICountdownCardWidget>) {
-  const countdownData = widgetData.data as ICountdownCardData;
+  const countdownData = widgetData.data as ICountdownCardData; 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Countdown Settings</h3>
@@ -1183,25 +1488,33 @@ function CountdownCardForm({ data: widgetData, onDataChange }: WidgetFormProps<I
         <Label htmlFor="countdown-date">Target Date</Label>
         <Input id="countdown-date" type="date" value={countdownData?.targetDate ? new Date(countdownData.targetDate).toISOString().split('T')[0] : ''} onChange={(e) => onDataChange({ ...widgetData, data: { ...countdownData, targetDate: e.target.value } })} />
       </div>
+       <div>
+        <Label htmlFor="countdown-image">Image URL (Optional)</Label>
+        <Input id="countdown-image" value={countdownData?.image || ''} onChange={(e) => onDataChange({ ...widgetData, data: { ...countdownData, image: e.target.value } })} placeholder="https://example.com/image.jpg" />
+      </div>
     </div>
   );
 }
 
 function MetricCardForm({ data: widgetData, onDataChange }: WidgetFormProps<IMetricCardWidget>) {
-  // IMetricCardData is an array of IMetricCardItem. This form edits the first item.
   const item = (widgetData.data && widgetData.data[0]) || { 
     id: `metric-${Date.now()}`,
-    description: 'New Metric', // Maps to IMetricCardItem.description
+    description: 'New Metric', 
     value: '0', 
-    currency: '', // Maps to IMetricCardItem.currency
-    trend: 'neutral' as IMetricTrend 
+    currency: '', 
+    trend: 'neutral' as IMetricTrend,
+    displayOrder: 0 
   };
 
   const handleFieldChange = (field: keyof IMetricCardItem, value: string | number | IMetricTrend) => {
     const updatedItem = { ...item, [field]: value };
-    // Update the first item in the array, preserve other items if they exist
-    const newData = [updatedItem, ...(widgetData.data?.slice(1) || [])];
-    onDataChange({ ...widgetData, data: newData as IMetricCardItem[] });
+    const newDataArray = widgetData.data ? [...widgetData.data] : [];
+    if (newDataArray.length > 0) {
+        newDataArray[0] = updatedItem;
+    } else {
+        newDataArray.push(updatedItem);
+    }
+    onDataChange({ ...widgetData, data: newDataArray as IMetricCardItem[] });
   };
 
   return (
@@ -1211,7 +1524,7 @@ function MetricCardForm({ data: widgetData, onDataChange }: WidgetFormProps<IMet
         <Label htmlFor={`metric-description-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</Label>
         <Input
           id={`metric-description-${item.id}`}
-          value={item.description || ''} // Use description
+          value={item.description || ''} 
           onChange={(e) => handleFieldChange('description', e.target.value)}
           placeholder="e.g., Total Revenue, Active Users"
           className="w-full"
@@ -1232,115 +1545,430 @@ function MetricCardForm({ data: widgetData, onDataChange }: WidgetFormProps<IMet
           <Label htmlFor={`metric-currency-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency (Optional)</Label>
           <Input
             id={`metric-currency-${item.id}`}
-            value={item.currency || ''} // Use currency
+            value={item.currency || ''} 
             onChange={(e) => handleFieldChange('currency', e.target.value)}
             placeholder="e.g., USD, kg, %"
             className="w-full"
           />
         </div>
-        {/* Select component for Trend is commented out as 'Select' is not found
         <div>
           <Label htmlFor={`metric-trend-${item.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trend (Optional)</Label>
-          <Select
+          <select
             id={`metric-trend-${item.id}`}
             value={item.trend || 'neutral'}
             onChange={(e) => handleFieldChange('trend', e.target.value as IMetricTrend)}
-            className="w-full"
+            className="w-full block rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 h-9 px-2"
           >
             <option value="neutral">Neutral</option>
             <option value="up">Up</option>
             <option value="down">Down</option>
             <option value="stable">Stable</option>
-          </Select>
+          </select>
         </div>
-        */}
       </div>
     </div>
   );
 }
+  
 
-const widgetTypeConfig: Record<string, { title: string; icon: any; form: React.FC<WidgetFormProps<any>> | null; defaultData: Omit<Widget, 'id'> }> ={
-  dataList: {
-    title: 'Data List',
-    icon: faList,
-    form: DataListForm,
-    defaultData: { type: 'dataList', title: 'New Data List', icon: 'faList', columnSpan: 2, rowSpan: 1, data: [] }
-  },
-  progressBarList: {
-    title: 'Progress Bar List',
-    icon: faTasks,
-    form: ProgressBarListForm,
-    defaultData: { type: 'progressBarList', title: 'My Progress', icon: 'faTasks', columnSpan: 1, rowSpan: 1, data: [], showPercentages: true, sortBy: 'custom' }
-  },
-  metricCard: {
-    title: 'Metric Card',
-    icon: faChartLine,
-    form: MetricCardForm,
-    defaultData: { type: 'metricCard', title: 'Key Metric', icon: 'faChartLine', columnSpan: 1, rowSpan: 1, data: [{ id: 'm1', description: 'Metric Label', value: '0', currency: '', trend: 'neutral' as IMetricTrend }] }
-  },
-  tipCard: {
-    title: 'Tip Card',
+type WidgetTypeKey = Widget['type']; 
+
+type WidgetTypeConfig = {
+  [K in WidgetTypeKey]: {
+    component: React.ComponentType<{ 
+      data: Extract<Widget, { type: K }>; 
+      onDataChange: (data: Extract<Widget, { type: K }>) => void; 
+    }> | null;
+    icon: IconDefinition;
+    defaultData: Omit<Extract<Widget, { type: K }>, 'id' | 'createdAt' | 'updatedAt'> & { id: string }; 
+    title?: string;
+  };
+};
+
+function generateId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+const widgetTypeConfig: WidgetTypeConfig = {
+  nextBestAction: {
+    component: null,
     icon: faLightbulb,
-    form: TipCardForm,
-    defaultData: { type: 'tipCard', title: 'Helpful Tip', icon: 'faLightbulb', columnSpan: 1, rowSpan: 1, data: { tips: [{id: 'tip-1', title: 'Save Regularly', content: 'Try to save a portion of your income each month.', displayOrder: 0}], currentTipIndex: 0, autoRotate: true } }
-  },
-  countdownCard: {
-    title: 'Countdown Card',
-    icon: faCalendarAlt,
-    form: CountdownCardForm,
-    defaultData: { type: 'countdownCard', title: 'Event Countdown', icon: 'faCalendarAlt', columnSpan: 1, rowSpan: 1, data: { id: 'cd-1', title: 'Next Holiday', days: 30, image: 'default_icon_url', targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], eventName: 'Upcoming Event' } }
-  },
-  barChart: {
-    title: 'Bar Chart',
-    icon: faChartBar,
-    form: BarChartForm,
-    defaultData: { type: 'barChart', title: 'Sample Bar Chart', icon: 'faChartBar', columnSpan: 2, rowSpan: 1, data: { dataPoints: [{id:'dp1', label: 'A', value: 10, color: '#4CAF50'}, {id:'dp2', label: 'B', value: 20, color: '#FFC107'}], chartType: 'bar', xAxisLabel: 'Category', yAxisLabel: 'Value' } }
-  },
-  lineChart: {
-    title: 'Line Chart',
-    icon: faChartLine,
-    form: LineChartForm,
-    defaultData: { type: 'lineChart', title: 'Sample Line Chart', icon: 'faChartLine', columnSpan: 2, rowSpan: 1, data: { dataPoints: [{id:'dp1', label: 'Jan', value: 5}, {id:'dp2', label: 'Feb', value: 15}], chartType: 'line', xAxisLabel: 'Month', yAxisLabel: 'Value', tension: 0.1, pointRadius: 3 } }
-  },
-  quickCashFlowSummary: {
-    title: 'Quick Cash Flow',
-    icon: faExchangeAlt,
-    form: QuickCashFlowSummaryForm,
-    defaultData: { type: 'quickCashFlowSummary', title: 'Cash Flow', icon: 'faExchangeAlt', columnSpan: 2, rowSpan: 1, data: { inflows: [{id:'in1', title: 'Salary', value: 3000, category: 'Income'}], outflows: [{id:'out1', title: 'Rent', value: 1000, category: 'Housing'}], projectedPeriod: 'Monthly' }, showCategories: true, showProjections: true }
-  },
-  debtVisualizer: {
-    title: 'Debt Visualizer',
-    icon: faCreditCard,
-    form: DebtVisualizerForm,
-    defaultData: { type: 'debtVisualizer', title: 'My Debts', icon: 'faCreditCard', columnSpan: 2, rowSpan: 1, data: [{id:'d1', name: 'Credit Card', currentBalance: 5000, originalBalance: 5000, interestRate: 18, minPayment: 100, payoffDate: '2026-01-01', type: 'Credit Card', displayOrder: 0}], strategy: 'snowball' }
-  },
-  financialHealthScorecard: {
-    title: 'Financial Health Scorecard',
-    icon: faShieldAlt,
-    form: null, // FinancialHealthScorecardForm, // Commented out as component is not found
     defaultData: {
-      type: 'financialHealthScorecard',
-      title: 'My Financial Health',
-      icon: 'faShieldAlt',
-      columnSpan: 2, rowSpan: 1,
-      data: {
-        items: [
-          { id: 'fhs-1', category: 'Budget Adherence', score: 80, status: 'Good', explanation: 'Generally sticking to budget.', weight: 1, displayOrder: 0 },
-          { id: 'fhs-2', category: 'Emergency Fund', score: 60, status: 'Fair', explanation: 'Fund covers 2 months of expenses.', weight: 1.5, displayOrder: 1 },
-        ],
-        overallScore: 72,
-        overallStatus: 'Good',
-      },
-      showIndividualScores: true,
+      id: generateId('widget-nba'),
+      type: 'nextBestAction',
+      title: 'Next Best Action',
+      icon: 'faLightbulb',
+      columnSpan: 1,
+      rowSpan: 1,
+      data: [] 
     }
   },
-  checklist: { 
-    title: 'Checklist', 
-    icon: faCheckSquare, 
-    form: null, // Placeholder for ChecklistForm
-    defaultData: { type: 'checklist', title: 'My Checklist', icon: 'faCheckSquare', columnSpan: 1, rowSpan: 1, data: [{id:'cl1', task: 'Pay bills', isCompleted: false, displayOrder: 0 }] }
+  retirementReadiness: {
+    component: null,
+    icon: faChartLine,
+    defaultData: {
+      id: generateId('widget-rr'),
+      type: 'retirementReadiness',
+      title: 'Retirement Readiness',
+      icon: 'faChartLine',
+      columnSpan: 2,
+      rowSpan: 1,
+      data: {
+        scenarios: [],
+        currentScenarioId: ''
+      }
+    }
   },
-}
+  enhancedSavingsGoals: {
+    component: null,
+    icon: faPiggyBank,
+    defaultData: {
+      id: generateId('widget-esg'),
+      type: 'enhancedSavingsGoals',
+      title: 'Savings Goals',
+      icon: 'faPiggyBank',
+      columnSpan: 2,
+      rowSpan: 1,
+      data: [] 
+    }
+  },
+  insuranceCoverage: {
+    component: null,
+    icon: faShieldAlt,
+    defaultData: {
+      id: generateId('widget-ic'),
+      type: 'insuranceCoverage',
+      title: 'Insurance Coverage',
+      icon: 'faShieldAlt',
+      columnSpan: 1,
+      rowSpan: 1,
+      data: [] 
+    }
+  },
+  dataList: {
+    component: DataListFormExt as React.ComponentType<{data: IDataListWidget; onDataChange: (data: IDataListWidget) => void}>,
+    icon: faList,
+    defaultData: { 
+      id: generateId('widget-dl'),
+      type: 'dataList' as const, 
+      title: 'New Data List', 
+      icon: 'faList', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: [] as IDataListItem[]
+    } as Omit<IDataListWidget, 'createdAt' | 'updatedAt'> & { id: string } 
+  },
+  progressBarList: {
+    component: ProgressBarListFormExt as React.ComponentType<{
+      data: IProgressBarListWidget;
+      onDataChange: (data: IProgressBarListWidget) => void;
+    }>,
+    icon: faTasks,
+    defaultData: {
+      id: generateId('widget-pbl'),
+      type: 'progressBarList' as const,
+      title: 'My Progress',
+      icon: 'faTasks',
+      columnSpan: 1,
+      rowSpan: 1,
+      data: [
+        {
+          id: generateId('progress-item'),
+          label: 'New Goal',
+          current: 0,
+          max: 100,
+          color: '#4CAF50',
+          displayOrder: 0
+        }
+      ],
+      showPercentages: true,
+      sortBy: 'custom' as const
+    } as Omit<IProgressBarListWidget, 'createdAt' | 'updatedAt'> & { id: string }
+  },
+  metricCard: {
+    component: MetricCardFormExt as React.ComponentType<{data: IMetricCardWidget; onDataChange: (data: IMetricCardWidget) => void}>,
+    icon: faCheckSquare,
+    defaultData: { 
+      id: generateId('widget-mc'),
+      type: 'metricCard' as const, 
+      title: 'Key Metric', 
+      icon: 'faCheckSquare', 
+      columnSpan: 1, 
+      rowSpan: 1, 
+      data: [{
+        id: 'm1', 
+        value: '0', 
+        currency: '$', 
+        trend: 'neutral' as const, 
+        description: 'Metric Label',
+        displayOrder: 0
+      }] as IMetricCardData
+    } as Omit<IMetricCardWidget, 'createdAt' | 'updatedAt'> & { id: string }
+  },
+  tipCard: {
+    component: TipCardFormExt as React.ComponentType<{data: ITipCardWidget; onDataChange: (data: ITipCardWidget) => void}>,
+    icon: faLightbulb,
+    defaultData: { 
+      id: generateId('widget-tc'),
+      type: 'tipCard' as const, 
+      title: 'Helpful Tip', 
+      icon: 'faLightbulb', 
+      columnSpan: 1, 
+      rowSpan: 1, 
+      data: { 
+        tips: [{
+          id: 'tip-1', 
+          title: 'Save Regularly', 
+          content: 'Try to save a portion of your income each month.', 
+          displayOrder: 0
+        }], 
+        currentTipIndex: 0, 
+        autoRotate: true 
+      } as ITipCardData
+    } as Omit<ITipCardWidget, 'createdAt' | 'updatedAt'> & { id: string }
+  },
+  countdownCard: {
+    component: CountdownCardFormExt as React.ComponentType<{data: ICountdownCardWidget; onDataChange: (data: ICountdownCardWidget) => void}>,
+    icon: faCalendar,
+    defaultData: { 
+      id: generateId('widget-cc'),
+      type: 'countdownCard' as const, 
+      title: 'Event Countdown', 
+      icon: 'faCalendar', 
+      columnSpan: 1, 
+      rowSpan: 1, 
+      data: { 
+        id: 'cd-1', 
+        title: 'Next Holiday', 
+        image: 'https://placekitten.com/100/100',
+        targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+      } as ICountdownCardData
+    } as Omit<ICountdownCardWidget, 'createdAt' | 'updatedAt'> & { id: string } // NO COMMA HERE
+  }, // This is the original BRACE_X, closing countdownCard.
+  // The original COMMA_Y will separate countdownCard from the new _placeholderForOriginalBraceY.
+  // The original BRACE_Y will close _placeholderForOriginalBraceY.
+  _placeholderForOriginalBraceY: { 
+    // This object is created to be closed by the original BRACE_Y,
+    // and separated from barChart by original COMMA_Y.
+  }, // This is the original BRACE_Y, closing this placeholder. Original COMMA_Y will follow.
+  
+  barChart: {
+    component: BarChartFormExt as React.ComponentType<{
+      data: IBarChartWidget;
+      onDataChange: (data: IBarChartWidget) => void;
+    }>,
+    icon: faChartBar,
+    defaultData: {
+      id: generateId('widget-bc'),
+      type: 'barChart' as const,
+      title: 'Sample Bar Chart',
+      icon: 'faChartBar',
+      columnSpan: 2,
+      rowSpan: 1,
+      data: {
+        dataPoints: [
+          {
+            id: generateId('dp-bc1'),
+            label: 'A',
+            value: 10,
+            color: '#4CAF50',
+            displayOrder: 0
+          },
+          {
+            id: generateId('dp-bc2'),
+            label: 'B',
+            value: 20,
+            color: '#FFC107',
+            displayOrder: 1
+          }
+        ],
+        chartType: 'bar' as const,
+        xAxisLabel: 'Category',
+        yAxisLabel: 'Value',
+        showLegend: true,
+        title: 'Sample Bar Chart', 
+        height: 300
+      }
+    } as Omit<IBarChartWidget, 'createdAt' | 'updatedAt'> & { id: string }
+  },
+  lineChart: {
+    component: LineChartFormExt as React.ComponentType<{data: ILineChartWidget; onDataChange: (data: ILineChartWidget) => void}>,
+    icon: faChartLine,
+    defaultData: { 
+      id: generateId('widget-lc'),
+      type: 'lineChart' as const, 
+      title: 'Sample Line Chart', 
+      icon: 'faChartLine', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: { 
+        dataPoints: [
+          {id:'dp-lc1', label: 'Jan', value: 5, x: 'Jan', y: 5, color: '#3B82F6', displayOrder: 0}, 
+          {id:'dp-lc2', label: 'Feb', value: 15, x: 'Feb', y: 15, color: '#3B82F6', displayOrder: 1}
+        ], 
+        chartType: 'line' as const, 
+        xAxisLabel: 'Month', 
+        yAxisLabel: 'Value',
+        showLegend: true,
+        title: 'Sample Line Chart', 
+        height: 300
+      } 
+    } as Omit<ILineChartWidget, 'createdAt' | 'updatedAt'> & { id: string }
+  },
+  quickCashFlowSummary: {
+    component: QuickCashFlowSummaryFormExt as unknown as React.ComponentType<any>, 
+    icon: faExchangeAlt,
+    defaultData: { 
+      id: generateId('widget-qcf'),
+      type: 'quickCashFlowSummary', 
+      title: 'Cash Flow', 
+      icon: 'faExchangeAlt', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: { 
+        inflows: [
+          {
+            id: 'in1',
+            title: 'Salary',
+            value: 3000,
+            category: 'Primary Income',
+            frequency: 'monthly',
+            isRecurring: true,
+            displayOrder: 0
+          }
+        ],
+        outflows: [
+          {
+            id: 'out1',
+            title: 'Rent',
+            value: 1000,
+            category: 'Housing',
+            frequency: 'monthly',
+            isRecurring: true,
+            displayOrder: 0
+          }
+        ],
+        projectedPeriod: 'monthly' 
+      } 
+    } as Omit<IQuickCashFlowSummaryWidget, 'createdAt'|'updatedAt'> & {id: string} 
+  },
+  debtVisualizer: {
+    component: DebtVisualizerFormExt as unknown as React.ComponentType<any>, 
+    icon: faCreditCard,
+    defaultData: { 
+      id: generateId('widget-dv'),
+      type: 'debtVisualizer', 
+      title: 'My Debts', 
+      icon: 'faCreditCard', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: [
+        {
+          id: 'd1', 
+          name: 'Credit Card', 
+          currentBalance: 5000, 
+          originalBalance: 5000, 
+          interestRate: 18, 
+          minPayment: 100, 
+          payoffDate: '2026-01-01', 
+          category: 'Credit Card', 
+          displayOrder: 0,
+          priority: 1 
+        }
+      ],
+      strategy: 'snowball',
+      showPayoffDates: true
+    } as Omit<IDebtVisualizerWidget, 'createdAt'|'updatedAt'> & {id: string} 
+  },
+  financialHealthScorecard: {
+    component: null as any, 
+    icon: faHeartbeat,
+    defaultData: { 
+      id: generateId('widget-fhs'),
+      type: 'financialHealthScorecard', 
+      title: 'Financial Health', 
+      icon: 'faHeartbeat', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: [
+        {
+          id: 'm1-fhs',
+          name: 'Savings Rate',
+          currentValue: 0,
+          targetValue: 20,
+          weight: 25,
+          displayOrder: 0,
+          category: 'savings',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'm2-fhs',
+          name: 'Debt to Income',
+          currentValue: 0,
+          targetValue: 36,
+          weight: 25,
+          displayOrder: 1,
+          category: 'debt',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'm3-fhs',
+          name: 'Emergency Fund',
+          currentValue: 0,
+          targetValue: 6, 
+          weight: 25,
+          displayOrder: 2,
+          category: 'savings',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'm4-fhs',
+          name: 'Credit Score',
+          currentValue: 0,
+          targetValue: 750,
+          weight: 25,
+          displayOrder: 3,
+          category: 'credit',
+          lastUpdated: new Date().toISOString()
+        }
+      ]
+    } as Omit<IFinancialHealthScorecardWidget, 'createdAt'|'updatedAt'> & {id: string} 
+  },
+  checklist: {
+    component: null as any, 
+    icon: faListCheck,
+    defaultData: { 
+      id: generateId('widget-cl'),
+      type: 'checklist', 
+      title: 'My Checklist', 
+      icon: 'faListCheck', 
+      columnSpan: 2, 
+      rowSpan: 1, 
+      data: [
+        {
+          id: 'i1-cl',
+          text: 'Task 1',
+          completed: false,
+          displayOrder: 0,
+          category: 'general',
+          dueDate: null,
+          priority: 'medium',
+          notes: ''
+        },
+        {
+          id: 'i2-cl',
+          text: 'Task 2',
+          completed: false,
+          displayOrder: 1,
+          category: 'general',
+          dueDate: null,
+          priority: 'medium',
+          notes: ''
+        }
+      ]
+    } as Omit<IChecklistWidget, 'createdAt'|'updatedAt'> & {id: string} 
+  }
+};
 
 export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditModalProps) {
   const [formData, setFormData] = useState<Widget | null>(null);
@@ -1348,31 +1976,36 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
 
   useEffect(() => {
     if (widget) {
-      setFormData(JSON.parse(JSON.stringify(widget))); // Deep copy
+      setFormData(JSON.parse(JSON.stringify(widget))); 
     } else {
       setFormData(null);
     }
   }, [widget]);
 
   const handleGlobalSettingChange = useCallback((field: keyof Widget, value: any) => {
-    setFormData(prev => prev ? { ...prev, [field]: value } : null);
+    setFormData(prev => prev ? { ...prev, [field]: value } as Widget : null);
   }, []);
 
-  const handleDataChange = useCallback((updatedWidgetSpecificData: any) => {
+  // This onDataChange is for the forms to update the *entire widget object* in formData
+  const handleSpecificWidgetDataChange = useCallback((updatedWidgetData: Widget) => {
     setFormData(prev => {
-      if (!prev) return null;
-      // This logic ensures that the 'data' field is correctly updated based on its type (array or object)
-      // It's a simplified approach; more complex data structures might need more specific handling.
-      return { ...prev, data: updatedWidgetSpecificData }; 
+        if (!prev) return updatedWidgetData; // Should not happen if form is active with a widget
+        // Ensure the core properties like id, type are from the original `prev`
+        // if updatedWidgetData is only partial, but most forms send the whole new object.
+        return {
+            ...prev, // Keep old top-level fields like id, type, title (unless changed in form)
+            ...updatedWidgetData // Apply changes from the form
+        };
     });
   }, []);
+
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formData) return;
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500)); 
       onSave(formData);
       onClose();
     } catch (error) {
@@ -1383,18 +2016,30 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
   }, [formData, onSave, onClose]);
 
   const ActiveForm = useMemo(() => {
-    if (!formData || !formData.type || !widgetTypeConfig[formData.type]) return () => <p>Widget configuration or form data is missing.</p>;
-    const config = widgetTypeConfig[formData.type];
-    const FormComponent = config.form;
-    if (!FormComponent) return () => <p>Edit form for widget type "{formData.type}" is not available.</p>;
-    return FormComponent;
-  }, [formData, widgetTypeConfig]);
+    if (!formData?.type) return null;
+    const config = widgetTypeConfig[formData.type as WidgetTypeKey]; 
+    return config?.component || null;
+  }, [formData?.type]);
+
+  const renderActiveForm = useMemo(() => {
+    if (!ActiveForm || !formData) return null;
+    
+    return (
+        <div className="w-full">
+          <ActiveForm 
+            data={formData as any} 
+            onDataChange={handleSpecificWidgetDataChange} 
+          />
+        </div>
+      );
+  }, [ActiveForm, formData, handleSpecificWidgetDataChange]); 
 
   if (!isOpen || !formData) return null;
 
-  const currentDisplayConfig = widgetTypeConfig[formData.type] || { icon: faCog, title: 'Widget Settings' };
-  const displayFormTitle = formData.title || currentDisplayConfig.title;
-  const displayFormIcon = currentDisplayConfig.icon;
+  const currentWidgetTypeConf = formData?.type ? widgetTypeConfig[formData.type as WidgetTypeKey] : null;
+  const displayFormTitle = formData.title || (currentWidgetTypeConf ? currentWidgetTypeConf.defaultData.title : 'Widget Settings');
+  const displayFormIcon = currentWidgetTypeConf ? currentWidgetTypeConf.icon : faCog;
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidth="2xl">
@@ -1415,7 +2060,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
                 id="widget-title"
                 value={formData.title || ''}
                 onChange={(e) => handleGlobalSettingChange('title', e.target.value)}
-                placeholder={`E.g., ${currentDisplayConfig.title}`}
+                placeholder={`E.g., ${currentWidgetTypeConf ? currentWidgetTypeConf.defaultData.title : 'Default Title'}`}
               />
             </div>
             <div>
@@ -1437,7 +2082,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
             </div>
           </div>
 
-          {formData && formData.type && widgetTypeConfig[formData.type]?.form && <ActiveForm data={formData} onDataChange={handleDataChange as any} />}
+          {ActiveForm ? renderActiveForm : <p className="text-center text-gray-500 dark:text-gray-400">No specific form for this widget type or widget data is missing.</p>}
         </div>
 
         <div className="py-4 px-5 flex justify-end space-x-3 bg-gray-50 dark:bg-gray-800/50 sticky bottom-0 z-10 border-t dark:border-gray-700">
