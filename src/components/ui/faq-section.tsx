@@ -41,7 +41,8 @@ export function FaqSection({ faqData }: { faqData: FaqItemProps[] }) {
   const faqSectionRef = useRef<HTMLDivElement>(null);
 
   return (
-    <section ref={faqSectionRef} className="bg-slate-50 px-6 py-20 md:px-12 lg:px-24">
+    <section ref={faqSectionRef} className="px-6 py-20 md:px-12 lg:px-24 relative overflow-hidden">
+      {/* Subtle gradient overlay */}
       <div className="mx-auto max-w-3xl">
         <h2 className="mb-10 text-center text-3xl font-bold text-slate-800 md:text-4xl">
           Frequently Asked Questions

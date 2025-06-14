@@ -39,7 +39,11 @@ interface Message {
 const MAX_TIME_TO_SHOW_LOADING = 8;
 
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  initialQuestion?: string;
+}
+
+export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
@@ -73,6 +77,8 @@ export function ChatInterface() {
   useEffect(() => {
     loadGuestMessages();
   }, []);
+  
+  
   
   function loadGuestMessages(): Message[] {
     // During SSR or initial render, return the state
@@ -171,6 +177,18 @@ export function ChatInterface() {
   const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Handle initial question if provided
+  useEffect(() => {
+    // Only proceed if there's an initial question and we're not already processing a message
+    if (initialQuestion && !isSendingMessage && !isLoading && guestSessionId) {
+      // Use the existing function to create a conversation and send the initial message
+      handleCreateConversationAndSendMessage(
+        user?.id || guestSessionId,
+        initialQuestion
+      );
+    }
+  }, [initialQuestion, guestSessionId, isSendingMessage, isLoading, user?.id]);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);

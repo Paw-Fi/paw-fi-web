@@ -793,7 +793,7 @@ function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProps<ILine
       if (!prev.data?.dataPoints) return prev;
       
       const updatedDataPoints = prev.data.dataPoints.map(item => 
-        item.id === itemId ? { ...item, [field]: (field === 'value' || field === 'y' || (field === 'x' && typeof value === 'string' && !isNaN(parseFloat(value)))) ? parseFloat(value) : value } : item
+        item.id === itemId ? { ...item, [field]: (field === 'value' || field === 'y' || field === 'x') && typeof value === 'string' && !isNaN(parseFloat(value)) ? parseFloat(value) : value } : item
       );
       
       return {
@@ -1995,7 +1995,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
         return {
             ...prev, // Keep old top-level fields like id, type, title (unless changed in form)
             ...updatedWidgetData // Apply changes from the form
-        };
+        } as Widget; // Explicitly cast to Widget type
     });
   }, []);
 
@@ -2027,7 +2027,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
     return (
         <div className="w-full">
           <ActiveForm 
-            data={formData as any} 
+            data={formData} 
             onDataChange={handleSpecificWidgetDataChange} 
           />
         </div>
