@@ -563,35 +563,10 @@ export default function HomePage() {
                 opacity: animationComplete ? 0 : 1,
                 WebkitBackdropFilter: "blur(12px)",
               }}
-            >
-              {/* Multiple ripple effects */}
-              {[...Array(rippleCount)].map((_, i) => (
-                <motion.div
-                  key={`ripple-${i}`}
-                  className="absolute inset-0 z-0 rounded-full bg-gradient-to-r from-purple-300/30 to-indigo-300/30"
-                  animate={rippleControls}
-                  initial={{ scale: 0, opacity: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                />
-              ))}
-
-              {/* Persistent subtle pulse effect */}
-              <motion.div
-                className="absolute inset-0 z-0 rounded-full bg-gradient-to-r from-purple-200/10 to-indigo-200/10"
-                animate={{
-                  scale: [1, 1.05, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2.5,
-                  ease: "easeInOut",
-                }}
-              />
+            >             
               {/* Enhanced Input field with animation */}
               <motion.div
                 className="relative z-10 flex-grow"
-                animate={textControls}
               >
                 <input
                   type="text"
@@ -599,7 +574,7 @@ export default function HomePage() {
                   onChange={(e) => setChatQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask PawFi to create personalized financial journey for my..."
-                  className="w-full border-none bg-transparent px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-opacity-50"
+                  className="w-full border-none bg-transparent px-6 py-3 text-gray-700 placeholder-gray-400 placeholder:pl-2 transition-all duration-300 ease-in-out focus:outline-none outline-none ring-0 focus:ring-0 focus:shadow-none"
                   aria-label="Ask a financial question"
                   ref={inputRef}
                   disabled={isTransitioning}
@@ -651,7 +626,11 @@ export default function HomePage() {
               {/* Send button with animation */}
               <motion.button
               
-                onClick={startTransitionAnimation}
+                onClick={() => {
+                  if (chatQuery.trim() && !isTransitioning) {
+                    handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent);
+                  }
+                }}
                 className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
                 aria-label="Send message"
                 animate={iconControls}
@@ -698,9 +677,10 @@ export default function HomePage() {
                   />
                 </div>
 
-                {/* Caption overlay - now always visible */}
+                {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-600/60 to-transparent p-6 pt-12"
+                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-purple-600/80 to-transparent p-4 pt-12 sm:p-6"
+                  style={{ transform: 'translateY(0)' }}
                 >
                   <h3 className="text-lg font-medium text-white">
                     AI-Powered Chat Assistant
@@ -734,9 +714,10 @@ export default function HomePage() {
                   />
                 </div>
 
-                {/* Caption overlay - now always visible */}
+                {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600/60 to-transparent p-6 pt-12"
+                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
+                  style={{ transform: 'translateY(0)' }}
                 >
                   <h3 className="text-lg font-medium text-white">
                     Achievement Badges

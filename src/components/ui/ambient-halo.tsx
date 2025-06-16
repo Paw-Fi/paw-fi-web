@@ -100,7 +100,7 @@ const AmbientHalo = () => {
   return (
     <div 
       className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none"
-      style={{ backgroundColor: '#f0ecfd' }}
+      style={{ backgroundColor: '#f7f5ff' }}
     >
       {/* Primary Ambient Halo */}
       <motion.div
@@ -128,13 +128,13 @@ const AmbientHalo = () => {
           <div 
             className="w-[900px] h-[900px] rounded-full blur-3xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(238, 199, 247, 1) 0%, rgba(238, 199, 247, 0.95) 50%, rgba(240, 236, 253, 0.6) 80%, rgba(240, 236, 253, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(245, 225, 250, 0.9) 0%, rgba(245, 225, 250, 0.85) 50%, rgba(247, 245, 255, 0.5) 80%, rgba(247, 245, 255, 0) 100%)'
             }} 
           />
           <div 
             className="absolute inset-8 w-[550px] h-[550px] rounded-full blur-2xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(238, 199, 247, 1) 0%, rgba(238, 199, 247, 0.9) 50%, rgba(183, 185, 249, 0.7) 80%, rgba(183, 185, 249, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(245, 225, 250, 0.9) 0%, rgba(245, 225, 250, 0.8) 50%, rgba(215, 217, 252, 0.6) 80%, rgba(215, 217, 252, 0) 100%)'
             }} 
           />
         </div>
@@ -168,13 +168,13 @@ const AmbientHalo = () => {
           <div 
             className="w-[750px] h-[750px] rounded-full blur-3xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(152, 251, 152, 0.9) 0%, rgba(143, 218, 189, 0.85) 40%, rgba(152, 251, 152, 0.6) 70%, rgba(152, 251, 152, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(190, 252, 190, 0.8) 0%, rgba(180, 235, 210, 0.75) 40%, rgba(190, 252, 190, 0.5) 70%, rgba(190, 252, 190, 0) 100%)'
             }} 
           />
           <div 
             className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(143, 218, 189, 1) 0%, rgba(152, 251, 152, 0.9) 50%, rgba(143, 218, 189, 0.7) 85%, rgba(143, 218, 189, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(180, 235, 210, 0.9) 0%, rgba(190, 252, 190, 0.8) 50%, rgba(180, 235, 210, 0.6) 85%, rgba(180, 235, 210, 0) 100%)'
             }} 
           />
         </div>
@@ -208,13 +208,13 @@ const AmbientHalo = () => {
           <div 
             className="w-[700px] h-[700px] rounded-full blur-3xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(191, 225, 245, 1) 0%, rgba(135, 206, 250, 1) 40%, rgba(191, 225, 245, 0.85) 70%, rgba(191, 225, 245, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(225, 245, 255, 0.85) 0%, rgba(200, 235, 255, 0.8) 40%, rgba(225, 245, 255, 0.65) 70%, rgba(225, 245, 255, 0) 100%)'
             }} 
           />
           <div 
             className="absolute inset-8 w-[450px] h-[450px] rounded-full blur-2xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(135, 206, 250, 1) 0%, rgba(118, 180, 240, 0.95) 50%, rgba(135, 206, 250, 0.7) 85%, rgba(135, 206, 250, 0) 100%)' // More vibrant medium blue
+              background: 'radial-gradient(circle, rgba(200, 240, 255, 0.85) 0%, rgba(190, 230, 255, 0.8) 50%, rgba(200, 240, 255, 0.55) 85%, rgba(200, 240, 255, 0) 100%)' // Even lighter blue
             }} 
           />
         </div>
@@ -247,13 +247,13 @@ const AmbientHalo = () => {
           <div 
             className="w-[750px] h-[750px] rounded-full blur-3xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(183, 185, 249, 0.9) 0%, rgba(238, 199, 247, 0.8) 40%, rgba(183, 185, 249, 0.6) 70%, rgba(183, 185, 249, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(215, 217, 252, 0.8) 0%, rgba(245, 225, 250, 0.7) 40%, rgba(215, 217, 252, 0.5) 70%, rgba(215, 217, 252, 0) 100%)'
             }} 
           />
           <div 
             className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl" 
             style={{ 
-              background: 'radial-gradient(circle, rgba(183, 185, 249, 1) 0%, rgba(238, 199, 247, 0.9) 50%, rgba(183, 185, 249, 0.7) 85%, rgba(183, 185, 249, 0) 100%)'
+              background: 'radial-gradient(circle, rgba(215, 217, 252, 0.9) 0%, rgba(245, 225, 250, 0.8) 50%, rgba(215, 217, 252, 0.6) 85%, rgba(215, 217, 252, 0) 100%)'
             }} 
           />
         </div>
