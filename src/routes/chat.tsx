@@ -2,9 +2,8 @@
 
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
-import catIcon from "@/assets/images/cat.gif";
-
-// Import the chat interface component
+import { motion } from "framer-motion";
+import AmbientHalo from "@/components/ui/ambient-halo";
 import { ChatInterface } from "@/components/chat/chat-interface";
 
 export const Route = createFileRoute("/chat")({
@@ -30,37 +29,21 @@ export const Route = createFileRoute("/chat")({
 });
 
 function Chat() {
-  // Get the initial question from URL query parameter
   const searchParams = useSearch({ from: '/chat' });
-  // Safely access the search parameter with type assertion
   const initialQuestion = (searchParams as any)?.q || '';
-  
+
   return (
-    <div className="flex items-center justify-center p-4 md:p-6">
-      <div className="flex h-[calc(100vh-6rem)] w-[95vw] flex-col overflow-hidden rounded-xl bg-white shadow-lg lg:h-[calc(100vh-8rem)] lg:w-[55rem]">
-        {/* Header with glassmorphism effect */}
-        <div className="mt-2 mb-2 flex items-center justify-center relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-100/30 to-indigo-100/30 backdrop-blur-sm rounded-t-xl z-0"></div>
-          <img
-            src={catIcon}
-            alt="Moneko Cat"
-            className="size-8 my-2 sm:size-14 relative z-10 drop-shadow-md"
-          />
-        </div>
-
-        {/* Title with modern styling */}
-        <div className="mb-4 text-center px-4">
-          <h1 className="text-lg leading-tight font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 sm:text-2xl">
-            Financial Learning Assistant
-          </h1>
-          <p className="mt-1 text-xs leading-snug text-gray-600 sm:text-sm">
-            Chat with our AI to get personalized financial education.
-          </p>
-        </div>
-
-        {/* Chat interface - always shown */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="relative flex flex-col items-center justify-center max-w-4xl mx-auto flex-1 h-[80vh] mt-8 px-4 lg:px-0"
+    >
+      <AmbientHalo />
+        {/* The ChatInterface will now fill this container. 
+            It is responsible for its own header, scrolling, and input.
+            The old header is removed to create a cleaner, more focused experience. */}
         <ChatInterface initialQuestion={initialQuestion} />
-      </div>
-    </div>
+    </motion.div>
   );
 }

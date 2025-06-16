@@ -9,6 +9,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
 import type { Lesson } from "@/types/learning.types";
+import BreadCrumbsHeader from "./layout/page-layout";
 // No JS truncate needed; use CSS line-clamp/truncate for all text truncation.
 
 // Grouping logic based on lesson titles/ids
@@ -359,7 +360,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-
       {/* Mobile menu, show/hide based on menu state */}
       {/* Mobile menu overlay */}
       <AnimatePresence>
@@ -590,6 +590,8 @@ export default function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+      <BreadCrumbsHeader/>
+
     </header>
   );
 }

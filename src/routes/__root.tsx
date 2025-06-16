@@ -1,6 +1,5 @@
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
@@ -21,7 +20,6 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 })))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientOnly } from '@/components/client-only'
-import PageLayout from '@/components/layout/page-layout'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -89,10 +87,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>       
+      <body className="h-screen">       
       <AuthProvider>
         <Header />
-        <PageLayout/>
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
           <Suspense fallback={null}>
@@ -110,7 +107,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             />
           </Suspense>
         </ClientOnly>
-        {children}
+       {children}
         <TanStackRouterDevtools position="bottom-right" />
         <ReactQueryDevtools buttonPosition="bottom-left" />
         <Scripts />

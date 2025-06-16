@@ -5,7 +5,7 @@ import type { FormEvent } from "react"; // For verbatimModuleSyntax
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGraduationCap, faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "../ui/modal";
@@ -20,11 +20,14 @@ import {
   getPredictedResponses
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
+import { AnimatePresence, motion } from "framer-motion";
+import Textarea from 'react-textarea-autosize';
 import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import { sanitizeCourse } from "@/utils/sanitize-course";
+import logo from "@/assets/images/icon.svg";
 
 const INITIAL_SUGGESTIONS = ["Start"];
 
@@ -43,6 +46,13 @@ interface ChatInterfaceProps {
   initialQuestion?: string;
 }
 
+export const iconContainer=(size:string="size-8")=>{
+  return(
+    <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
+    <img src={logo} alt="Moneko AI" className={size} />
+  </div>
+  )
+}
 export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
@@ -194,7 +204,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -958,42 +968,51 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const shouldPromptRegister =
     lastMsg?.content?.includes('```json') && !isAuthenticated;
 
+
+
   return (
-    <div className={`flex flex-1 flex-col overflow-hidden bg-gray-50 shadow-lg dark:bg-gray-900 ${shouldPromptRegister ? 'pointer-events-none select-none opacity-80' : ''}`}>
-      <div
-        ref={chatContainerRef}
-        className="h-full flex-1 overflow-y-scroll p-2 md:p-6"
-        id="chat-messages-container"
-        onScroll={handleScroll}
-      >
-        <div className="mx-auto">
-          {isBackendProcessing && (
-            <div className="space-y-4 pt-6">
-              {[1, 2, 3, 4,5].map((i) => (
+    <div className="flex h-full w-full flex-col overflow-hidden bg-white/20 backdrop-blur-2xl rounded-2xl border border-white/30 shadow-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/20 p-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
+            {iconContainer()}
+            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-400 border-2 border-white/50" />
+          </div>
+          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Moneko AI</h1>
+        </div>
+        {/* Add any header controls here if needed */}
+      </div>
+
+      {/* Messages Area */}
+      <div id="messages" className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" ref={chatContainerRef} onScroll={handleScroll}>
+        {isBackendProcessing && (
+          <div className="space-y-6 p-4 sm:p-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`flex animate-pulse items-end gap-3 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+                {i % 2 !== 0 && <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>}
                 <div
-                  key={i}
-                  className={`flex animate-pulse ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
-                >
+                  className={`w-3/5 rounded-2xl p-4 ${i % 2 === 0 ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"}`}>
                   <div
-                    className={`w-3/5 rounded-lg p-3 ${i % 2 === 0 ? "bg-purple-200 dark:bg-purple-700" : "bg-gray-200 dark:bg-gray-700"}`}
-                  >
-                    <div
-                      className={`mb-1.5 h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-3/4`}
-                    ></div>
-                    <div
-                      className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300 dark:bg-primary" : "bg-gray-300 dark:bg-gray-600"} w-full`}
-                    ></div>                 
+                    className={`mb-2 h-4 rounded ${i % 2 === 0 ? "bg-purple-300/50 dark:bg-purple-600/50" : "bg-slate-300/50 dark:bg-slate-600/50"} w-3/4`}>
+                  </div>
+                  <div
+                    className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300/50 dark:bg-purple-600/50" : "bg-slate-300/50 dark:bg-slate-600/50"} w-full`}>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {!isBackendProcessing && (
-            <div className="text-center text-gray-400 dark:text-gray-500">
+                {i % 2 === 0 && <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>}
+              </div>
+            ))}
+          </div>
+        )}
+        {!isBackendProcessing && messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 dark:text-slate-400">
+            <div className="mb-4 rounded-full bg-white/30 p-4 backdrop-blur-md dark:bg-slate-800/30">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-600"
+                className="mx-auto h-16 w-16 text-slate-400 dark:text-slate-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1005,15 +1024,16 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                   d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                 />
               </svg>
-              <p className="text-lg">{baseWelcomeMessage}</p>
             </div>
-          )}
-
-          {messages.map((msg) => {
-            // Create a more unique key using content hash to help React identify unique messages
+            <p className="text-lg font-medium">{baseWelcomeMessage}</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Ask me anything to get started!</p>
+          </div>
+        )}
+        <AnimatePresence initial={false}>
+          {messages.map((message, index) => {
             const contentHash =
-              msg.content.length > 0
-                ? msg.content
+              message.content.length > 0
+                ? message.content
                     .split("")
                     .reduce(
                       (acc, char) =>
@@ -1021,127 +1041,128 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                       0,
                     )
                 : 0;
-
             return (
-              <ChatMessageItem
-                key={`${msg.timestamp}-${msg.role}-${contentHash}`}
-                message={msg}
-                formatTime={formatTime}
+            <motion.div
+              key={`${message.timestamp}-${message.role}-${contentHash}`}
+              layout
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+            >
+              <ChatMessageItem 
+                message={message} 
+                formatTime={formatTime} 
                 extractFirstJson={extractFirstJson}
                 navigate={navigate}
               />
-            );
-          })}
-
-          <div
-            ref={messagesEndRef}
-            id="messages-end-ref"
-            style={{ height: "1px", float: "left", clear: "both" }}
-          />
-
-          {/* Modal overlay for registration prompt using reusable Modal */}
-          <Modal
-            isOpen={shouldPromptRegister}
-            onClose={() => {}}
-            disableOverlayClick={true}
-            overlayClassName="bg-black/40"
-            contentClassName="relative flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900 rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
-          >
-            <div className="flex flex-col items-center w-full">
-    <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
-    <FontAwesomeIcon icon={faGraduationCap} className="text-white text-3xl" />
-  </div>
-  <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">Your personalized lesson is ready!</h2>
-  <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
-    Register a free account to view this personalized lesson and access more features.
-  </p>
-    <div className="mb-8 w-full max-w-md mx-auto bg-white/80 dark:bg-gray-800/80 rounded-2xl border border-primary/20 shadow-lg px-6 py-4 flex flex-col gap-2 backdrop-blur-sm">
-    <ul className="text-gray-700 dark:text-gray-200 text-base list-disc pl-5 space-y-2">
-      <li><span className="font-semibold text-primary">Access</span> your saved chats and history on any device</li>
-      <li><span className="font-semibold text-primary">Get unlimited</span> personalized lessons and financial tools</li>
-      <li><span className="font-semibold text-primary">We respect your privacy</span>—no spam, ever</li>
-    </ul>
-  </div>
-  <div className="w-full flex flex-col gap-2">
-    <Link to="/register" className="w-full">
-      <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
-        Register for Free
-      </Button>
-    </Link>
-  </div>
-</div>
-
-          </Modal>
-
-          {isLoading &&
-            messages.length > 0 &&
-            !messages[messages.length - 1]?.metadata?.isStreaming && (
-              <div className="flex justify-start pt-2">
-                <div className="max-w-[80%] h-20 rounded-lg border border-gray-200/80 bg-white p-3 shadow-sm transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800">
-                  <div className="mb-2 flex items-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                    <span
-                      className={`mr-2 ${loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? "text-primary dark:text-primary" : ""}`}
-                    >
-                      {loadingMessage}
-                    </span>
+            </motion.div>
+          )}
+          )}
+          {isLoading && !messages[messages.length - 1]?.metadata?.isStreaming && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+            >
+              <div className="flex justify-start">
+                <div className="flex items-center gap-3 max-w-xs lg:max-w-md">
+                  <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 shrink-0">
+                   {iconContainer("size-6")}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90 [animation-delay:-0.3s]"></div>
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90 [animation-delay:-0.15s]"></div>
-                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary opacity-90"></div>
+                  <div className="bg-white/80 dark:bg-slate-700 rounded-2xl p-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.3s]"></div>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.15s]"></div>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400"></div>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div ref={messagesEndRef} />
       </div>
 
-      {!isBackendProcessing && (
-        <div className="border-t border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-          <div className="mx-auto w-full p-3 md:p-4">
-            <ChatSuggestions
+      {/* Input Area */}
+      <div className="border-t border-white/20 bg-white/30 backdrop-blur-lg p-2 sm:p-4">
+        {!isBackendProcessing && (
+           <ChatSuggestions
               suggestions={suggestedResponses}
               onSuggestionClick={handleSuggestionClick}
               isLoading={isLoading}
               isSendingMessage={isSendingMessage}
             />
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
-              <input
-                ref={inputRef}
-                value={currentMessage}
-                onChange={(e) => setCurrentMessage(e.target.value)}
-                placeholder={shouldPromptRegister ? "Register to continue..." : "Type your message..."}
-                className="w-full flex-grow resize-none overflow-y-hidden rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e as any);
-                  }
-                }}
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={!currentMessage.trim() || isLoading}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-white transition-all duration-150 ease-in-out hover:bg-primary/80 focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 disabled:bg-gray-300 disabled:hover:bg-gray-300 dark:disabled:bg-gray-600 dark:disabled:hover:bg-gray-600"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="currentColor"
-                  className="transition-transform duration-150 ease-in-out group-hover:scale-110"
-                >
-                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                </svg>
-                <span className="sr-only">Send message</span>
+        )}
+        <form onSubmit={handleSubmit} className="flex items-end gap-2 sm:gap-3">
+          <div className="flex-grow relative">
+            <Textarea
+              ref={inputRef}
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              placeholder={shouldPromptRegister ? "Register to continue..." : "Ask Moneko anything..."}
+              className="w-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-4 py-2.5 pr-12 text-sm text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200"
+              minRows={1}
+              maxRows={6}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
+              disabled={shouldPromptRegister || isLoading}
+            />
+          </div>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!currentMessage.trim() || isLoading || shouldPromptRegister}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 p-0 text-white shadow-lg shadow-purple-500/30 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white/50 disabled:bg-slate-300 disabled:shadow-none dark:disabled:bg-slate-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+              </svg>
+              <span className="sr-only">Send message</span>
+            </Button>
+          </motion.div>
+        </form>
+      </div>
+
+      {/* Registration Modal - Unchanged but kept for functionality */}
+      <Modal
+        isOpen={shouldPromptRegister}
+        onClose={() => {}}
+        disableOverlayClick={true}
+        overlayClassName="bg-black/40"
+        contentClassName="relative flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900 rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
+      >
+        <div className="flex flex-col items-center w-full">
+          <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
+            <FontAwesomeIcon icon={faGraduationCap} className="text-white text-3xl" />
+          </div>
+          <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">Your personalized lesson is ready!</h2>
+          <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
+            Register a free account to view this personalized lesson and access more features.
+          </p>
+          <div className="mb-8 w-full max-w-md mx-auto bg-white/80 dark:bg-gray-800/80 rounded-2xl border border-primary/20 shadow-lg px-6 py-4 flex flex-col gap-2 backdrop-blur-sm">
+            <ul className="text-gray-700 dark:text-gray-200 text-base list-disc pl-5 space-y-2">
+              <li><span className="font-semibold text-primary">Access</span> your saved chats and history on any device</li>
+              <li><span className="font-semibold text-primary">Get unlimited</span> personalized lessons and financial tools</li>
+              <li><span className="font-semibold text-primary">We respect your privacy</span>—no spam, ever</li>
+            </ul>
+          </div>
+          <div className="w-full flex flex-col gap-2">
+            <Link to="/register" className="w-full">
+              <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
+                Register for Free
               </Button>
-            </form>
+            </Link>
           </div>
         </div>
-      )}
-      <div ref={messagesEndRef} />
+      </Modal>
     </div>
   );
 }

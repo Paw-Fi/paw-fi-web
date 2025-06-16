@@ -10,7 +10,7 @@ const NO_BREADCRUMB_PATHNAMES = ["/", "/intro", "/sign-in", "/sign-up"];
 // Segments that should be combined with the previous segment in the breadcrumb
 const COMBINED_PATHNAMES = ["lesson"];
 
-export function PageLayout() {
+export function BreadCrumbsHeader() {
   const location = useLocation();
 
   const showBreadcrumb = useMemo(
@@ -154,4 +154,4 @@ export function PageLayout() {
   );
 }
 
-export default PageLayout;
+export default BreadCrumbsHeader;
