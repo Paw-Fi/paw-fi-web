@@ -7,7 +7,7 @@ export const authorsData: BlogAuthor[] = [
     name: "Roe Luo",
     avatar: RoeImg, // Professional looking male
     title: "Financial Advisor",
-    bio: "With over two decades in financial markets and a Ph.D. in Economics, Dr. Thorne leads Moneko's market analysis and investment strategy division. He is dedicated to providing data-driven insights to help users navigate complex financial landscapes and make informed investment decisions.",
+    bio: "CFA, MBA, and former equity research analyst with 10+ years in finance. Led financial modeling, investment analysis, and curriculum development for non- experts. Deeply focused on making investing more inclusive and understandable.",
   },
 ];
 
