@@ -57,6 +57,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [hasProcessedInitialQuestion, setHasProcessedInitialQuestion] = useState(false);
   const { getCookie, setCookie } = useCookie();
 
   // --- Guest Conversation Utilities ---
@@ -190,15 +191,15 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   
   // Handle initial question if provided
   useEffect(() => {
-    // Only proceed if there's an initial question and we're not already processing a message
-    if (initialQuestion && !isSendingMessage && !isLoading && guestSessionId) {
-      // Use the existing function to create a conversation and send the initial message
+    // Only proceed if there's an initial question and we haven't processed it yet
+    if (initialQuestion && !hasProcessedInitialQuestion && guestSessionId) {
+      setHasProcessedInitialQuestion(true); // Mark as processed immediately
       handleCreateConversationAndSendMessage(
         user?.id || guestSessionId,
         initialQuestion
       );
     }
-  }, [initialQuestion, guestSessionId, isSendingMessage, isLoading, user?.id]);
+  }, [initialQuestion, guestSessionId, hasProcessedInitialQuestion, user?.id]);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
