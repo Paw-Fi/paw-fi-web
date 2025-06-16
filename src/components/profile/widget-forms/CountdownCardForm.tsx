@@ -4,10 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { WidgetFormProps } from './types';
 
+import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
+
 export function CountdownCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ICountdownCardWidget>) {
-  const countdownData = widgetData.data || { 
+  const countdownData: ICountdownCardData = widgetData.data || {
+    id: uuidv4(), // Ensure ID is present
     title: '',
+    image: '', // Initialize image
     targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    days: 0, // Initialize, though it's calculated elsewhere
     showDays: true,
     showHours: true,
     showMinutes: true,
@@ -32,6 +37,15 @@ export function CountdownCardForm({ data: widgetData, onDataChange }: WidgetForm
           value={countdownData.title}
           onChange={(e) => handleChange('title', e.target.value)}
           placeholder="Countdown title"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Image URL</Label>
+        <Input
+          value={countdownData.image}
+          onChange={(e) => handleChange('image', e.target.value)}
+          placeholder="https://example.com/image.png"
         />
       </div>
       
@@ -140,7 +154,7 @@ export function CountdownCardForm({ data: widgetData, onDataChange }: WidgetForm
           </div>
           
           <div className="mt-2 text-sm text-gray-500">
-            Target: {new Date(countdownData.targetDate).toLocaleDateString()}
+            Target: {countdownData.targetDate ? new Date(countdownData.targetDate).toLocaleDateString() : 'Not set'}
           </div>
         </div>
       </div>

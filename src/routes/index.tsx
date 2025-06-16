@@ -513,7 +513,7 @@ export default function HomePage() {
           {/* Heading */}
           <div className="mb-12 text-center">
             <motion.h2
-              className="mb-3 text-4xl font-bold md:text-5xl"
+              className="mb-3 text-4xl font-bold md:text-5xl mt-24"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -640,21 +640,8 @@ export default function HomePage() {
             </motion.div>
           </motion.div>
 
-          {/* Button */}
-          <motion.div
-            className="mb-16 flex justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            viewport={{ once: true }}
-          >
-            <Button className="bg-purple-600 px-8 py-3 text-lg text-white shadow-lg hover:bg-purple-700">
-              Start Your Journey Today
-            </Button>
-          </motion.div>
-
           {/* Video Cards with Seamless Integration */}
-          <div className="grid gap-8 md:grid-cols-2">
+          <div className="grid gap-8 md:grid-cols-2 mt-24">
             {/* AI Chat Animation Card */}
             <motion.div
               className="group relative overflow-hidden rounded-3xl"
@@ -668,7 +655,7 @@ export default function HomePage() {
               {/* Glowing border effect */}
 
               {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/30 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
+              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/80">
                 <div className="relative flex aspect-square items-center justify-center p-2">
                   <Lottie
                     animationData={aiChatAnimation}
@@ -705,7 +692,7 @@ export default function HomePage() {
               {/* Glowing border effect */}
 
               {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/30 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
+              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
                 <div className="relative flex aspect-square items-center justify-center p-2">
                   <Lottie
                     animationData={badgeUnlockAnimation}

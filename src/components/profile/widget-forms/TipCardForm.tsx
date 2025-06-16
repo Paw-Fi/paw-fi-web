@@ -56,7 +56,7 @@ function SortableTipCardItem({ id, children }: SortableTipCardItemProps) {
 }
 
 export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<ITipCardWidget>) {
-  const tips = widgetData.data?.items || [];
+  const tips = widgetData.data?.tips || [];
   const [isDragging, setIsDragging] = useState(false);
   
   const sensors = useSensors(
@@ -77,7 +77,7 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
       ...widgetData,
       data: {
         ...widgetData.data,
-        items: newTips,
+        tips: newTips,
       },
     });
   };
@@ -87,6 +87,8 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
       id: `tip-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       title: `Tip ${tips.length + 1}`,
       content: '',
+      image: '',
+      link: '',
       displayOrder: tips.length,
     };
     
@@ -106,7 +108,7 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
       ...widgetData,
       data: {
         ...widgetData.data,
-        items: newTips,
+        tips: newTips,
       },
     });
   }, [tips, widgetData, onDataChange]);
@@ -128,7 +130,7 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
           ...widgetData,
           data: {
             ...widgetData.data,
-            items: newTips,
+            tips: newTips,
           },
         });
       }
@@ -143,21 +145,6 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Widget Title</Label>
-        <Input
-          value={widgetData.data?.title || ''}
-          onChange={(e) => onDataChange({
-            ...widgetData,
-            data: {
-              ...widgetData.data,
-              title: e.target.value,
-            },
-          })}
-          placeholder="Enter widget title"
-        />
-      </div>
-      
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Tips</Label>
@@ -174,7 +161,7 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
           onDragStart={handleDragStart}
         >
           <SortableContext 
-            items={tips.map(tip => tip.id)} 
+            items={tips.map((tip: ITipCardListItem) => tip.id)} 
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-3">
@@ -214,12 +201,30 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
                               rows={3}
                             />
                           </div>
+
+                          <div>
+                            <Label>Image URL (optional)</Label>
+                            <Input
+                              value={tip.image || ''}
+                              onChange={(e) => handleTipChange(index, 'image', e.target.value)}
+                              placeholder="Enter image URL (e.g., https://placekitten.com/50/50)"
+                            />
+                          </div>
+
+                          <div>
+                            <Label>Link URL (optional)</Label>
+                            <Input
+                              value={tip.link || ''}
+                              onChange={(e) => handleTipChange(index, 'link', e.target.value)}
+                              placeholder="Enter full URL (e.g., https://example.com)"
+                            />
+                          </div>
                         </div>
                         
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
+                          variant="text"
+                          size="sm"
                           onClick={() => removeTip(index)}
                           className="text-red-500 hover:text-red-700"
                         >

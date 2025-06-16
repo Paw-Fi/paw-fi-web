@@ -28,7 +28,11 @@ export interface IMetricCardItem {
   goalLabel?: string; // (Optional) Label for the goal associated with progress
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface IMetricCardData extends Array<IMetricCardItem> {}
+export interface IMetricCardData {
+  title?: string; // Optional title for the whole card
+  description?: string; // Optional description for the whole card
+  metrics: IMetricCardItem[]; // Array of individual metrics
+}
 
 // 2. PROGRESS BAR LIST - Enhanced with IDs for CRUD
 export interface IProgressBarListItem {
@@ -75,6 +79,10 @@ export interface ICountdownCardData {
   days: number; // (Mandatory) Number of days remaining
   image: string; // (Mandatory) URL for an icon or small image
   targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
+  showDays?: boolean;    // (Optional) Whether to display the days part
+  showHours?: boolean;   // (Optional) Whether to display the hours part
+  showMinutes?: boolean; // (Optional) Whether to display the minutes part
+  showSeconds?: boolean; // (Optional) Whether to display the seconds part
 }
 
 // 5. DATA LIST - Enhanced with IDs
@@ -143,7 +151,7 @@ export interface ICashFlowEntry {
   title: string; // (Mandatory) Name of the income/expense item (e.g., "Salary", "Rent")
   value: number; // (Mandatory) The monetary amount
   category?: string; // (Optional) Further sub-categorization (e.g., "Primary Income", "Housing")
-  frequency?: 'one-time' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'; // (Optional) How often this entry occurs
+    frequency?: 'one-time' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly'; // (Optional) How often this entry occurs
   isRecurring?: boolean; // (Optional) Is this a recurring entry?
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
@@ -202,18 +210,20 @@ export interface IEnhancedSavingsGoalsData extends Array<IEnhancedSavingsGoalIte
 
 // 13. INSURANCE COVERAGE - Enhanced with IDs
 export interface IInsuranceCoverageItem {
-  id: string; // (Mandatory) Unique ID for the insurance item
-  type: string; // (Mandatory) e.g., "Health", "Life", "Home", "Auto"
-  provider?: string; // (Optional) Insurance company name
-  policyNumber?: string; // (Optional) Policy number
-  coverage: string; // (Mandatory) Brief details of coverage (e.g., "$500k, comprehensive")
-  premium: number; // (Mandatory) Monthly/annual premium amount
-  status: 'Adequate' | 'Potential Gap' | 'Review Recommended'; // (Mandatory) Assessment status
-  suggestion?: string; // (Optional) Suggestion if status is not 'Adequate'
-  renewalDate?: string; // (Optional) Policy renewal date (e.g., "2026-03-01")
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
+  id: string;
+  policyName: string;
+  provider: string;
+  coverageAmount: number;
+  premium: number;
+  renewalDate?: string;
+  policyType?: 'life' | 'health' | 'auto' | 'home' | 'other';
+  notes?: string;
+  displayOrder: number; // Now mandatory for dnd
 }
-export interface IInsuranceCoverageData extends Array<IInsuranceCoverageItem> {}
+
+export interface IInsuranceCoverageData {
+  items: IInsuranceCoverageItem[];
+}
 
 // 14. CHECKLIST - Enhanced (already had IDs)
 export interface IChecklistItem {

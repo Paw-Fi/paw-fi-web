@@ -56,7 +56,8 @@ export function SortableBarChartItem({ id, children }: SortableBarChartItemProps
 }
 
 export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps<IBarChartWidget>) {
-  const chartData = widgetData.data || { series: [] };
+  const chartData = widgetData.data || { dataPoints: [] };
+  const dataPoints = chartData.dataPoints || [];
   const [isDragging, setIsDragging] = useState(false);
   
   const sensors = useSensors(
@@ -70,22 +71,22 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
     })
   );
 
-  const handleSeriesChange = (index: number, field: keyof IChartDataPoint, value: string | number) => {
-    const newSeries = [...chartData.series];
-    newSeries[index] = { ...newSeries[index], [field]: value };
+  const handleDataPointChange = (index: number, field: keyof IChartDataPoint, value: string | number) => {
+    const newDataPoints = [...dataPoints];
+    newDataPoints[index] = { ...newDataPoints[index], [field]: value };
     onDataChange({
       ...widgetData,
       data: {
         ...chartData,
-        series: newSeries,
+        dataPoints: newDataPoints,
       },
     });
   };
 
-  const addSeries = useCallback(() => {
-    const newSeries: IChartDataPoint = {
-      id: `series-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      label: `Series ${chartData.series.length + 1}`,
+  const addDataPoint = useCallback(() => {
+    const newDataPoint: IChartDataPoint = {
+      id: `dp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      label: `Data ${dataPoints.length + 1}`,
       value: 0,
       color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
     };
@@ -94,45 +95,45 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
       ...widgetData,
       data: {
         ...chartData,
-        series: [...chartData.series, newSeries],
+        dataPoints: [...dataPoints, newDataPoint],
       },
     });
-  }, [chartData, widgetData, onDataChange]);
+  }, [chartData, dataPoints, widgetData, onDataChange]);
 
-  const removeSeries = useCallback((index: number) => {
-    const newSeries = [...chartData.series];
-    newSeries.splice(index, 1);
+  const removeDataPoint = useCallback((index: number) => {
+    const newDataPoints = [...dataPoints];
+    newDataPoints.splice(index, 1);
     onDataChange({
       ...widgetData,
       data: {
         ...chartData,
-        series: newSeries,
+        dataPoints: newDataPoints,
       },
     });
-  }, [chartData, widgetData, onDataChange]);
+  }, [dataPoints, chartData, widgetData, onDataChange]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      const oldIndex = chartData.series.findIndex((item) => item.id === active.id);
-      const newIndex = chartData.series.findIndex((item) => item.id === over.id);
+      const oldIndex = dataPoints.findIndex((item) => item.id === active.id);
+      const newIndex = dataPoints.findIndex((item) => item.id === over.id);
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newSeries = arrayMove(chartData.series, oldIndex, newIndex);
+        const newDataPoints = arrayMove(dataPoints, oldIndex, newIndex);
         
         onDataChange({
           ...widgetData,
           data: {
             ...chartData,
-            series: newSeries,
+            dataPoints: newDataPoints,
           },
         });
       }
     }
     
     setIsDragging(false);
-  }, [chartData, widgetData, onDataChange]);
+  }, [dataPoints, chartData, widgetData, onDataChange]);
 
   const handleDragStart = () => {
     setIsDragging(true);
@@ -144,84 +145,55 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
         <Label>Chart Title</Label>
         <Input
           value={chartData.title || ''}
-          onChange={(e) => onDataChange({
-            ...widgetData,
-            data: {
-              ...chartData,
-              title: e.target.value,
-            },
-          })}
-          placeholder="Enter chart title"
+          onChange={(e) => {
+            const newChartData = { ...chartData, title: e.target.value };
+            onDataChange({ ...widgetData, data: newChartData });
+          }}
+          placeholder="Chart Title"
         />
       </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label>X-Axis Label</Label>
           <Input
             value={chartData.xAxisLabel || ''}
-            onChange={(e) => onDataChange({
-              ...widgetData,
-              data: {
-                ...chartData,
-                xAxisLabel: e.target.value,
-              },
-            })}
-            placeholder="X-axis label"
-            className="w-48"
+            onChange={(e) => {
+              const newChartData = { ...chartData, xAxisLabel: e.target.value };
+              onDataChange({ ...widgetData, data: newChartData });
+            }}
+            placeholder="X-Axis Label"
           />
         </div>
-        
-        <div className="flex items-center justify-between">
+        <div className="space-y-2">
           <Label>Y-Axis Label</Label>
           <Input
             value={chartData.yAxisLabel || ''}
-            onChange={(e) => onDataChange({
-              ...widgetData,
-              data: {
-                ...chartData,
-                yAxisLabel: e.target.value,
-              },
-            })}
-            placeholder="Y-axis label"
-            className="w-48"
+            onChange={(e) => {
+              const newChartData = { ...chartData, yAxisLabel: e.target.value };
+              onDataChange({ ...widgetData, data: newChartData });
+            }}
+            placeholder="Y-Axis Label"
           />
         </div>
       </div>
-      
+
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Data Series</Label>
-          <Button type="button" size="sm" variant="outline" onClick={addSeries}>
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-            Add Series
-          </Button>
-        </div>
-        
+        <h3 className="text-md font-medium">Data Points</h3>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
           onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          <SortableContext 
-            items={chartData.series.map(item => item.id)} 
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={dataPoints.map(dp => dp.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {chartData.series.map((series, index) => (
-                <SortableBarChartItem key={series.id} id={series.id}>
+              {dataPoints.map((dataPoint, index) => (
+                <SortableBarChartItem key={dataPoint.id} id={dataPoint.id}>
                   {(listeners, attributes) => (
-                    <div 
-                      className={`p-3 border rounded-lg bg-white ${isDragging ? 'shadow-md' : ''}`}
-                    >
-                      <div className="flex items-start space-x-2">
-                        <button
-                          type="button"
-                          {...listeners}
-                          {...attributes}
-                          className="p-1 -ml-1 -mt-1 text-gray-400 hover:text-gray-600 cursor-move"
-                        >
+                    <div className={`p-2 border rounded-lg ${isDragging ? 'bg-gray-100' : 'bg-white'}`}>
+                      <div className="flex items-center space-x-2">
+                        <button {...listeners} {...attributes} className="cursor-grab p-2">
                           <FontAwesomeIcon icon={faGripVertical} />
                         </button>
                         
@@ -229,8 +201,8 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
                           <div>
                             <Label>Label</Label>
                             <Input
-                              value={series.label}
-                              onChange={(e) => handleSeriesChange(index, 'label', e.target.value)}
+                              value={dataPoint.label}
+                              onChange={(e) => handleDataPointChange(index, 'label', e.target.value)}
                               placeholder="Label"
                             />
                           </div>
@@ -239,8 +211,8 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
                             <Label>Value</Label>
                             <Input
                               type="number"
-                              value={series.value}
-                              onChange={(e) => handleSeriesChange(index, 'value', Number(e.target.value))}
+                              value={dataPoint.value}
+                              onChange={(e) => handleDataPointChange(index, 'value', Number(e.target.value))}
                               placeholder="Value"
                             />
                           </div>
@@ -250,13 +222,13 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
                             <div className="flex items-center space-x-2">
                               <input
                                 type="color"
-                                value={series.color}
-                                onChange={(e) => handleSeriesChange(index, 'color', e.target.value)}
+                                value={dataPoint.color}
+                                onChange={(e) => handleDataPointChange(index, 'color', e.target.value)}
                                 className="h-10 w-10 p-1 border rounded"
                               />
                               <Input
-                                value={series.color}
-                                onChange={(e) => handleSeriesChange(index, 'color', e.target.value)}
+                                value={dataPoint.color}
+                                onChange={(e) => handleDataPointChange(index, 'color', e.target.value)}
                                 placeholder="Color code"
                                 className="flex-1"
                               />
@@ -266,10 +238,10 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
                         
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeSeries(index)}
-                          className="text-red-500 hover:text-red-700"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeDataPoint(index)}
+                          className="text-red-500 hover:text-red-700 border-red-500 hover:border-red-700"
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>
@@ -283,33 +255,37 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
         </DndContext>
       </div>
       
+      <Button type="button" onClick={addDataPoint} variant="outline" className="w-full">
+        <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Data Point
+      </Button>
+
       <div className="space-y-2">
         <Label>Preview</Label>
         <div className="border rounded-lg p-4 bg-gray-50">
           <div className="h-48 flex items-end space-x-2">
-            {chartData.series.length > 0 ? (
-              chartData.series.map((series, index) => {
-                const maxValue = Math.max(...chartData.series.map(s => Number(s.value) || 0), 10);
-                const height = maxValue > 0 ? `${(Number(series.value) / maxValue) * 100}%` : '0%';
+            {dataPoints.length > 0 ? (
+              dataPoints.map((dataPoint) => {
+                const maxValue = Math.max(...dataPoints.map(dp => Number(dp.value) || 0), 10);
+                const height = maxValue > 0 ? `${(Number(dataPoint.value) / maxValue) * 100}%` : '0%';
                 
                 return (
-                  <div key={series.id} className="flex-1 flex flex-col items-center">
+                  <div key={dataPoint.id} className="flex-1 flex flex-col items-center">
                     <div 
                       className="w-3/4 rounded-t-sm" 
                       style={{
                         height,
-                        backgroundColor: series.color || '#3b82f6',
+                        backgroundColor: dataPoint.color || '#3b82f6',
                       }}
                     />
                     <div className="text-xs mt-1 text-center">
-                      {series.label}
+                      {dataPoint.label}
                     </div>
                   </div>
                 );
               })
             ) : (
               <div className="w-full text-center text-gray-400">
-                Add data series to see preview
+                Add data points to see preview
               </div>
             )}
           </div>
