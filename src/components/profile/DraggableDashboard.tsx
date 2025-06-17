@@ -268,7 +268,7 @@ export function DraggableDashboard({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[14rem]">
           <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
             {currentWidgets.map((widget) => (
-              isEditMode ? (
+             (
                 <EditableWidget
                   key={widget.id}
                   id={widget.id}
@@ -281,24 +281,14 @@ export function DraggableDashboard({
                   onToggleChecklistItem={handleToggleChecklistItem} // Added prop
                   isEditMode={isEditMode}
                 />
-              ) : (
-                <SortableWidget
-                  key={widget.id}
-                  id={widget.id}
-                  widget={widget}
-                  // isExpanded is derived from widget.rowSpan
-                  onToggleRowSpan={handleToggleRowSpan} // Renamed prop and confirmed handler
-                  onToggleChecklistItem={handleToggleChecklistItem} // Added prop
-                  isEditMode={isEditMode}
-                />
-              )
+              ) 
             ))}
           </SortableContext>
           
           {/* Add widget button in edit mode */}
           {isEditMode && (
             <div 
-              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
+              className="bg-white/80 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
               onClick={() => setIsAddWidgetModalOpen(true)}
               role="button"
               tabIndex={0}

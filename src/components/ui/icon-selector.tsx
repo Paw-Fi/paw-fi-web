@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { iconMap, iconOptions } from '../profile/widgets/Widget';
+import { iconOptions } from '../profile/widgets/Widget';
 import { Button } from './button';
 import { Input } from './input';
 import { faChartBar, faSearch } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
+import { iconMap } from '../profile/data/icon-map';
 
 interface IconSelectorProps {
   // Support both prop naming conventions for better compatibility

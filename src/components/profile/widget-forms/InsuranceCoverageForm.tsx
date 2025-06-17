@@ -1,16 +1,15 @@
-import React, { useState, useEffect, FunctionComponent } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState, useEffect } from 'react';
 import { IInsuranceCoverageItem, IInsuranceCoverageWidget } from '../types/dashboard-data.typings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGripVertical, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGripVertical, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WidgetFormProps } from './types';
 
 // Props for a single sortable item
@@ -20,7 +19,7 @@ interface SortableInsuranceItemProps {
 }
 
 // The Sortable Item component using dnd-kit
-const SortableInsuranceItem: FunctionComponent<SortableInsuranceItemProps> = ({ item, children }) => {
+const SortableInsuranceItem: React.FC<SortableInsuranceItemProps> = ({ item, children }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
 
   const style: React.CSSProperties = {
@@ -32,7 +31,7 @@ const SortableInsuranceItem: FunctionComponent<SortableInsuranceItemProps> = ({ 
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-start space-x-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-3 shadow-sm">
-      <button {...attributes} {...listeners} className="cursor-grab p-3 touch-none">
+      <button type="button" {...attributes} {...listeners} className="cursor-grab p-3 touch-none">
         <FontAwesomeIcon icon={faGripVertical} />
       </button>
       <div className="flex-grow">{children}</div>
@@ -41,14 +40,42 @@ const SortableInsuranceItem: FunctionComponent<SortableInsuranceItemProps> = ({ 
 };
 
 // The main form component
-export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsuranceCoverageWidget>> = ({ data: widgetData, onDataChange }) => {
-  // Initialize state from the `items` array within the `data` object
-  const [items, setItems] = useState<IInsuranceCoverageItem[]>(widgetData.data?.items || []);
+export const InsuranceCoverageForm: React.FC<WidgetFormProps<IInsuranceCoverageWidget>> = ({ data: widgetData, onDataChange }) => {
+  // Handle both data structures: direct array or items property
+  // This supports both the sample data format and the form component format
+  const getInitialItems = () => {
+    if (Array.isArray(widgetData.data)) {
+      return widgetData.data as IInsuranceCoverageItem[];
+    } else if (widgetData.data?.items) {
+      return widgetData.data.items;
+    }
+    return [];
+  };
+
+  // Initialize state from the items array (handling both data structures)
+  const [items, setItems] = useState<IInsuranceCoverageItem[]>(getInitialItems());
+  const [showPremiums, setShowPremiums] = useState<boolean>(widgetData.showPremiums ?? true);
+  const [showRenewalDates, setShowRenewalDates] = useState<boolean>(widgetData.showRenewalDates ?? true);
 
   // Effect to sync state if the prop changes from outside
   useEffect(() => {
-    setItems(widgetData.data?.items || []);
-  }, [widgetData.data?.items]);
+    setItems(getInitialItems());
+    setShowPremiums(widgetData.showPremiums ?? true);
+    setShowRenewalDates(widgetData.showRenewalDates ?? true);
+  }, [widgetData]);
+
+  // Update parent component with changes
+  const propagateChanges = (updatedItems: IInsuranceCoverageItem[], updatedShowPremiums?: boolean, updatedShowRenewalDates?: boolean) => {
+    // Always use the IInsuranceCoverageData structure with items property
+    // This ensures TypeScript compatibility with IInsuranceCoverageWidget
+    const newData = {
+      ...widgetData,
+      data: { items: updatedItems },
+      showPremiums: updatedShowPremiums !== undefined ? updatedShowPremiums : showPremiums,
+      showRenewalDates: updatedShowRenewalDates !== undefined ? updatedShowRenewalDates : showRenewalDates,
+    };
+    onDataChange(newData);
+  };
 
   // Generic handler for changing any field in an item
   const handleItemChange = (id: string, field: keyof IInsuranceCoverageItem, value: any) => {
@@ -59,32 +86,46 @@ export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsurance
       return item;
     });
     setItems(newItems);
-    onDataChange({ ...widgetData, data: { items: newItems } });
+    propagateChanges(newItems);
   };
 
   // Adds a new, empty insurance item
   const addItem = () => {
     const newItem: IInsuranceCoverageItem = {
-      id: uuidv4(),
-      policyName: '',
+      id: `ins-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      type: 'New Insurance',
       provider: '',
-      coverageAmount: 0,
+      coverage: '',
       premium: 0,
-      renewalDate: '',
-      policyType: 'other',
-      notes: '',
+      status: 'Adequate',
+      suggestion: '',
+      renewalDate: new Date().toISOString().split('T')[0],
       displayOrder: items.length, // Set initial display order
     };
     const newItems = [...items, newItem];
     setItems(newItems);
-    onDataChange({ ...widgetData, data: { items: newItems } });
+    propagateChanges(newItems);
   };
 
   // Removes an item by its ID
   const removeItem = (id: string) => {
-    const newItems = items.filter(item => item.id !== id);
+    const newItems = items.filter(item => item.id !== id).map((item, index) => ({
+      ...item,
+      displayOrder: index // Update display order after removal
+    }));
     setItems(newItems);
-    onDataChange({ ...widgetData, data: { items: newItems } });
+    propagateChanges(newItems);
+  };
+
+  // Toggle handlers for display options
+  const handleShowPremiumsChange = (value: boolean) => {
+    setShowPremiums(value);
+    propagateChanges(items, value, showRenewalDates);
+  };
+
+  const handleShowRenewalDatesChange = (value: boolean) => {
+    setShowRenewalDates(value);
+    propagateChanges(items, showPremiums, value);
   };
 
   // dnd-kit sensors for pointer and keyboard
@@ -102,14 +143,42 @@ export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsurance
       if (oldIndex === -1 || newIndex === -1) return; // Safety check
 
       // Reorder the array and update the displayOrder property for each item
-      const newOrderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, displayOrder: index }));
-      setItems(newOrderedItems);
-      onDataChange({ ...widgetData, data: { items: newOrderedItems } });
+      const reorderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({ 
+        ...item, 
+        displayOrder: index 
+      }));
+      setItems(reorderedItems);
+      propagateChanges(reorderedItems);
     }
   };
 
   return (
     <div className="space-y-6 p-1">
+      {/* Display options */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="showPremiums"
+            checked={showPremiums}
+            onChange={(e) => handleShowPremiumsChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <Label htmlFor="showPremiums">Show Premium Amounts</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="showRenewalDates"
+            checked={showRenewalDates}
+            onChange={(e) => handleShowRenewalDatesChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <Label htmlFor="showRenewalDates">Show Renewal Dates</Label>
+        </div>
+      </div>
+
+      {/* Sortable insurance items */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(item => (
@@ -117,40 +186,58 @@ export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsurance
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Form Fields */}
                 <div>
-                  <Label htmlFor={`policyName-${item.id}`}>Policy Name</Label>
+                  <Label htmlFor={`type-${item.id}`}>Insurance Type</Label>
                   <Input
-                    id={`policyName-${item.id}`}
-                    value={item.policyName}
-                    onChange={e => handleItemChange(item.id, 'policyName', e.target.value)}
-                    placeholder="e.g., Comprehensive Auto"
+                    id={`type-${item.id}`}
+                    value={item.type || ''}
+                    onChange={e => handleItemChange(item.id, 'type', e.target.value)}
+                    placeholder="e.g., Health Insurance"
                   />
                 </div>
                 <div>
                   <Label htmlFor={`provider-${item.id}`}>Provider</Label>
                   <Input
                     id={`provider-${item.id}`}
-                    value={item.provider}
+                    value={item.provider || ''}
                     onChange={e => handleItemChange(item.id, 'provider', e.target.value)}
-                    placeholder="e.g., Acme Insurance"
+                    placeholder="e.g., MediCare Plus"
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`coverageAmount-${item.id}`}>Coverage Amount ($)</Label>
+                  <Label htmlFor={`coverage-${item.id}`}>Coverage Details</Label>
                   <Input
-                    id={`coverageAmount-${item.id}`}
-                    type="number"
-                    value={item.coverageAmount}
-                    onChange={e => handleItemChange(item.id, 'coverageAmount', parseFloat(e.target.value) || 0)}
+                    id={`coverage-${item.id}`}
+                    value={item.coverage || ''}
+                    onChange={e => handleItemChange(item.id, 'coverage', e.target.value)}
+                    placeholder="e.g., $1M annual limit, $5k deductible"
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`premium-${item.id}`}>Premium ($)</Label>
+                  <Label htmlFor={`premium-${item.id}`}>Monthly Premium ($)</Label>
                   <Input
                     id={`premium-${item.id}`}
                     type="number"
-                    value={item.premium}
+                    value={item.premium || 0}
                     onChange={e => handleItemChange(item.id, 'premium', parseFloat(e.target.value) || 0)}
+                    placeholder="e.g., 350"
                   />
+                </div>
+                <div>
+                  <Label htmlFor={`status-${item.id}`}>Status</Label>
+                  <Select
+                    onValueChange={(value: string) => handleItemChange(item.id, 'status', value)}
+                    value={item.status || 'Adequate'}
+                  >
+                    <SelectTrigger id={`status-trigger-${item.id}`}>
+                      <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Adequate">Adequate</SelectItem>
+                      <SelectItem value="Review Recommended">Review Recommended</SelectItem>
+                      <SelectItem value="Insufficient">Insufficient</SelectItem>
+                      <SelectItem value="Excellent">Excellent</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor={`renewalDate-${item.id}`}>Renewal Date</Label>
@@ -161,36 +248,19 @@ export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsurance
                     onChange={e => handleItemChange(item.id, 'renewalDate', e.target.value)}
                   />
                 </div>
-                <div>
-                  <Label htmlFor={`policyType-${item.id}`}>Policy Type</Label>
-                  <Select
-                    onValueChange={(value: string) => handleItemChange(item.id, 'policyType', value)}
-                    value={item.policyType}
-                  >
-                    <SelectTrigger id={`policyType-trigger-${item.id}`}>
-                      <SelectValue placeholder="Select type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="life">Life</SelectItem>
-                      <SelectItem value="health">Health</SelectItem>
-                      <SelectItem value="auto">Auto</SelectItem>
-                      <SelectItem value="home">Home</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="col-span-1 md:col-span-2">
-                  <Label htmlFor={`notes-${item.id}`}>Notes</Label>
+                  <Label htmlFor={`suggestion-${item.id}`}>Suggestion/Notes</Label>
                   <Textarea
-                    id={`notes-${item.id}`}
-                    value={item.notes || ''}
-                    onChange={e => handleItemChange(item.id, 'notes', e.target.value)}
-                    placeholder="Add any relevant notes..."
+                    id={`suggestion-${item.id}`}
+                    value={item.suggestion || ''}
+                    onChange={e => handleItemChange(item.id, 'suggestion', e.target.value)}
+                    placeholder="e.g., Shop for better rates or increased liability."
                   />
                 </div>
               </div>
               <div className="flex justify-end mt-3">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => removeItem(item.id)}
@@ -204,7 +274,9 @@ export const InsuranceCoverageForm: FunctionComponent<WidgetFormProps<IInsurance
           ))}
         </SortableContext>
       </DndContext>
-      <Button onClick={addItem} variant="outline" className="w-full">
+      
+      {/* Add new policy button */}
+      <Button type="button" onClick={addItem} variant="outline" className="w-full">
         <FontAwesomeIcon icon={faPlus} className="mr-2" />
         Add New Policy
       </Button>

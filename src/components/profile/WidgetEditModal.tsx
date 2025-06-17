@@ -38,7 +38,11 @@ import {
   IInsuranceCoverageWidget, 
   IInsuranceCoverageData, 
   IInsuranceCoverageItem,
-  IChecklistItem 
+  IChecklistItem,
+  INextBestActionData,
+  IEnhancedSavingsGoalsWidget,
+  IRetirementReadinessWidget,
+  IRetirementReadinessData // Added import
 } from './types/dashboard-data.typings'; 
 // DnD Kit imports
 import { 
@@ -88,7 +92,9 @@ import {
   faPercent,
   faPiggyBank,
   faHeartbeat,
-  faListCheck
+  faListCheck,
+  faSave, // Added for Save button
+  faUmbrellaBeach // Added for Retirement Readiness
   // faShieldAlt was already imported earlier, removed duplicate
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -102,12 +108,17 @@ import { QuickCashFlowSummaryForm as QuickCashFlowSummaryFormExt } from './widge
 import { TipCardForm as TipCardFormExt } from './widget-forms/TipCardForm';
 import { CountdownCardForm as CountdownCardFormExt } from './widget-forms/CountdownCardForm';
 import { MetricCardForm as MetricCardFormExt } from './widget-forms/MetricCardForm';
+import { RetirementReadinessForm as RetirementReadinessFormExt } from './widget-forms/retirement-readiness-form';
 import { InsuranceCoverageForm as InsuranceCoverageFormExt } from './widget-forms/InsuranceCoverageForm';
+import { FinancialHealthScorecardForm } from './widget-forms/financial-health-scorecard-form';
+import { ChecklistForm } from './widget-forms/ChecklistForm';
+import { NextBestActionForm } from './widget-forms/next-best-action-form';
+import { EnhancedSavingsGoalsForm } from './widget-forms/EnhancedSavingsGoalsForm';
 
 // Import IconDefinition type from @fortawesome/fontawesome-common-types
 import type { IconDefinition } from '@fortawesome/fontawesome-common-types';
 
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { Modal } from '../ui/modal';
 import { IconSelector } from '../ui/icon-selector';
 
@@ -717,7 +728,7 @@ function MetricCardForm({ data: widgetData, onDataChange }: WidgetFormProps<IMet
 }
   
 
-type WidgetTypeKey = Widget['type']; 
+export type WidgetTypeKey = Widget['type']; 
 
 type WidgetTypeConfig = {
   [K in WidgetTypeKey]: {
@@ -735,7 +746,7 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-const widgetTypeConfig: WidgetTypeConfig = {
+export const widgetTypeConfig: WidgetTypeConfig = {
   quickCashFlowSummary: {
     component: QuickCashFlowSummaryFormExt,
     icon: faExchangeAlt,
@@ -768,36 +779,55 @@ const widgetTypeConfig: WidgetTypeConfig = {
     } as Omit<IDebtVisualizerWidget, 'createdAt' | 'updatedAt'> & { id: string },
   },
   nextBestAction: {
-    component: null,
-    icon: faLightbulb,
+    component: NextBestActionForm,
+    title: 'Next Best Actions',
+    icon: faLightbulb, // Use the imported IconDefinition
     defaultData: {
       id: generateId('widget-nba'),
       type: 'nextBestAction',
-      title: 'Next Best Action',
+      title: 'Next Best Actions',
       icon: 'faLightbulb',
       columnSpan: 1,
       rowSpan: 1,
-      data: [] 
+      data: [] as INextBestActionData, // INextBestActionData is INextBestActionItem[]
+      maxDisplayItems: 3,             
+      filterByPriority: undefined,
     }
   },
   retirementReadiness: {
-    component: null,
-    icon: faChartLine,
+    title: 'Retirement Readiness',
+    component: RetirementReadinessFormExt,
+    icon: faUmbrellaBeach,
     defaultData: {
       id: generateId('widget-rr'),
       type: 'retirementReadiness',
       title: 'Retirement Readiness',
-      icon: 'faChartLine',
-      columnSpan: 2,
+      icon: 'faUmbrellaBeach',
+      columnSpan: 1,
       rowSpan: 1,
-      data: {
-        scenarios: [],
-        currentScenarioId: ''
-      }
+      data: (() => {
+        const firstScenarioId = generateId('ret-scen');
+        return {
+          scenarios: [
+            {
+              id: firstScenarioId,
+              scenarioName: "My Retirement Plan",
+              score: 75,
+              status: "On Track",
+              projectionAmount: 1200000,
+              projectionDate: "Age 67",
+              explanation: "Initial projection based on current savings and market estimates.",
+              assumptions: "Assumes 5% annual real return, $500 monthly contribution.",
+              displayOrder: 1
+            }
+          ],
+          currentScenarioId: firstScenarioId
+        } as IRetirementReadinessData;
+      })()
     }
   },
   enhancedSavingsGoals: {
-    component: null,
+    component: EnhancedSavingsGoalsForm as React.ComponentType<{data: IEnhancedSavingsGoalsWidget; onDataChange: (data: IEnhancedSavingsGoalsWidget) => void}>,
     icon: faPiggyBank,
     defaultData: {
       id: generateId('widget-esg'),
@@ -806,10 +836,11 @@ const widgetTypeConfig: WidgetTypeConfig = {
       icon: 'faPiggyBank',
       columnSpan: 2,
       rowSpan: 1,
-      data: [] 
+      data: [],
+      groupByCategory: false,
+      showProgress: true
     }
   },
-  
   dataList: {
     component: DataListFormExt as React.ComponentType<{data: IDataListWidget; onDataChange: (data: IDataListWidget) => void}>,
     icon: faList,
@@ -881,7 +912,7 @@ const widgetTypeConfig: WidgetTypeConfig = {
       id: generateId('widget-tc'),
       type: 'tipCard' as const, 
       title: 'Helpful Tip', 
-      icon: 'faLightbulb', 
+      icon: 'faLightbulb',
       columnSpan: 1, 
       rowSpan: 1, 
       data: { 
@@ -982,77 +1013,52 @@ const widgetTypeConfig: WidgetTypeConfig = {
     } as Omit<ILineChartWidget, 'createdAt' | 'updatedAt'> & { id: string }
   },
   financialHealthScorecard: {
-    component: null as any, 
+    component: FinancialHealthScorecardForm as React.ComponentType<{ data: IFinancialHealthScorecardWidget; onDataChange: (data: IFinancialHealthScorecardWidget) => void; }>,
     icon: faHeartbeat,
-    defaultData: { 
+    title: 'Financial Health Scorecard', // Title for the "Add Widget" list entry
+    defaultData: {
       id: generateId('widget-fhs'),
-      type: 'financialHealthScorecard', 
-      title: 'Financial Health', 
-      icon: 'faHeartbeat', 
-      columnSpan: 2, 
-      rowSpan: 1, 
+      type: 'financialHealthScorecard',
+      title: 'Financial Health Score',
+      icon: 'faHeartbeat',
+      columnSpan: 2,
+      rowSpan: 1,
+      showIndividualScores: true, // Default setting for the widget
       data: {
         items: [
-          {
-            id: 'm1-fhs',
-            category: 'Credit Score',
-            score: 750,
-            status: 'Good' as const,
-            explanation: 'Your credit score is healthy, but could be improved.',
-            weight: 0.4,
-            displayOrder: 1,
-          },
-          {
-            id: 'm2-fhs',
-            category: 'Savings Ratio',
-            score: 15,
-            status: 'Fair' as const,
-            explanation: 'Your savings rate is okay, aiming for 20% is better.',
-            weight: 0.3,
-            displayOrder: 2,
-          },
-          {
-            id: 'm3-fhs',
-            category: 'Debt-to-Income Ratio',
-            score: 35,
-            status: 'Good' as const,
-            explanation: 'Your DTI is in a good range.',
-            weight: 0.3,
-            displayOrder: 3,
-          },
-          {
-            id: 'm4-fhs',
-            category: 'Emergency Fund',
-            score: 6,
-            status: 'Fair' as const,
-            explanation: 'Your emergency fund is okay, aiming for 3-6 months is better.',
-            weight: 0.3,
-            displayOrder: 4,
-          },
-        ],
-        overallScore: 78,
-        overallStatus: 'Good' as const,
-      } as IFinancialHealthScorecardData
-    } as Omit<IFinancialHealthScorecardWidget, 'createdAt'|'updatedAt'> & {id: string} 
+          // Optionally, start with one default item or keep empty
+          // {
+          //   id: generateId('fhs-item'),
+          //   category: 'Example Category',
+          //   score: 75,
+          //   status: 'Good' as const,
+          //   explanation: 'This is an example item.',
+          //   weight: 0.5,
+          //   displayOrder: 0,
+          // }
+        ], // Start with an empty array or a minimal valid item
+        // overallScore and overallStatus are calculated, not part of default data.items
+      } as IFinancialHealthScorecardData,
+    } as Omit<IFinancialHealthScorecardWidget, 'createdAt' | 'updatedAt'> & { id: string },
   },
   insuranceCoverage: {
     component: InsuranceCoverageFormExt,
     icon: faShieldAlt, // Icon for the "Add Widget" list entry
     title: 'Insurance Coverage', // Title for the "Add Widget" list entry
-    defaultData: { // Default data for a new widget instance
+    defaultData: {
       id: generateId('widget-insurance'),
       type: 'insuranceCoverage',
-      title: 'Insurance Policies', // Default title for the new widget instance
-      icon: 'faShieldAlt', // Default icon string for the new widget instance
+      title: 'Insurance Policies',
+      icon: 'faShieldAlt',
       columnSpan: 1,
       rowSpan: 1,
-      data: { items: [] as IInsuranceCoverageItem[] }, // Data structure for insurance items
+      data: { items: [] as IInsuranceCoverageItem[] },
       showPremiums: true,
       showRenewalDates: true,
     } as Omit<IInsuranceCoverageWidget, 'createdAt' | 'updatedAt'> & { id: string }
   },
   checklist: {
-    component: null as any, // Replace with a real form component when created
+    component: ChecklistForm,
     icon: faListCheck,
     defaultData: {
       id: generateId('widget-cl'),
@@ -1079,6 +1085,11 @@ const widgetTypeConfig: WidgetTypeConfig = {
   }
 };
 
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
+};
+
 export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: WidgetEditModalProps) {
   const [formData, setFormData] = useState<Widget | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1097,15 +1108,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
 
   // This onDataChange is for the forms to update the *entire widget object* in formData
   const handleSpecificWidgetDataChange = useCallback((updatedWidgetData: Widget) => {
-    setFormData(prev => {
-        if (!prev) return updatedWidgetData; // Should not happen if form is active with a widget
-        // Ensure the core properties like id, type are from the original `prev`
-        // if updatedWidgetData is only partial, but most forms send the whole new object.
-        return {
-            ...prev, // Keep old top-level fields like id, type, title (unless changed in form)
-            ...updatedWidgetData // Apply changes from the form
-        } as Widget; // Explicitly cast to Widget type
-    });
+    setFormData(updatedWidgetData);
   }, []);
 
 
@@ -1152,17 +1155,18 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
 
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidth="2xl">
-      <form onSubmit={handleSubmit} className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="py-4 px-5 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10 border-b dark:border-gray-700">
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="2xl" contentClassName="p-0 bg-white dark:bg-slate-800 border border-slate-300/30 dark:border-slate-700/30 shadow-2xl rounded-xl overflow-hidden">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full divide-y divide-gray-300/50 dark:divide-slate-700/50">
+        <motion.div variants={itemVariants} className="py-4 px-5 sticky top-0 z-10 border-b border-gray-300/50 dark:border-slate-700/50">
           <div className="flex items-center">
             <FontAwesomeIcon icon={displayFormIcon} className="text-xl text-primary-600 dark:text-primary-400 mr-3" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit {displayFormTitle}</h2>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="py-6 px-5 space-y-6 max-h-[calc(100vh-220px)] overflow-y-auto">
-          <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-700/30">
+        {/* Scrollable Content Area */}
+        <motion.div variants={itemVariants} className="py-6 px-5 space-y-6 max-h-[calc(100vh-220px)] overflow-y-auto">
+          <div className="space-y-4 p-4 border border-gray-300/30 dark:border-slate-700/30 rounded-lg bg-white/10 dark:bg-slate-900/10">
             <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">General Settings</h3>
             <div>
               <Label htmlFor="widget-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Widget Title</Label>
@@ -1171,6 +1175,7 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
                 value={formData.title || ''}
                 onChange={(e) => handleGlobalSettingChange('title', e.target.value)}
                 placeholder={`E.g., ${currentWidgetTypeConf ? currentWidgetTypeConf.defaultData.title : 'Default Title'}`}
+                className="bg-white/20 dark:bg-slate-900/20 border-gray-400/50 dark:border-slate-600/50 focus:ring-primary-500 focus:border-primary-500 placeholder:text-gray-400/70 dark:placeholder:text-gray-500/70"
               />
             </div>
             <div>
@@ -1183,26 +1188,29 @@ export default function WidgetEditModal({ isOpen, onClose, widget, onSave }: Wid
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="widget-columnSpan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Column Span</Label>
-                    <Input id="widget-columnSpan" type="number" min="1" max="2" value={formData.columnSpan || 1} onChange={(e) => handleGlobalSettingChange('columnSpan', parseInt(e.target.value,10) as 1 | 2 || 1)} />
+                    <Input id="widget-columnSpan" type="number" min="1" max="2" value={formData.columnSpan || 1} onChange={(e) => handleGlobalSettingChange('columnSpan', parseInt(e.target.value,10) as 1 | 2 || 1)} className="bg-white/20 dark:bg-slate-900/20 border-gray-400/50 dark:border-slate-600/50 focus:ring-primary-500 focus:border-primary-500 placeholder:text-gray-400/70 dark:placeholder:text-gray-500/70" />
                 </div>
                 <div>
                     <Label htmlFor="widget-rowSpan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Row Span (Optional)</Label>
-                    <Input id="widget-rowSpan" type="number" min="1" max="2" value={formData.rowSpan || ''} onChange={(e) => handleGlobalSettingChange('rowSpan', parseInt(e.target.value,10) as 1 | 2 || undefined)} placeholder="Auto"/>
+                    <Input id="widget-rowSpan" type="number" min="1" max="2" value={formData.rowSpan || ''} onChange={(e) => handleGlobalSettingChange('rowSpan', parseInt(e.target.value,10) as 1 | 2 || undefined)} placeholder="Auto" className="bg-white/20 dark:bg-slate-900/20 border-gray-400/50 dark:border-slate-600/50 focus:ring-primary-500 focus:border-primary-500 placeholder:text-gray-400/70 dark:placeholder:text-gray-500/70"/>
                 </div>
             </div>
           </div>
 
           {ActiveForm ? renderActiveForm : <p className="text-center text-gray-500 dark:text-gray-400">No specific form for this widget type or widget data is missing.</p>}
-        </div>
+        </motion.div>
 
-        <div className="py-4 px-5 flex justify-end space-x-3 bg-gray-50 dark:bg-gray-800/50 sticky bottom-0 z-10 border-t dark:border-gray-700">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+        {/* Sticky Footer */}
+        <motion.div variants={itemVariants} className="py-4 px-5 flex justify-end space-x-3 sticky bottom-0 z-10 border-t border-gray-300/50 dark:border-slate-700/50">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="transition-all duration-200 ease-in-out hover:bg-gray-100/50 dark:hover:bg-slate-700/50 hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-800 dark:hover:text-gray-200 px-5 py-2.5 rounded-lg flex items-center space-x-2">
+         
+            <span>Cancel</span>
           </Button>
-          <Button type="submit" variant="primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          <Button type="submit" variant="primary" disabled={isSubmitting} className="transition-all duration-200 ease-in-out hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform px-5 py-2.5 rounded-lg flex items-center space-x-2">
+          
+            <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
           </Button>
-        </div>
+        </motion.div>
       </form>
     </Modal>
   );

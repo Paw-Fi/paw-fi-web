@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import classNames from 'classnames';
 
@@ -50,7 +50,7 @@ export function Modal({
   }, [isOpen, onClose]);
 
   // Animation variants
-  const overlayVariants = {
+  const overlayVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
@@ -68,7 +68,7 @@ export function Modal({
     },
   };
   
-  const contentVariants = {
+  const contentVariants: Variants = {
     hidden: { 
       opacity: 0, 
       y: 20, 
@@ -79,8 +79,10 @@ export function Modal({
       y: 0, 
       scale: 1,
       transition: { 
-        duration: 0.25, 
-        ease: [0.16, 1, 0.3, 1],
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        staggerChildren: 0.07
       },
     },
     exit: { 
@@ -88,8 +90,9 @@ export function Modal({
       y: 20, 
       scale: 0.98,
       transition: { 
-        duration: 0.15, 
-        ease: [0.4, 0, 1, 1],
+        type: "spring",
+        stiffness: 300,
+        damping: 30
       },
     },
   };
@@ -112,12 +115,12 @@ export function Modal({
         <div 
           role="dialog" 
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4  "
+          className="fixed inset-0 z-30 flex items-center justify-center p-4  "
         >
           {/* Backdrop */}
           <motion.div 
             className={classNames(
-              'fixed inset-0',
+              'fixed inset-0 z-50',
               overlayClassName
             )}
             onClick={!disableOverlayClick ? onClose : undefined}
@@ -129,7 +132,7 @@ export function Modal({
           />
 
           {/* Modal content */}
-          <div className="flex items-center justify-center min-h-full ">
+          <div className="flex items-center justify-center min-h-full z-50 ">
             <motion.div
               className={classNames(
                 'relative bg-white rounded-2xl shadow-2xl overflow-y-auto w-[90vw] lg:w-[40rem] px-6 py-4',

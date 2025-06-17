@@ -62,7 +62,14 @@ export const debtStrategyOptions = [
 ];
 
 export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFormProps<IDebtVisualizerWidget>) {
-  const debtData = widgetData.data || { debts: [], strategy: 'snowball', monthlyPayment: 0 };
+  const debts: IDebtItem[] = Array.isArray(widgetData.data) ? widgetData.data : [];
+  const strategy: 'snowball' | 'avalanche' | 'custom' = widgetData.strategy || 'snowball';
+  // monthlyPayment is not part of IDebtVisualizerWidget, manage as local state if needed for calculations within the form.
+  // For now, we'll calculate it based on sum of minPayments or a fixed value if user input is desired later.
+  const [monthlyPaymentInput, setMonthlyPaymentInput] = useState<number>(() => {
+    const sumMinPayments = debts.reduce((sum, debt) => sum + (Number(debt.minPayment) || 0), 0);
+    return sumMinPayments > 0 ? sumMinPayments : 0; // Default to sum or 0 if no debts
+  });
   const [isDragging, setIsDragging] = useState(false);
   
   const sensors = useSensors(
@@ -77,97 +84,83 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
   );
 
   const handleDebtChange = (index: number, field: keyof IDebtItem, value: string | number) => {
-    const newDebts = [...debtData.debts];
-    newDebts[index] = { ...newDebts[index], [field]: value };
+    const newDebts = [...debts];
+    // Ensure the field exists on IDebtItem before assignment
+    if (field in newDebts[index]) {
+      newDebts[index] = { ...newDebts[index], [field]: value };
+    }
     onDataChange({
       ...widgetData,
-      data: {
-        ...debtData,
-        debts: newDebts,
-      },
+      data: newDebts,
     });
   };
 
   const addDebt = useCallback(() => {
     const newDebt: IDebtItem = {
       id: `debt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name: `Debt ${debtData.debts.length + 1}`,
-      balance: 0,
+      name: `Debt ${debts.length + 1}`,
+      currentBalance: 0,
+      originalBalance: 0, // Assuming new debts start with original = current
       interestRate: 0,
-      minimumPayment: 0,
+      minPayment: 0,
+      payoffDate: '', // Needs calculation logic or user input
     };
     
     onDataChange({
       ...widgetData,
-      data: {
-        ...debtData,
-        debts: [...debtData.debts, newDebt],
-      },
+      data: [...debts, newDebt],
     });
-  }, [debtData, widgetData, onDataChange]);
+  }, [debts, widgetData, onDataChange]);
 
   const removeDebt = useCallback((index: number) => {
-    const newDebts = [...debtData.debts];
+    const newDebts = [...debts];
     newDebts.splice(index, 1);
     onDataChange({
       ...widgetData,
-      data: {
-        ...debtData,
-        debts: newDebts,
-      },
+      data: newDebts,
     });
-  }, [debtData, widgetData, onDataChange]);
+  }, [debts, widgetData, onDataChange]);
 
   const handleStrategyChange = (value: string) => {
     onDataChange({
       ...widgetData,
-      data: {
-        ...debtData,
-        strategy: value as 'snowball' | 'avalanche' | 'custom',
-      },
+      strategy: value as 'snowball' | 'avalanche' | 'custom',
+      // Note: monthlyPayment is not part of widgetData, so it's not updated here
     });
   };
 
   const handleMonthlyPaymentChange = (value: number) => {
-    onDataChange({
-      ...widgetData,
-      data: {
-        ...debtData,
-        monthlyPayment: value,
-      },
-    });
+    // monthlyPayment is local state, not part of widgetData
+    setMonthlyPaymentInput(value);
   };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      const oldIndex = debtData.debts.findIndex((item) => item.id === active.id);
-      const newIndex = debtData.debts.findIndex((item) => item.id === over.id);
+      const oldIndex = debts.findIndex((item) => item.id === active.id);
+      const newIndex = debts.findIndex((item) => item.id === over.id);
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newDebts = arrayMove(debtData.debts, oldIndex, newIndex);
+        const newOrderedDebts = arrayMove(debts, oldIndex, newIndex);
         
         onDataChange({
           ...widgetData,
-          data: {
-            ...debtData,
-            debts: newDebts,
-            strategy: 'custom', // Switch to custom strategy when manually reordering
-          },
+          data: newOrderedDebts,
+          strategy: 'custom', // Switch to custom strategy when manually reordering
         });
       }
     }
     
     setIsDragging(false);
-  }, [debtData, widgetData, onDataChange]);
+  }, [debts, widgetData, onDataChange]);
 
   const handleDragStart = () => {
     setIsDragging(true);
   };
 
-  const totalDebt = debtData.debts.reduce((sum, debt) => sum + (Number(debt.balance) || 0), 0);
-  const totalMinimumPayment = debtData.debts.reduce((sum, debt) => sum + (Number(debt.minimumPayment) || 0), 0);
+  const totalDebt = debts.reduce((sum, debt) => sum + (Number(debt.currentBalance) || 0), 0);
+  const totalMinimumPayment = debts.reduce((sum, debt) => sum + (Number(debt.minPayment) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -178,9 +171,11 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
             <label key={option.value} className="flex items-center space-x-2">
               <input
                 type="radio"
-                checked={debtData.strategy === option.value}
-                onChange={() => handleStrategyChange(option.value)}
-                className="text-blue-500"
+                name="debtStrategy"
+                value={option.value}
+                checked={strategy === option.value}
+                onChange={(e) => handleStrategyChange(e.target.value)}
+                className="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
               />
               <span>{option.label}</span>
             </label>
@@ -190,16 +185,17 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Monthly Payment</Label>
-          <div className="relative w-48">
-            <span className="absolute left-3 top-2 text-gray-500">$</span>
+          <Label htmlFor="monthlyPaymentInput">Total Monthly Payment Towards Debts</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
             <Input
+              id="monthlyPaymentInput"
               type="number"
-              value={debtData.monthlyPayment || ''}
-              onChange={(e) => handleMonthlyPaymentChange(Number(e.target.value))}
-              placeholder="0.00"
+              value={monthlyPaymentInput}
+              onChange={(e) => setMonthlyPaymentInput(Number(e.target.value))}
+              placeholder="Enter total amount"
               className="pl-8"
-              min={totalMinimumPayment}
+              min={totalMinimumPayment > 0 ? totalMinimumPayment : 0} // Suggest at least sum of min payments
               step="0.01"
             />
           </div>
@@ -207,7 +203,7 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
         {totalMinimumPayment > 0 && (
           <p className="text-xs text-gray-500">
             Total minimum payments: ${totalMinimumPayment.toFixed(2)}/month
-            {debtData.monthlyPayment > 0 && debtData.monthlyPayment < totalMinimumPayment && (
+            {monthlyPaymentInput > 0 && monthlyPaymentInput < totalMinimumPayment && (
               <span className="text-red-500 ml-2">
                 Warning: Below minimum payments (${totalMinimumPayment.toFixed(2)})
               </span>
@@ -231,12 +227,9 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
           onDragEnd={handleDragEnd}
           onDragStart={handleDragStart}
         >
-          <SortableContext 
-            items={debtData.debts.map(debt => debt.id)} 
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={debts.map(d => d.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
-              {debtData.debts.map((debt, index) => (
+              {debts.map((debt, index) => (
                 <SortableDebtItem key={debt.id} id={debt.id}>
                   {(listeners, attributes) => (
                     <div 
@@ -268,8 +261,8 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
                               <span className="absolute left-3 top-2 text-gray-500">$</span>
                               <Input
                                 type="number"
-                                value={debt.balance || ''}
-                                onChange={(e) => handleDebtChange(index, 'balance', Number(e.target.value))}
+                                value={debt.currentBalance || ''}
+                                onChange={(e) => handleDebtChange(index, 'currentBalance', Number(e.target.value))}
                                 placeholder="0.00"
                                 className="pl-8"
                                 min="0"
@@ -299,8 +292,8 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
                               <span className="absolute left-3 top-2 text-gray-500">$</span>
                               <Input
                                 type="number"
-                                value={debt.minimumPayment || ''}
-                                onChange={(e) => handleDebtChange(index, 'minimumPayment', Number(e.target.value))}
+                                value={debt.minPayment || ''}
+                                onChange={(e) => handleDebtChange(index, 'minPayment', Number(e.target.value))}
                                 placeholder="0.00"
                                 className="pl-8"
                                 min="0"
@@ -312,10 +305,10 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
                         
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
+                          variant="outline" // Changed from ghost
+                          size="sm" // Changed from icon
                           onClick={() => removeDebt(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-100 border-red-500 hover:border-red-700"
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>
@@ -342,7 +335,7 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
           </div>
           <div className="bg-white p-3 rounded border">
             <div className="text-sm text-gray-500">Number of Debts</div>
-            <div className="text-xl font-bold">{debtData.debts.length}</div>
+            <div className="text-xl font-bold">{debts.length}</div>
           </div>
         </div>
       </div>

@@ -309,7 +309,7 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
               {currentScenario.status}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Projected: <strong>${currentScenario.projectedSavingsAmount?.toLocaleString()}</strong> by {currentScenario.projectionDate}
+              Projected: <strong>${currentScenario.projectionAmount?.toLocaleString()}</strong> by {currentScenario.projectionDate}
             </div>
           </div>
         </div>
@@ -375,48 +375,40 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
 
 // Insurance Coverage Widget
 export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverageWidget }) {
-  const { data } = widget;
-  
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Adequate': 
-        return <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4 text-green-500" />;
-      case 'Potential Gap': 
-        return <FontAwesomeIcon icon={faCircleExclamation} className="h-4 w-4 text-yellow-500" />;
-      default: 
-        return <FontAwesomeIcon icon={faCircleQuestion} className="h-4 w-4 text-blue-500" />;
-    }
-  };
-  
+  // Handle both data structures: direct array or items property
+  // This supports both the sample data format and the form component format
+  const items = Array.isArray(widget.data) ? widget.data : widget.data?.items;
+
   return (
     <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-3">
-        {data.map((insurance, index) => (
-          <div 
-            key={index} 
-            className="flex items-start space-x-3 pb-3 border-b border-gray-100 dark:border-gray-700/30 last:border-0"
-          >
-            <div className="mt-0.5">
-              {getStatusIcon(insurance.status)}
-            </div>
-            <div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {insurance.type}
-                </span>
-                <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  {insurance.status}
+        {Array.isArray(items) && items.length > 0 ? (
+          items.map((item) => (
+            <div key={item.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-sm">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{item.type || item.policyName}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.provider}</p>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900/50 dark:text-primary-300 capitalize">
+                  {item.status || item.policyType || 'Active'}
                 </span>
               </div>
-              
-              {insurance.suggestion && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {insurance.suggestion}
-                </div>
-              )}
+              <div className="mt-2 text-right">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Coverage</p>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                  {item.coverage ? item.coverage : 
+                   (typeof item.coverageAmount === 'number' ? `$${item.coverageAmount.toLocaleString()}` : '$0')}
+                </p>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">No policies to display.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Click the pencil to add one.</p>
           </div>
-        ))}
+        )}
       </div>
     </Widget>
   );

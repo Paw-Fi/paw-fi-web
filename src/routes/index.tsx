@@ -61,9 +61,9 @@ import AmbientHalo from "../components/ui/ambient-halo";
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
-    const title = "Moneko: Learn Finance with Free Education & AI Tools";
+    const title = "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
     const description =
-      "Moneko offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
+      "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = "https://paw-fi.app/og-img.png";
@@ -249,7 +249,7 @@ function WaitlistForm() {
 
   return (
     <motion.div
-      className="rounded-3xl border border-white/20 bg-white/20 p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
+      className="rounded-3xl border border-white/20 bg-white/50 p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
       variants={fadeInUp}
       initial="hidden"
       whileInView="visible"
@@ -449,6 +449,9 @@ export default function HomePage() {
     <div className="relative min-h-screen bg-[#f5f3ff]">
       {/* Enhanced ambient halo background with scroll animations */}
       <AmbientHalo />
+      
+      {/* Hidden H1 for SEO */}
+      <h1 className="sr-only">Learn How to Save and Start Investing for Beginners with Moneko, Your AI Money Coach</h1>
 
       {/* Navigation */}
       <nav className="sticky top-0 z-50">
@@ -631,7 +634,7 @@ export default function HomePage() {
                     handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent);
                   }
                 }}
-                className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
+                className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-400 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
                 aria-label="Send message"
                 animate={iconControls}
               >
