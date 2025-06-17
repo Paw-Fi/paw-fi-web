@@ -16,6 +16,7 @@ interface ModalProps {
   fullHeight?: boolean;
   title?: string;
   description?: string;
+  footer?: () => ReactNode;
 }
 
 export function Modal({
@@ -28,6 +29,7 @@ export function Modal({
   fullHeight = false,
   title = '',
   description = '',
+  footer,
 }: ModalProps) {
   // Lock body scroll when modal is open
   useLockBodyScroll(isOpen);
@@ -120,7 +122,7 @@ export function Modal({
           {/* Backdrop */}
           <motion.div 
             className={classNames(
-              'fixed inset-0 z-50',
+              'fixed inset-0 z-50 flex-col flex-1',
               overlayClassName
             )}
             onClick={!disableOverlayClick ? onClose : undefined}
@@ -132,10 +134,10 @@ export function Modal({
           />
 
           {/* Modal content */}
-          <div className="flex items-center justify-center min-h-full z-50 ">
+          <div className="flex items-center justify-center min-h-full z-50 flex-col">
             <motion.div
               className={classNames(
-                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto w-[90vw] lg:w-[40rem] px-6 py-4',
+                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto w-[90vw] lg:w-[40rem] px-6 py-4 flex-1',
                 'flex flex-col max-h-[90vh]',
                 fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',
                 contentClassName
@@ -149,9 +151,12 @@ export function Modal({
             >
               {title && <h2 className="text-xl font-semibold">{title}</h2>}
               {description && <p className="text-sm text-gray-500">{description}</p>}
+              <div className="flex-1">
               {children}
+              </div>
             </motion.div>
           </div>
+            {footer && footer()}
         </div>
       )}
     </AnimatePresence>

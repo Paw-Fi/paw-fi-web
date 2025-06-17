@@ -2,14 +2,10 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   motion,
-  AnimatePresence,
   useAnimation,
-  useScroll,
-  useTransform,
-  easeInOut,
 } from "framer-motion";
 import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
@@ -18,39 +14,20 @@ import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
 import {
   fadeInUp,
   fadeInDown,
-  fadeInLeft,
-  scaleUp,
   elasticScale,
   staggerContainer,
   fadeIn,
-  floatAnimation,
 } from "@/lib/motion-variants";
 import { Button } from "@/components/ui/button";
-import banner from "@/assets/images/index/pawfi-banner.png";
-import banner3 from "@/assets/images/index/pawfi-banner3.png";
 import catCoin from "@/assets/images/icon.svg";
-import banner2 from "@/assets/images/index/pawfi-banner2.png";
-import waveBackground from "@/assets/images/index/homepage-bg.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
-  faGraduationCap,
-  faBookOpen,
-  faChalkboardTeacher,
-  faPuzzlePiece,
-  faBrain,
-  faCalculator,
-  faCommentsDollar,
-  faTasks,
-  faRobot,
-  faTimes,
   faPlus,
   faX,
   faLightbulb,
   faPaperPlane,
-  faChartLine,
   faLock,
-  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
@@ -382,68 +359,7 @@ export default function HomePage() {
       navigate({ to: "/chat", search: { q: chatQuery } });
     }, 500);
   };
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const howItWorksRef = useRef<HTMLDivElement>(null);
-  const toolkitRef = useRef<HTMLDivElement>(null);
-  const basicLessonsRef = useRef<HTMLDivElement>(null);
-  const waitlistRef = useRef<HTMLDivElement>(null);
-  // We only need to keep refs that are used for other purposes than animation triggering
-  const catRef = useRef<HTMLImageElement>(null);
 
-  // Controls for staggered animations
-  const learningControls = useAnimation();
-
-  // For the cat animation, we need to handle the floating effect separately
-  const [catAnimationState, setCatAnimationState] = useState("hidden");
-
-  useEffect(() => {
-    // Start with the initial animation
-    setCatAnimationState("visible");
-
-    // After the initial animation completes, switch to floating animation
-    const timer = setTimeout(() => {
-      setCatAnimationState("floating");
-    }, 1000); // Matches the duration of the initial animation
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Create a scroll animation value for parallax effect
-  const { scrollY } = useScroll();
-
-  // Create spring-like scroll values for jellyfish movement with fluid easing
-  const jellyfishY = useTransform(
-    scrollY,
-    [0, 500, 1000, 1500],
-    [0, 50, -30, 20],
-    { ease: easeInOut },
-  );
-
-  const jellyfishRotate = useTransform(scrollY, [0, 800, 1600], [0, 5, -3], {
-    ease: easeInOut,
-  });
-
-  const jellyfishScale = useTransform(
-    scrollY,
-    [0, 700, 1400],
-    [1, 1.05, 0.98],
-    { ease: easeInOut },
-  );
-
-  // Tentacle movement values that respond to scroll
-  const tentacle1Y = useTransform(
-    scrollY,
-    [0, 400, 800, 1200],
-    [0, 30, 15, 40],
-    { ease: easeInOut },
-  );
-
-  const tentacle2Y = useTransform(
-    scrollY,
-    [0, 400, 800, 1200],
-    [0, 20, 40, 25],
-    { ease: easeInOut },
-  );
 
   return (
     <div className="relative min-h-screen bg-[#f5f3ff]">
@@ -461,9 +377,7 @@ export default function HomePage() {
               <img
                 src={catCoin}
                 alt="Moneko Logo"
-                className="h-8 w-8"
-                width="32"
-                height="32"
+                className="size-10"               
               />
               <span className="text-xl font-semibold text-slate-800">
                 Moneko

@@ -10,7 +10,7 @@ import * as React from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
-import appCss from '@/styles/app.css?url'
+import appCss from '@/styles/main.css?url'
 import { seo } from '@/utils/seo'
 import Header from '@/components/Header'
 // Import ToastContainer dynamically to avoid SSR issues

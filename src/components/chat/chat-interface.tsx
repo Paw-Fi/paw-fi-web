@@ -21,13 +21,15 @@ import {
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { AnimatePresence, motion } from "framer-motion";
-import Textarea from 'react-textarea-autosize';
+
 import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import { sanitizeCourse } from "@/utils/sanitize-course";
 import logo from "@/assets/images/icon.svg";
+import { ChatInput } from './chat-input';
+import { VoiceConversationModal } from './voice-conversation-modal';
 
 const INITIAL_SUGGESTIONS = ["Start"];
 
@@ -41,7 +43,6 @@ interface Message {
 }
 const MAX_TIME_TO_SHOW_LOADING = 8;
 
-
 interface ChatInterfaceProps {
   initialQuestion?: string;
 }
@@ -53,12 +54,14 @@ export const iconContainer=(size:string="size-8")=>{
   </div>
   )
 }
+
 export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [hasProcessedInitialQuestion, setHasProcessedInitialQuestion] = useState(false);
   const { getCookie, setCookie } = useCookie();
+  const [isVoiceModalOpen, setVoiceModalOpen] = useState(false);
 
   // --- Guest Conversation Utilities ---
   // State for client values with consistent initial SSR values
@@ -159,7 +162,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     setCookie("paw-fi-chat-merge-lock", "", { days: -1, path: "/", sameSite: "Lax" });
   }
   const navigate = useNavigate();
-  const [currentMessage, setCurrentMessage] = useState("");
+  
   const [messages, setMessages] = useState<Message[]>([]);
   // Track guest messages separately for merging
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
@@ -205,7 +208,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -364,8 +366,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
       // Show user message immediately
       setMessages([userMessage]);
-      setCurrentMessage("");
-      inputRef.current?.focus();
 
       // Save the user message
       await addMessageMutation.mutateAsync(userMessage);
@@ -436,6 +436,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         clearInterval(loadingTimerRef.current);
         loadingTimerRef.current = null;
       }
+      setTimeout(() => scrollToBottom(), 100);
     }
   }
 
@@ -462,7 +463,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       }
     }
     return () => clearTimeout(timeoutId);
-  }, [messages, isLoading, isAuthenticated]);
+  }, [messages, isAuthenticated]);
 
   // --- Guest/Authenticated Merge Effect ---
   useEffect(() => {
@@ -670,8 +671,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         setGuestMessages(next);
         return next;
       });
-      setCurrentMessage("");
-      inputRef.current?.focus();
       setTimeout(() => scrollToBottom(), 50);
       setIsLoading(true);
       setLoadingMessage("Moneko is thinking...");
@@ -732,7 +731,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           clearInterval(loadingTimerRef.current);
           loadingTimerRef.current = null;
         }
-        inputRef.current?.focus();
         setTimeout(() => scrollToBottom(), 100);
       }
       return;
@@ -766,9 +764,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       await handleCreateConversationAndSendMessage(user.id, content);
       return;
     }
-
-    setCurrentMessage("");
-    inputRef.current?.focus();
 
     // Force scroll to bottom after adding user message
     setTimeout(() => scrollToBottom(), 50);
@@ -860,8 +855,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         clearInterval(loadingTimerRef.current);
         loadingTimerRef.current = null;
       }
-
-      inputRef.current?.focus();
+      // inputRef.current?.focus();
       refetchConversation();
       // Final scroll to bottom
       setTimeout(() => scrollToBottom(), 100);
@@ -904,12 +898,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     return null;
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (currentMessage.trim()) {
-      handleSendMessage(currentMessage);
-    }
-  };
+  
 
   const isBackendProcessing = useMemo(
     () =>
@@ -957,7 +946,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
   // Handle clicking on a suggestion button
   const handleSuggestionClick = (suggestion: string) => {
-    setCurrentMessage(suggestion);
+    
     setSuggestedResponses([]);
     
     // Instantly send the message
@@ -969,7 +958,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const shouldPromptRegister =
     lastMsg?.content?.includes('```json') && !isAuthenticated;
 
-
+  
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white/20 backdrop-blur-2xl rounded-2xl border border-white/30 shadow-2xl">
@@ -980,7 +969,9 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
             {iconContainer()}
             <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-400 border-2 border-white/50" />
           </div>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Moneko AI</h1>
+          <div className="relative flex h-full flex-col">
+            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Moneko AI</h1>
+          </div>
         </div>
         {/* Add any header controls here if needed */}
       </div>
@@ -1087,51 +1078,15 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="border-t border-white/20 bg-white/30 backdrop-blur-lg p-2 sm:p-4">
-        {!isBackendProcessing && (
-           <ChatSuggestions
-              suggestions={suggestedResponses}
-              onSuggestionClick={handleSuggestionClick}
-              isLoading={isLoading}
-              isSendingMessage={isSendingMessage}
-            />
-        )}
-        <form onSubmit={handleSubmit} className="flex items-end gap-2 sm:gap-3">
-          <div className="flex-grow relative">
-            <Textarea
-              ref={inputRef}
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              placeholder={shouldPromptRegister ? "Register to continue..." : "Ask Moneko anything..."}
-              className="w-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-4 py-2.5 pr-12 text-sm text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200"
-              minRows={1}
-              maxRows={6}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e as any);
-                }
-              }}
-              disabled={shouldPromptRegister || isLoading}
-            />
-          </div>
-          <motion.div whileTap={{ scale: 0.9 }}>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!currentMessage.trim() || isLoading || shouldPromptRegister}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 p-0 text-white shadow-lg shadow-purple-500/30 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white/50 disabled:bg-slate-300 disabled:shadow-none dark:disabled:bg-slate-600"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-              </svg>
-              <span className="sr-only">Send message</span>
-            </Button>
-          </motion.div>
-        </form>
+        <ChatSuggestions
+          suggestions={suggestedResponses}
+          onSuggestionClick={handleSuggestionClick}
+          isLoading={isLoading}
+          isSendingMessage={isSendingMessage}
+        />
+        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading || shouldPromptRegister} onOpenVoiceModal={() => setVoiceModalOpen(true)} />
       </div>
-
       {/* Registration Modal - Unchanged but kept for functionality */}
       <Modal
         isOpen={shouldPromptRegister}
@@ -1164,6 +1119,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           </div>
         </div>
       </Modal>
+      <VoiceConversationModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} />
     </div>
   );
 }
