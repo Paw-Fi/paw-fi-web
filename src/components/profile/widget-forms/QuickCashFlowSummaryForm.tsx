@@ -252,15 +252,13 @@ export function QuickCashFlowSummaryForm({ data: widgetData, onDataChange }: Wid
                           </div>
                         </div>
                         
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeEntry(entryType, index)}
-                          className="text-white"
-                        >
-                          <FontAwesomeIcon icon={faTrash} className="mr-1 h-3 w-3" /> Delete
-                        </Button>
+                        <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeEntry(entryType, index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                       </div>
                     </div>
                   </div>

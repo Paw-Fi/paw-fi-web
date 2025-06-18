@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, type ReactNode } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
-import classNames from 'classnames';
+import { useEffect, type ReactNode } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import classNames from "classnames";
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface ModalProps {
   overlayClassName?: string;
   contentClassName?: string;
   disableOverlayClick?: boolean;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
   fullHeight?: boolean;
   title?: string;
   description?: string;
@@ -24,11 +24,11 @@ export function Modal({
   onClose,
   children,
   disableOverlayClick = false,
-  overlayClassName = 'bg-black/50 backdrop-blur-sm',
-  contentClassName = '',
+  overlayClassName = "bg-black/50 backdrop-blur-sm",
+  contentClassName = "",
   fullHeight = false,
-  title = '',
-  description = '',
+  title = "",
+  description = "",
   footer,
 }: ModalProps) {
   // Lock body scroll when modal is open
@@ -37,93 +37,81 @@ export function Modal({
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
+      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
 
   // Animation variants
   const overlayVariants: Variants = {
     hidden: { opacity: 0 },
-    visible: { 
+    visible: {
       opacity: 1,
-      transition: { 
+      transition: {
         duration: 0.15,
         ease: [0.16, 1, 0.3, 1],
       },
     },
-    exit: { 
+    exit: {
       opacity: 0,
-      transition: { 
+      transition: {
         duration: 0.1,
         ease: [0.4, 0, 1, 1],
       },
     },
   };
-  
+
   const contentVariants: Variants = {
-    hidden: { 
-      opacity: 0, 
-      y: 20, 
+    hidden: {
+      opacity: 0,
+      y: 20,
       scale: 0.98,
     },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    visible: {
+      opacity: 1,
+      y: 0,
       scale: 1,
-      transition: { 
+      transition: {
         type: "spring",
         stiffness: 300,
         damping: 30,
-        staggerChildren: 0.07
+        staggerChildren: 0.07,
       },
     },
-    exit: { 
-      opacity: 0, 
-      y: 20, 
+    exit: {
+      opacity: 0,
+      y: 20,
       scale: 0.98,
-      transition: { 
+      transition: {
         type: "spring",
         stiffness: 300,
-        damping: 30
+        damping: 30,
       },
     },
   };
 
-  const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-    '5xl': 'max-w-5xl',
-    full: 'max-w-full',
-  };
-  
   return (
     <AnimatePresence>
       {isOpen && (
-        <div 
-          role="dialog" 
+        <div
+          role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-30 flex items-center justify-center p-4  "
+          className="fixed inset-0 z-30 flex items-center justify-center p-4"
         >
           {/* Backdrop */}
-          <motion.div 
+          <motion.div
             className={classNames(
-              'fixed inset-0 z-50 flex-col flex-1',
-              overlayClassName
+              "fixed inset-0 z-50 flex-1 flex-col",
+              overlayClassName,
             )}
             onClick={!disableOverlayClick ? onClose : undefined}
             initial="hidden"
@@ -134,29 +122,31 @@ export function Modal({
           />
 
           {/* Modal content */}
-          <div className="flex items-center justify-center min-h-full z-50 flex-col">
-            <motion.div
-              className={classNames(
-                'relative bg-white rounded-2xl shadow-2xl overflow-y-auto w-[90vw] lg:w-[40rem] px-6 py-4 flex-1',
-                'flex flex-col max-h-[90vh]',
-                fullHeight ? 'h-[90vh]' : 'max-h-[90vh]',
-                contentClassName
-              )}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={contentVariants}
-              onClick={(e) => e.stopPropagation()}
-              role="document"
-            >
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={contentVariants}
+            onClick={(e) => e.stopPropagation()}
+            role="document"
+            className={classNames(
+              "relative z-50 flex w-[90vw] flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl lg:w-[40rem]",
+              fullHeight ? "h-[90vh]" : "max-h-[90vh]",
+              contentClassName,
+            )}
+          >
+            <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
               {title && <h2 className="text-xl font-semibold">{title}</h2>}
-              {description && <p className="text-sm text-gray-500">{description}</p>}
-              <div className="flex-1">
-              {children}
-              </div>
-            </motion.div>
-          </div>
-            {footer && footer()}
+              {description && (
+                <p className="text-sm text-gray-500">{description}</p>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-scroll w-full">{children}</div>
+            <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
+              {footer && footer()}
+            </div>
+          </motion.div>
         </div>
       )}
     </AnimatePresence>

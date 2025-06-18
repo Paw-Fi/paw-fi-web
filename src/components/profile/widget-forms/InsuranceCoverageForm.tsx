@@ -259,16 +259,13 @@ export const InsuranceCoverageForm: React.FC<WidgetFormProps<IInsuranceCoverageW
                 </div>
               </div>
               <div className="flex justify-end mt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeItem(item.id)}
-                  className="text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="mr-2 h-3 w-3" />
-                  Remove
-                </Button>
+                 <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(item.id)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
               </div>
             </SortableInsuranceItem>
           ))}

@@ -31,16 +31,6 @@ const getPriorityBorderColor = (priority?: Priority): string => {
   }
 };
 
-// Helper function to get tag styling based on priority
-const getPriorityTagClasses = (priority: Priority): string => {
-  switch (priority) {
-    case 'high': return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300';
-    case 'medium': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300';
-    case 'low': return 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300';
-    default: return 'bg-slate-100 text-slate-700 dark:bg-slate-700/20 dark:text-slate-300';
-  }
-};
-
 interface ChecklistWidgetProps {
   widget: IChecklistWidget;
   onToggleItem?: (itemId: string, isCompleted: boolean) => void;

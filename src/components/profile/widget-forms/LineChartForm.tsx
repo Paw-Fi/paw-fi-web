@@ -265,15 +265,13 @@ export function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProp
                           </div>
                         </div>
                         
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="sm"
-                          onClick={() => removeDataPoint(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                        <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeDataPoint(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                       </div>
                     </div>
                   )}
@@ -283,45 +281,7 @@ export function LineChartForm({ data: widgetData, onDataChange }: WidgetFormProp
           </SortableContext>
         </DndContext>
       </div>
-      
-      <div className="space-y-2">
-        <Label>Preview</Label>
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <div className="h-48 flex items-end space-x-2">
-            {dataPoints.length > 0 ? (
-              dataPoints.map((dataPoint, index) => {
-                const maxValue = Math.max(...dataPoints.map(s => Number(s.value) || 0), 10);
-                const height = maxValue > 0 ? `${(Number(dataPoint.value) / maxValue) * 100}%` : '0%';
-                
-                return (
-                  <div key={dataPoint.id} className="flex-1 flex flex-col items-center">
-                    <div 
-                      className="w-3/4 rounded-t-sm" 
-                      style={{
-                        height,
-                        backgroundColor: dataPoint.color || '#3b82f6',
-                      }}
-                    />
-                    <div className="text-xs mt-1 text-center">
-                      {dataPoint.label}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full text-center text-gray-400">
-                Add data points to see preview
-              </div>
-            )}
-          </div>
-          
-          {chartData.xAxisLabel && (
-            <div className="text-center text-xs text-gray-500 mt-2">
-              {chartData.xAxisLabel}
-            </div>
-          )}
-        </div>
-      </div>
+     
     </div>
   );
 }

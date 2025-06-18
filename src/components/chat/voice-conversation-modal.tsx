@@ -3,8 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useVoiceRecorder, VoiceRecordingState } from '../../hooks/use-voice-recorder';
-import { ListeningAnimation, SpeakingAnimation, ThinkingAnimation, ErrorAnimation, IdleAnimation } from './voice-animations';
 import { createPortal } from 'react-dom';
+import AIVoiceParticles, { VoiceAnimationState } from './ai-voice-particles';
 
 interface VoiceConversationModalProps {
   isOpen: boolean;
@@ -27,12 +27,14 @@ export function VoiceConversationModal({ isOpen, onClose }: VoiceConversationMod
   const { recordingState, startRecording, stopRecording, error } = useVoiceRecorder();
   const [hasSpoken, setHasSpoken] = useState(false);
   const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [animationState, setAnimationState] = useState<VoiceAnimationState>('listening');
 
   // Effect to handle automatic recording start and cleanup
   useEffect(() => {
     if (isOpen) {
       console.log('VoiceModal: Opened, starting recording...');
       setHasSpoken(false); // Reset speaking state
+      setAnimationState('listening');
       startRecording();
     } else {
       console.log('VoiceModal: Closed, ensuring recording is stopped.');
@@ -68,11 +70,27 @@ export function VoiceConversationModal({ isOpen, onClose }: VoiceConversationMod
     };
   }, [recordingState, stopRecording]);
 
-  // Effect to handle auto-closing the modal after AI has spoken
+  // Effect to handle auto-closing the modal after AI has spoken and update animation state
   useEffect(() => {
-    if (recordingState === VoiceRecordingState.Speaking) {
-      console.log('VoiceModal: AI Speaking...');
-      setHasSpoken(true);
+    // Update animation state based on recording state
+    switch (recordingState) {
+      case VoiceRecordingState.Recording:
+        console.log('VoiceModal: User speaking...');
+        setAnimationState('listening');
+        break;
+      case VoiceRecordingState.Processing:
+        console.log('VoiceModal: Processing...');
+        setAnimationState('thinking');
+        break;
+      case VoiceRecordingState.Speaking:
+        console.log('VoiceModal: AI Speaking...');
+        setAnimationState('speaking');
+        setHasSpoken(true);
+        break;
+      case VoiceRecordingState.Error:
+        console.log('VoiceModal: Error state');
+        setAnimationState('unauthorized');
+        break;
     }
 
     if (hasSpoken && recordingState === VoiceRecordingState.Idle) {
@@ -90,6 +108,8 @@ export function VoiceConversationModal({ isOpen, onClose }: VoiceConversationMod
     };
   }, [recordingState, hasSpoken, onClose]);
 
+  // This useEffect is now redundant with the first one and has been removed
+
   const handleModalClose = () => {
     console.log('VoiceModal: Close button clicked / backdrop clicked.');
     // stopRecording(); // Stop recording is handled by useEffect cleanup for isOpen
@@ -97,29 +117,34 @@ export function VoiceConversationModal({ isOpen, onClose }: VoiceConversationMod
   };
 
   const renderContent = () => {
-    if (error) {
-      return <ErrorAnimation message={error} />;
-    }
-
-    switch (recordingState) {
-      case VoiceRecordingState.Idle:
-        return <p className="text-gray-400">Initializing...</p>;
-      case VoiceRecordingState.RequestingPermission:
-        return <p className="text-gray-400">Requesting microphone access...</p>;
-      case VoiceRecordingState.Recording:
-        return <ListeningAnimation />;
-      case VoiceRecordingState.Processing:
-        return <ThinkingAnimation />;
-      case VoiceRecordingState.Speaking:
-        // In a real app, you'd trigger this after processing is complete
-        return <SpeakingAnimation />;
-      default:
-        return null;
-    }
+    // Show animation for all states
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-6">
+        <div className="w-64 h-64 flex items-center justify-center">
+          <AIVoiceParticles state={animationState} />
+        </div>
+        
+        {/* Display status text based on state */}
+        <div className="text-center">
+          {error ? (
+            <p className="text-red-300 font-medium">{error}</p>
+          ) : (
+            <p className="text-purple-100 font-medium">
+              {recordingState === VoiceRecordingState.Idle && 'Ready'}
+              {recordingState === VoiceRecordingState.RequestingPermission && 'Requesting microphone access...'}
+              {recordingState === VoiceRecordingState.Recording && 'Listening...'}
+              {recordingState === VoiceRecordingState.Processing && 'Thinking...'}
+              {recordingState === VoiceRecordingState.Speaking && 'Speaking...'}
+            </p>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-       createPortal( <AnimatePresence>
+    createPortal(
+      <AnimatePresence>
         {isOpen && (
           <motion.div
             variants={backdropVariants}
@@ -138,7 +163,7 @@ export function VoiceConversationModal({ isOpen, onClose }: VoiceConversationMod
               >
                 <FontAwesomeIcon icon={faXmark} size="2x" />
               </button>
-              <div className="flex flex-col items-center justify-center h-full w-full">
+              <div className="flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto">
                 {renderContent()}
               </div>
             </div>

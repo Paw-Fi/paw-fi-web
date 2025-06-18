@@ -185,15 +185,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
   return (
     <Widget widget={widget} className="overflow-hidden" controls={widget.controls}>
       {/* Use absolute positioning to ensure no scrollbars */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {/* Background gradient circle - size based on widget dimensions */}
-        <div 
-          className={`absolute rounded-full bg-gradient-to-br ${gradientClass} opacity-10 blur-xl`}
-          style={{
-            width: widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1 ? '12rem' : '10rem',
-            height: widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1 ? '12rem' : '10rem',
-          }}
-        ></div>
+      <div className="absolute inset-0 flex items-center justify-center">       
         
         {/* Content container with responsive sizing based on widget dimensions */}
         <div className="flex flex-col items-center w-full text-center">

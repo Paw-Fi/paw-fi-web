@@ -241,16 +241,13 @@ export const EnhancedSavingsGoalsForm: React.FC<WidgetFormProps<IEnhancedSavings
                             <FontAwesomeIcon icon={faGripVertical} className="text-muted-foreground" />
                           </button>
                           <div className="flex-1 font-medium">{item.name || 'Unnamed Goal'}</div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="text-destructive hover:text-destructive h-9 w-9 p-0"
-                            title="Remove goal"
-                          >
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </Button>
+                          <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                         </div>
                         
                         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">

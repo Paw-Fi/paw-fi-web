@@ -93,16 +93,13 @@ export function EditableWidget({
                 </button>
 
                 {/* Remove widget button */}
-                <button
-                  onClick={() => onRemoveWidget(id)}
-                  aria-label="Remove widget"
-                  title="Remove widget"
-                >
-                  <FontAwesomeIcon
-                    icon={faTrash}
-                    className="h-3 w-3 text-red-500"
-                  />
-                </button>
+                <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => onRemoveWidget(id)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />  
 
                 {/* Expand/collapse height button */}
                 <button

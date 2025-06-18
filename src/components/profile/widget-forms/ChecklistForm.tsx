@@ -63,16 +63,13 @@ function SortableChecklistItem({ item, index, onItemChange, onRemoveItem }: Sort
         className="flex-grow"
         aria-label={`Edit item ${item.task}`}
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => onRemoveItem(index)}
-        className="text-red-500 hover:text-red-700 hover:bg-red-100 border-red-500 hover:border-red-700"
-        aria-label={`Remove item ${item.task}`}
-      >
-        <FontAwesomeIcon icon={faTrash} />
-      </Button>
+     <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => onRemoveItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
     </div>
   );
 }

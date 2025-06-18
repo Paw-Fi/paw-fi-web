@@ -221,15 +221,13 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
                           </div>
                         </div>
                         
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="sm"
-                          onClick={() => removeTip(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                        <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeTip(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                       </div>
                     </div>
                   )}

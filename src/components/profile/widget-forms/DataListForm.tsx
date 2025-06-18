@@ -177,15 +177,13 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
                   className="max-w-[60px]"
                 />
               </div>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        onClick={() => removeItem(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </Button>
+              <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                     </div>
                   )}
                 </SortableDataListItem>

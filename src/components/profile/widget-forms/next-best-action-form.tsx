@@ -151,9 +151,13 @@ export function NextBestActionForm({ data: widgetDataProp, onDataChange }: NextB
         <div key={item.id} className="p-4 border rounded-md space-y-3 bg-slate-50 dark:bg-slate-800">
           <div className="flex justify-between items-center">
             <h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Action {index + 1}</h4>
-            <Button variant="outline" onClick={() => removeItem(index)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 border-red-500 hover:border-red-700">
-              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-            </Button>
+            <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
           </div>
           
           <div>

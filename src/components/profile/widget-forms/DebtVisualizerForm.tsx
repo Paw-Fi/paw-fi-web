@@ -303,15 +303,13 @@ export function DebtVisualizerForm({ data: widgetData, onDataChange }: WidgetFor
                           </div>
                         </div>
                         
-                        <Button
-                          type="button"
-                          variant="outline" // Changed from ghost
-                          size="sm" // Changed from icon
-                          onClick={() => removeDebt(index)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-100 border-red-500 hover:border-red-700"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                        <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeDebt(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                       </div>
                     </div>
                   )}

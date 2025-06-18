@@ -259,44 +259,7 @@ export function BarChartForm({ data: widgetData, onDataChange }: WidgetFormProps
         <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Data Point
       </Button>
 
-      <div className="space-y-2">
-        <Label>Preview</Label>
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <div className="h-48 flex items-end space-x-2">
-            {dataPoints.length > 0 ? (
-              dataPoints.map((dataPoint) => {
-                const maxValue = Math.max(...dataPoints.map(dp => Number(dp.value) || 0), 10);
-                const height = maxValue > 0 ? `${(Number(dataPoint.value) / maxValue) * 100}%` : '0%';
-                
-                return (
-                  <div key={dataPoint.id} className="flex-1 flex flex-col items-center">
-                    <div 
-                      className="w-3/4 rounded-t-sm" 
-                      style={{
-                        height,
-                        backgroundColor: dataPoint.color || '#3b82f6',
-                      }}
-                    />
-                    <div className="text-xs mt-1 text-center">
-                      {dataPoint.label}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full text-center text-gray-400">
-                Add data points to see preview
-              </div>
-            )}
-          </div>
-          
-          {chartData.xAxisLabel && (
-            <div className="text-center text-xs text-gray-500 mt-2">
-              {chartData.xAxisLabel}
-            </div>
-          )}
-        </div>
-      </div>
+
     </div>
   );
 }

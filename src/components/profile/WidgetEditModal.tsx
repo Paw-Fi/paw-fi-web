@@ -138,22 +138,6 @@ interface WidgetEditModalProps {
   onSave: (widget: Widget) => void;
 }
 
-const availableIcons = [
-  { name: "List", value: "faList", icon: faList },
-  { name: "Tasks", value: "faTasks", icon: faTasks },
-  { name: "Chart Line", value: "faChartLine", icon: faChartLine },
-  { name: "Lightbulb", value: "faLightbulb", icon: faLightbulb },
-  { name: "Calendar Alt", value: "faCalendarAlt", icon: faCalendarAlt },
-  { name: "Chart Bar", value: "faChartBar", icon: faChartBar },
-  { name: "Exchange Alt", value: "faExchangeAlt", icon: faExchangeAlt },
-  { name: "Credit Card", value: "faCreditCard", icon: faCreditCard },
-  { name: "Shield Alt", value: "faShieldAlt", icon: faShieldAlt },
-  { name: "Check Square", value: "faCheckSquare", icon: faCheckSquare },
-  { name: "Cog", value: "faCog", icon: faCog },
-  { name: "Calendar", value: "faCalendar", icon: faCalendar },
-  { name: "Percent", value: "faPercent", icon: faPercent },
-];
-
 export type WidgetTypeKey = Widget["type"];
 
 type WidgetTypeConfig = {
@@ -669,10 +653,11 @@ export default function WidgetEditModal({
       onClose={onClose}
       maxWidth="2xl"
       contentClassName="p-0 bg-white dark:bg-slate-800 border border-slate-300/30 dark:border-slate-700/30 shadow-2xl rounded-xl overflow-hidden"
+    title={`Edit ${displayFormTitle}`}
       footer={
         ()=> <motion.div
         variants={itemVariants}
-        className="flex justify-end space-x-3 border-t border-gray-300/50 px-5 py-4 dark:border-slate-700/50"
+        className="flex justify-end space-x-3"
       >
         <Button
           type="button"
@@ -696,29 +681,12 @@ export default function WidgetEditModal({
     >
       <form
         onSubmit={handleSubmit}
-        className="flex h-full flex-col divide-y divide-gray-300/50 dark:divide-slate-700/50"
+        className="flex h-full overflow-scroll flex-col divide-y divide-gray-300/50 dark:divide-slate-700/50"
       >
-        <motion.div
-          variants={itemVariants}
-          className="sticky top-0 z-10 border-b border-gray-300/50 px-5 py-4 dark:border-slate-700/50"
-        >
-          <div className="flex items-center">
-            <FontAwesomeIcon
-              icon={displayFormIcon}
-              className="text-primary-600 dark:text-primary-400 mr-3 text-xl"
-            />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Edit {displayFormTitle}
-            </h2>
-          </div>
-        </motion.div>
-
         {/* Scrollable Content Area */}
-        <motion.div
-          variants={itemVariants}
-          className="flex-1 space-y-6 overflow-y-auto px-5 py-6"
+        <motion.div         
         >
-          <div className="space-y-4 rounded-lg border border-gray-300/30 bg-white/10 p-4 dark:border-slate-700/30 dark:bg-slate-900/10">
+          <div className="flex flex-col gap-4">
             <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">
               General Settings
             </h3>

@@ -146,35 +146,7 @@ export function MetricCardForm({ data: widgetDataProp, onDataChange }: WidgetFor
             />
           </div>
           
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Preview</h4>
-            <div className="bg-white p-4 rounded border">
-              {metricData.title ? (
-                <h3 className="text-lg font-medium mb-1">{metricData.title}</h3>
-              ) : (
-                <div className="h-6 bg-gray-200 rounded w-1/3 mb-1"></div>
-              )}
-              
-              {metricData.description ? (
-                <p className="text-sm text-gray-500 mb-4">{metricData.description}</p>
-              ) : (
-                <div className="h-4 bg-gray-100 rounded w-2/3 mb-4"></div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {metricData.metrics.length > 0 ? (
-                  metricData.metrics.slice(0, 4).map((metric: IMetricCardItem, i: number) => (
-                    <div key={i} className="p-3 border rounded">
-                      <h4 className="font-medium text-lg text-gray-800">{metric.description || 'Metric'}</h4>
-                      <p className="text-3xl font-bold text-gray-900">{metric.currency || '$'}{metric.value}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-gray-500">Add metrics to see preview</div>
-                )}
-              </div>
-            </div>
-          </div>
+          
         </div>
       ) : (
         <div className="space-y-4">
@@ -258,14 +230,13 @@ export function MetricCardForm({ data: widgetDataProp, onDataChange }: WidgetFor
                       </div>
                     </div>
                     
-                    <button
+                    <FontAwesomeIcon
                       type="button"
+                      icon={faTrash}
                       onClick={() => removeMetric(index)}
-                      className="ml-2 text-red-500 hover:text-red-700"
-                      title="Remove metric"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                   </div>
                   
                   <div className="mt-3 flex items-center space-x-2">

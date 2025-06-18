@@ -238,16 +238,13 @@ export const ProgressBarListForm: React.FC<WidgetFormProps<IProgressBarListWidge
                             onChange={(e) => handleItemChange(index, 'color', e.target.value)}
                             className="w-10 h-10 p-1"
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="text-destructive hover:text-destructive h-9 w-9 p-0"
-                            title="Remove item"
-                          >
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </Button>
+                         <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                         </div>
                       </div>
                     )}

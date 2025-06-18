@@ -583,7 +583,7 @@ export default function HomePage() {
 
                 {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-purple-600/80 to-transparent p-4 pt-12 sm:p-6"
+                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
                   style={{ transform: 'translateY(0)' }}
                 >
                   <h3 className="text-lg font-medium text-white">

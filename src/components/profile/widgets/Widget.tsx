@@ -40,7 +40,7 @@ export function Widget({ widget, children, className = '', controls }: WidgetPro
             <FontAwesomeIcon icon={icon} className="size-3" />
           </div>
           <h3 className="font-semibold text-base text-purple-900 dark:text-purple-200 truncate group-hover:text-purple-700 dark:group-hover:text-purple-300" title={widget.title}>
-            {widget.title || 'Untitled Widget'}
+            {widget.type || 'Untitled Widget'}
           </h3>
         </div>
         
