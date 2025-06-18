@@ -593,10 +593,13 @@ export default function WidgetEditModal({
   );
 
   const handleSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    async (
+      event:React.MouseEvent<HTMLButtonElement>,
+    ) => {
       event.preventDefault();
       if (!formData) return;
       setIsSubmitting(true);
+
       try {
         await new Promise((resolve) => setTimeout(resolve, 500));
         onSave(formData);
@@ -672,6 +675,7 @@ export default function WidgetEditModal({
           type="submit"
           variant="primary"
           disabled={isSubmitting}
+          onClick={handleSubmit}
           className="flex transform items-center space-x-2 rounded-lg px-5 py-2.5 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30"
         >
           <span>{isSubmitting ? "Saving..." : "Save Changes"}</span>
@@ -680,7 +684,6 @@ export default function WidgetEditModal({
       }
     >
       <form
-        onSubmit={handleSubmit}
         className="flex h-full overflow-scroll flex-col divide-y divide-gray-300/50 dark:divide-slate-700/50"
       >
         {/* Scrollable Content Area */}
