@@ -739,33 +739,50 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="space-y-3">
+      <div 
+        className="space-y-4 p-1"      
+      >
         {Array.isArray(items) && items.length > 0 ? (
-          items.map((item) => (
-            <div key={item.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-sm">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-bold text-gray-800 dark:text-gray-100">{item.type || item.policyName}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.provider}</p>
+          items.map((item, index) => (
+            <motion.div 
+              key={item.id || index} 
+              variants={itemVariants}
+              className="p-4 rounded-xl border border-white/20 dark:border-slate-700/50 bg-white/20 dark:bg-slate-800/40 shadow-lg backdrop-blur-md hover:shadow-xl transition-shadow duration-300"
+            >
+              <div className="flex items-start space-x-3">
+                <div className="flex-grow">
+                  <div className="flex justify-between items-center">
+                    <h5 className="font-semibold text-slate-800 dark:text-slate-100 truncate" title={item.type || item.policyName}>{item.type || item.policyName}</h5>
+                    <span 
+                      className={`text-xs px-2.5 py-1 rounded-full capitalize font-medium 
+                        ${(item.status?.toLowerCase() === 'active' || !item.status) ? 'bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300' : 
+                         (item.status?.toLowerCase() === 'pending') ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700/30 dark:text-yellow-300' : 
+                         'bg-slate-100 text-slate-800 dark:bg-slate-700/30 dark:text-slate-300'}`}
+                    >
+                      {item.status || item.policyType || 'Active'}
+                    </span>
+                  </div>
+                  {item.provider && <p className="text-sm text-slate-500 dark:text-slate-400">{item.provider}</p>}
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900/50 dark:text-primary-300 capitalize">
-                  {item.status || item.policyType || 'Active'}
-                </span>
               </div>
-              <div className="mt-2 text-right">
-                <p className="text-sm text-gray-600 dark:text-gray-300">Coverage</p>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              <div className="mt-3 text-right">
+                <p className="text-sm text-slate-500 dark:text-slate-400">Coverage</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
                   {item.coverage ? item.coverage : 
                    (typeof item.coverageAmount === 'number' ? `$${item.coverageAmount.toLocaleString()}` : '$0')}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))
         ) : (
-          <div className="text-center py-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">No policies to display.</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Click the pencil to add one.</p>
-          </div>
+          <motion.div 
+            variants={itemVariants} 
+            className="text-center py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/5 dark:bg-slate-800/20"
+          >
+            <FontAwesomeIcon icon={faShieldAlt} className="w-10 h-10 text-slate-400 dark:text-slate-500 mb-3" />
+            <p className="font-medium text-slate-600 dark:text-slate-300">No insurance policies found.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Add your policies to see them here.</p>
+          </motion.div>
         )}
       </div>
     </Widget>

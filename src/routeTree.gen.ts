@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as IntroRouteImport } from './routes/intro'
 import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
 import { Route as ChatRouteImport } from './routes/chat'
@@ -49,6 +50,11 @@ const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntroRoute = IntroRouteImport.update({
@@ -214,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/pricing': typeof PricingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/pricing': typeof PricingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
+  '/pricing': typeof PricingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/cookie-policy'
     | '/intro'
+    | '/pricing'
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/cookie-policy'
     | '/intro'
+    | '/pricing'
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/cookie-policy'
     | '/intro'
+    | '/pricing'
     | '/privacy-policy'
     | '/terms-of-service'
     | '/author/import'
@@ -406,6 +418,7 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
+  PricingRoute: typeof PricingRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/intro': {
@@ -716,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRoute,
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
+  PricingRoute: PricingRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,

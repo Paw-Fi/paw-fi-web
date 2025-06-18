@@ -4,7 +4,7 @@ import { seo } from '@/utils/seo';
 export const Route = createFileRoute('/privacy-policy')({
   component: PrivacyPolicy,
   head: () => {
-    const pageUrl = 'https://pawfi.app/privacy-policy';
+    const pageUrl = 'https://moneko.io/privacy-policy';
     const meta = seo({
       title: 'Privacy Policy | Moneko',
       description: 'Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.',
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/privacy-policy')({
       "publisher": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       }
     };
     

@@ -30,7 +30,7 @@ export function ChatInput({ onSendMessage, isLoading, onOpenVoiceModal }: ChatIn
 
   return (
     <div className="border-t border-white/20 bg-white/30 backdrop-blur-lg p-2 sm:p-4">
-      <form onSubmit={handleFormSubmit} className="flex items-end gap-2 sm:gap-3">
+      <form onSubmit={handleFormSubmit} className="flex items-center gap-2 sm:gap-3">
         <div className="flex-grow relative">
           <TextareaAutosize
             ref={inputRef}
@@ -49,7 +49,7 @@ export function ChatInput({ onSendMessage, isLoading, onOpenVoiceModal }: ChatIn
             disabled={isLoading}          />
         
         </div>
-        <motion.div whileTap={{ scale: 0.9 }}>
+        {/* <motion.div whileTap={{ scale: 0.9 }}>
           <Button
             variant="primary"
             disabled={isLoading}
@@ -58,7 +58,7 @@ export function ChatInput({ onSendMessage, isLoading, onOpenVoiceModal }: ChatIn
           >
            <FontAwesomeIcon icon={faMagicWandSparkles} />
           </Button>
-        </motion.div>
+        </motion.div> */}
         <motion.div whileTap={{ scale: 0.9 }}>
           <Button
             type="submit"

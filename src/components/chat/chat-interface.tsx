@@ -902,7 +902,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
   const isBackendProcessing = useMemo(
     () =>
-      (isMergingGuestToAuth ||
+      !!(isMergingGuestToAuth ||
         isConversationsLoading ||
         (currentConversationId && isConversationLoading)) &&
       messages.length === 0,
@@ -933,7 +933,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           setIsFetchingSuggestions(false);
         }
       } else {
-        if(!isLoading&&!messages.length)
+        if(!isLoading&&!messages.length&&!isBackendProcessing)
         {
           setSuggestedResponses(INITIAL_SUGGESTIONS);
         }
@@ -942,7 +942,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       }
     };
     fetchSuggestions();
-  }, [messages, isLoading]);
+  }, [messages, isLoading,isBackendProcessing]);
 
   // Handle clicking on a suggestion button
   const handleSuggestionClick = (suggestion: string) => {

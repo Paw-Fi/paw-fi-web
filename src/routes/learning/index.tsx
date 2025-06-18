@@ -12,7 +12,7 @@ import { seo } from "@/utils/seo";
 export const Route = createFileRoute("/learning/")({
   component: LearningPage,
   head: () => {
-    const pageUrl = "https://pawfi.app/learning/";
+    const pageUrl = "https://moneko.io/learning/";
     const meta = seo({
       title: "Moneko: AI-Powered Financial Learning & Personalized Lessons",
       description:
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/learning/")({
           "provider": {
             "@type": "Organization",
             "name": "Moneko",
-            "url": "https://pawfi.app/"
+            "url": "https://moneko.io/"
           }
         },
         {
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/learning/")({
           "provider": {
             "@type": "Organization",
             "name": "Moneko",
-            "url": "https://pawfi.app/"
+            "url": "https://moneko.io/"
           }
         }
       ]

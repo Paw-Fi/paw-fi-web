@@ -13,7 +13,7 @@ export const Route = createFileRoute("/chat")({
     const description = "Chat with Moneko's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
     const keywords = "AI chat, financial assistant, Moneko, money questions, financial help, chatbot";
     const imageUrl = 'https://paw-fi.app/og-img.png';
-    const pageUrl = 'https://pawfi.app/chat';
+    const pageUrl = 'https://moneko.io/chat';
 
     const meta = seo({
       title: title,

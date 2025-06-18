@@ -50,7 +50,7 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
       console.error("Error fetching lesson/course data for meta tags:", e);
     }
 
-    const pageUrl = `https://pawfi.app/learning/${params.courseId}/lesson/${params.lessonId}`;
+    const pageUrl = `https://moneko.io/learning/${params.courseId}/lesson/${params.lessonId}`;
     const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, Moneko`;
 
     const meta = seo({
@@ -70,7 +70,7 @@ export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
       provider: {
         "@type": "Organization",
         name: "Moneko",
-        url: "https://pawfi.app/",
+        url: "https://moneko.io/",
       },
     };
 

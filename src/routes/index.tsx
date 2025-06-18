@@ -44,7 +44,7 @@ export const Route = createFileRoute("/")({
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = "https://paw-fi.app/og-img.png";
-    const pageUrl = "https://pawfi.app/";
+    const pageUrl = "https://moneko.io/";
 
     const meta = seo({
       title: title,
@@ -121,7 +121,7 @@ export const Route = createFileRoute("/")({
       link: [
         {
           rel: "canonical",
-          href: "https://pawfi.app/",
+          href: "https://moneko.io/",
         },
       ],
       script: [
@@ -401,6 +401,12 @@ export default function HomePage() {
                 className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
               >
                 Blogs
+              </Link>
+              <Link
+                to="/pricing"
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
+              >
+                Pricing
               </Link>
             </div>
           </div>

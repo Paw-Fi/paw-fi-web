@@ -16,6 +16,7 @@ import { useDashboard, STORAGE_KEYS } from "@/hooks/use-dashboard";
 import { DashboardStatus } from "@/store/slices/dashboardSlice";
 import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import AmbientHalo from "@/components/ui/ambient-halo";
+import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 
 export const Route = createFileRoute("/profile/")({
   component: Profile,
@@ -112,16 +113,7 @@ function Profile() {
       </div>
     );
   }
-  const AmbientHaloLayout = (props: any) => {
-    return (
-      <div className="relative h-full w-full flex-1">
-        <AmbientHalo />
-        <div className="z-5 absolute left-0 top-0 h-full w-full">
-          {props.children}
-        </div>
-      </div>
-    );
-  };
+
   return (
     <AmbientHaloLayout>
       <div className="flex">

@@ -42,7 +42,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
     const description = blog.seo?.metaDescription || blog.excerpt;
     const keywords = blog.seo?.keywords || blog.tags.map(tag => tag.name).join(", ");
     const imageUrl = blog.coverImage;
-    const pageUrl = `https://pawfi.app/blogs/${blog.slug}`;
+    const pageUrl = `https://moneko.io/blogs/${blog.slug}`;
     
     const meta = seo({
       title,
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
         "name": "Moneko",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://pawfi.app/icon.svg"
+          "url": "https://moneko.io/icon.svg"
         }
       },
       "description": blog.excerpt,

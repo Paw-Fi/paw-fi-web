@@ -4,7 +4,7 @@ import { seo } from '@/utils/seo';
 export const Route = createFileRoute('/cookie-policy')({
   component: CookiePolicy,
   head: () => {
-    const pageUrl = 'https://pawfi.app/cookie-policy';
+    const pageUrl = 'https://moneko.io/cookie-policy';
     const meta = seo({
       title: 'Cookie Policy | Moneko',
       description: 'Learn about how Moneko uses cookies and similar technologies on our website to enhance your browsing experience.',
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/cookie-policy')({
       "publisher": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       }
     };
     
