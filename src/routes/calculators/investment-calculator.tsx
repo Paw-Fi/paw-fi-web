@@ -7,7 +7,7 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/calculators/investment-calculator')({
   component: InvestmentCalculatorPage,
   head: () => {
-    const pageUrl = 'https://moneko.io/calculators/investment-calculator';
+    const pageUrl = 'https://pawfi.app/calculators/investment-calculator';
     const meta = seo({
       title: 'Investment Growth Calculator | Moneko',
       description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://moneko.io/"
+        "url": "https://pawfi.app/"
       },
       "category": "Investment"
     };

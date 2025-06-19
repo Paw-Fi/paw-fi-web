@@ -111,73 +111,90 @@ const CompoundCalculator = () => {
   
   // No longer needed as we're using the BarChart component
 
-  
+  const styles = () => (
+    <style>{`
+      .interest-bar {
+        /* Default height, will be overridden by dynamic style */
+      }
+
+      .contribution-bar {
+        /* Default height, will be overridden by dynamic style */
+        opacity: 0.8;
+      }
+    `}</style>
+  );
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-xl p-6 md:p-8">
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
       <div className="grid md:grid-cols-2 gap-8">
         {/* Input Form */}
         <div className="space-y-4">
           <div>
-            <label htmlFor="initialInvestment" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Initial Investment ($)</label>
+            <label htmlFor="initialInvestment" className="block text-sm font-medium mb-1">
+              Initial Investment
+            </label>
             <input
-              type="number"
               id="initialInvestment"
+              type="number"
               value={initialInvestment === '' ? '' : initialInvestment}
-              onChange={(e) => setInitialInvestment(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              className="block w-full px-3 py-2.5 bg-white/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors duration-150 ease-in-out"
-              placeholder="e.g., 1000"
+              onChange={e => setInitialInvestment(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
               min={0}
             />
           </div>
           
           <div>
-            <label htmlFor="annualContribution" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Annual Contribution ($)</label>
+            <label htmlFor="annualContribution" className="block text-sm font-medium mb-1">
+              Annual Contribution
+            </label>
             <input
-              type="number"
               id="annualContribution"
+              type="number"
               value={annualContribution === '' ? '' : annualContribution}
-              onChange={(e) => setAnnualContribution(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              className="block w-full px-3 py-2.5 bg-white/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors duration-150 ease-in-out"
-              placeholder="e.g., 1200"
+              onChange={e => setAnnualContribution(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
               min={0}
             />
           </div>
           
           <div>
-            <label htmlFor="annualReturn" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Expected Annual Return (%)</label>
+            <label htmlFor="annualReturn" className="block text-sm font-medium mb-1">
+              Annual Return (%)
+            </label>
             <input
-              type="number"
               id="annualReturn"
+              type="number"
               value={annualReturn === '' ? '' : annualReturn}
-              onChange={(e) => setAnnualReturn(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              className="block w-full px-3 py-2.5 bg-white/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors duration-150 ease-in-out"
-              placeholder="e.g., 7"
+              onChange={e => setAnnualReturn(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
               min={0}
               step={0.01}
             />
           </div>
           
           <div>
-            <label htmlFor="years" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number of Years</label>
+            <label htmlFor="years" className="block text-sm font-medium mb-1">
+              Investment Period (Years)
+            </label>
             <input
-              type="number"
               id="years"
+              type="number"
               value={years === '' ? '' : years}
-              onChange={(e) => setYears(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              className="block w-full px-3 py-2.5 bg-white/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors duration-150 ease-in-out"
-              placeholder="e.g., 10"
+              onChange={e => setYears(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
               min={1}
             />
           </div>
           
           <div>
-            <label htmlFor="compoundingFrequency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Compounding Frequency</label>
+            <label htmlFor="compoundingFrequency" className="block text-sm font-medium mb-1">
+              Compounding Frequency
+            </label>
             <select
               id="compoundingFrequency"
               value={compoundingFrequency}
               onChange={(e) => setCompoundingFrequency(e.target.value)}
-              className="block w-full px-3 py-2.5 bg-white/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors duration-150 ease-in-out"
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="daily">Daily</option>
               <option value="monthly">Monthly</option>
@@ -187,25 +204,25 @@ const CompoundCalculator = () => {
           </div>
           
           {/* Results Summary */}
-          <div className="bg-purple-50/50 dark:bg-purple-900/30 p-4 md:p-6 rounded-xl mt-6 md:mt-8">
-            <h3 className="text-xl font-semibold text-purple-800 dark:text-purple-200 mb-4">Calculation Results</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-blue-50 p-4 rounded-lg mt-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">Results</h3>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-700 dark:text-gray-400">Final Balance</p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{formatCurrency(calculationResult.finalAmount)}</p>
+                <p className="text-sm text-gray-600">Final Balance</p>
+                <p className="text-lg font-bold text-blue-900">{formatCurrency(calculationResult.finalAmount)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-700 dark:text-gray-400">Total Contributions</p>
-                <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(calculationResult.contributions)}</p>
+                <p className="text-sm text-gray-600">Total Contributions</p>
+                <p className="text-lg font-bold text-blue-700">{formatCurrency(calculationResult.contributions)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-700 dark:text-gray-400">Total Interest Earned</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(calculationResult.interest)}</p>
+                <p className="text-sm text-gray-600">Total Interest</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(calculationResult.interest)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-700 dark:text-gray-400">Interest vs Contributions</p>
-                <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-                  {calculationResult.contributions > 0 ? (calculationResult.interest / calculationResult.contributions).toFixed(2) : 'N/A'}x
+                <p className="text-sm text-gray-600">Interest / Contribution Ratio</p>
+                <p className="text-lg font-bold text-purple-600">
+                  {(calculationResult.interest / calculationResult.contributions).toFixed(2)}x
                 </p>
               </div>
             </div>
@@ -214,10 +231,10 @@ const CompoundCalculator = () => {
         
         {/* Chart & Visualization */}
         <div>
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Growth Visualization</h3>
+          <h3 className="text-lg font-semibold mb-4">Growth Visualization</h3>
           <div 
             ref={chartContainerRef} 
-            className="h-[300px] sm:h-[350px] md:h-[400px] bg-slate-100/30 dark:bg-slate-800/30 border border-slate-200/70 dark:border-slate-700/50 rounded-xl p-3 md:p-4 relative"
+            className="h-[300px] border border-gray-200 rounded-lg p-4 relative"
           >
             <BarChart
               labels={calculationResult.yearlyData.map(d => d.year.toString())}
@@ -241,24 +258,29 @@ const CompoundCalculator = () => {
           </div>
           
           {/* Power of Compounding Example */}
-          <div className="mt-8 md:mt-10">
-            <div className="p-4 md:p-6 bg-indigo-50/50 dark:bg-indigo-900/30 rounded-xl">
-              <h4 className="text-lg font-semibold text-indigo-800 dark:text-indigo-200 mb-3">The Shocking Power of Compounding</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                If you invest $1 with a <strong>1% daily return</strong> for 365 days, 
-                your investment would grow to <strong className="text-indigo-600 dark:text-indigo-400">${exampleCalculation.finalAmount}</strong>!
-              </p>
-              <p className="text-sm font-mono bg-slate-200/70 dark:bg-slate-700/70 p-2 rounded-md my-2 text-gray-800 dark:text-gray-200">
-                Formula: $1 × (1 + 0.01)<sup>365</sup> = ${exampleCalculation.finalAmount}
-              </p>
-              <p className="text-xs sm:text-sm mt-3 text-gray-600 dark:text-gray-400 italic">
-                This extreme example illustrates how compounding can create exponential growth over time. 
-                While 1% daily returns aren't realistic, even modest returns can lead to significant growth over long periods.
-              </p>
-            </div>
+          <div className="mt-6">            
+            
+           
+              <div className="mt-2 p-4 bg-yellow-50 rounded-lg">
+                <h4 className="font-semibold mb-2">The Shocking Power of Compounding</h4>
+                <p className="text-sm mb-2">
+                  If you invest $1 with a <strong>1% daily return</strong> for 365 days, 
+                  your investment would grow to <strong>${exampleCalculation.finalAmount}</strong>!
+                </p>
+                <p className="text-sm font-mono bg-gray-100 p-2 rounded">
+                  Formula: $1 × (1 + 0.01)<sup>365</sup> = ${exampleCalculation.finalAmount}
+                </p>
+                <p className="text-sm mt-2 text-gray-600 italic">
+                  This extreme example illustrates how compounding can create exponential growth over time.
+                  While 1% daily returns aren't realistic, even modest returns can lead to significant growth 
+                  over long periods.
+                </p>
+              </div>
+            
           </div>
         </div>
       </div>
+      {styles()}
     </div>
   );
 };

@@ -102,7 +102,7 @@ const pageVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      duration: 0.5,
+      duration: 0.25,
     },
   },
 };
@@ -113,7 +113,7 @@ const gridVariants: Variants = {
     opacity: 1,
     transition: {
       staggerChildren: 0.1,
-      delayChildren: 0.2,
+      delayChildren: 0.1,
     },
   },
 };
@@ -124,7 +124,7 @@ const cardVariants: Variants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
+      duration: 0.25,
       ease: [0.25, 0.1, 0.25, 1.0], // Smooth cubic bezier
     },
   },

@@ -1,30 +1,19 @@
 import { MortgageCalculator } from '@/components/calculators/mortgage/mortgage';
 import { MortgageCalculatorSEOContent } from '@/components/calculators/mortgage/mortgage-seo-contents';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { motion } from 'framer-motion';
-import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
+import { createFileRoute } from '@tanstack/react-router';
+
 import { seo } from '@/utils/seo';
-
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
-};
-
-const itemVariants = {
-  initial: { opacity: 0, y: 15 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.5 } }, // Removed 'ease' property
-};
+import { useNavigate } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/calculators/mortgage-calculator')({
   component: MortgageCalculatorPage,
   head: () => {
-    const pageUrl = 'https://moneko.io/calculators/mortgage-calculator';
+    const pageUrl = 'https://pawfi.app/calculators/mortgage-calculator';
     const meta = seo({
       title: 'Mortgage Calculator | Moneko',
       description: 'Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan with Moneko.',
       keywords: 'mortgage calculator, home loan calculator, PITI calculator, amortization schedule, Moneko',
-      image: 'https://moneko.io/og-images/mortgage-calculator.png', // Updated OG image path
+      image: 'https://paw-fi.app/og-img.png',
       url: pageUrl,
     });
     
@@ -38,7 +27,7 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://moneko.io/"
+        "url": "https://pawfi.app/"
       },
       "category": "Financial Education Tool"
     };
@@ -60,36 +49,16 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
     };
   },
 });
-function MortgageCalculatorPage() {
-  // const navigate = useNavigate(); // useNavigate might not be needed if not used
+function MortgageCalculatorPage  ()  {
+  const navigate = useNavigate();
   return (
-    <AmbientHaloLayout>
-      <motion.div
-        className="container mx-auto px-4 py-12 md:py-16 lg:py-20 min-h-[calc(100vh-var(--header-height))]"
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-      >
-        <motion.h1 
-          variants={itemVariants}
-          className="mb-6 md:mb-8 text-4xl md:text-5xl font-bold tracking-tight text-center bg-gradient-to-br from-purple-600 to-indigo-700 dark:from-purple-500 dark:to-indigo-600 bg-clip-text text-transparent"
-        >
-          Mortgage Calculator
-        </motion.h1>
-        <motion.p 
-          variants={itemVariants} 
-          className="mb-8 md:mb-10 text-base md:text-lg text-slate-700 dark:text-slate-300 text-center max-w-2xl mx-auto"
-        >
-          Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan details and visualize your payment schedule.
-        </motion.p>
-        <motion.div variants={itemVariants} className="max-w-5xl mx-auto">
-          <MortgageCalculator />
-        </motion.div>
-        <motion.div variants={itemVariants} className="mt-12 md:mt-16">
-          <MortgageCalculatorSEOContent />
-        </motion.div>
-      </motion.div>
-    </AmbientHaloLayout>
+<div className="container mx-auto px-4 py-8 md:px-8 lg:px-12">
+      <h1 className="mb-8 text-3xl font-bold text-center">Mortgage Calculator</h1>
+      <p className="mb-6 text-lg text-center">
+        Calculate your monthly mortgage payments and see a complete amortization schedule.
+      </p>
+      <MortgageCalculator />
+      <MortgageCalculatorSEOContent />
+    </div>
   );
-}
+};

@@ -34,7 +34,7 @@ function AutoLoanCalculatorPage() {
 export const Route = createFileRoute('/calculators/auto-loan-calculator')({
   component: AutoLoanCalculatorPage,
   head: () => {
-    const pageUrl = 'https://moneko.io/calculators/auto-loan-calculator';
+    const pageUrl = 'https://pawfi.app/calculators/auto-loan-calculator';
     const meta = seo({
       title: 'Auto Loan Calculator | Moneko',
       description: "Calculate your auto loan payments, interest, and total cost with Moneko's easy-to-use car loan calculator.",
@@ -52,7 +52,7 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://moneko.io/"
+        "url": "https://pawfi.app/"
       },
       "category": "Auto Loan"
     };
