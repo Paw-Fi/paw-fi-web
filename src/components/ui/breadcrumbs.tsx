@@ -2,7 +2,7 @@
 
 import { useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Breadcrumb, type BreadcrumbItem } from "../ui/Breadcrumb";
+import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
 
 // Pages that should not show breadcrumbs
 const NO_BREADCRUMB_PATHNAMES = ["/", "/intro", "/sign-in", "/sign-up"];

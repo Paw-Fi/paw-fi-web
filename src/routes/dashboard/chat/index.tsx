@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { ChatInterface } from "@/components/chat/chat-interface";
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/dashboard/chat/")({
   component: Chat,
   head: () => {
     const title = "AI Chat | Moneko - Your Financial Assistant";
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/chat")({
 });
 
 function Chat() {
-  const searchParams = useSearch({ from: '/chat' });
+  const searchParams = useSearch({ from: '/dashboard/chat/' });
   const initialQuestion = (searchParams as any)?.q || '';
 
   return (
@@ -37,10 +37,9 @@ function Chat() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative flex flex-col items-center justify-center max-w-4xl mx-auto flex-1 h-[80vh] mt-8 px-4 lg:px-0 bg-[#f5f3ff]" 
+      className="relative flex flex-col items-center justify-center max-w-4xl mx-auto flex-1 h-[80vh] mt-8 px-4 lg:px-0" 
     >
-      <AmbientHalo />
-        {/* The ChatInterface will now fill this container. 
+\        {/* The ChatInterface will now fill this container. 
             It is responsible for its own header, scrolling, and input.
             The old header is removed to create a cleaner, more focused experience. */}
         <ChatInterface initialQuestion={initialQuestion} />

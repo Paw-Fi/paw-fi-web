@@ -31,7 +31,7 @@ function AutoLoanCalculatorPage() {
   );
 }
 
-export const Route = createFileRoute('/calculators/auto-loan-calculator')({
+export const Route = createFileRoute('/dashboard/calculators/auto-loan-calculator')({
   component: AutoLoanCalculatorPage,
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/auto-loan-calculator';

@@ -4,7 +4,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/calculators/investment-calculator')({
+export const Route = createFileRoute('/dashboard/calculators/investment-calculator')({
   component: InvestmentCalculatorPage,
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/investment-calculator';

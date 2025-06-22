@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/user-settings/')({  
+export const Route = createFileRoute('/dashboard/user-settings/')({  
   component: UserSettings,
 });
 

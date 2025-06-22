@@ -1,15 +1,15 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
-import { useUserCourses } from "@/services/course-service";
+import { useUserCourses, CourseDataSource } from "@/services/course-service";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 // Import data from separate data file
 
 import { seo } from "@/utils/seo";
 
-export const Route = createFileRoute("/learning/")({
+export const Route = createFileRoute("/dashboard/learning/")({
   component: LearningPage,
   head: () => {
     const pageUrl = "https://moneko.io/learning/";
@@ -72,17 +72,25 @@ export const Route = createFileRoute("/learning/")({
   },
 });
 
-function LearningPage() {
+interface LearningPageProps {
+  /** Data source to use for fetching courses */
+  dataSource?: CourseDataSource;
+}
+
+export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
   const { user } = useAuth();
   const {
     data: courses = [],
     isLoading,
     isError,
     error,
-  } = useUserCourses(user?.id ?? "", { enabled: !!user });
+  } = useUserCourses(user?.id ?? "", { 
+    enabled: !!user,
+    source: dataSource 
+  });
   
   // Define animation variants for cards
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: {},
     visible: {
       transition: {
@@ -91,7 +99,7 @@ function LearningPage() {
     }
   };
   
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -168,10 +176,13 @@ function LearningPage() {
   return (
     <div className="px-4 py-12">
       <div className="mb-8 text-center">
-        <h1 className="mb-2 text-2xl font-bold">Your Personalized Courses</h1>
+        <h1 className="mb-2 text-2xl font-bold">
+          {dataSource === 'local' ? 'Essential Financial Lessons' : 'Your Personalized Courses'}
+        </h1>
         <p className="mx-auto max-w-md text-gray-600">
-          Choose a course to continue learning. You can generate more courses
-          with our AI.
+          {dataSource === 'local' 
+            ? 'Master the fundamentals of personal finance with these essential lessons.' 
+            : 'Choose a course to continue learning. You can generate more courses with our AI.'}
         </p>
       </div>
       {isLoading ? (
@@ -188,13 +199,15 @@ function LearningPage() {
           {courses.length === 0 ? (
             <div className="col-span-full rounded-2xl bg-white p-8 text-center shadow-md">
               <p className="mb-4 text-gray-600">
-                No courses available. Chat with our AI to generate personalized
-                courses.
+                {dataSource === 'local' 
+                  ? 'No essential lessons available at this time.' 
+                  : 'No courses available. Chat with our AI to generate personalized courses.'}
               </p>
-              <Link
-                to="/chat"
-                className="focus:ring-opacity-50 inline-flex items-center justify-center rounded-lg bg-purple-600 px-5 py-3 font-medium text-white transition-colors hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              >
+              {dataSource === 'remote' && (
+                <Link
+                  to="/dashboard/chat"
+                  className="focus:ring-opacity-50 inline-flex items-center justify-center rounded-lg bg-purple-600 px-5 py-3 font-medium text-white transition-colors hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                >
                 <svg
                   className="mr-2 h-5 w-5"
                   fill="none"
@@ -211,6 +224,7 @@ function LearningPage() {
                 </svg>
                 Chat with AI
               </Link>
+              )}
             </div>
           ) : (
             courses.map((course) => (
@@ -220,7 +234,7 @@ function LearningPage() {
                 whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
               >
                 <Link
-                  to={`/learning/${course.course_id}`}
+                  to={`/dashboard/${dataSource === 'local' ? 'essentials' : 'learning'}/${course.course_id}`}
                   className="course-card block cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md"
                 >
                 <div className="flex h-full flex-col justify-between p-6">

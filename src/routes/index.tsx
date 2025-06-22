@@ -34,7 +34,7 @@ import { seo } from "@/utils/seo";
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
-
+const DISCORD_URL = "https://discord.gg/RZdG7GpX";
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
@@ -221,7 +221,7 @@ import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 function WaitlistForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open("https://discord.gg/RZdG7GpX", "_blank");
+    window.open(DISCORD_URL, "_blank");
   };
 
   return (
@@ -246,7 +246,7 @@ function WaitlistForm() {
           custom={0.2}
         >
           Be among the first to experience personalized financial education with
-          PawFi. Join our community for updates and beta access.
+          Moneko. Join our community for updates and beta access.
         </motion.p>
 
         <motion.div variants={fadeInUp} custom={0.3}>
@@ -356,7 +356,7 @@ export default function HomePage() {
 
     // Navigate after animation completes with adjusted timing for smoother experience
     setTimeout(() => {
-      navigate({ to: "/chat", search: { q: chatQuery } });
+      navigate({ to: "/dashboard/chat", search: { q: chatQuery } });
     }, 500);
   };
 
@@ -385,13 +385,13 @@ export default function HomePage() {
             </Link>
             <div className="hidden items-center gap-x-6 md:flex">
               <Link
-                to="/learning"
+                to={'/dashboard/learning'}
                 className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
               >
                 Learning
               </Link>
               <Link
-                to="/calculators"
+                to={'/dashboard/calculators'}
                 className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
               >
                 Calculators
@@ -408,6 +408,13 @@ export default function HomePage() {
               >
                 Pricing
               </Link>
+              <a
+                href={DISCORD_URL}
+                target="_blank"
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
+              >
+                Community
+              </a>
             </div>
           </div>
           <div className="flex items-center gap-x-5">
@@ -418,7 +425,7 @@ export default function HomePage() {
               Explore Courses
             </Link>
             <Link
-              to="/chat"
+              to="/dashboard/chat"
               className="font-medium text-purple-600 hover:text-purple-800"
             >
               <Button className="bg-purple-600 hover:bg-purple-700">
@@ -496,7 +503,7 @@ export default function HomePage() {
                   value={chatQuery}
                   onChange={(e) => setChatQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask PawFi to create personalized financial journey for my..."
+                  placeholder="Ask Moneko to create personalized financial journey for my..."
                   className="w-full border-none bg-transparent px-6 py-3 text-gray-700 placeholder-gray-400 placeholder:pl-2 transition-all duration-300 ease-in-out focus:outline-none outline-none ring-0 focus:ring-0 focus:shadow-none"
                   aria-label="Ask a financial question"
                   ref={inputRef}
@@ -803,13 +810,13 @@ export default function HomePage() {
             </motion.h3>
             <motion.ul className="space-y-2" variants={staggerContainer}>
               <motion.li variants={fadeInUp} custom={0.4}>
-                <Link to="/learning" className="text-gray-400 hover:text-white">
+                <Link to="/dashboard/essentials" className="text-gray-400 hover:text-white">
                   AI Learning
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.5}>
                 <Link
-                  to="/learning/$courseId"
+                  to="/dashboard/learning/$courseId"
                   params={{ courseId: "your-2025-guide-to-investing" }}
                   className="text-gray-400 hover:text-white"
                 >
@@ -818,14 +825,14 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.6}>
                 <Link
-                  to="/calculators"
+                  to="/dashboard/calculators"
                   className="text-gray-400 hover:text-white"
                 >
                   Financial Calculators
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.7}>
-                <Link to="/chat" className="text-gray-400 hover:text-white">
+                <Link to="/dashboard/chat" className="text-gray-400 hover:text-white">
                   Chat with AI
                 </Link>
               </motion.li>

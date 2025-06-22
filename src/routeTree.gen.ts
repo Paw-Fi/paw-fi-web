@@ -14,33 +14,35 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as IntroRouteImport } from './routes/intro'
 import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
-import { Route as ChatRouteImport } from './routes/chat'
-import { Route as UserSettingsRouteRouteImport } from './routes/user-settings/route'
 import { Route as RegisterRouteRouteImport } from './routes/register/route'
-import { Route as ProfileRouteRouteImport } from './routes/profile/route'
 import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
 import { Route as LoginRouteRouteImport } from './routes/login/route'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UserSettingsIndexRouteImport } from './routes/user-settings/index'
 import { Route as RegisterIndexRouteImport } from './routes/register/index'
-import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
-import { Route as LearningIndexRouteImport } from './routes/learning/index'
 import { Route as FormatIndexRouteImport } from './routes/format/index'
-import { Route as CalculatorsIndexRouteImport } from './routes/calculators/index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs/index'
 import { Route as AuthorIndexRouteImport } from './routes/author/index'
-import { Route as CalculatorsSavingGoalsCalculatorRouteImport } from './routes/calculators/saving-goals-calculator'
-import { Route as CalculatorsRetirementCalculatorRouteImport } from './routes/calculators/retirement-calculator'
-import { Route as CalculatorsMortgageCalculatorRouteImport } from './routes/calculators/mortgage-calculator'
-import { Route as CalculatorsInvestmentCalculatorRouteImport } from './routes/calculators/investment-calculator'
-import { Route as CalculatorsCompoundCalculatorRouteImport } from './routes/calculators/compound-calculator'
-import { Route as CalculatorsAutoLoanCalculatorRouteImport } from './routes/calculators/auto-loan-calculator'
 import { Route as BlogsBlogIdRouteImport } from './routes/blogs/$blogId'
 import { Route as AuthorImportRouteImport } from './routes/author/import'
-import { Route as LearningCourseIdIndexRouteImport } from './routes/learning/$courseId/index'
-import { Route as LearningCourseIdLessonLessonIdRouteImport } from './routes/learning/$courseId/lesson/$lessonId'
+import { Route as DashboardUserSettingsIndexRouteImport } from './routes/dashboard/user-settings/index'
+import { Route as DashboardLearningIndexRouteImport } from './routes/dashboard/learning/index'
+import { Route as DashboardEssentialsIndexRouteImport } from './routes/dashboard/essentials/index'
+import { Route as DashboardChatIndexRouteImport } from './routes/dashboard/chat/index'
+import { Route as DashboardCalculatorsIndexRouteImport } from './routes/dashboard/calculators/index'
+import { Route as DashboardLayoutIndexRouteImport } from './routes/dashboard/_layout.index'
+import { Route as DashboardCalculatorsSavingGoalsCalculatorRouteImport } from './routes/dashboard/calculators/saving-goals-calculator'
+import { Route as DashboardCalculatorsRetirementCalculatorRouteImport } from './routes/dashboard/calculators/retirement-calculator'
+import { Route as DashboardCalculatorsMortgageCalculatorRouteImport } from './routes/dashboard/calculators/mortgage-calculator'
+import { Route as DashboardCalculatorsInvestmentCalculatorRouteImport } from './routes/dashboard/calculators/investment-calculator'
+import { Route as DashboardCalculatorsCompoundCalculatorRouteImport } from './routes/dashboard/calculators/compound-calculator'
+import { Route as DashboardCalculatorsAutoLoanCalculatorRouteImport } from './routes/dashboard/calculators/auto-loan-calculator'
+import { Route as DashboardLearningCourseIdIndexRouteImport } from './routes/dashboard/learning/$courseId/index'
+import { Route as DashboardEssentialsCourseIdIndexRouteImport } from './routes/dashboard/essentials/$courseId/index'
+import { Route as DashboardLearningCourseIdLessonLessonIdRouteImport } from './routes/dashboard/learning/$courseId/lesson/$lessonId'
+import { Route as DashboardEssentialsCourseIdLessonLessonIdRouteImport } from './routes/dashboard/essentials/$courseId/lesson/$lessonId'
 
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   id: '/terms-of-service',
@@ -67,24 +69,9 @@ const CookiePolicyRoute = CookiePolicyRouteImport.update({
   path: '/cookie-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChatRoute = ChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UserSettingsRouteRoute = UserSettingsRouteRouteImport.update({
-  id: '/user-settings',
-  path: '/user-settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RegisterRouteRoute = RegisterRouteRouteImport.update({
   id: '/register',
   path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRouteRoute = ProfileRouteRouteImport.update({
-  id: '/profile',
-  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRouteRoute = OnboardingRouteRouteImport.update({
@@ -97,25 +84,20 @@ const LoginRouteRoute = LoginRouteRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRouteRoute = DashboardRouteRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UserSettingsIndexRoute = UserSettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => UserSettingsRouteRoute,
-} as any)
 const RegisterIndexRoute = RegisterIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => RegisterRouteRoute,
-} as any)
-const ProfileIndexRoute = ProfileIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ProfileRouteRoute,
 } as any)
 const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
   id: '/',
@@ -127,19 +109,9 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LoginRouteRoute,
 } as any)
-const LearningIndexRoute = LearningIndexRouteImport.update({
-  id: '/learning/',
-  path: '/learning/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FormatIndexRoute = FormatIndexRouteImport.update({
   id: '/format/',
   path: '/format/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalculatorsIndexRoute = CalculatorsIndexRouteImport.update({
-  id: '/calculators/',
-  path: '/calculators/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogsIndexRoute = BlogsIndexRouteImport.update({
@@ -152,42 +124,6 @@ const AuthorIndexRoute = AuthorIndexRouteImport.update({
   path: '/author/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalculatorsSavingGoalsCalculatorRoute =
-  CalculatorsSavingGoalsCalculatorRouteImport.update({
-    id: '/calculators/saving-goals-calculator',
-    path: '/calculators/saving-goals-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CalculatorsRetirementCalculatorRoute =
-  CalculatorsRetirementCalculatorRouteImport.update({
-    id: '/calculators/retirement-calculator',
-    path: '/calculators/retirement-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CalculatorsMortgageCalculatorRoute =
-  CalculatorsMortgageCalculatorRouteImport.update({
-    id: '/calculators/mortgage-calculator',
-    path: '/calculators/mortgage-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CalculatorsInvestmentCalculatorRoute =
-  CalculatorsInvestmentCalculatorRouteImport.update({
-    id: '/calculators/investment-calculator',
-    path: '/calculators/investment-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CalculatorsCompoundCalculatorRoute =
-  CalculatorsCompoundCalculatorRouteImport.update({
-    id: '/calculators/compound-calculator',
-    path: '/calculators/compound-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CalculatorsAutoLoanCalculatorRoute =
-  CalculatorsAutoLoanCalculatorRouteImport.update({
-    id: '/calculators/auto-loan-calculator',
-    path: '/calculators/auto-loan-calculator',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const BlogsBlogIdRoute = BlogsBlogIdRouteImport.update({
   id: '/blogs/$blogId',
   path: '/blogs/$blogId',
@@ -198,26 +134,106 @@ const AuthorImportRoute = AuthorImportRouteImport.update({
   path: '/author/import',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LearningCourseIdIndexRoute = LearningCourseIdIndexRouteImport.update({
-  id: '/learning/$courseId/',
-  path: '/learning/$courseId/',
-  getParentRoute: () => rootRouteImport,
+const DashboardUserSettingsIndexRoute =
+  DashboardUserSettingsIndexRouteImport.update({
+    id: '/user-settings/',
+    path: '/user-settings/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardLearningIndexRoute = DashboardLearningIndexRouteImport.update({
+  id: '/learning/',
+  path: '/learning/',
+  getParentRoute: () => DashboardRouteRoute,
 } as any)
-const LearningCourseIdLessonLessonIdRoute =
-  LearningCourseIdLessonLessonIdRouteImport.update({
+const DashboardEssentialsIndexRoute =
+  DashboardEssentialsIndexRouteImport.update({
+    id: '/essentials/',
+    path: '/essentials/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardChatIndexRoute = DashboardChatIndexRouteImport.update({
+  id: '/chat/',
+  path: '/chat/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardCalculatorsIndexRoute =
+  DashboardCalculatorsIndexRouteImport.update({
+    id: '/calculators/',
+    path: '/calculators/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardLayoutIndexRoute = DashboardLayoutIndexRouteImport.update({
+  id: '/_layout/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardCalculatorsSavingGoalsCalculatorRoute =
+  DashboardCalculatorsSavingGoalsCalculatorRouteImport.update({
+    id: '/calculators/saving-goals-calculator',
+    path: '/calculators/saving-goals-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardCalculatorsRetirementCalculatorRoute =
+  DashboardCalculatorsRetirementCalculatorRouteImport.update({
+    id: '/calculators/retirement-calculator',
+    path: '/calculators/retirement-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardCalculatorsMortgageCalculatorRoute =
+  DashboardCalculatorsMortgageCalculatorRouteImport.update({
+    id: '/calculators/mortgage-calculator',
+    path: '/calculators/mortgage-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardCalculatorsInvestmentCalculatorRoute =
+  DashboardCalculatorsInvestmentCalculatorRouteImport.update({
+    id: '/calculators/investment-calculator',
+    path: '/calculators/investment-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardCalculatorsCompoundCalculatorRoute =
+  DashboardCalculatorsCompoundCalculatorRouteImport.update({
+    id: '/calculators/compound-calculator',
+    path: '/calculators/compound-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardCalculatorsAutoLoanCalculatorRoute =
+  DashboardCalculatorsAutoLoanCalculatorRouteImport.update({
+    id: '/calculators/auto-loan-calculator',
+    path: '/calculators/auto-loan-calculator',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardLearningCourseIdIndexRoute =
+  DashboardLearningCourseIdIndexRouteImport.update({
+    id: '/learning/$courseId/',
+    path: '/learning/$courseId/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardEssentialsCourseIdIndexRoute =
+  DashboardEssentialsCourseIdIndexRouteImport.update({
+    id: '/essentials/$courseId/',
+    path: '/essentials/$courseId/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardLearningCourseIdLessonLessonIdRoute =
+  DashboardLearningCourseIdLessonLessonIdRouteImport.update({
     id: '/learning/$courseId/lesson/$lessonId',
     path: '/learning/$courseId/lesson/$lessonId',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardEssentialsCourseIdLessonLessonIdRoute =
+  DashboardEssentialsCourseIdLessonLessonIdRouteImport.update({
+    id: '/essentials/$courseId/lesson/$lessonId',
+    path: '/essentials/$courseId/lesson/$lessonId',
+    getParentRoute: () => DashboardRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRouteRouteWithChildren
-  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/pricing': typeof PricingRoute
@@ -225,28 +241,31 @@ export interface FileRoutesByFullPath {
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author': typeof AuthorIndexRoute
   '/blogs': typeof BlogsIndexRoute
-  '/calculators': typeof CalculatorsIndexRoute
   '/format': typeof FormatIndexRoute
-  '/learning': typeof LearningIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
-  '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
-  '/user-settings/': typeof UserSettingsIndexRoute
-  '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/dashboard/calculators/auto-loan-calculator': typeof DashboardCalculatorsAutoLoanCalculatorRoute
+  '/dashboard/calculators/compound-calculator': typeof DashboardCalculatorsCompoundCalculatorRoute
+  '/dashboard/calculators/investment-calculator': typeof DashboardCalculatorsInvestmentCalculatorRoute
+  '/dashboard/calculators/mortgage-calculator': typeof DashboardCalculatorsMortgageCalculatorRoute
+  '/dashboard/calculators/retirement-calculator': typeof DashboardCalculatorsRetirementCalculatorRoute
+  '/dashboard/calculators/saving-goals-calculator': typeof DashboardCalculatorsSavingGoalsCalculatorRoute
+  '/dashboard/': typeof DashboardLayoutIndexRoute
+  '/dashboard/calculators': typeof DashboardCalculatorsIndexRoute
+  '/dashboard/chat': typeof DashboardChatIndexRoute
+  '/dashboard/essentials': typeof DashboardEssentialsIndexRoute
+  '/dashboard/learning': typeof DashboardLearningIndexRoute
+  '/dashboard/user-settings': typeof DashboardUserSettingsIndexRoute
+  '/dashboard/essentials/$courseId': typeof DashboardEssentialsCourseIdIndexRoute
+  '/dashboard/learning/$courseId': typeof DashboardLearningCourseIdIndexRoute
+  '/dashboard/essentials/$courseId/lesson/$lessonId': typeof DashboardEssentialsCourseIdLessonLessonIdRoute
+  '/dashboard/learning/$courseId/lesson/$lessonId': typeof DashboardLearningCourseIdLessonLessonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/pricing': typeof PricingRoute
@@ -254,34 +273,36 @@ export interface FileRoutesByTo {
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author': typeof AuthorIndexRoute
   '/blogs': typeof BlogsIndexRoute
-  '/calculators': typeof CalculatorsIndexRoute
   '/format': typeof FormatIndexRoute
-  '/learning': typeof LearningIndexRoute
   '/login': typeof LoginIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
-  '/profile': typeof ProfileIndexRoute
   '/register': typeof RegisterIndexRoute
-  '/user-settings': typeof UserSettingsIndexRoute
-  '/learning/$courseId': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/dashboard/calculators/auto-loan-calculator': typeof DashboardCalculatorsAutoLoanCalculatorRoute
+  '/dashboard/calculators/compound-calculator': typeof DashboardCalculatorsCompoundCalculatorRoute
+  '/dashboard/calculators/investment-calculator': typeof DashboardCalculatorsInvestmentCalculatorRoute
+  '/dashboard/calculators/mortgage-calculator': typeof DashboardCalculatorsMortgageCalculatorRoute
+  '/dashboard/calculators/retirement-calculator': typeof DashboardCalculatorsRetirementCalculatorRoute
+  '/dashboard/calculators/saving-goals-calculator': typeof DashboardCalculatorsSavingGoalsCalculatorRoute
+  '/dashboard': typeof DashboardLayoutIndexRoute
+  '/dashboard/calculators': typeof DashboardCalculatorsIndexRoute
+  '/dashboard/chat': typeof DashboardChatIndexRoute
+  '/dashboard/essentials': typeof DashboardEssentialsIndexRoute
+  '/dashboard/learning': typeof DashboardLearningIndexRoute
+  '/dashboard/user-settings': typeof DashboardUserSettingsIndexRoute
+  '/dashboard/essentials/$courseId': typeof DashboardEssentialsCourseIdIndexRoute
+  '/dashboard/learning/$courseId': typeof DashboardLearningCourseIdIndexRoute
+  '/dashboard/essentials/$courseId/lesson/$lessonId': typeof DashboardEssentialsCourseIdLessonLessonIdRoute
+  '/dashboard/learning/$courseId/lesson/$lessonId': typeof DashboardLearningCourseIdLessonLessonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/profile': typeof ProfileRouteRouteWithChildren
   '/register': typeof RegisterRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRouteRouteWithChildren
-  '/chat': typeof ChatRoute
   '/cookie-policy': typeof CookiePolicyRoute
   '/intro': typeof IntroRoute
   '/pricing': typeof PricingRoute
@@ -289,35 +310,37 @@ export interface FileRoutesById {
   '/terms-of-service': typeof TermsOfServiceRoute
   '/author/import': typeof AuthorImportRoute
   '/blogs/$blogId': typeof BlogsBlogIdRoute
-  '/calculators/auto-loan-calculator': typeof CalculatorsAutoLoanCalculatorRoute
-  '/calculators/compound-calculator': typeof CalculatorsCompoundCalculatorRoute
-  '/calculators/investment-calculator': typeof CalculatorsInvestmentCalculatorRoute
-  '/calculators/mortgage-calculator': typeof CalculatorsMortgageCalculatorRoute
-  '/calculators/retirement-calculator': typeof CalculatorsRetirementCalculatorRoute
-  '/calculators/saving-goals-calculator': typeof CalculatorsSavingGoalsCalculatorRoute
   '/author/': typeof AuthorIndexRoute
   '/blogs/': typeof BlogsIndexRoute
-  '/calculators/': typeof CalculatorsIndexRoute
   '/format/': typeof FormatIndexRoute
-  '/learning/': typeof LearningIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
-  '/profile/': typeof ProfileIndexRoute
   '/register/': typeof RegisterIndexRoute
-  '/user-settings/': typeof UserSettingsIndexRoute
-  '/learning/$courseId/': typeof LearningCourseIdIndexRoute
-  '/learning/$courseId/lesson/$lessonId': typeof LearningCourseIdLessonLessonIdRoute
+  '/dashboard/calculators/auto-loan-calculator': typeof DashboardCalculatorsAutoLoanCalculatorRoute
+  '/dashboard/calculators/compound-calculator': typeof DashboardCalculatorsCompoundCalculatorRoute
+  '/dashboard/calculators/investment-calculator': typeof DashboardCalculatorsInvestmentCalculatorRoute
+  '/dashboard/calculators/mortgage-calculator': typeof DashboardCalculatorsMortgageCalculatorRoute
+  '/dashboard/calculators/retirement-calculator': typeof DashboardCalculatorsRetirementCalculatorRoute
+  '/dashboard/calculators/saving-goals-calculator': typeof DashboardCalculatorsSavingGoalsCalculatorRoute
+  '/dashboard/_layout/': typeof DashboardLayoutIndexRoute
+  '/dashboard/calculators/': typeof DashboardCalculatorsIndexRoute
+  '/dashboard/chat/': typeof DashboardChatIndexRoute
+  '/dashboard/essentials/': typeof DashboardEssentialsIndexRoute
+  '/dashboard/learning/': typeof DashboardLearningIndexRoute
+  '/dashboard/user-settings/': typeof DashboardUserSettingsIndexRoute
+  '/dashboard/essentials/$courseId/': typeof DashboardEssentialsCourseIdIndexRoute
+  '/dashboard/learning/$courseId/': typeof DashboardLearningCourseIdIndexRoute
+  '/dashboard/essentials/$courseId/lesson/$lessonId': typeof DashboardEssentialsCourseIdLessonLessonIdRoute
+  '/dashboard/learning/$courseId/lesson/$lessonId': typeof DashboardLearningCourseIdLessonLessonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/login'
     | '/onboarding'
-    | '/profile'
     | '/register'
-    | '/user-settings'
-    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/pricing'
@@ -325,28 +348,31 @@ export interface FileRouteTypes {
     | '/terms-of-service'
     | '/author/import'
     | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
     | '/author'
     | '/blogs'
-    | '/calculators'
     | '/format'
-    | '/learning'
     | '/login/'
     | '/onboarding/'
-    | '/profile/'
     | '/register/'
-    | '/user-settings/'
-    | '/learning/$courseId'
-    | '/learning/$courseId/lesson/$lessonId'
+    | '/dashboard/calculators/auto-loan-calculator'
+    | '/dashboard/calculators/compound-calculator'
+    | '/dashboard/calculators/investment-calculator'
+    | '/dashboard/calculators/mortgage-calculator'
+    | '/dashboard/calculators/retirement-calculator'
+    | '/dashboard/calculators/saving-goals-calculator'
+    | '/dashboard/'
+    | '/dashboard/calculators'
+    | '/dashboard/chat'
+    | '/dashboard/essentials'
+    | '/dashboard/learning'
+    | '/dashboard/user-settings'
+    | '/dashboard/essentials/$courseId'
+    | '/dashboard/learning/$courseId'
+    | '/dashboard/essentials/$courseId/lesson/$lessonId'
+    | '/dashboard/learning/$courseId/lesson/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/pricing'
@@ -354,33 +380,35 @@ export interface FileRouteTypes {
     | '/terms-of-service'
     | '/author/import'
     | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
     | '/author'
     | '/blogs'
-    | '/calculators'
     | '/format'
-    | '/learning'
     | '/login'
     | '/onboarding'
-    | '/profile'
     | '/register'
-    | '/user-settings'
-    | '/learning/$courseId'
-    | '/learning/$courseId/lesson/$lessonId'
+    | '/dashboard/calculators/auto-loan-calculator'
+    | '/dashboard/calculators/compound-calculator'
+    | '/dashboard/calculators/investment-calculator'
+    | '/dashboard/calculators/mortgage-calculator'
+    | '/dashboard/calculators/retirement-calculator'
+    | '/dashboard/calculators/saving-goals-calculator'
+    | '/dashboard'
+    | '/dashboard/calculators'
+    | '/dashboard/chat'
+    | '/dashboard/essentials'
+    | '/dashboard/learning'
+    | '/dashboard/user-settings'
+    | '/dashboard/essentials/$courseId'
+    | '/dashboard/learning/$courseId'
+    | '/dashboard/essentials/$courseId/lesson/$lessonId'
+    | '/dashboard/learning/$courseId/lesson/$lessonId'
   id:
     | '__root__'
     | '/'
+    | '/dashboard'
     | '/login'
     | '/onboarding'
-    | '/profile'
     | '/register'
-    | '/user-settings'
-    | '/chat'
     | '/cookie-policy'
     | '/intro'
     | '/pricing'
@@ -388,34 +416,36 @@ export interface FileRouteTypes {
     | '/terms-of-service'
     | '/author/import'
     | '/blogs/$blogId'
-    | '/calculators/auto-loan-calculator'
-    | '/calculators/compound-calculator'
-    | '/calculators/investment-calculator'
-    | '/calculators/mortgage-calculator'
-    | '/calculators/retirement-calculator'
-    | '/calculators/saving-goals-calculator'
     | '/author/'
     | '/blogs/'
-    | '/calculators/'
     | '/format/'
-    | '/learning/'
     | '/login/'
     | '/onboarding/'
-    | '/profile/'
     | '/register/'
-    | '/user-settings/'
-    | '/learning/$courseId/'
-    | '/learning/$courseId/lesson/$lessonId'
+    | '/dashboard/calculators/auto-loan-calculator'
+    | '/dashboard/calculators/compound-calculator'
+    | '/dashboard/calculators/investment-calculator'
+    | '/dashboard/calculators/mortgage-calculator'
+    | '/dashboard/calculators/retirement-calculator'
+    | '/dashboard/calculators/saving-goals-calculator'
+    | '/dashboard/_layout/'
+    | '/dashboard/calculators/'
+    | '/dashboard/chat/'
+    | '/dashboard/essentials/'
+    | '/dashboard/learning/'
+    | '/dashboard/user-settings/'
+    | '/dashboard/essentials/$courseId/'
+    | '/dashboard/learning/$courseId/'
+    | '/dashboard/essentials/$courseId/lesson/$lessonId'
+    | '/dashboard/learning/$courseId/lesson/$lessonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   LoginRouteRoute: typeof LoginRouteRouteWithChildren
   OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
-  ProfileRouteRoute: typeof ProfileRouteRouteWithChildren
   RegisterRouteRoute: typeof RegisterRouteRouteWithChildren
-  UserSettingsRouteRoute: typeof UserSettingsRouteRouteWithChildren
-  ChatRoute: typeof ChatRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
   IntroRoute: typeof IntroRoute
   PricingRoute: typeof PricingRoute
@@ -423,19 +453,9 @@ export interface RootRouteChildren {
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   AuthorImportRoute: typeof AuthorImportRoute
   BlogsBlogIdRoute: typeof BlogsBlogIdRoute
-  CalculatorsAutoLoanCalculatorRoute: typeof CalculatorsAutoLoanCalculatorRoute
-  CalculatorsCompoundCalculatorRoute: typeof CalculatorsCompoundCalculatorRoute
-  CalculatorsInvestmentCalculatorRoute: typeof CalculatorsInvestmentCalculatorRoute
-  CalculatorsMortgageCalculatorRoute: typeof CalculatorsMortgageCalculatorRoute
-  CalculatorsRetirementCalculatorRoute: typeof CalculatorsRetirementCalculatorRoute
-  CalculatorsSavingGoalsCalculatorRoute: typeof CalculatorsSavingGoalsCalculatorRoute
   AuthorIndexRoute: typeof AuthorIndexRoute
   BlogsIndexRoute: typeof BlogsIndexRoute
-  CalculatorsIndexRoute: typeof CalculatorsIndexRoute
   FormatIndexRoute: typeof FormatIndexRoute
-  LearningIndexRoute: typeof LearningIndexRoute
-  LearningCourseIdIndexRoute: typeof LearningCourseIdIndexRoute
-  LearningCourseIdLessonLessonIdRoute: typeof LearningCourseIdLessonLessonIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -475,32 +495,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CookiePolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/user-settings': {
-      id: '/user-settings'
-      path: '/user-settings'
-      fullPath: '/user-settings'
-      preLoaderRoute: typeof UserSettingsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -517,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -524,26 +530,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/user-settings/': {
-      id: '/user-settings/'
-      path: '/'
-      fullPath: '/user-settings/'
-      preLoaderRoute: typeof UserSettingsIndexRouteImport
-      parentRoute: typeof UserSettingsRouteRoute
-    }
     '/register/': {
       id: '/register/'
       path: '/'
       fullPath: '/register/'
       preLoaderRoute: typeof RegisterIndexRouteImport
       parentRoute: typeof RegisterRouteRoute
-    }
-    '/profile/': {
-      id: '/profile/'
-      path: '/'
-      fullPath: '/profile/'
-      preLoaderRoute: typeof ProfileIndexRouteImport
-      parentRoute: typeof ProfileRouteRoute
     }
     '/onboarding/': {
       id: '/onboarding/'
@@ -559,25 +551,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof LoginRouteRoute
     }
-    '/learning/': {
-      id: '/learning/'
-      path: '/learning'
-      fullPath: '/learning'
-      preLoaderRoute: typeof LearningIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/format/': {
       id: '/format/'
       path: '/format'
       fullPath: '/format'
       preLoaderRoute: typeof FormatIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/': {
-      id: '/calculators/'
-      path: '/calculators'
-      fullPath: '/calculators'
-      preLoaderRoute: typeof CalculatorsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blogs/': {
@@ -594,48 +572,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calculators/saving-goals-calculator': {
-      id: '/calculators/saving-goals-calculator'
-      path: '/calculators/saving-goals-calculator'
-      fullPath: '/calculators/saving-goals-calculator'
-      preLoaderRoute: typeof CalculatorsSavingGoalsCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/retirement-calculator': {
-      id: '/calculators/retirement-calculator'
-      path: '/calculators/retirement-calculator'
-      fullPath: '/calculators/retirement-calculator'
-      preLoaderRoute: typeof CalculatorsRetirementCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/mortgage-calculator': {
-      id: '/calculators/mortgage-calculator'
-      path: '/calculators/mortgage-calculator'
-      fullPath: '/calculators/mortgage-calculator'
-      preLoaderRoute: typeof CalculatorsMortgageCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/investment-calculator': {
-      id: '/calculators/investment-calculator'
-      path: '/calculators/investment-calculator'
-      fullPath: '/calculators/investment-calculator'
-      preLoaderRoute: typeof CalculatorsInvestmentCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/compound-calculator': {
-      id: '/calculators/compound-calculator'
-      path: '/calculators/compound-calculator'
-      fullPath: '/calculators/compound-calculator'
-      preLoaderRoute: typeof CalculatorsCompoundCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calculators/auto-loan-calculator': {
-      id: '/calculators/auto-loan-calculator'
-      path: '/calculators/auto-loan-calculator'
-      fullPath: '/calculators/auto-loan-calculator'
-      preLoaderRoute: typeof CalculatorsAutoLoanCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/blogs/$blogId': {
       id: '/blogs/$blogId'
       path: '/blogs/$blogId'
@@ -650,22 +586,170 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorImportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/learning/$courseId/': {
-      id: '/learning/$courseId/'
-      path: '/learning/$courseId'
-      fullPath: '/learning/$courseId'
-      preLoaderRoute: typeof LearningCourseIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/dashboard/user-settings/': {
+      id: '/dashboard/user-settings/'
+      path: '/user-settings'
+      fullPath: '/dashboard/user-settings'
+      preLoaderRoute: typeof DashboardUserSettingsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
     }
-    '/learning/$courseId/lesson/$lessonId': {
-      id: '/learning/$courseId/lesson/$lessonId'
+    '/dashboard/learning/': {
+      id: '/dashboard/learning/'
+      path: '/learning'
+      fullPath: '/dashboard/learning'
+      preLoaderRoute: typeof DashboardLearningIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/essentials/': {
+      id: '/dashboard/essentials/'
+      path: '/essentials'
+      fullPath: '/dashboard/essentials'
+      preLoaderRoute: typeof DashboardEssentialsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/chat/': {
+      id: '/dashboard/chat/'
+      path: '/chat'
+      fullPath: '/dashboard/chat'
+      preLoaderRoute: typeof DashboardChatIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/': {
+      id: '/dashboard/calculators/'
+      path: '/calculators'
+      fullPath: '/dashboard/calculators'
+      preLoaderRoute: typeof DashboardCalculatorsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/_layout/': {
+      id: '/dashboard/_layout/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardLayoutIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/saving-goals-calculator': {
+      id: '/dashboard/calculators/saving-goals-calculator'
+      path: '/calculators/saving-goals-calculator'
+      fullPath: '/dashboard/calculators/saving-goals-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsSavingGoalsCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/retirement-calculator': {
+      id: '/dashboard/calculators/retirement-calculator'
+      path: '/calculators/retirement-calculator'
+      fullPath: '/dashboard/calculators/retirement-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsRetirementCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/mortgage-calculator': {
+      id: '/dashboard/calculators/mortgage-calculator'
+      path: '/calculators/mortgage-calculator'
+      fullPath: '/dashboard/calculators/mortgage-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsMortgageCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/investment-calculator': {
+      id: '/dashboard/calculators/investment-calculator'
+      path: '/calculators/investment-calculator'
+      fullPath: '/dashboard/calculators/investment-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsInvestmentCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/compound-calculator': {
+      id: '/dashboard/calculators/compound-calculator'
+      path: '/calculators/compound-calculator'
+      fullPath: '/dashboard/calculators/compound-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsCompoundCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/calculators/auto-loan-calculator': {
+      id: '/dashboard/calculators/auto-loan-calculator'
+      path: '/calculators/auto-loan-calculator'
+      fullPath: '/dashboard/calculators/auto-loan-calculator'
+      preLoaderRoute: typeof DashboardCalculatorsAutoLoanCalculatorRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/learning/$courseId/': {
+      id: '/dashboard/learning/$courseId/'
+      path: '/learning/$courseId'
+      fullPath: '/dashboard/learning/$courseId'
+      preLoaderRoute: typeof DashboardLearningCourseIdIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/essentials/$courseId/': {
+      id: '/dashboard/essentials/$courseId/'
+      path: '/essentials/$courseId'
+      fullPath: '/dashboard/essentials/$courseId'
+      preLoaderRoute: typeof DashboardEssentialsCourseIdIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/learning/$courseId/lesson/$lessonId': {
+      id: '/dashboard/learning/$courseId/lesson/$lessonId'
       path: '/learning/$courseId/lesson/$lessonId'
-      fullPath: '/learning/$courseId/lesson/$lessonId'
-      preLoaderRoute: typeof LearningCourseIdLessonLessonIdRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/dashboard/learning/$courseId/lesson/$lessonId'
+      preLoaderRoute: typeof DashboardLearningCourseIdLessonLessonIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/essentials/$courseId/lesson/$lessonId': {
+      id: '/dashboard/essentials/$courseId/lesson/$lessonId'
+      path: '/essentials/$courseId/lesson/$lessonId'
+      fullPath: '/dashboard/essentials/$courseId/lesson/$lessonId'
+      preLoaderRoute: typeof DashboardEssentialsCourseIdLessonLessonIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
     }
   }
 }
+
+interface DashboardRouteRouteChildren {
+  DashboardCalculatorsAutoLoanCalculatorRoute: typeof DashboardCalculatorsAutoLoanCalculatorRoute
+  DashboardCalculatorsCompoundCalculatorRoute: typeof DashboardCalculatorsCompoundCalculatorRoute
+  DashboardCalculatorsInvestmentCalculatorRoute: typeof DashboardCalculatorsInvestmentCalculatorRoute
+  DashboardCalculatorsMortgageCalculatorRoute: typeof DashboardCalculatorsMortgageCalculatorRoute
+  DashboardCalculatorsRetirementCalculatorRoute: typeof DashboardCalculatorsRetirementCalculatorRoute
+  DashboardCalculatorsSavingGoalsCalculatorRoute: typeof DashboardCalculatorsSavingGoalsCalculatorRoute
+  DashboardLayoutIndexRoute: typeof DashboardLayoutIndexRoute
+  DashboardCalculatorsIndexRoute: typeof DashboardCalculatorsIndexRoute
+  DashboardChatIndexRoute: typeof DashboardChatIndexRoute
+  DashboardEssentialsIndexRoute: typeof DashboardEssentialsIndexRoute
+  DashboardLearningIndexRoute: typeof DashboardLearningIndexRoute
+  DashboardUserSettingsIndexRoute: typeof DashboardUserSettingsIndexRoute
+  DashboardEssentialsCourseIdIndexRoute: typeof DashboardEssentialsCourseIdIndexRoute
+  DashboardLearningCourseIdIndexRoute: typeof DashboardLearningCourseIdIndexRoute
+  DashboardEssentialsCourseIdLessonLessonIdRoute: typeof DashboardEssentialsCourseIdLessonLessonIdRoute
+  DashboardLearningCourseIdLessonLessonIdRoute: typeof DashboardLearningCourseIdLessonLessonIdRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardCalculatorsAutoLoanCalculatorRoute:
+    DashboardCalculatorsAutoLoanCalculatorRoute,
+  DashboardCalculatorsCompoundCalculatorRoute:
+    DashboardCalculatorsCompoundCalculatorRoute,
+  DashboardCalculatorsInvestmentCalculatorRoute:
+    DashboardCalculatorsInvestmentCalculatorRoute,
+  DashboardCalculatorsMortgageCalculatorRoute:
+    DashboardCalculatorsMortgageCalculatorRoute,
+  DashboardCalculatorsRetirementCalculatorRoute:
+    DashboardCalculatorsRetirementCalculatorRoute,
+  DashboardCalculatorsSavingGoalsCalculatorRoute:
+    DashboardCalculatorsSavingGoalsCalculatorRoute,
+  DashboardLayoutIndexRoute: DashboardLayoutIndexRoute,
+  DashboardCalculatorsIndexRoute: DashboardCalculatorsIndexRoute,
+  DashboardChatIndexRoute: DashboardChatIndexRoute,
+  DashboardEssentialsIndexRoute: DashboardEssentialsIndexRoute,
+  DashboardLearningIndexRoute: DashboardLearningIndexRoute,
+  DashboardUserSettingsIndexRoute: DashboardUserSettingsIndexRoute,
+  DashboardEssentialsCourseIdIndexRoute: DashboardEssentialsCourseIdIndexRoute,
+  DashboardLearningCourseIdIndexRoute: DashboardLearningCourseIdIndexRoute,
+  DashboardEssentialsCourseIdLessonLessonIdRoute:
+    DashboardEssentialsCourseIdLessonLessonIdRoute,
+  DashboardLearningCourseIdLessonLessonIdRoute:
+    DashboardLearningCourseIdLessonLessonIdRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
 
 interface LoginRouteRouteChildren {
   LoginIndexRoute: typeof LoginIndexRoute
@@ -691,18 +775,6 @@ const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
   OnboardingRouteRouteChildren,
 )
 
-interface ProfileRouteRouteChildren {
-  ProfileIndexRoute: typeof ProfileIndexRoute
-}
-
-const ProfileRouteRouteChildren: ProfileRouteRouteChildren = {
-  ProfileIndexRoute: ProfileIndexRoute,
-}
-
-const ProfileRouteRouteWithChildren = ProfileRouteRoute._addFileChildren(
-  ProfileRouteRouteChildren,
-)
-
 interface RegisterRouteRouteChildren {
   RegisterIndexRoute: typeof RegisterIndexRoute
 }
@@ -715,25 +787,12 @@ const RegisterRouteRouteWithChildren = RegisterRouteRoute._addFileChildren(
   RegisterRouteRouteChildren,
 )
 
-interface UserSettingsRouteRouteChildren {
-  UserSettingsIndexRoute: typeof UserSettingsIndexRoute
-}
-
-const UserSettingsRouteRouteChildren: UserSettingsRouteRouteChildren = {
-  UserSettingsIndexRoute: UserSettingsIndexRoute,
-}
-
-const UserSettingsRouteRouteWithChildren =
-  UserSettingsRouteRoute._addFileChildren(UserSettingsRouteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
   LoginRouteRoute: LoginRouteRouteWithChildren,
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
-  ProfileRouteRoute: ProfileRouteRouteWithChildren,
   RegisterRouteRoute: RegisterRouteRouteWithChildren,
-  UserSettingsRouteRoute: UserSettingsRouteRouteWithChildren,
-  ChatRoute: ChatRoute,
   CookiePolicyRoute: CookiePolicyRoute,
   IntroRoute: IntroRoute,
   PricingRoute: PricingRoute,
@@ -741,19 +800,9 @@ const rootRouteChildren: RootRouteChildren = {
   TermsOfServiceRoute: TermsOfServiceRoute,
   AuthorImportRoute: AuthorImportRoute,
   BlogsBlogIdRoute: BlogsBlogIdRoute,
-  CalculatorsAutoLoanCalculatorRoute: CalculatorsAutoLoanCalculatorRoute,
-  CalculatorsCompoundCalculatorRoute: CalculatorsCompoundCalculatorRoute,
-  CalculatorsInvestmentCalculatorRoute: CalculatorsInvestmentCalculatorRoute,
-  CalculatorsMortgageCalculatorRoute: CalculatorsMortgageCalculatorRoute,
-  CalculatorsRetirementCalculatorRoute: CalculatorsRetirementCalculatorRoute,
-  CalculatorsSavingGoalsCalculatorRoute: CalculatorsSavingGoalsCalculatorRoute,
   AuthorIndexRoute: AuthorIndexRoute,
   BlogsIndexRoute: BlogsIndexRoute,
-  CalculatorsIndexRoute: CalculatorsIndexRoute,
   FormatIndexRoute: FormatIndexRoute,
-  LearningIndexRoute: LearningIndexRoute,
-  LearningCourseIdIndexRoute: LearningCourseIdIndexRoute,
-  LearningCourseIdLessonLessonIdRoute: LearningCourseIdLessonLessonIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -17,7 +17,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import { LearningDropdown } from "@/components/ui/learning-dropdown";
 import lessonsData from "@/data/basic-lessons.json";
 import type { Lesson } from "@/types/learning.types";
-import BreadCrumbsHeader from "./layout/page-layout";
+import BreadCrumbsHeader from "./ui/breadcrumbs";
 // No JS truncate needed; use CSS line-clamp/truncate for all text truncation.
 
 // Grouping logic based on lesson titles/ids
@@ -182,7 +182,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-10 bg-white shadow-sm">
+    <header className="sticky top-0 z-10 bg-white shadow-sm sr-only">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 justify-between">
           {/* Logo and main navigation */}
@@ -196,7 +196,7 @@ export default function Header() {
               {/* Learning dropdown */}
               <LearningDropdown groups={groups} />
               <Link
-                to="/chat"
+                to="/dashboard/chat"
                 className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 activeProps={{
                   className:
@@ -293,7 +293,7 @@ export default function Header() {
                       {/* Menu items */}
                       <div className="py-1">
                         <Link
-                          to="/profile"
+                          to={'/profile' as any}
                           className="flex items-center px-4 py-2.5 text-sm text-gray-700 transition-colors duration-150 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
                           onClick={() => setIsMenuOpen(false)}
                         >
@@ -305,7 +305,7 @@ export default function Header() {
                           Profile
                         </Link>
                         <Link
-                          to="/user-settings"
+                          to={'/user-settings' as any}
                           className="flex items-center px-4 py-2.5 text-sm text-gray-700 transition-colors duration-150 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
                           onClick={() => setIsMenuOpen(false)}
                         >
@@ -469,7 +469,7 @@ export default function Header() {
                     >
                       {/* AI Learning Link - Mobile Adapted */}
                       <Link
-                        to="/learning"
+                        to={'/learning' as any}
                         className="group/ai flex w-full items-center gap-3 rounded-md bg-gradient-to-r from-[#7458FF] via-purple-500 to-fuchsia-500 p-3 text-sm font-medium text-white hover:opacity-90"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -541,7 +541,7 @@ export default function Header() {
                   )}
                 </AnimatePresence>
                 <Link
-                  to="/chat"
+                  to={'/chat' as any}
                   className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
                   activeProps={{
                     className:
@@ -552,7 +552,7 @@ export default function Header() {
                   AI Chat
                 </Link>
                 <Link
-                  to="/calculators"
+                  to={'/calculators' as any}
                   className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
                   activeProps={{
                     className:
@@ -614,14 +614,14 @@ export default function Header() {
                   </div>
                   <div className="mt-3 space-y-1">
                     <Link
-                      to="/user-settings"
+                      to={'/user-settings' as any}
                       className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Settings
                     </Link>
                     <Link
-                      to="/profile"
+                      to={'/profile' as any}
                       className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                       onClick={() => setIsMenuOpen(false)}
                     >

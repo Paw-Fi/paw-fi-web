@@ -5,7 +5,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/calculators/compound-calculator')({
+export const Route = createFileRoute('/dashboard/calculators/compound-calculator')({
   component: CompoundCalculatorPage,
   head: () => {
     const pageUrl = 'https://pawfi.app/calculators/compound-calculator';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate, useRouter } from '@tanstack/react-router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight, faHome, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
@@ -21,6 +21,7 @@ interface BreadcrumbProps {
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const router=useRouter();
   
   const handleGoBack = () => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -37,7 +38,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
     }
     
     // Default behavior - go up one level
-    navigate({ to: '..' });
+    router.history.back();
   };
   // Generate structured data for SEO
   useIsomorphicLayoutEffect(() => {

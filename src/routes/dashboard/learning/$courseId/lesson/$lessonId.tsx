@@ -11,11 +11,11 @@ import { QuestionContent } from "@/components/learning/question-content";
 import { QuestionHeader } from "@/components/learning/question-header";
 import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useAuth } from "@/contexts/auth-context";
-import { useUserCourses } from "@/services/course-service";
+import { useUserCourses, CourseDataSource } from "@/services/course-service";
 import type { Course, Lesson, Question, Tutorial } from "@/types/learning.types";
 import { seo } from "@/utils/seo";
 import basicCourse from "@/data/basic-lessons.json"; // Ensure this is imported
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link, useNavigate } from "@tanstack/react-router";
 import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
@@ -26,10 +26,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 import { ContentDisplay } from "@/components/learning/lesson/content-display";
 import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
-import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { faLightbulb, faArrowLeft, faCheckCircle, faLock } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-export const Route = createFileRoute("/learning/$courseId/lesson/$lessonId")({
-  component: LessonPage,
+export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$lessonId")({
+  component: () => <LessonPage dataSource="remote" />,
   head: ({ params }: { params: { courseId: string; lessonId: string } }) => {
     let lessonTitle = "Lesson";
     let lessonDescription = "Explore this lesson on Moneko.";
@@ -102,7 +103,12 @@ function transformQuestionsToFlashcards(lesson: Lesson|undefined) {
     data: any;
   }> = [];
   const questionItems: Array<{ type: "question"; data: any }> = [];
-  const tutorials = lesson?.tutorials??[];
+  
+  if (!lesson) {
+    return [];
+  }
+  
+  const tutorials = lesson.tutorials ?? [];
 
   // First collect all tutorial items
   tutorials?.forEach((tutorial) => {
@@ -127,7 +133,7 @@ function transformQuestionsToFlashcards(lesson: Lesson|undefined) {
   }
 
   // Then collect all question items
-  lesson.questions.forEach((question) => {
+  lesson.questions?.forEach((question) => {
     questionItems.push({
       type: "question",
       data: question,
@@ -138,19 +144,26 @@ function transformQuestionsToFlashcards(lesson: Lesson|undefined) {
   return [...contentItems, ...quizTransitionItem, ...questionItems];
 }
 
+export interface LessonPageProps {
+  /** Data source to use for fetching courses */
+  dataSource?: CourseDataSource;
+}
 
-function LessonPage() {
-  const { courseId, lessonId } = useParams({
-    from: "/learning/$courseId/lesson/$lessonId",
-  });
+function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
+  // Determine the correct route path based on dataSource
+  const routePath = dataSource === 'local' ? '/dashboard/essentials/$courseId/lesson/$lessonId' : '/dashboard/learning/$courseId/lesson/$lessonId';
+  const { courseId, lessonId } = useParams({ from: routePath });
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Fetch all user courses using the TanStack query
   const {
-    data: courses,
+    data: courses = [],
     isLoading: isCoursesLoading,
     isError: isCoursesError,
-  } = useUserCourses(user?.id ?? "", { enabled: !!user });
+  } = useUserCourses(user?.id ?? '', { 
+    enabled: !!user,
+    source: dataSource 
+  });
 
   // Adapter function to ensure lesson data conforms to the Lesson interface
   const adaptLesson = (lessonData: any): Lesson => {
@@ -222,11 +235,9 @@ function LessonPage() {
   const currentItem = flashcardItems[currentItemIndex];
 
   const handleBack = () => {
-    if (currentItemIndex > 0) {
-      setCurrentItemIndex(currentItemIndex - 1);
-    } else {
-      previousQuestion();
-    }
+    // Use the correct route based on dataSource
+    const basePath = dataSource === 'local' ? '/dashboard/essentials' : '/dashboard/learning';
+    navigate({ to: `${basePath}/${courseId}` });
   };
 
   // Create a custom check answer function that works with the current flashcard item
@@ -304,7 +315,8 @@ function LessonPage() {
   return (
     <div className="flex flex-1 flex-col bg-background px-4 py-8 lg:flex-row">
       <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
-        <div></div>
+        {/* Secondary Navigation Menu */}
+        
       </div>
       <div className="flex flex-col gap-4 lg:w-[50rem]">
         {/* Progress bar */}

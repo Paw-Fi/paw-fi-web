@@ -18,7 +18,7 @@ import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 
-export const Route = createFileRoute("/profile/")({
+export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
 });
 
@@ -115,7 +115,7 @@ function Profile() {
   }
 
   return (
-    <AmbientHaloLayout>
+    <>
       <div className="flex">
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Header with user info and controls */}
@@ -244,7 +244,7 @@ function Profile() {
         confirmText="Discard Changes"
         cancelText="Continue Editing"
       />
-    </AmbientHaloLayout>
+    </>
   );
 }
 

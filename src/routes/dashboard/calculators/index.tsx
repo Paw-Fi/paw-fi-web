@@ -14,7 +14,7 @@ import { motion, Variants } from 'framer-motion';
 import { seo } from '@/utils/seo';
 import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 
-export const Route = createFileRoute('/calculators/')({
+export const Route = createFileRoute('/dashboard/calculators/')({
   component: CalculatorsPage,
   head: () => {
     const pageUrl = 'https://moneko.io/calculators';
@@ -136,49 +136,47 @@ function CalculatorsPage() {
       title: 'Compound Interest',
       description: 'See your investments snowball with the magic of compound interest.',
       icon: faChartLine,
-      path: '/calculators/compound-calculator',
+      path: '/dashboard/calculators/compound-calculator',
       available: true
     },
     {
       title: 'Mortgage',
       description: 'Estimate monthly payments and understand your home loan better.',
       icon: faHome,
-      path: '/calculators/mortgage-calculator',
+      path: '/dashboard/calculators/mortgage-calculator',
       available: true
     },
     {
       title: 'Savings Goal',
       description: 'Chart a course to your financial dreams, one saving step at a time.',
       icon: faPiggyBank,
-      path: '/calculators/saving-goals-calculator',
+      path: '/dashboard/calculators/saving-goals-calculator',
       available: true
     },
     {
       title: 'Investment Growth',
       description: 'Project potential returns and explore different investment scenarios.',
       icon: faPercent, // Could use faSeedling or faChartPie for more visual variety if desired
-      path: '/calculators/investment-calculator',
+      path: '/dashboard/calculators/investment-calculator',
       available: true
     },
     {
       title: 'Auto Loan',
       description: 'Calculate car loan payments and total costs, including taxes and fees.',
       icon: faMoneyBillWave, // Could use faCar
-      path: '/calculators/auto-loan-calculator',
+      path: '/dashboard/calculators/auto-loan-calculator',
       available: true
     },
     {
       title: 'Retirement Planner',
       description: 'Map out your golden years with retirement savings and withdrawal estimates.',
       icon: faCreditCard, // Could use faUmbrellaBeach or faMountainSun
-      path: '/calculators/retirement-calculator',
+      path: '/dashboard/calculators/retirement-calculator',
       available: true
     },
   ];
 
   return (
-    <AmbientHaloLayout>
-
     <motion.div 
       className="container mx-auto px-4 py-12 md:py-20"
       variants={pageVariants}
@@ -264,6 +262,5 @@ function CalculatorsPage() {
         ))}
       </motion.div>
     </motion.div>
-    </AmbientHaloLayout>
   );
 }

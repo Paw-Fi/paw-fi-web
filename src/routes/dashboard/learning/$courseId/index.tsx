@@ -2,15 +2,15 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { useParams, Link } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/auth-context';
-import { useUserCourses } from '@/services/course-service';
-import { motion } from 'framer-motion';
-import type {Lesson } from '@/types/learning.types';
+import { useUserCourses, CourseDataSource } from '@/services/course-service';
+import { motion, Variants } from 'framer-motion';
+import type { Lesson, Course } from '@/types/learning.types';
 
 import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from '@/utils/seo';
 
-export const Route = createFileRoute("/learning/$courseId/")({
+export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   component: CourseDetailPage,
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'Course Details'; // Default title
@@ -74,19 +74,29 @@ export const Route = createFileRoute("/learning/$courseId/")({
 
 
 
-export default function CourseDetailPage() {
-  const { courseId } = useParams({ from: '/learning/$courseId/' });
+interface CourseDetailPageProps {
+  /** Data source to use for fetching courses */
+  dataSource?: CourseDataSource;
+}
+
+export default function CourseDetailPage({ dataSource = 'remote' }: CourseDetailPageProps) {
+  // Determine the correct route path based on dataSource
+  const routePath = dataSource === 'local' ? '/dashboard/essentials/$courseId/' : '/dashboard/learning/$courseId/';
+  const { courseId } = useParams({ from: routePath });
   const { user } = useAuth();
   const {
     data: courses = [],
     isLoading,
     isError,
     error,
-  } = useUserCourses(user?.id ?? '', { enabled: !!user });
-  const course = courseId === basicCourse.id ? basicCourse : courses.find((c) => c.course_id === courseId) || null;
+  } = useUserCourses(user?.id ?? '', { 
+    enabled: !!user,
+    source: dataSource 
+  });
+  const course = courseId === basicCourse.id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
 
   // Define animation variants for container and lesson cards
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: {},
     visible: {
       transition: {
@@ -95,7 +105,7 @@ export default function CourseDetailPage() {
     }
   };
   
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -110,7 +120,7 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="py-12 px-4 relative">      
+    <div className="py-12 px-4 relative">
       {isLoading ? (
  
           <div className="flex flex-col gap-4 items-center mb-8">
@@ -177,7 +187,7 @@ export default function CourseDetailPage() {
             <div className="p-8 text-center bg-white rounded-2xl shadow-md">
               <p className="text-gray-600 mb-4">No lessons available for this course.</p>
               <Link
-                to="/chat"
+                to="/dashboard/chat"
                 className="inline-flex items-center justify-center px-5 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -188,7 +198,7 @@ export default function CourseDetailPage() {
             </div>
           ) : (
             //@ts-ignore expect error
-            course.lessons.map((lesson: Lesson) => (
+            (course.lessons.map((lesson: Lesson) => (
               lesson.unlocked ? (
                 <motion.div
                   key={lesson.lesson_id}
@@ -197,7 +207,7 @@ export default function CourseDetailPage() {
                   className="lesson-card"
                 >
                   <Link
-                    to={`/learning/${courseId}/lesson/${lesson.lesson_id}`}
+                    to={`/dashboard/${dataSource === 'local' ? 'essentials' : 'learning'}/${courseId}/lesson/${lesson.lesson_id}`}
                     className="block bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer"
                   >
                   <div className="p-4">
@@ -270,10 +280,10 @@ export default function CourseDetailPage() {
                   </div>
                 </motion.div>
               )
-            ))
+            )))
           )}
         </motion.div>
       )}
     </div>
-  );
+  )
 }
