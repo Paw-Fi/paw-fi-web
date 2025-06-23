@@ -29,7 +29,7 @@ export function SignUpForm() {
           setVerificationSent(true);
         } else {
           // If no confirmation needed, navigate to chat
-          navigate({ to: '/chat' });
+          navigate({ to: '/dashboard/chat' });
         }
       }
     } catch (error: any) {

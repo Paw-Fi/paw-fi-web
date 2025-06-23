@@ -74,7 +74,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
   }, [items]);
 
   return (
-    <nav aria-label="Breadcrumb" className={`${className} flex items-center`}>
+    <nav aria-label="Breadcrumb" className={`${className} flex items-center bg-white/70 rounded-xl shadow-sm border border-gray-100/80 px-4 py-3`}>
       <button 
         onClick={handleGoBack}
         className="mr-4 text-gray-600 hover:text-primary transition-colors rounded-full hover:bg-gray-100 flex items-center justify-center"

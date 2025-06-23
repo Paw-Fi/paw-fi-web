@@ -45,13 +45,6 @@ function Profile() {
     updateWidgets,
   } = useDashboard(user?.id);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user && !isLoading) {
-      navigate({ to: "/login" });
-    }
-  }, [user, isLoading, navigate]);
-
   // Load saved dashboard configuration on initial render
   useEffect(() => {
     if (user && status === "idle") {

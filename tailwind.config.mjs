@@ -5,6 +5,7 @@ export default {
     extend: {
       colors: {
         background: '#F9FAFB',  
+        icon:"#AA76FF",
         secondary: '#836DFF',
         primary: '#7458FF',
         success: '#16CDA2',
