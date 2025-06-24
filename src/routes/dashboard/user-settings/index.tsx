@@ -16,12 +16,7 @@ export function UserSettings() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    if (!user) {
-      navigate({ to: '/login' });
-    }
-  }, [user, navigate]);
+
   
   if (!user) {
     return <div className="flex items-center justify-center h-screen">

@@ -313,12 +313,12 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     (currentItemIndex / flashcardItems.length) * 100;
 
   return (
-    <div className="flex flex-1 flex-col bg-background px-4 py-8 lg:flex-row">
+    <div className="flex flex-1 flex-col bg-background px-4 lg:flex-row">
       <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
         {/* Secondary Navigation Menu */}
         
       </div>
-      <div className="flex flex-col gap-4 lg:w-[50rem]">
+      <div className="flex flex-col gap-4 container">
         {/* Progress bar */}
         <LessonProgressBar progressPercentage={calculatedProgressPercentage} />
         {/* Main content */}

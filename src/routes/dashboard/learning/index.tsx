@@ -111,15 +111,6 @@ export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <p className="text-gray-600">
-          You must be logged in to view your courses.
-        </p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (

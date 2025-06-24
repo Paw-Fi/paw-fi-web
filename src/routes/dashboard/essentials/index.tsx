@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { LearningPage } from "../learning";
 import { seo } from "@/utils/seo";
+import basicLessonsData from "@/data/basic-lessons.json";
+
 
 export const Route = createFileRoute("/dashboard/essentials/")({
   component: Essentials,
@@ -28,5 +30,5 @@ export const Route = createFileRoute("/dashboard/essentials/")({
 
 function Essentials() {
   // Pass source='local' as a prop to LearningPage
-  return <LearningPage dataSource="local" />;
+  return <Navigate to={`/dashboard/essentials/${basicLessonsData.course_id}/lesson/${basicLessonsData.lessons[0].lesson_id}`} />
 }

@@ -419,7 +419,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-x-5">
             <Link
-              to="/login"
+              to="/dashboard/essentials"
               className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-purple-600 md:block"
             >
               Explore Courses
