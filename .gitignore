@@ -29,3 +29,5 @@ package-lock.json
 .nitro/
 
 .tanstack/
+
+src/routeTree.gen.ts

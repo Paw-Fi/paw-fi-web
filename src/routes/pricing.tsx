@@ -19,6 +19,8 @@ import { Switch } from "@/components/ui/switch";
 import React, { useState } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
+import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -250,12 +252,68 @@ function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(true);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleBillingToggle = (toggled: boolean) => {
     setIsAnnual(toggled);
     setBillingPeriodMessage(
       toggled ? "Displaying annual pricing." : "Displaying monthly pricing.",
     );
+  };
+  
+  const handleSubscribe = async (plan: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Get the current user ID if logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      
+      if (!userId) {
+        toast.error("Please sign in to subscribe");
+        navigate({ to: "/login" });
+        setIsLoading(false);
+        return;
+      }
+      
+      const billingInterval = isAnnual ? "yearly" : "monthly";
+      
+      // Create success and cancel URLs for the checkout session
+      const origin = window.location.origin;
+      const successUrl = `${origin}/payment-status?status=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/payment-status?status=canceled`;
+      
+      // Call the create-checkout-session function
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { 
+          plan, 
+          billingInterval, 
+          userId,
+          successUrl,
+          cancelUrl
+        },
+      });
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        toast.error('Failed to create checkout session. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Redirect to checkout page with plan and billing interval
+      navigate({
+        to: '/checkout',
+        search: { plan, billing: billingInterval },
+      });
+      
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error handling subscription:', err);
+      toast.error('An error occurred. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -383,7 +441,14 @@ function PricingPage() {
                 )}
 
                 <div
-                 onClick={()=>toast.info("Coming soon")}
+                 onClick={() => {
+                   if (tier.title.toLowerCase().includes("free")) {
+                     toast.info("Free plan is available after signup");
+                     return;
+                   }
+                   const planParam = tier.title.toLowerCase().includes("plus") ? "plus" : "premium";
+                   handleSubscribe(planParam);
+                 }}
                   className={`mt-auto block w-full cursor-pointer rounded-lg px-6 py-3 text-center text-base font-medium shadow-md transition-transform duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                     tier.highlight
                       ? "transform bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 focus-visible:ring-purple-500 group-hover:scale-105"

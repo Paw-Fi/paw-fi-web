@@ -24,12 +24,27 @@ import {
   faSignInAlt,
   faSignOut,
   faIdBadge,
+  faBars,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@assets/images/icon.svg";
 import { toast } from "react-toastify";
 import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import classNames from "classnames";
+
+// Custom CSS for hiding scrollbars while maintaining functionality
+const scrollbarHideStyles = `
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+`;
+
 
 // Type definitions for menu items
 interface SubMenuItem {
@@ -55,6 +70,7 @@ export function Dashboard() {
   const matchRoute = useMatchRoute();
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
   const { data: courses = [], isLoading: isCoursesLoading } = useUserCourses(
@@ -185,6 +201,7 @@ export function Dashboard() {
     },
   ];
 
+  // Effect to handle menu expansion based on current route
   useEffect(() => {
     const path = location.pathname;
     
@@ -212,7 +229,7 @@ export function Dashboard() {
     
     // If we're not in any submenu, clear the expanded menu
     setExpandedMenu(null);
-  }, [location, menuItems]);
+  }, [location.pathname]); // Only depend on pathname, not the entire menuItems array
 
   const handleSignOut = async () => {
     try {
@@ -231,19 +248,59 @@ export function Dashboard() {
     "/dashboard/user-settings",
   ];
 
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   return (
-    <div className="flex h-screen gap-3 bg-gradient-to-br from-background to-purple-300/30 p-4 font-sans">
+    <>
+      {/* Add style tag for custom scrollbar hiding */}
+      <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
+      <div className="h-screen overflow-hidden bg-gradient-to-br from-background to-purple-300/30 p-2 sm:p-4 font-sans">
+        <div className="flex flex-col md:flex-row h-full gap-3 overflow-hidden">
+      {/* Mobile Menu Toggle Button - Only visible on mobile */}
+      <div className="flex items-center justify-between md:hidden mb-3">
+        <Link to="/" className="flex items-center space-x-3">
+          <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
+            <img src={logo} className="h-6 w-6" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-gray-900">Moneko</span>
+        </Link>
+        <motion.button 
+          onClick={toggleMobileMenu}
+          className={classNames(
+            "rounded-lg p-2 text-gray-700 shadow-sm transition-all duration-300",
+            mobileMenuOpen ? "bg-red-100/70" : "bg-white/70"
+          )}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FontAwesomeIcon 
+            icon={mobileMenuOpen ? faTimes : faBars} 
+            className={classNames(
+              "h-6 w-6 transition-all duration-300",
+              mobileMenuOpen ? "text-red-500" : "text-gray-700"
+            )} 
+          />
+        </motion.button>
+      </div>
+
       {/* Main Sidebar - Card-based Design */}
       <motion.div
-        className="w-72"
-        initial={{ x: -20, opacity: 0 }}
+        className={classNames(
+          "flex-shrink-0 transition-all duration-300 ease-in-out",
+          mobileMenuOpen ? "block" : "hidden md:block",
+          "w-full md:w-56 md:max-h-full md:overflow-y-auto"
+        )}
+        initial={{ x: -64, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        transition={{ duration: 0.3 }}
       >
         <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
           <div className="flex-1 py-6">
-            {/* Logo Section */}
-            <Link to="/" className="mb-8 ml-4 flex items-center space-x-3">
+            {/* Logo Section - Hidden on mobile (shown in top bar) */}
+            <Link to="/" className="mb-8 ml-4 hidden md:flex items-center space-x-3">
               <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
                 <img src={logo} className="h-6 w-6" />
               </div>
@@ -253,7 +310,7 @@ export function Dashboard() {
             </Link>
 
             {/* Navigation Menu */}
-            <nav className="flex-1 space-y-2">
+            <nav className="flex-1 space-y-2 px-4">
               {menuItems.map((item) => (
                 <div key={item.id}>
                   <Link to={item.path} className="group">
@@ -321,73 +378,86 @@ export function Dashboard() {
             </nav>
           </div>
 
-          {/* User Footer */}
-          <motion.div
-            className="border-t border-gray-100 p-6"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            {user ? (
-              <div className="group flex items-center space-x-3 rounded-xl bg-gray-50 p-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
-                  {user.name
-                    ? user.name.charAt(0).toUpperCase()
-                    : user.email?.charAt(0).toUpperCase() || "U"}
+          {/* User Profile Section */}
+          <div className="border-t border-gray-100 p-4">
+            {isLoading ? (
+              <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
+                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                <div className="flex-1">
+                  <div className="mb-1 h-3 w-24 rounded bg-gray-200"></div>
+                  <div className="h-2 w-32 rounded bg-gray-200"></div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-gray-900">
-                    {user.name || "User"}
+              </div>
+            ) : user ? (
+              <div className="flex items-center space-x-3 rounded-lg px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
+                  {user.email?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    {"User"}
                   </p>
-                  <p className="truncate text-xs text-gray-500">{user.email}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
               </div>
             ) : (
               <Link to="/login" className="group">
                 <motion.div
-                  className="flex items-center justify-center space-x-2 rounded-lg border border-primary/30 px-4 py-3 text-primary transition-all duration-200 hover:bg-purple-50/50"
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-gray-50"
+                  whileHover={{ x: 3 }}
                 >
-                  <FontAwesomeIcon className="h-4 w-4" icon={faSignInAlt} />
-                  <span className="text-sm font-medium">Sign In</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
+                    <FontAwesomeIcon
+                      icon={faSignInAlt}
+                      className="h-5 w-5 text-primary"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      Sign In
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Access your account
+                    </p>
+                  </div>
                 </motion.div>
               </Link>
             )}
-          </motion.div>
+          </div>
         </div>
       </motion.div>
 
-      {/* Secondary Sidebar - Card Style */}
+      {/* Secondary Sidebar - Desktop Card Style or Mobile/Tablet Horizontal Scroll */}
       <AnimatePresence>
-        {expandedMenu?.submenu&&expandedMenu?.submenu.length&& (
-          <motion.div
-            className="w-56"
-            initial={{ x: -64, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -64, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <div className="h-full rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
-              <div className="p-6">
-                <div className="mb-6 flex items-center space-x-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
-                    <FontAwesomeIcon
-                      className="h-4 w-4 text-primary"
-                      icon={
-                        expandedMenu
-                          ?.icon || faHome
-                      }
-                    />
+        {expandedMenu?.submenu && expandedMenu?.submenu.length > 0 && (
+          <>
+            {/* Desktop Version - Vertical Sidebar */}
+            <motion.div
+              className={classNames(
+                "hidden lg:block w-56",
+                "transition-all duration-300 ease-in-out"
+              )}
+              initial={{ x: -64, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -64, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <div className="h-full rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
+                <div className="p-6">
+                  <div className="mb-6 flex items-center space-x-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                      <FontAwesomeIcon
+                        className="h-4 w-4 text-primary"
+                        icon={expandedMenu?.icon || faHome}
+                      />
+                    </div>
+                    <h3 className="text-sm font-bold capitalize text-gray-900">
+                      {expandedMenu.label}
+                    </h3>
                   </div>
-                  <h3 className="text-sm font-bold capitalize text-gray-900">
-                    {expandedMenu.label}
-                  </h3>
-                </div>
 
-                <div className="space-y-2">
-                  {expandedMenu?.submenu?.map((subItem, index) => (
+                  <div className="space-y-2">
+                    {expandedMenu?.submenu?.map((subItem, index) => (
                       <motion.div
                         key={subItem.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -401,7 +471,6 @@ export function Dashboard() {
                                 ? "border-l-3 border-primary bg-purple-50/50 font-medium text-primary"
                                 : "border-l-3 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
                             }`}
-                 
                             transition={{
                               type: "spring",
                               stiffness: 400,
@@ -413,17 +482,88 @@ export function Dashboard() {
                         </Link>
                       </motion.div>
                     ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+            
+            {/* Mobile/Tablet Version - Horizontal Scroll */}
+            <motion.div 
+              className="lg:hidden w-full mb-3 overflow-visible sticky top-0 z-10"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="rounded-xl border border-gray-100 bg-white/90 backdrop-blur-md shadow-md p-3">
+                <div className="flex items-center justify-between mb-2 px-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
+                      <FontAwesomeIcon
+                        className="h-3 w-3 text-primary"
+                        icon={expandedMenu?.icon || faHome}
+                      />
+                    </div>
+                    <h3 className="text-xs font-bold capitalize text-gray-900">
+                      {expandedMenu.label}
+                    </h3>
+                  </div>
+                  
+                  {/* Close submenu button on mobile */}
+                  <motion.button
+                    onClick={() => setExpandedMenu(null)}
+                    className="rounded-full bg-gray-100/70 p-1 text-gray-500"
+                    whileHover={{ scale: 1.1, backgroundColor: "#f3f4f6" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                  </motion.button>
+                </div>
+                
+                <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
+                  <div className="flex space-x-3 py-1">
+                    {expandedMenu?.submenu?.map((subItem, index) => (
+                      <motion.div
+                        key={subItem.id}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex-shrink-0"
+                      >
+                        <Link to={subItem.path} className="group">
+                          <motion.div
+                            className={classNames(
+                              "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
+                              isRouteActive(subItem.path) 
+                                ? "bg-gradient-to-r from-primary/10 to-purple-400/10 border-b-2 border-primary font-medium text-primary" 
+                                : "border-b-2 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
+                            )}
+                            whileHover={{ y: -2 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25,
+                            }}
+                          >
+                            {subItem.label}
+                          </motion.div>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <Outlet />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden">
-        {/* Header */}
+      <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
+        {/* Header - Always visible regardless of submenu state */}
         <motion.div
+          className="transition-all duration-300"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
@@ -433,7 +573,7 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="h-full flex-1 overflow-y-auto rounded-xl border border-gray-100/80 bg-white/70 px-6 pt-6 shadow-sm"
+          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 bg-white/80 backdrop-blur-md px-3 md:px-6 py-4 md:pt-6 shadow-md"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -504,7 +644,9 @@ export function Dashboard() {
               )}
            
         </motion.main>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
