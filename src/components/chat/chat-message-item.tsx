@@ -52,7 +52,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     <div
       className={`relative max-w-xs lg:max-w-md xl:max-w-lg rounded-2xl px-4 py-3 shadow-md ${isUser
           ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-none"
-          : "bg-[#F9F9F9] dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-none"
+          : "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-none"
         }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>

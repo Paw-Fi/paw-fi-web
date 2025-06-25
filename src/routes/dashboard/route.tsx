@@ -107,7 +107,19 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard" },
+    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard",submenu: [
+{
+  id:"view1",
+  label:"View 1",
+  path:"/dashboard"
+},
+{
+  id:"view2",
+  label:"View 2",
+  path:"/dashboard"
+}
+
+    ] },
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
@@ -351,7 +363,7 @@ export function Dashboard() {
       <AnimatePresence>
         {expandedMenu?.submenu&&expandedMenu?.submenu.length&& (
           <motion.div
-            className="w-64"
+            className="w-56"
             initial={{ x: -64, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -64, opacity: 0 }}
@@ -421,7 +433,7 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="min-h-full flex-1 overflow-y-auto rounded-xl border border-gray-100/80 bg-white/70 p-8 shadow-sm"
+          className="h-full flex-1 overflow-y-auto rounded-xl border border-gray-100/80 bg-white/70 px-6 pt-6 shadow-sm"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}

@@ -961,9 +961,9 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-white/20 backdrop-blur-2xl rounded-2xl border border-white/30 shadow-2xl">
+    <div className="flex w-full flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/20 p-4 shrink-0">
+      <div className="flex items-center justify-between border-b border-white/20">
         <div className="flex items-center gap-3">
           <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
             {iconContainer()}
@@ -977,7 +977,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       </div>
 
       {/* Messages Area */}
-      <div id="messages" className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" ref={chatContainerRef} onScroll={handleScroll}>
+      <div id="messages" className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" ref={chatContainerRef} onScroll={handleScroll}>
         {isBackendProcessing && (
           <div className="space-y-6 p-4 sm:p-6">
             {[1, 2, 3, 4, 5].map((i) => (

@@ -37,7 +37,7 @@ function Chat() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative flex flex-col items-center justify-center max-w-4xl mx-auto flex-1 h-[80vh] mt-8 px-4 lg:px-0" 
+      className="relative h-full flex flex-col items-center justify-center container flex-1 overflow-hidden max-w-[80rem] mx-auto" 
     >
 \        {/* The ChatInterface will now fill this container. 
             It is responsible for its own header, scrolling, and input.
