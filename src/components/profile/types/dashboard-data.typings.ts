@@ -254,7 +254,7 @@ export interface IChecklistData extends Array<IChecklistItem> {}
 // =============================================================================
 export interface IMetricCardWidget extends IBaseWidget {
   type: 'metricCard';
-  data: IMetricCardData;
+  data: IMetricCardItem[];
   displayMode?: 'carousel' | 'grid' | 'list'; // How to display multiple metrics
 }
 export interface IProgressBarListWidget extends IBaseWidget {
@@ -329,7 +329,7 @@ export interface IEnhancedSavingsGoalsWidget extends IBaseWidget {
 }
 export interface IInsuranceCoverageWidget extends IBaseWidget {
   type: 'insuranceCoverage';
-  data: IInsuranceCoverageData;
+  data: IInsuranceCoverageItem[];
   showPremiums?: boolean;
   showRenewalDates?: boolean;
 }
@@ -355,6 +355,13 @@ export interface IChecklistWidget extends IBaseWidget {
 // Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
 
 // Discriminated Union for all possible widget types
+export interface IPieChartWidget extends IBaseWidget {
+  type: 'pieChart';
+  data: IChartData;
+  height?: number;
+  showLegend?: boolean;
+}
+
 export type Widget =
   | IMetricCardWidget
   | IProgressBarListWidget
@@ -363,6 +370,7 @@ export type Widget =
   | IDataListWidget
   | IBarChartWidget
   | ILineChartWidget
+  | IPieChartWidget
   | IFinancialHealthScorecardWidget
   | INextBestActionWidget
   | IQuickCashFlowSummaryWidget

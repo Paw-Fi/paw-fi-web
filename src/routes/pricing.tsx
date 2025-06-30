@@ -1,17 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCheck,
-  faGift,
-  faRocket,
-  faMoneyBillWave,
-  faChartPie,
-  faUserGraduate,
-  faBullseye,
-  faCalendarCheck,
-  faStar,
-} from "@fortawesome/free-solid-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { motion, Variants } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
@@ -21,6 +8,9 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
+import { FeatureItem, PricingTier, getPricingTiers } from "@/data/pricing-plans";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck, faRocket } from "@fortawesome/free-solid-svg-icons";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -155,105 +145,15 @@ const cardVariants: Variants = {
   },
 };
 
-interface FeatureItem {
-  text: string;
-  icon: IconDefinition;
-}
-
-interface PricingTier {
-  title: string;
-  subtitle: string;
-  priceMonthly: string;
-  priceYearly?: string;
-  priceFrequencyText: string;
-  description: string;
-  features: FeatureItem[];
-  actionText: string;
-  actionLink: string;
-  highlight?: boolean;
-  trialText?: string;
-  audienceText?: string;
-  badgeText?: string;
-  bgColor: string; // Added
-  textColor: string; // Added
-  borderColor?: string; // Added
-}
-
-const pricingData: PricingTier[] = [
-  {
-    title: "Free Plan",
-    subtitle: "Starter Pack",
-    priceMonthly: "$0",
-    priceFrequencyText: "/month",
-    description:
-      "Perfect if you’re just starting your financial journey. Basic tools and community access.",
-    features: [
-      { text: "Core Financial Calculators", icon: faCheck },
-      { text: "Basic Budgeting Templates", icon: faCheck },
-      { text: "Community Forum Access", icon: faCheck },
-    ],
-    actionText: "Get Started for Free",
-    actionLink: "/signup?plan=free",
-    audienceText: "No credit card required",
-    bgColor: "bg-slate-50/60 dark:bg-slate-900/60",
-    textColor: "text-gray-800 dark:text-gray-100",
-    borderColor: "border-white/30 dark:border-slate-700/50",
-  },
-  {
-    title: "Plus Plan",
-    subtitle: "Money Mover",
-    priceMonthly: "$9",
-    priceYearly: "$79",
-    priceFrequencyText: "/month",
-    description:
-      "Great if you want deeper tools, personalized insights, and investing preparation.",
-    features: [
-      { text: "All Free Plan Features", icon: faCheck },
-      { text: "Advanced Calculators (Retirement, Investment)", icon: faCheck },
-      { text: "Personalized Financial Goal Setting", icon: faCheck },
-      { text: "Ad-Free Experience", icon: faCheck },
-      { text: "Priority Community Support", icon: faCheck },
-    ],
-    actionText: "Start 7-Day Free Trial",
-    actionLink: "/signup?plan=plus",
-    highlight: true,
-    audienceText: "Most Popular Choice",
-    badgeText: "Best Value",
-    bgColor: "bg-purple-50/70 dark:bg-purple-900/50 scale-105",
-    textColor: "text-gray-900 dark:text-purple-200",
-    borderColor:
-      "border-purple-500 dark:border-purple-400 shadow-purple-500/30",
-  },
-  {
-    title: "Premium Plan",
-    subtitle: "Invest & Thrive",
-    priceMonthly: "$19",
-    priceYearly: "$149",
-    priceFrequencyText: "/month",
-    description:
-      "For users serious about mastering money, advanced investing, and building long-term wealth.",
-    features: [
-      { text: "All Plus Plan Features", icon: faCheck },
-      { text: "Advanced Investment Portfolio Tracking", icon: faCheck },
-      { text: "Exclusive Webinars & Workshops", icon: faCheck },
-      { text: "Early Access to New Features", icon: faCheck },
-      { text: "Direct Expert Q&A Sessions", icon: faCheck },
-    ],
-    actionText: "Go Premium",
-    actionLink: "/signup?plan=premium",
-    audienceText: "For Serious Investors",
-    bgColor: "bg-slate-100/60 dark:bg-slate-800/60",
-    textColor: "text-gray-800 dark:text-gray-100",
-    borderColor: "border-white/30 dark:border-slate-700/50",
-  },
-];
-
 function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(true);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get pricing tiers from shared data module
+  const pricingTiers = getPricingTiers(isAnnual);
 
   const handleBillingToggle = (toggled: boolean) => {
     setIsAnnual(toggled);
@@ -361,10 +261,10 @@ function PricingPage() {
         </motion.header>
 
         <motion.div
-          className="grid grid-cols-1 items-stretch gap-8 lg:grid-cols-3"
+          className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
-          {pricingData.map((tier) => (
+          {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}

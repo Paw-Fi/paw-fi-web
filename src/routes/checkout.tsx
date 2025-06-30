@@ -5,12 +5,13 @@ import { seo } from "@/utils/seo";
 import { motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { faCheckCircle, faXmarkCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { toast } from "react-toastify";
 
 // Define the search params type for this route
 type CheckoutSearchParams = {
@@ -31,24 +32,12 @@ declare module "@tanstack/react-router" {
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
-  head: () => {
-    const pageUrl = "https://moneko.io/checkout";
-    const meta = seo({
-      title: "Checkout | Moneko",
-      description: "Complete your subscription purchase",
-      keywords: "checkout, payment, subscription, moneko",
-      image: "https://moneko.io/og-pricing.png",
-      url: pageUrl,
-    });
-
+  loader: () => {
     return {
-      meta,
-      link: [
-        {
-          rel: "canonical",
-          href: pageUrl,
-        },
-      ],
+      meta: seo({
+        title: "Checkout | Paw-Fi",
+        description: "Complete your subscription purchase.",
+      })
     };
   },
 });
@@ -56,19 +45,17 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
-  // Get search params from URL directly to avoid TypeScript issues
-  const urlParams = new URLSearchParams(window.location.search);
-  const plan = urlParams.get('plan') || "plus";
-  const billing = urlParams.get('billing') || "yearly";
-  const status = urlParams.get('status');
-  const sessionId = urlParams.get('session_id');
+  const { plan = "plus", billing = "yearly", status, session_id } = useSearch({ strict: false });
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed' | 'canceled'>(
-    status === 'success' ? 'success' : 
-    status === 'failed' ? 'failed' : 
-    status === 'canceled' ? 'canceled' : 'idle'
+  const [paymentStatus, setPaymentStatus] = useState<
+    "idle" | "processing" | "success" | "failed" | "canceled"
+  >(
+    status === "success" ? "success" :
+      status === "failed" ? "failed" :
+        status === "canceled" ? "canceled" : "idle"
   );
 
   // Load Stripe.js
@@ -98,35 +85,34 @@ function CheckoutPage() {
   useEffect(() => {
     // Handle payment status from URL parameters
     if (status) {
-      if (status === 'success' && sessionId) {
+      if (status === "success" && session_id) {
         // Redirect to payment status page with session ID
-        navigate({ 
-          to: '/payment-status', 
-          search: { 
-            status: 'success', 
-            session_id: sessionId 
-          } 
+        navigate({
+          to: "/payment-status",
+          search: {
+            status: "success",
+            session_id: session_id,
+          },
         });
         return;
-      } else if (status === 'failed') {
+      } else if (status === "failed") {
         // Redirect to payment status page with error
-        navigate({ 
-          to: '/payment-status', 
-          search: { 
-            status: 'failed', 
-            error: 'Payment failed. Please try again.' 
-          } 
+        navigate({
+          to: "/payment-status",
+          search: {
+            status: "failed",
+            error: "Payment failed. Please try again.",
+          },
         });
         return;
-      } else if (status === 'canceled') {
-        // Redirect to payment status page
-        navigate({ 
-          to: '/payment-status', 
-          search: { 
-            status: 'canceled' 
-          } 
+      } else if (status === "canceled") {
+        // Redirect to payment status page with canceled status
+        navigate({
+          to: "/payment-status",
+          search: {
+            status: "canceled",
+          },
         });
-        return;
       }
     }
     // If we have status parameters but didn't match any of the above conditions,
@@ -134,9 +120,9 @@ function CheckoutPage() {
     if (status) {
       return;
     }
-  }, [sessionId, status, navigate]);
+  }, [session_id, status, navigate]);
 
-  // Initialize Stripe and Express Checkout Element
+  // Initialize Stripe when loaded
   useEffect(() => {
     // Don't initialize Stripe if we're handling a payment status callback
     if (!stripeLoaded || status) return;
@@ -144,108 +130,113 @@ function CheckoutPage() {
     const initializeStripe = async () => {
       try {
         setIsLoading(true);
-        setPaymentStatus('processing');
-        
+        setPaymentStatus("processing");
+
         // @ts-ignore - Stripe is loaded via script tag
         const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+        // Check if user is logged in
+        if (!user || !user.id) {
+          console.error("User not logged in or missing ID");
+          setPaymentStatus("failed");
+          throw new Error("You must be logged in to make a purchase");
+        }
+
+        // Get the current origin safely
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
         
         // Create a payment session on the server
-        const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-          method: 'POST',
+        const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+          method: "POST",
           body: {
             plan,
             billingInterval: billing,
             // Add the success and cancel URLs with status parameters
-            successUrl: `${window.location.origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${window.location.origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
+            successUrl: `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
+            // Pass the user ID to the server
+            userId: user.id,
           },
         });
-        
+
         if (error) {
-          console.error('Supabase function error:', error);
-          setPaymentStatus('failed');
+          console.error("Supabase function error:", error);
+          setPaymentStatus("failed");
           throw new Error(error.message || "Failed to create checkout session");
         }
-        
+
         // Check if we have a client secret or checkout URL
         if (!data) {
-          console.error('No response data from server');
-          setPaymentStatus('failed');
+          console.error("No response data from server");
+          setPaymentStatus("failed");
           throw new Error("No response from server");
         }
-        
-        console.log('Response from server:', data);
-        
+
+        console.log("Response from server:", data);
+
         // If we have a checkout URL but no client secret, redirect to Stripe hosted checkout
         if (!data.clientSecret && data.checkoutUrl) {
-          console.log('No client secret, redirecting to Stripe hosted checkout:', data.checkoutUrl);
-          toast.info("Redirecting to Stripe checkout...");
-          window.location.href = data.checkoutUrl;
+          console.log("No client secret, redirecting to Stripe hosted checkout");
+          // Redirect to Stripe hosted checkout (only in browser)
+          if (typeof window !== 'undefined') {
+            window.location.href = data.checkoutUrl;
+          }
           return;
         }
-        
-        // If we have no client secret and no checkout URL, show error
-        if (!data.clientSecret && !data.checkoutUrl) {
-          console.error('Invalid response data - no client secret or checkout URL:', data);
-          setPaymentStatus('failed');
-          throw new Error("Invalid response from server - missing payment information");
+
+        if (!data.clientSecret) {
+          console.error("No client secret in response");
+          setPaymentStatus("failed");
+          throw new Error("Invalid payment session. Please try again.");
         }
-        
+
         const { clientSecret } = data;
-        
-        // Initialize Express Checkout Element
+
+        // Configure Stripe Elements
         const options = {
-          clientSecret,
+          clientSecret: data.clientSecret,
           appearance: {
-            theme: 'stripe',
+            theme: "stripe" as const,
             variables: {
-              colorPrimary: '#6366f1',
-              colorBackground: '#ffffff',
-              colorText: '#1f2937',
-              colorDanger: '#ef4444',
-              fontFamily: 'system-ui, sans-serif',
-              spacingUnit: '4px',
-              borderRadius: '8px',
+              colorPrimary: "#10b981",
+              colorBackground: "#ffffff",
+              colorText: "#1f2937",
+              colorDanger: "#ef4444",
+              fontFamily: "Inter, system-ui, sans-serif",
+              spacingUnit: "4px",
+              borderRadius: "8px",
             },
           },
-          // Customize the Express Checkout Element
           expressCheckout: {
-            buttonType: {
-              applePay: "buy",
-              googlePay: "buy",
-            },
+            buttonType: "pay",
           },
-          // Handle successful payment
           onComplete: () => {
-            setPaymentStatus('success');
-            toast.success("Payment successful! Redirecting to your dashboard...");
-            setTimeout(() => {
-              window.location.href = "/dashboard?payment=success";
-            }, 2000);
+            setPaymentStatus("success");
+            toast.success("Payment successful!");
           },
         };
-        
-        // Mount the Express Checkout Element
+
+        // Create and mount Express Checkout Element
         const elements = stripe.elements(options);
-        const expressCheckoutElement = elements.create('expressCheckout');
-        expressCheckoutElement.mount('#express-checkout-element');
-        
+        const expressCheckoutElement = elements.create("expressCheckout");
+        expressCheckoutElement.mount("#express-checkout-element");
+
         setIsLoading(false);
       } catch (err: unknown) {
-        console.error('Error initializing Stripe:', err);
-        setPaymentStatus('failed');
+        console.error("Error initializing Stripe:", err);
+        setPaymentStatus("failed");
         setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");
         setIsLoading(false);
       }
     };
 
     initializeStripe();
-  }, [stripeLoaded, plan, billing, status, navigate]);
+  }, [stripeLoaded, plan, billing, navigate, user, status]);
 
   // Helper function to render payment status UI
   const renderPaymentStatus = () => {
     switch (paymentStatus) {
-      case 'success':
+      case "success":
         return (
           <Alert variant="success" className="mb-6">
             <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500" />

@@ -13,42 +13,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Widget,
-  IDataListWidget,
-  IProgressBarListWidget,
   IBarChartWidget,
-  ILineChartWidget,
-  IDebtVisualizerWidget,
-  IQuickCashFlowSummaryWidget,
-  ITipCardWidget,
-  ICountdownCardWidget,
-  IMetricCardWidget,
-  IDataListItem,
-  IProgressBarListItem,
-  IChartData,
-  IChartDataPoint,
-  IDebtItem,
-  IDebtVisualizerData,
-  ICashFlowEntry,
-  IQuickCashFlowSummaryData,
-  ITipCardListItem,
-  ICountdownCardData,
-  IMetricCardItem,
-  IMetricTrend,
-  ITipCardData,
-  IChecklistData,
-  IFinancialHealthScorecardData,
-  IMetricCardData,
-  IProgressBarListData,
-  IChecklistWidget,
-  IFinancialHealthScorecardWidget,
-  IInsuranceCoverageWidget,
-  IInsuranceCoverageData,
-  IInsuranceCoverageItem,
   IChecklistItem,
-  INextBestActionData,
+  IChecklistWidget,
+  ICountdownCardData,
+  ICountdownCardWidget,
+  IDataListItem,
+  IDataListWidget,
+  IDebtItem,
+  IDebtVisualizerWidget,
   IEnhancedSavingsGoalsWidget,
+  IFinancialHealthScorecardData,
+  IFinancialHealthScorecardWidget,
+  IInsuranceCoverageItem,
+  IInsuranceCoverageWidget,
+  ILineChartWidget,
+  IMetricCardData,
+  IMetricCardWidget,
+  INextBestActionData,
+  INextBestActionWidget,
+  IPieChartWidget,
+  IProgressBarListItem,
+  IProgressBarListWidget,
+  IQuickCashFlowSummaryData,
+  IQuickCashFlowSummaryWidget,
+  IRetirementReadinessData,
   IRetirementReadinessWidget,
-  IRetirementReadinessData, // Added import
+  ITipCardData,
+  ITipCardWidget,
 } from "./types/dashboard-data.typings";
 // DnD Kit imports
 import {
@@ -101,6 +93,7 @@ import {
   faListCheck,
   faSave, // Added for Save button
   faUmbrellaBeach, // Added for Retirement Readiness
+  faChartPie, // Added for Pie Chart
   // faShieldAlt was already imported earlier, removed duplicate
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -112,6 +105,7 @@ import {
   SortableBarChartItem,
 } from "./widget-forms/BarChartForm";
 import { LineChartForm as LineChartFormExt } from "./widget-forms/LineChartForm";
+import { PieChartForm as PieChartFormExt } from "./widget-forms/PieChartForm";
 import { DebtVisualizerForm as DebtVisualizerFormExt } from "./widget-forms/DebtVisualizerForm";
 import { QuickCashFlowSummaryForm as QuickCashFlowSummaryFormExt } from "./widget-forms/QuickCashFlowSummaryForm";
 import { TipCardForm as TipCardFormExt } from "./widget-forms/TipCardForm";
@@ -160,6 +154,61 @@ function generateId(prefix: string): string {
 }
 
 export const widgetTypeConfig: WidgetTypeConfig = {
+  pieChart: {
+    component: PieChartFormExt as React.ComponentType<{
+      data: IPieChartWidget;
+      onDataChange: (data: IPieChartWidget) => void;
+    }>,
+    icon: faChartPie,
+    defaultData: {
+      id: generateId("widget-pc"),
+      type: "pieChart" as const,
+      title: "Expense Categories",
+      icon: "fas fa-chart-pie",
+      columnSpan: 1,
+      rowSpan: 1,
+      showLegend: true,
+      data: {
+        dataPoints: [
+          {
+            id: generateId("dp-pc1"),
+            label: "Housing",
+            value: 35,
+            color: "rgba(255, 99, 132, 0.8)",
+            displayOrder: 0,
+          },
+          {
+            id: generateId("dp-pc2"),
+            label: "Food",
+            value: 25,
+            color: "rgba(54, 162, 235, 0.8)",
+            displayOrder: 1,
+          },
+          {
+            id: generateId("dp-pc3"),
+            label: "Transportation",
+            value: 15,
+            color: "rgba(255, 206, 86, 0.8)",
+            displayOrder: 2,
+          },
+          {
+            id: generateId("dp-pc4"),
+            label: "Utilities",
+            value: 10,
+            color: "rgba(75, 192, 192, 0.8)",
+            displayOrder: 3,
+          },
+          {
+            id: generateId("dp-pc5"),
+            label: "Other",
+            value: 15,
+            color: "rgba(153, 102, 255, 0.8)",
+            displayOrder: 4,
+          },
+        ],
+      },
+    } as Omit<IPieChartWidget, "createdAt" | "updatedAt"> & { id: string },
+  },
   quickCashFlowSummary: {
     component: QuickCashFlowSummaryFormExt,
     icon: faExchangeAlt,

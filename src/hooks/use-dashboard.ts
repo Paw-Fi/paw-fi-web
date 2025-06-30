@@ -7,13 +7,18 @@ import {
   updateWidgets, 
   cancelEditing,
   setHasUnsavedChanges,
-  setConfirmModalOpen
+  setConfirmModalOpen,
+  setCurrentViewId
 } from '@/store/slices/dashboardSlice';
+import { useDashboardViewById, convertDashboardWidgetToWidget } from '@/lib/api/dashboard';
 import { Widget } from '@/components/profile/types/dashboard-data.typings';
+import { DashboardView, DashboardWidget } from '@/types/dashboard.types';
+import { useQuery } from '@tanstack/react-query';
 
 // Define localStorage keys as constants for reuse
 export const STORAGE_KEYS = {
-  DASHBOARD_DATA: 'pawfi-dashboard-data'
+  DASHBOARD_DATA: 'pawfi-dashboard-data',
+  CURRENT_VIEW_ID: 'pawfi-dashboard-view-id'
 };
 
 /**
@@ -30,7 +35,10 @@ export function useDashboard(userId?: string) {
     hasUnsavedChanges, 
     isSaving, 
     saveSuccess,
-    isConfirmModalOpen
+    isConfirmModalOpen,
+    views,
+    currentViewId,
+    isViewLoading
   } = useAppSelector(state => state.dashboard);
 
   // Load dashboard data
@@ -38,6 +46,45 @@ export function useDashboard(userId?: string) {
     if (userId) {
       dispatch(fetchDashboard(userId));
     }
+  }, [userId, dispatch]);
+
+  // Load a specific dashboard view using TanStack Query
+  const { data: viewData, isLoading: isViewDataLoading, error: viewError } = useDashboardViewById(
+    userId || '',
+    currentViewId || '',
+    {
+      enabled: !!userId && !!currentViewId
+    }
+  );
+  
+  // Handle view data changes with an effect
+  useEffect(() => {
+    if (viewData && viewData.widgets) {
+      const widgets = viewData.widgets.map(w => convertDashboardWidgetToWidget(w));
+      
+      dispatch(updateWidgets({ 
+        widgets, 
+        hasUnsavedChanges: false 
+      }));
+    }
+  }, [viewData, dispatch]);
+  
+  // Handle view errors with an effect
+  useEffect(() => {
+    if (viewError) {
+      console.error('Error loading dashboard view:', viewError);
+    }
+  }, [viewError]);
+
+  // Load a specific dashboard view
+  const loadDashboardView = useCallback((viewId: string) => {
+    if (!userId) return;
+    
+    // Set the current view ID in the Redux store
+    dispatch(setCurrentViewId(viewId));
+    
+    // The actual data fetching is handled by the useDashboardViewById hook above
+    // which will automatically trigger when currentViewId changes
   }, [userId, dispatch]);
 
   // Save dashboard data
@@ -132,9 +179,13 @@ export function useDashboard(userId?: string) {
     isSaving,
     saveSuccess,
     isConfirmModalOpen,
+    views,
+    currentViewId,
+    isViewLoading,
     
     // Actions
     loadDashboard,
+    loadDashboardView,
     saveDashboard: saveDashboardData,
     toggleEditMode,
     cancelEditing: handleCancelEditing,

@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
+import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
 
 // Add Deno namespace declaration for TypeScript
 declare const Deno: {
@@ -54,6 +55,15 @@ serve(async (req) => {
 
     // Parse the request body
     const { plan, billingInterval, successUrl, cancelUrl, userId } = await req.json()
+    
+    // Validate userId is a valid UUID
+    if (!userId || !validateUuid(userId)) {
+      console.error('Invalid or missing user ID:', userId)
+      return new Response(JSON.stringify({ error: 'Valid user ID is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Validate plan
     if (!SUBSCRIPTION_PRICES[plan] && plan !== 'free') {
@@ -97,7 +107,7 @@ serve(async (req) => {
         mode: 'subscription',
         success_url: successUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
-        client_reference_id: userId || 'anonymous', // Store user ID for reference (use 'anonymous' if not provided)
+        client_reference_id: userId, // Store user ID for reference (already validated as UUID)
         allow_promotion_codes: true, // Enable promotion code field in checkout
       });
       

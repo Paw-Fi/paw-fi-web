@@ -10,10 +10,11 @@ import {
   Title, 
   Tooltip, 
   Legend,
+  ArcElement,
   ChartOptions
 } from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-import { IBarChartWidget, ILineChartWidget, IQuickCashFlowSummaryWidget } from '../types/dashboard-data.typings';
+import { Bar, Line, Pie } from 'react-chartjs-2';
+import { IBarChartWidget, ILineChartWidget, IPieChartWidget, IQuickCashFlowSummaryWidget } from '../types/dashboard-data.typings';
 import { Widget } from './Widget';
 
 // Register ChartJS components
@@ -23,6 +24,7 @@ ChartJS.register(
   BarElement,
   LineElement,
   PointElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -209,6 +211,100 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
             responsive: true
           }} 
         />
+      </div>
+    </Widget>
+  );
+}
+
+// Pie Chart Widget
+export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
+  const { data: chartDataDefinition, title } = widget;
+
+  if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
+    return (
+      <Widget widget={widget}>
+        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+          No data available for this chart.
+        </div>
+      </Widget>
+    );
+  }
+
+  const labels = chartDataDefinition.dataPoints.map(dp => dp.label);
+  const values = chartDataDefinition.dataPoints.map(dp => dp.value);
+  
+  // Use specific colors from dataPoints if available, otherwise use a default palette
+  const backgroundColors = chartDataDefinition.dataPoints.map(dp => dp.color || 'rgba(99, 102, 241, 0.6)');
+  const borderColors = chartDataDefinition.dataPoints.map(dp => dp.color ? dp.color.replace('0.6', '1') : 'rgba(99, 102, 241, 1)');
+  // Default colors if not specified
+  const defaultBackgroundColors = [
+    'rgba(255, 99, 132, 0.8)',
+    'rgba(54, 162, 235, 0.8)',
+    'rgba(255, 206, 86, 0.8)',
+    'rgba(75, 192, 192, 0.8)',
+    'rgba(153, 102, 255, 0.8)',
+    'rgba(255, 159, 64, 0.8)',
+  ];
+  const defaultBorderColors = defaultBackgroundColors.map(color => color.replace('0.8', '1'));
+
+  const chartData = {
+    labels: labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: chartDataDefinition.dataPoints.every(dp => dp.color) ? backgroundColors : defaultBackgroundColors.slice(0, values.length),
+        borderColor: chartDataDefinition.dataPoints.every(dp => dp.color) ? borderColors : defaultBorderColors.slice(0, values.length),
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Pie chart specific options
+  const getPieChartOptions = (title: string) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: {
+          boxWidth: 12,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          font: {
+            size: 12,
+          },
+          color: '#6B7280',
+        },
+      },
+      title: {
+        display: false,
+        text: title,
+      },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        titleColor: '#1F2937',
+        bodyColor: '#4B5563',
+        borderColor: 'rgba(209, 213, 219, 0.5)',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        boxPadding: 4,
+        usePointStyle: true,
+      },
+    },
+  });
+  
+  const chartOptions = getPieChartOptions(title);
+
+  return (
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="w-full max-w-sm">
+          <Pie 
+            data={chartData} 
+            options={chartOptions} 
+          />
+        </div>
       </div>
     </Widget>
   );

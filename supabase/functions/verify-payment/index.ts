@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
+import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
 
 // Add Deno namespace declaration for TypeScript
 declare const Deno: {
@@ -69,6 +70,21 @@ serve(async (req) => {
 
     // Get the user ID from the session
     const userId = session.client_reference_id
+    
+    // Validate that userId is a valid UUID
+    if (!userId || !validateUuid(userId)) {
+      console.error('Invalid or missing user ID:', userId)
+      return new Response(
+        JSON.stringify({
+          verified: false,
+          message: 'Invalid or missing user ID',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
 
     // Get the subscription details from the session
     const subscriptionId = session.subscription as string
@@ -104,45 +120,79 @@ serve(async (req) => {
     })
 
     // Update the user's subscription in the database
-    if (userId) {
-      try {
-        // Check if user exists
-        const { data: userData, error: userError } = await supabase
-          .from('users')
+    // userId is already validated as a valid UUID
+    try {
+        // First check if a subscription record already exists for this user
+        const { data: existingSubscription, error: findError } = await supabase
+          .from('subscriptions')
           .select('id')
-          .eq('id', userId)
-          .single()
+          .eq('user_id', userId)
+          .maybeSingle()
 
-        if (userError || !userData) {
-          console.error('User not found:', userError || 'No user data')
-          // Continue with verification even if user update fails
-        } else {
-          // Update or insert subscription data
-          const { error: subscriptionError } = await supabase
+        console.log('Existing subscription check:', { existingSubscription, findError })
+
+        let subscriptionUpdateError = null
+
+        if (findError) {
+          console.error('Error checking for existing subscription:', findError)
+        }
+
+        // Prepare subscription data
+        const subscriptionData = {
+          user_id: userId,
+          stripe_subscription_id: subscriptionId,
+          stripe_customer_id: session.customer as string,
+          plan,
+          status,
+          current_period_end: currentPeriodEnd,
+          cancel_at_period_end: cancelAtPeriodEnd,
+          updated_at: new Date().toISOString()
+        }
+
+        // If subscription exists, update it
+        if (existingSubscription?.id) {
+          const { error } = await supabase
             .from('subscriptions')
-            .upsert(
-              {
-                user_id: userId,
-                stripe_subscription_id: subscriptionId,
-                stripe_customer_id: session.customer as string,
-                plan,
-                status,
-                current_period_end: currentPeriodEnd,
-                cancel_at_period_end: cancelAtPeriodEnd,
-              },
-              { onConflict: 'user_id' }
-            )
+            .update(subscriptionData)
+            .eq('user_id', userId)
 
-          if (subscriptionError) {
-            console.error('Error updating subscription:', subscriptionError)
-            // Continue with verification even if subscription update fails
-          }
+          subscriptionUpdateError = error
+          console.log('Subscription update result:', { error })
+        } else {
+          // Otherwise insert a new record
+          const { error } = await supabase
+            .from('subscriptions')
+            .insert({
+              ...subscriptionData,
+              created_at: new Date().toISOString()
+            })
+
+          subscriptionUpdateError = error
+          console.log('Subscription insert result:', { error })
+        }
+
+        if (subscriptionUpdateError) {
+          console.error('Error updating/inserting subscription:', subscriptionUpdateError)
+        } else {
+          console.log('Subscription successfully updated/inserted for user:', userId)
+          
+          // Double-check that the subscription was saved correctly
+          const { data: checkData, error: checkError } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', userId)
+            .single()
+            
+          console.log('Subscription verification check:', { 
+            saved: checkData ? true : false, 
+            error: checkError,
+            data: checkData 
+          })
         }
       } catch (dbError) {
         console.error('Database error:', dbError)
         // Continue with verification even if database operations fail
       }
-    }
 
     // Return success response
     return new Response(

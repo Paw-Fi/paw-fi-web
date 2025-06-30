@@ -1,17 +1,27 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Widget } from '@/components/profile/types/dashboard-data.typings';
-import { dashboardData as initialData } from '@/components/profile/data/profile-data';
-import { supabase } from '@/lib/supabase'; // Assuming you have a supabase client setup
-import { STORAGE_KEYS } from '@/hooks/use-dashboard';
+import { 
+  getAllDashboardViews, 
+  getDashboardViewById, 
+  getDefaultDashboardView,
+  updateDashboardWidget,
+  createDashboardViewFromTemplate,
+  convertDashboardWidgetToWidget,
+  reorderDashboardWidgets,
+  getAllDashboardTemplates
+} from '@/lib/api/dashboard';
+import { DashboardView, DashboardWidget } from '@/types/dashboard.types';
 
 // Define status type for better type safety
-export type DashboardStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
+export type DashboardStatus = 'idle' | 'loading' | 'succeeded' | 'failed' | 'no_views';
+export type TemplatesStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
-// Define the state type
+// Define the state type - keep the original property names
 interface DashboardState {
   data: Widget[] | null;
   originalData: Widget[] | null;
-  // expandedWidgets: Record<string, boolean>; // Removed
+  views: DashboardView[];
+  currentViewId: string | null;
   status: DashboardStatus;
   error: string | null;
   isEditMode: boolean;
@@ -20,13 +30,18 @@ interface DashboardState {
   saveSuccess: boolean;
   isConfirmModalOpen: boolean;
   hasInitialLoad: boolean;
+  isViewLoading: boolean;
+  templates: any[];
+  templatesStatus: TemplatesStatus;
+  templatesError: string | null;
 }
 
-// Initial state
+// Initial state - keep the original property names
 const initialState: DashboardState = {
-  data: [...initialData],
-  originalData: [...initialData],
-  // expandedWidgets: {}, // Removed
+  data: null,
+  originalData: null,
+  views: [],
+  currentViewId: null,
   status: 'idle',
   error: null,
   isEditMode: false,
@@ -34,10 +49,14 @@ const initialState: DashboardState = {
   isSaving: false,
   saveSuccess: false,
   isConfirmModalOpen: false,
-  hasInitialLoad: false
+  hasInitialLoad: false,
+  isViewLoading: false,
+  templates: [],
+  templatesStatus: 'idle',
+  templatesError: null
 };
 
-// Async thunks
+// Async thunks - keep the original function names
 export const fetchDashboard = createAsyncThunk(
   'dashboard/fetchDashboard',
   async (userId: string, { getState, rejectWithValue }) => {
@@ -49,29 +68,77 @@ export const fetchDashboard = createAsyncThunk(
         return state.dashboard.data;
       }
       
-      // For now, we'll simulate a delay to demonstrate loading state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // First, get all views for this user
+      const views = await getAllDashboardViews(userId);
       
-      // In a real implementation, fetch from Supabase
-      // const { data, error } = await supabase
-      //   .from('user_dashboards')
-      //   .select('dashboard_config')
-      //   .eq('user_id', userId)
-      //   .single();
-      
-      // if (error) throw error;
-      
-      // Get from localStorage as fallback
-      const savedConfig = localStorage.getItem(STORAGE_KEYS.DASHBOARD_DATA);
-      if (savedConfig) {
-        const parsedConfig = JSON.parse(savedConfig);
-        // Ensure we're returning an array
-        return Array.isArray(parsedConfig) ? parsedConfig : [...initialData];
+      // If no views exist, return a special status
+      if (!views || views.length === 0) {
+        return rejectWithValue('no_views');
       }
       
-      // If no saved config, use initial data
-      return [...initialData];
+      try {
+        // Try to fetch the default dashboard view
+        const result = await getDefaultDashboardView(userId);
+        
+        // Convert dashboard widgets to frontend widgets
+        const widgets = result.widgets.map(convertDashboardWidgetToWidget);
+        
+        return { views, currentView: result.view, widgets };
+      } catch (error) {
+        // If no default view exists, but we have other views, use the first one
+        if (views.length > 0) {
+          const result = await getDashboardViewById(userId, views[0].id);
+          const widgets = result.widgets.map(convertDashboardWidgetToWidget);
+          return { views, currentView: result.view, widgets };
+        }
+        
+        throw error;
+      }
     } catch (error) {
+      if ((error as Error).message.includes('no rows')) {
+        return rejectWithValue('no_views');
+      }
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+// Fetch available dashboard templates
+export const fetchDashboardTemplates = createAsyncThunk(
+  'dashboard/fetchDashboardTemplates',
+  async (_, { rejectWithValue }) => {
+    try {
+      const templates = await getAllDashboardTemplates();
+      
+      // If no templates are returned, return an empty array but don't reject
+      if (!templates || !Array.isArray(templates) || templates.length === 0) {
+        console.warn('No dashboard templates found or invalid response format');
+        return [];
+      }
+      
+      return templates;
+    } catch (error) {
+      console.error('Error fetching dashboard templates:', error);
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+// Create a new dashboard view from a template
+export const createDashboardViewFromTemplateThunk = createAsyncThunk(
+  'dashboard/createDashboardViewFromTemplate',
+  async ({ userId, templateId, viewName }: { userId: string, templateId: string, viewName: string }, { rejectWithValue }) => {
+    try {
+      const result = await createDashboardViewFromTemplate(userId, {
+        templateId,
+        viewName,
+        isDefault: true // Make this the default view
+      });
+      
+      const widgets = result.widgets.map(convertDashboardWidgetToWidget);
+      return { view: result.view, widgets };
+    } catch (error) {
+      console.error('Error creating dashboard view from template:', error);
       return rejectWithValue((error as Error).message);
     }
   }
@@ -79,26 +146,44 @@ export const fetchDashboard = createAsyncThunk(
 
 export const saveDashboard = createAsyncThunk(
   'dashboard/saveDashboard',
-  async ({ userId, dashboardConfig }: { userId: string, dashboardConfig: Widget[] }, { rejectWithValue }) => {
+  async ({ userId, dashboardConfig }: { userId: string, dashboardConfig: Widget[] }, { getState, rejectWithValue }) => {
     try {
-      // For now, we'll simulate a delay to demonstrate saving state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const state = getState() as { dashboard: DashboardState };
+      const viewId = state.dashboard.currentViewId;
       
-      // In a real implementation, save to Supabase
-      // const { error } = await supabase
-      //   .from('user_dashboards')
-      //   .upsert({ 
-      //     user_id: userId, 
-      //     dashboard_config: dashboardConfig 
-      //   });
+      if (!viewId) {
+        throw new Error('No current view selected');
+      }
       
-      // if (error) throw error;
+      // Update each widget in Supabase
+      const updatePromises = dashboardConfig.map(async (widget: Widget, index: number) => {
+        // Calculate position based on index (this is a simplified example)
+        const position_x = index % 2; // Example: 2 columns grid
+        const position_y = Math.floor(index / 2); // Example: row calculation
+        
+        return updateDashboardWidget(userId, widget.id, {
+          widgetId: widget.id,
+          title: widget.title,
+          icon: widget.icon,
+          column_span: widget.columnSpan as 1 | 2,
+          row_span: widget.rowSpan as 1 | 2,
+          position_x,
+          position_y,
+          widget_data: widget.data
+        });
+      });
       
-      // Save to localStorage as backup
-      localStorage.setItem(STORAGE_KEYS.DASHBOARD_DATA, JSON.stringify(dashboardConfig));
+      await Promise.all(updatePromises);
+      
+      // Reorder widgets if needed
+      await reorderDashboardWidgets(userId, {
+        viewId,
+        widgetIds: dashboardConfig.map(widget => widget.id)
+      });
       
       return dashboardConfig;
     } catch (error) {
+      console.error('Error saving dashboard:', error);
       return rejectWithValue((error as Error).message);
     }
   }
@@ -138,7 +223,7 @@ const dashboardSlice = createSlice({
     },
     reorderWidgets: (state, action: PayloadAction<Widget[]>) => {
       if (!state.data) {
-        state.data = [] ;
+        state.data = [];
       }
       state.data = action.payload;
       state.hasUnsavedChanges = JSON.stringify(state.data) !== JSON.stringify(state.originalData);
@@ -157,6 +242,38 @@ const dashboardSlice = createSlice({
     },
     clearSaveSuccess: (state) => {
       state.saveSuccess = false;
+    },
+    // New action to set the current view ID
+    setCurrentViewId: (state, action: PayloadAction<string>) => {
+      state.currentViewId = action.payload;
+    },
+    // Reset the error state
+    resetError: (state) => {
+      state.error = null;
+      state.status = 'idle';
+    },
+    // Reset templates error state
+    resetTemplatesError: (state) => {
+      state.templatesError = null;
+      state.templatesStatus = 'idle';
+    },
+    // Set default templates for development/testing
+    setDefaultTemplates: (state) => {
+      if (state.templates.length === 0) {
+        state.templates = [
+          {
+            id: 'default',
+            name: 'Default Dashboard',
+            description: 'A standard dashboard with common financial widgets'
+          },
+          {
+            id: 'minimal',
+            name: 'Minimal Dashboard',
+            description: 'A simplified dashboard with essential widgets only'
+          }
+        ];
+        state.templatesStatus = 'succeeded';
+      }
     }
   },
   extraReducers(builder) {
@@ -171,16 +288,110 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.data = action.payload;
-        state.originalData = action.payload;
+        
+        if (action.payload === 'no_views') {
+          state.status = 'no_views';
+          state.data = [];
+          state.originalData = [];
+          state.hasInitialLoad = true;
+          return;
+        }
+        
+        // Handle the response with views and widgets
+        if (action.payload && typeof action.payload === 'object' && 'views' in action.payload) {
+          state.views = action.payload.views;
+          state.currentViewId = action.payload.currentView.id;
+          state.data = action.payload.widgets;
+          state.originalData = [...action.payload.widgets];
+        } else {
+          // Fallback to the old format for backward compatibility
+          state.data = action.payload as Widget[];
+          state.originalData = [...(action.payload as Widget[])];
+        }
+        
         state.error = null;
         state.hasInitialLoad = true; // Mark initial load as complete
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload as string || 'Failed to load dashboard';
+        if (action.payload === 'no_views') {
+          state.status = 'no_views';
+        } else {
+          state.status = 'failed';
+          state.error = action.payload as string || 'Failed to load dashboard';
+        }
         state.hasInitialLoad = true; // Even on error, mark as loaded to prevent repeated loading
       })
+      
+      // Handle fetchDashboardTemplates
+      .addCase(fetchDashboardTemplates.pending, (state) => {
+        state.templatesStatus = 'loading';
+        state.templatesError = null;
+      })
+      .addCase(fetchDashboardTemplates.fulfilled, (state, action) => {
+        state.templatesStatus = 'succeeded';
+        
+        // If we got an empty array, set default templates for development
+        if (!action.payload || !Array.isArray(action.payload) || action.payload.length === 0) {
+          // Set default templates for development/testing
+          state.templates = [
+            {
+              id: 'default',
+              name: 'Default Dashboard',
+              description: 'A standard dashboard with common financial widgets'
+            },
+            {
+              id: 'minimal',
+              name: 'Minimal Dashboard',
+              description: 'A simplified dashboard with essential widgets only'
+            }
+          ];
+        } else {
+          state.templates = action.payload;
+        }
+      })
+      .addCase(fetchDashboardTemplates.rejected, (state, action) => {
+        state.templatesStatus = 'failed';
+        state.templatesError = action.payload as string || 'Failed to load templates';
+        
+        // Set default templates even on error for development/testing
+        state.templates = [
+          {
+            id: 'default',
+            name: 'Default Dashboard',
+            description: 'A standard dashboard with common financial widgets'
+          },
+          {
+            id: 'minimal',
+            name: 'Minimal Dashboard',
+            description: 'A simplified dashboard with essential widgets only'
+          }
+        ];
+      })
+      
+      // Handle createDashboardViewFromTemplate
+      .addCase(createDashboardViewFromTemplateThunk.pending, (state) => {
+        state.isSaving = true;
+      })
+      .addCase(createDashboardViewFromTemplateThunk.fulfilled, (state, action) => {
+        state.isSaving = false;
+        state.status = 'succeeded';
+        state.currentViewId = action.payload.view.id;
+        
+        // Add the new view to the views array
+        state.views.push(action.payload.view);
+        
+        state.data = action.payload.widgets;
+        state.originalData = [...action.payload.widgets];
+        
+        state.hasUnsavedChanges = false;
+        state.hasInitialLoad = true;
+      })
+      .addCase(createDashboardViewFromTemplateThunk.rejected, (state, action) => {
+        state.isSaving = false;
+        state.status = 'failed';
+        state.error = action.payload as string;
+      })
+      
       // Handle saveDashboard
       .addCase(saveDashboard.pending, (state) => {
         state.isSaving = true;
@@ -207,7 +418,7 @@ const dashboardSlice = createSlice({
   }
 });
 
-// Export actions and reducer
+// Export actions and reducer - keep the original export names
 export const { 
   setEditMode, 
   updateWidgets,
@@ -215,7 +426,11 @@ export const {
   cancelEditing,
   setConfirmModalOpen,
   setHasUnsavedChanges,
-  clearSaveSuccess
+  clearSaveSuccess,
+  setCurrentViewId,
+  resetError,
+  resetTemplatesError,
+  setDefaultTemplates
 } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

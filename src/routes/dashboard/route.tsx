@@ -123,19 +123,7 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard",submenu: [
-{
-  id:"view1",
-  label:"View 1",
-  path:"/dashboard"
-},
-{
-  id:"view2",
-  label:"View 2",
-  path:"/dashboard"
-}
-
-    ] },
+    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
@@ -192,6 +180,12 @@ export function Dashboard() {
           path: "/dashboard/calculators/saving-goals-calculator",
         },
       ],
+    },
+    {
+      id: "membership",
+      label: "Membership",
+      icon: faUser,
+      path: "/dashboard/membership",
     },
     {
       id: "user-settings",
@@ -389,15 +383,15 @@ export function Dashboard() {
                 </div>
               </div>
             ) : user ? (
-              <div className="flex items-center space-x-3 rounded-lg px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
+              <div className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden">
+                <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
                   {user.email?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
-                    {"User"}
+                    {user.user_metadata?.name || "User"}
                   </p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}ssssssss</p>
                 </div>
               </div>
             ) : (

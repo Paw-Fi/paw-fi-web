@@ -5,6 +5,7 @@ import { MetricCard } from './MetricCard';
 import { 
   BarChartWidget, 
   LineChartWidget, 
+  PieChartWidget,
   CashFlowWidget,
 } from './ChartWidgets';
 import { 
@@ -57,6 +58,8 @@ export function WidgetFactory({ widget, onToggleChecklistItem, controls }: Widge
       return renderWidget(BarChartWidget);
     case 'lineChart':
       return renderWidget(LineChartWidget);
+    case 'pieChart':
+      return renderWidget(PieChartWidget);
     case 'financialHealthScorecard':
       return renderWidget(FinancialHealthScorecardWidget);
     case 'nextBestAction':

@@ -2,6 +2,27 @@ import { Widget } from "../types/dashboard-data.typings";
 
 export const dashboardData: Widget[] =[
   {
+    "id": "expenseCategoryPieChart",
+    "type": "pieChart",
+    "title": "Monthly Expense Categories",
+    "icon": "fas fa-chart-pie",
+    "columnSpan": 1,
+    "data": {
+      "dataPoints": [
+        { "id": "chart-exp-cat-1", "label": "Housing", "value": 1200, "color": "#FF6384", "displayOrder": 1 },
+        { "id": "chart-exp-cat-2", "label": "Transportation", "value": 400, "color": "#36A2EB", "displayOrder": 2 },
+        { "id": "chart-exp-cat-3", "label": "Food", "value": 600, "color": "#FFCE56", "displayOrder": 3 },
+        { "id": "chart-exp-cat-4", "label": "Utilities", "value": 300, "color": "#4BC0C0", "displayOrder": 4 },
+        { "id": "chart-exp-cat-5", "label": "Entertainment", "value": 200, "color": "#9966FF", "displayOrder": 5 },
+        { "id": "chart-exp-cat-6", "label": "Other", "value": 150, "color": "#FF9F40", "displayOrder": 6 }
+      ],
+      "xAxisLabel": "Category",
+      "yAxisLabel": "Amount ($)"
+    },
+    "height": 280,
+    "showLegend": true
+  },
+  {
     "id": "keyMetricsDashboard",
     "type": "metricCard",
     "title": "Key Financial Overview",
