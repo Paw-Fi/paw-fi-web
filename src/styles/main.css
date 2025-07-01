@@ -1,8 +1,9 @@
-@import "./tailwind-themes.css";
+@import "./app.css";
 @import "./page-transitions.css";
 @import "./fonts.css";
 @import "./animations.css";
 @import "./image-choice-question.css";
+@import "./scrollbar.css";
 
 body {
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',

@@ -19,7 +19,7 @@ export function Onboarding() {
   }
   
   const handleComplete = () => {
-    navigate({ to: '/profile' });
+    navigate({ to: '/dashboard' });
   };
 
   return (

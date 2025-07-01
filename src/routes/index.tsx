@@ -2,14 +2,10 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   motion,
-  AnimatePresence,
   useAnimation,
-  useScroll,
-  useTransform,
-  easeInOut,
 } from "framer-motion";
 import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
@@ -18,56 +14,37 @@ import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
 import {
   fadeInUp,
   fadeInDown,
-  fadeInLeft,
-  scaleUp,
   elasticScale,
   staggerContainer,
   fadeIn,
-  floatAnimation,
 } from "@/lib/motion-variants";
 import { Button } from "@/components/ui/button";
-import banner from "@/assets/images/index/pawfi-banner.png";
-import banner3 from "@/assets/images/index/pawfi-banner3.png";
 import catCoin from "@/assets/images/icon.svg";
-import banner2 from "@/assets/images/index/pawfi-banner2.png";
-import waveBackground from "@/assets/images/index/homepage-bg.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
-  faGraduationCap,
-  faBookOpen,
-  faChalkboardTeacher,
-  faPuzzlePiece,
-  faBrain,
-  faCalculator,
-  faCommentsDollar,
-  faTasks,
-  faRobot,
-  faTimes,
   faPlus,
   faX,
   faLightbulb,
   faPaperPlane,
-  faChartLine,
   faLock,
-  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
-
+const DISCORD_URL = "https://discord.gg/RZdG7GpX";
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
-    const title = "Moneko: Learn Finance with Free Education & AI Tools";
+    const title = "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
     const description =
-      "Moneko offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
+      "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = "https://paw-fi.app/og-img.png";
-    const pageUrl = "https://pawfi.app/";
+    const pageUrl = "https://moneko.io/";
 
     const meta = seo({
       title: title,
@@ -144,7 +121,7 @@ export const Route = createFileRoute("/")({
       link: [
         {
           rel: "canonical",
-          href: "https://pawfi.app/",
+          href: "https://moneko.io/",
         },
       ],
       script: [
@@ -244,12 +221,12 @@ import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 function WaitlistForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open("https://discord.gg/RZdG7GpX", "_blank");
+    window.open(DISCORD_URL, "_blank");
   };
 
   return (
     <motion.div
-      className="rounded-3xl border border-white/20 bg-white/20 p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
+      className="rounded-3xl border border-white/20 bg-white/50 p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
       variants={fadeInUp}
       initial="hidden"
       whileInView="visible"
@@ -269,7 +246,7 @@ function WaitlistForm() {
           custom={0.2}
         >
           Be among the first to experience personalized financial education with
-          PawFi. Join our community for updates and beta access.
+          Moneko. Join our community for updates and beta access.
         </motion.p>
 
         <motion.div variants={fadeInUp} custom={0.3}>
@@ -379,76 +356,18 @@ export default function HomePage() {
 
     // Navigate after animation completes with adjusted timing for smoother experience
     setTimeout(() => {
-      navigate({ to: "/chat", search: { q: chatQuery } });
+      navigate({ to: "/dashboard/chat", search: { q: chatQuery } });
     }, 500);
   };
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const howItWorksRef = useRef<HTMLDivElement>(null);
-  const toolkitRef = useRef<HTMLDivElement>(null);
-  const basicLessonsRef = useRef<HTMLDivElement>(null);
-  const waitlistRef = useRef<HTMLDivElement>(null);
-  // We only need to keep refs that are used for other purposes than animation triggering
-  const catRef = useRef<HTMLImageElement>(null);
 
-  // Controls for staggered animations
-  const learningControls = useAnimation();
-
-  // For the cat animation, we need to handle the floating effect separately
-  const [catAnimationState, setCatAnimationState] = useState("hidden");
-
-  useEffect(() => {
-    // Start with the initial animation
-    setCatAnimationState("visible");
-
-    // After the initial animation completes, switch to floating animation
-    const timer = setTimeout(() => {
-      setCatAnimationState("floating");
-    }, 1000); // Matches the duration of the initial animation
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Create a scroll animation value for parallax effect
-  const { scrollY } = useScroll();
-
-  // Create spring-like scroll values for jellyfish movement with fluid easing
-  const jellyfishY = useTransform(
-    scrollY,
-    [0, 500, 1000, 1500],
-    [0, 50, -30, 20],
-    { ease: easeInOut },
-  );
-
-  const jellyfishRotate = useTransform(scrollY, [0, 800, 1600], [0, 5, -3], {
-    ease: easeInOut,
-  });
-
-  const jellyfishScale = useTransform(
-    scrollY,
-    [0, 700, 1400],
-    [1, 1.05, 0.98],
-    { ease: easeInOut },
-  );
-
-  // Tentacle movement values that respond to scroll
-  const tentacle1Y = useTransform(
-    scrollY,
-    [0, 400, 800, 1200],
-    [0, 30, 15, 40],
-    { ease: easeInOut },
-  );
-
-  const tentacle2Y = useTransform(
-    scrollY,
-    [0, 400, 800, 1200],
-    [0, 20, 40, 25],
-    { ease: easeInOut },
-  );
 
   return (
     <div className="relative min-h-screen bg-[#f5f3ff]">
       {/* Enhanced ambient halo background with scroll animations */}
       <AmbientHalo />
+      
+      {/* Hidden H1 for SEO */}
+      <h1 className="sr-only">Learn How to Save and Start Investing for Beginners with Moneko, Your AI Money Coach</h1>
 
       {/* Navigation */}
       <nav className="sticky top-0 z-50">
@@ -458,9 +377,7 @@ export default function HomePage() {
               <img
                 src={catCoin}
                 alt="Moneko Logo"
-                className="h-8 w-8"
-                width="32"
-                height="32"
+                className="size-10"               
               />
               <span className="text-xl font-semibold text-slate-800">
                 Moneko
@@ -468,13 +385,13 @@ export default function HomePage() {
             </Link>
             <div className="hidden items-center gap-x-6 md:flex">
               <Link
-                to="/learning"
+                to={'/dashboard/learning'}
                 className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
               >
                 Learning
               </Link>
               <Link
-                to="/calculators"
+                to={'/dashboard/calculators'}
                 className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
               >
                 Calculators
@@ -485,17 +402,30 @@ export default function HomePage() {
               >
                 Blogs
               </Link>
+              <Link
+                to="/pricing"
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
+              >
+                Pricing
+              </Link>
+              <a
+                href={DISCORD_URL}
+                target="_blank"
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
+              >
+                Community
+              </a>
             </div>
           </div>
           <div className="flex items-center gap-x-5">
             <Link
-              to="/login"
+              to="/dashboard/essentials"
               className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-purple-600 md:block"
             >
               Explore Courses
             </Link>
             <Link
-              to="/chat"
+              to="/dashboard/chat"
               className="font-medium text-purple-600 hover:text-purple-800"
             >
               <Button className="bg-purple-600 hover:bg-purple-700">
@@ -513,7 +443,7 @@ export default function HomePage() {
           {/* Heading */}
           <div className="mb-12 text-center">
             <motion.h2
-              className="mb-3 text-4xl font-bold md:text-5xl"
+              className="mb-3 text-4xl font-bold md:text-5xl mt-24"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -573,7 +503,7 @@ export default function HomePage() {
                   value={chatQuery}
                   onChange={(e) => setChatQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask PawFi to create personalized financial journey for my..."
+                  placeholder="Ask Moneko to create personalized financial journey for my..."
                   className="w-full border-none bg-transparent px-6 py-3 text-gray-700 placeholder-gray-400 placeholder:pl-2 transition-all duration-300 ease-in-out focus:outline-none outline-none ring-0 focus:ring-0 focus:shadow-none"
                   aria-label="Ask a financial question"
                   ref={inputRef}
@@ -631,7 +561,7 @@ export default function HomePage() {
                     handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent);
                   }
                 }}
-                className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
+                className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-400 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
                 aria-label="Send message"
                 animate={iconControls}
               >
@@ -640,21 +570,8 @@ export default function HomePage() {
             </motion.div>
           </motion.div>
 
-          {/* Button */}
-          <motion.div
-            className="mb-16 flex justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            viewport={{ once: true }}
-          >
-            <Button className="bg-purple-600 px-8 py-3 text-lg text-white shadow-lg hover:bg-purple-700">
-              Start Your Journey Today
-            </Button>
-          </motion.div>
-
           {/* Video Cards with Seamless Integration */}
-          <div className="grid gap-8 md:grid-cols-2">
+          <div className="grid gap-8 md:grid-cols-2 mt-24">
             {/* AI Chat Animation Card */}
             <motion.div
               className="group relative overflow-hidden rounded-3xl"
@@ -668,7 +585,7 @@ export default function HomePage() {
               {/* Glowing border effect */}
 
               {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/30 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
+              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/80">
                 <div className="relative flex aspect-square items-center justify-center p-2">
                   <Lottie
                     animationData={aiChatAnimation}
@@ -679,7 +596,7 @@ export default function HomePage() {
 
                 {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-purple-600/80 to-transparent p-4 pt-12 sm:p-6"
+                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
                   style={{ transform: 'translateY(0)' }}
                 >
                   <h3 className="text-lg font-medium text-white">
@@ -705,7 +622,7 @@ export default function HomePage() {
               {/* Glowing border effect */}
 
               {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/30 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
+              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
                 <div className="relative flex aspect-square items-center justify-center p-2">
                   <Lottie
                     animationData={badgeUnlockAnimation}
@@ -893,13 +810,13 @@ export default function HomePage() {
             </motion.h3>
             <motion.ul className="space-y-2" variants={staggerContainer}>
               <motion.li variants={fadeInUp} custom={0.4}>
-                <Link to="/learning" className="text-gray-400 hover:text-white">
+                <Link to="/dashboard/essentials" className="text-gray-400 hover:text-white">
                   AI Learning
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.5}>
                 <Link
-                  to="/learning/$courseId"
+                  to="/dashboard/learning/$courseId"
                   params={{ courseId: "your-2025-guide-to-investing" }}
                   className="text-gray-400 hover:text-white"
                 >
@@ -908,14 +825,14 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.6}>
                 <Link
-                  to="/calculators"
+                  to="/dashboard/calculators"
                   className="text-gray-400 hover:text-white"
                 >
                   Financial Calculators
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.7}>
-                <Link to="/chat" className="text-gray-400 hover:text-white">
+                <Link to="/dashboard/chat" className="text-gray-400 hover:text-white">
                   Chat with AI
                 </Link>
               </motion.li>

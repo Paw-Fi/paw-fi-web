@@ -50,7 +50,7 @@ id: string (unique identifier)
 
 title: string
 
-icon: string (Must be a valid Lucide React icon name: Sparkles, PiggyBank, Briefcase, Handshake, TrendingUp, DollarSign, Calendar, Target, Lightbulb, Link, Wallet, Receipt, CreditCard, Banknote, ShieldCheck, BarChart2, LineChartIcon, ChevronsRight, Home, Car)
+icon: string (Must be a valid FontAwesome React icon name: "faSparkles", "faPiggyBank", "faBriefcase", "faHandshake", "faTrendingUp", "faDollarSign", "faCalendar", "faTarget", "faLightbulb", "faLink", "faWallet", "faReceipt", "faCreditCard", "faBanknote", "faShieldCheck", "faBarChart2", "faLineChartIcon", "faChevronsRight", "faHome", "faCar")
 
 columnSpan: 1 | 2 (Widgets will occupy 1 or 2 columns in a 2-column grid layout on large screens, and always 2 columns on small screens).
 

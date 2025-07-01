@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 
 export interface IBaseWidget {
   id: string; // Unique identifier for the widget itself (Mandatory)
+  type: string;
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
   columnSpan: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
@@ -28,7 +29,11 @@ export interface IMetricCardItem {
   goalLabel?: string; // (Optional) Label for the goal associated with progress
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface IMetricCardData extends Array<IMetricCardItem> {}
+export interface IMetricCardData {
+  title?: string; // Optional title for the whole card
+  description?: string; // Optional description for the whole card
+  metrics: IMetricCardItem[]; // Array of individual metrics
+}
 
 // 2. PROGRESS BAR LIST - Enhanced with IDs for CRUD
 export interface IProgressBarListItem {
@@ -75,6 +80,10 @@ export interface ICountdownCardData {
   days: number; // (Mandatory) Number of days remaining
   image: string; // (Mandatory) URL for an icon or small image
   targetDate?: string; // (Optional) The specific target date (e.g., "2025-11-20")
+  showDays?: boolean;    // (Optional) Whether to display the days part
+  showHours?: boolean;   // (Optional) Whether to display the hours part
+  showMinutes?: boolean; // (Optional) Whether to display the minutes part
+  showSeconds?: boolean; // (Optional) Whether to display the seconds part
 }
 
 // 5. DATA LIST - Enhanced with IDs
@@ -143,7 +152,7 @@ export interface ICashFlowEntry {
   title: string; // (Mandatory) Name of the income/expense item (e.g., "Salary", "Rent")
   value: number; // (Mandatory) The monetary amount
   category?: string; // (Optional) Further sub-categorization (e.g., "Primary Income", "Housing")
-  frequency?: 'one-time' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'; // (Optional) How often this entry occurs
+    frequency?: 'one-time' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly'; // (Optional) How often this entry occurs
   isRecurring?: boolean; // (Optional) Is this a recurring entry?
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
@@ -170,19 +179,20 @@ export interface IDebtVisualizerData extends Array<IDebtItem> {}
 
 // 11. RETIREMENT READINESS - Now supports multiple scenarios
 export interface IRetirementScenario {
-  id: string; // (Mandatory) Unique ID for the retirement scenario
-  scenarioName: string; // (Mandatory) e.g., "Conservative", "Aggressive", "Current Path"
-  score: number; // (Mandatory) Assessment score for this scenario (e.g., 1-100)
-  status: 'On Track' | 'Ahead' | 'Behind' | 'Needs Significant Work'; // (Mandatory) Status for this scenario
+  id: string; // (Mandatory) Unique ID for the scenario
+  scenarioName: string; // (Mandatory) e.g., "Current Path"
+  score: number; // (Mandatory) e.g., 65
+  status: string; // (Mandatory) e.g., "Needs Significant Work"
   projectionAmount: number; // (Mandatory) Projected retirement savings amount
   projectionDate: string; // (Mandatory) Age or date of projected amount (e.g., "Age 67", "2055")
   explanation: string; // (Mandatory) Explanation for this scenario's assessment
-  assumptions?: string; // (Optional) What this scenario assumes (e.g., "7% annual return, $500/month contribution")
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
+  assumptions: string; // (Mandatory) What this scenario assumes
+  displayOrder: number; // (Mandatory) Numeric hint for display sorting
 }
+
 export interface IRetirementReadinessData {
-  scenarios: IRetirementScenario[]; // (Mandatory) Array of different retirement scenarios
-  currentScenarioId?: string; // (Optional) ID of the currently active/selected scenario
+  scenarios: IRetirementScenario[]; // (Mandatory) Array of retirement scenarios
+  currentScenarioId: string; // (Mandatory) ID of the currently active/selected scenario
 }
 
 // 12. ENHANCED SAVINGS GOALS - Already array-based, adding IDs
@@ -202,18 +212,26 @@ export interface IEnhancedSavingsGoalsData extends Array<IEnhancedSavingsGoalIte
 
 // 13. INSURANCE COVERAGE - Enhanced with IDs
 export interface IInsuranceCoverageItem {
-  id: string; // (Mandatory) Unique ID for the insurance item
-  type: string; // (Mandatory) e.g., "Health", "Life", "Home", "Auto"
-  provider?: string; // (Optional) Insurance company name
-  policyNumber?: string; // (Optional) Policy number
-  coverage: string; // (Mandatory) Brief details of coverage (e.g., "$500k, comprehensive")
-  premium: number; // (Mandatory) Monthly/annual premium amount
-  status: 'Adequate' | 'Potential Gap' | 'Review Recommended'; // (Mandatory) Assessment status
-  suggestion?: string; // (Optional) Suggestion if status is not 'Adequate'
-  renewalDate?: string; // (Optional) Policy renewal date (e.g., "2026-03-01")
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
+  id: string;
+  type: string; // Insurance type (e.g., "Health Insurance", "Auto Insurance")
+  provider: string; // Provider name (e.g., "MediCare Plus", "AutoSecure")
+  coverage: string; // Coverage details as a string (e.g., "$1M annual limit, $5k deductible")
+  premium: number; // Monthly premium amount
+  status: string; // Status like "Adequate", "Review Recommended", etc.
+  suggestion?: string; // Optional suggestion for improvement
+  renewalDate?: string; // Renewal date in ISO format or YYYY-MM-DD
+  displayOrder: number; // Mandatory for drag-and-drop ordering
+  
+  // Legacy fields - keeping for backward compatibility
+  policyName?: string;
+  coverageAmount?: number;
+  policyType?: 'life' | 'health' | 'auto' | 'home' | 'other';
+  notes?: string;
 }
-export interface IInsuranceCoverageData extends Array<IInsuranceCoverageItem> {}
+
+export interface IInsuranceCoverageData {
+  items: IInsuranceCoverageItem[];
+}
 
 // 14. CHECKLIST - Enhanced (already had IDs)
 export interface IChecklistItem {
@@ -237,7 +255,7 @@ export interface IChecklistData extends Array<IChecklistItem> {}
 // =============================================================================
 export interface IMetricCardWidget extends IBaseWidget {
   type: 'metricCard';
-  data: IMetricCardData;
+  data: IMetricCardItem[];
   displayMode?: 'carousel' | 'grid' | 'list'; // How to display multiple metrics
 }
 export interface IProgressBarListWidget extends IBaseWidget {
@@ -312,7 +330,7 @@ export interface IEnhancedSavingsGoalsWidget extends IBaseWidget {
 }
 export interface IInsuranceCoverageWidget extends IBaseWidget {
   type: 'insuranceCoverage';
-  data: IInsuranceCoverageData;
+  data: IInsuranceCoverageItem[];
   showPremiums?: boolean;
   showRenewalDates?: boolean;
 }
@@ -338,6 +356,13 @@ export interface IChecklistWidget extends IBaseWidget {
 // Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
 
 // Discriminated Union for all possible widget types
+export interface IPieChartWidget extends IBaseWidget {
+  type: 'pieChart';
+  data: IChartData;
+  height?: number;
+  showLegend?: boolean;
+}
+
 export type Widget =
   | IMetricCardWidget
   | IProgressBarListWidget
@@ -346,6 +371,7 @@ export type Widget =
   | IDataListWidget
   | IBarChartWidget
   | ILineChartWidget
+  | IPieChartWidget
   | IFinancialHealthScorecardWidget
   | INextBestActionWidget
   | IQuickCashFlowSummaryWidget

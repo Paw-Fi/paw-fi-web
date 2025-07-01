@@ -25,3 +25,9 @@ package-lock.json
 .output/
 
 .vinxi/
+
+.nitro/
+
+.tanstack/
+
+src/routeTree.gen.ts

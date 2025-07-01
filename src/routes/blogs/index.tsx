@@ -17,8 +17,8 @@ export const Route = createFileRoute("/blogs/")({
     const title = "Financial Education Blog | Moneko";
     const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from Moneko.";
     const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, Moneko blog";
-    const imageUrl = "https://pawfi.app/og-blog.png";
-    const pageUrl = "https://pawfi.app/blogs";
+    const imageUrl = "https://moneko.io/og-blog.png";
+    const pageUrl = "https://moneko.io/blogs";
 
     const meta = seo({
       title,
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/blogs/")({
         "name": "Moneko",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://pawfi.app/icon.svg"
+          "url": "https://moneko.io/icon.svg"
         }
       },
       "mainEntity": {
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/blogs/")({
         "itemListElement": blogs.slice(0, 10).map((blog, index) => ({
           "@type": "ListItem",
           "position": index + 1,
-          "url": `https://pawfi.app/blogs/${blog.slug}`
+          "url": `https://moneko.io/blogs/${blog.slug}`
         }))
       }
     };

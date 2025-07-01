@@ -30,5 +30,50 @@ declare module '@tanstack/react-router' {
     '/cookie-policy': {
       parentRoute: RegisteredRoutes['/']
     }
+    '/profile': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/user-settings': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/register': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/login': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/onboarding': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/pricing': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/dashboard': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/dashboard/learning': {
+      parentRoute: RegisteredRoutes['/dashboard']
+    }
+    '/dashboard/learning/$courseId': {
+      parentRoute: RegisteredRoutes['/dashboard/learning']
+    }
+    '/dashboard/learning/$courseId/lesson/$lessonId': {
+      parentRoute: RegisteredRoutes['/dashboard/learning/$courseId']
+    }
+    '/dashboard/essentials': {
+      parentRoute: RegisteredRoutes['/dashboard']
+    }
+    '/dashboard/essentials/$courseId': {
+      parentRoute: RegisteredRoutes['/dashboard/essentials']
+    }
+    '/dashboard/essentials/$courseId/lesson/$lessonId': {
+      parentRoute: RegisteredRoutes['/dashboard/essentials/$courseId']
+    }
+    '/blogs/$blogId': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/author/import': {
+      parentRoute: RegisteredRoutes['/']
+    }
   }
 }

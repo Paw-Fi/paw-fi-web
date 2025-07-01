@@ -3,10 +3,11 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { motion, useAnimation, AnimatePresence } from "framer-motion";
+import { motion, useAnimation, AnimatePresence, Variants, Variant } from "framer-motion";
 
 // Import the unlockNextLesson function - we'll use this directly in the component
 import { unlockNextLesson } from './hooks/unlock-next-lesson';
+import { CourseDataSource } from '@/services/course-service';
 
 interface CompletionDisplayProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface CompletionDisplayProps {
   lessonTitle?: string; // The completed lesson title
   lessonId?: string; // Added explicit lessonId prop for direct access
   courseId?: string; // <-- add courseId as a prop
+  dataSource?: CourseDataSource; // Add dataSource prop to determine navigation path
   reward?: {
     amount: number;
     unit: string;
@@ -52,22 +54,23 @@ export function CompletionDisplay({
   emoji = "🎉",
   isSuccess,
   onCustomAction,
+  dataSource = 'remote',
 }: CompletionDisplayProps) {
   // Animation controls for staggered animations
   const controls = useAnimation();
   
   // Define animation variants
-  const fadeInUp = {
+  const fadeInUp: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 15 } }
   };
   
-  const fadeInScale = {
+  const fadeInScale: Variants = {
     hidden: { opacity: 0, scale: 0.8 },
     visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 400, damping: 15 } }
   };
   
-  const bounceAnimation = {
+  const bounceAnimation: Variants = {
     hidden: { scale: 1 },
     visible: { scale: 1, y: 0 },
     bounce: { 
@@ -76,12 +79,12 @@ export function CompletionDisplay({
         repeat: 1, 
         repeatType: "mirror" as const, 
         duration: 0.5, 
-        ease: "easeOut" 
+        ease: "easeOut" as const
       } 
     }
   };
   
-  // Confetti animation variants
+  // Confetti animation variants - using custom type instead of Variants due to function variant
   const confettiAnimation = {
     hidden: { opacity: 0, y: -10 },
     visible: (i: number) => ({
@@ -93,10 +96,10 @@ export function CompletionDisplay({
         duration: Math.random() * 3 + 2,
         repeat: Infinity,
         delay: Math.random() * 2,
-        ease: "linear"
+        ease: "linear" as const
       }
     })
-  };
+  } as const; // Using const assertion instead of explicit typing
   
   // Start animations when modal is opened
   useEffect(() => {
@@ -423,7 +426,7 @@ export function CompletionDisplay({
               // If this is a success completion and we have the lessonId, unlock next lesson
               if (isSuccess && lessonId) {
                 console.log('Attempting to unlock next lesson with ID:', lessonId);
-                const unlocked = unlockNextLesson(lessonId, courseId);
+                const unlocked = unlockNextLesson(lessonId, courseId || '');
                 if (unlocked) {
                   console.log('Successfully unlocked next lesson');
                 } else {
@@ -435,7 +438,9 @@ export function CompletionDisplay({
               
               // Use immediate navigation to avoid background help tips interference
               if (actionText === "Continue Learning" && courseId) {
-                window.location.href = `/learning/${courseId}`;
+                // Use the correct path based on dataSource
+                const basePath = dataSource === 'local' ? 'essentials' : 'learning';
+                window.location.href = `/dashboard/${basePath}/${courseId}`;
               } else {
                 onClose();
               }

@@ -1,12 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { Course, Tutorial, ContentBlockType } from '../types/learning.types';
 
-// --- Types ---
-import type { Course } from '../types/learning.types';
+import BasicLessons from '@/data/basic-lessons.json';
 
+/**
+ * Data source type for course fetching
+ */
+export type CourseDataSource = 'remote' | 'local';
 
-// --- RAW ASYNC FUNCTION ---
-export async function getUserCourses(userId: string): Promise<Course[]> {
+/**
+ * Options for course fetching
+ */
+export interface CourseOptions {
+  /** Whether the query is enabled */
+  enabled?: boolean;
+  /** Data source to use (remote API or local data) */
+  source?: CourseDataSource;
+}
+
+/**
+ * Fetch courses from remote API
+ */
+export async function getRemoteUserCourses(userId: string): Promise<Course[]> {
   const { data, error } = await supabase.functions.invoke('get-user-courses', {
     method: 'POST',
     body: { userId },
@@ -15,11 +31,56 @@ export async function getUserCourses(userId: string): Promise<Course[]> {
   return data.courses as Course[];
 }
 
-// --- TANSTACK QUERY HOOK ---
-export function useUserCourses(userId: string, options?: { enabled?: boolean }) {
+/**
+ * Get essential courses from local data
+ */
+export function getEssentialCourses(): Promise<Course[]> {
+  // Transform BasicLessons to match the Course type structure
+  const transformedCourse: Course = {
+    ...BasicLessons,
+    lessons: BasicLessons.lessons.map(lesson => ({
+      ...lesson,
+      id: lesson.lesson_id, // Ensure id field is present
+      tutorials: lesson.tutorials.map((tutorial, index) => ({
+        ...tutorial,
+        id: `tutorial-${index}`,
+        tutorial_id: `tutorial-${index}`,
+        lesson_id: lesson.lesson_id
+      })) as Tutorial[],
+      questions: lesson.questions.map(question => ({
+        ...question,
+        // Transform content_blocks to match ContentBlock type if they exist
+        content_blocks: question.content_blocks ? 
+          question.content_blocks.map(block => ({
+            ...block,
+            type: block.type as ContentBlockType
+          })) : 
+          undefined
+      }))
+    }))
+  };
+  
+  // Wrap in Promise to match the API signature
+  return Promise.resolve([transformedCourse]);
+}
+
+/**
+ * React hook for fetching user courses with Tanstack Query
+ * @param userId - User ID to fetch courses for
+ * @param options - Query options including data source
+ */
+export function useUserCourses(userId: string, options?: CourseOptions) {
+  const source = options?.source || 'remote';
+  
   return useQuery<Course[]>({
-    queryKey: ['user-courses', userId],
-    queryFn: async () => getUserCourses(userId),
+    // Include source in queryKey for proper caching
+    queryKey: ['user-courses', userId, source],
+    queryFn: async () => {
+      if (source === 'local') {
+        return getEssentialCourses();
+      }
+      return getRemoteUserCourses(userId);
+    },
     enabled: !!userId && (options?.enabled ?? true),
   });
 }

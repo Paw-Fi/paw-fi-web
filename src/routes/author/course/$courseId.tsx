@@ -30,7 +30,7 @@
 //       console.error('Failed to parse courses from localStorage for meta tags:', e);
 //     }
 
-//     const pageUrl = `https://pawfi.app/author/course/${params.courseId}`;
+//     const pageUrl = `https://moneko.io/author/course/${params.courseId}`;
 //     const keywords = `course authoring, edit course, manage lessons, Moneko, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}`;
 
 //     const meta = seo({
@@ -50,7 +50,7 @@
 //       "publisher": {
 //         "@type": "Organization",
 //         "name": "Moneko",
-//         "url": "https://pawfi.app/"
+//         "url": "https://moneko.io/"
 //       }
 //     };
 

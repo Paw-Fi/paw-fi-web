@@ -40,7 +40,7 @@ export const Route = createFileRoute("/intro")({
     const description = "Moneko offers free financial education, AI lessons & tools to manage money. Start your financial literacy journey & gain confidence!";
     const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = 'https://paw-fi.app/og-img.png';
-    const pageUrl = 'https://pawfi.app/';
+    const pageUrl = 'https://moneko.io/';
 
     const meta = seo({
       title: title,
@@ -117,7 +117,7 @@ export const Route = createFileRoute("/intro")({
       link: [
         {
           rel: 'canonical',
-          href: 'https://pawfi.app/'
+          href: 'https://moneko.io/'
         }
       ],
       script: [

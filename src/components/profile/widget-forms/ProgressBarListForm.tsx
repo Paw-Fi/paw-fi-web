@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { IProgressBarListWidget, IProgressBarListData, IProgressBarListItem } from '../types/dashboard-data.typings';
+import { IProgressBarListWidget, IProgressBarListItem, IProgressBarListData } from '../types/dashboard-data.typings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,34 +43,16 @@ interface WidgetFormProps<T> {
   onDataChange: (data: T) => void;
 }
 
-export function ProgressBarListForm({ 
-  data: widgetData, 
-  onDataChange 
-}: WidgetFormProps<IProgressBarListWidget>) {
-  // Initialize local state with the items from widgetData.data (which is an array)
-  const [items, setItems] = useState<IProgressBarListItem[]>(() => {
-    return Array.isArray(widgetData.data) ? widgetData.data : [];
-  });
+export const ProgressBarListForm: React.FC<WidgetFormProps<IProgressBarListWidget>> = ({ data: widgetData, onDataChange }) => {
+  const [items, setItems] = useState<IProgressBarListItem[]>(widgetData.data || []);
 
-  const [isDragging, setIsDragging] = useState(false);
-  
-  // Update local state when widgetData changes
   useEffect(() => {
-    if (Array.isArray(widgetData.data)) {
-      setItems(widgetData.data);
-    }
+    setItems(widgetData.data || []);
   }, [widgetData.data]);
-  
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+
+  const propagateChangesUp = (updatedItems: IProgressBarListItem[]) => {
+    onDataChange({ ...widgetData, data: updatedItems });
+  };
 
   const handleItemChange = (index: number, field: keyof IProgressBarListItem, value: any) => {
     if (index < 0 || index >= items.length) return;
@@ -83,10 +65,7 @@ export function ProgressBarListForm({
     setItems(newItems);
     
     // Propagate changes up to parent
-    onDataChange({
-      ...widgetData,
-      data: newItems
-    });
+    propagateChangesUp(newItems);
   };
 
   const addItem = useCallback(() => {
@@ -105,11 +84,8 @@ export function ProgressBarListForm({
     setItems(newItems);
     
     // Propagate changes up to parent
-    onDataChange({
-      ...widgetData,
-      data: newItems,
-    });
-  }, [items, widgetData, onDataChange]);
+    propagateChangesUp(newItems);
+  }, [items]);
 
   const removeItem = useCallback((index: number) => {
     if (index < 0 || index >= items.length) return;
@@ -127,43 +103,44 @@ export function ProgressBarListForm({
     setItems(reorderedItems);
     
     // Propagate changes up to parent
-    onDataChange({
-      ...widgetData,
-      data: reorderedItems,
-      sortBy: 'custom' as const
-    });
-  }, [items, widgetData, onDataChange]);
+    propagateChangesUp(reorderedItems);
+  }, [items]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex(item => item.id === active.id);
-      const newIndex = items.findIndex(item => item.id === over.id);
+      const oldIndex = items.findIndex((item) => item.id === active.id.toString());
+      const newIndex = items.findIndex((item) => item.id === over.id.toString());
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newItems = arrayMove([...items], oldIndex, newIndex).map((item, index) => ({
+        const newOrderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({
           ...item,
           displayOrder: index,
         }));
         
-        // Update local state immediately for better UX
-        setItems(newItems);
+        // Update local state immediately
+        setItems(newOrderedItems);
         
         // Propagate changes up to parent
-        onDataChange({
-          ...widgetData,
-          data: newItems,
-          sortBy: 'custom' as const
-        });
+        propagateChangesUp(newOrderedItems);
       }
     }
-    
-    setIsDragging(false);
-  }, [items, widgetData, onDataChange]);
+  }, [items]);
 
   const handleDragStart = () => {
-    setIsDragging(true);
+    // setIsDragging(true);
   };
 
   // Sort items by displayOrder before rendering
@@ -202,7 +179,7 @@ export function ProgressBarListForm({
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-            onDragCancel={() => setIsDragging(false)}
+            onDragCancel={() => {}}
           >
             <SortableContext
               items={sortedItems.map(item => item.id)}
@@ -261,16 +238,13 @@ export function ProgressBarListForm({
                             onChange={(e) => handleItemChange(index, 'color', e.target.value)}
                             className="w-10 h-10 p-1"
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="text-destructive hover:text-destructive h-9 w-9 p-0"
-                            title="Remove item"
-                          >
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </Button>
+                         <FontAwesomeIcon
+                      type="button"
+                      icon={faTrash}
+                      onClick={() => removeItem(index)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                    
+                    />
                         </div>
                       </div>
                     )}

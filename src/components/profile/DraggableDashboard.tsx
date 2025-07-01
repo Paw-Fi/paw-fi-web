@@ -18,7 +18,6 @@ import {
   sortableKeyboardCoordinates, 
   rectSortingStrategy 
 } from '@dnd-kit/sortable';
-import { SortableWidget } from './SortableWidget';
 import { EditableWidget } from './EditableWidget';
 import { Widget } from './types/dashboard-data.typings';
 import { WidgetFactory } from './widgets/WidgetFactory';
@@ -26,6 +25,7 @@ import WidgetEditModal from './WidgetEditModal';
 import { AddWidgetModal } from './AddWidgetModal';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { updateWidgets } from '@/store/slices/dashboardSlice';
+import { v4 as uuidv4 } from 'uuid';
 
 
 interface DraggableDashboardProps {
@@ -235,11 +235,13 @@ export function DraggableDashboard({
       'quickCashFlowSummary'
     ].includes((newWidgetData as any).type);
 
+    // Generate a unique ID for the new widget if it doesn't have one
     const newWidgetWithLayout: Widget = {
       ...newWidgetData,
+      id: newWidgetData.id || uuidv4(),
       rowSpan: newWidgetData.rowSpan ?? (shouldBeExpanded ? 2 : 1),
       columnSpan: newWidgetData.columnSpan ?? 1, // Default columnSpan to 1 if not provided
-    } as Widget; // Added 'as Widget' to satisfy TypeScript, assuming all required fields are present
+    } as Widget;
 
     const updatedWidgets = [...currentWidgets, newWidgetWithLayout];
     setIsAddWidgetModalOpen(false);
@@ -256,6 +258,14 @@ export function DraggableDashboard({
   // Find the active widget for the drag overlay
   const activeWidget = currentWidgets.find?.(widget => widget.id === activeId);
 
+  if(!isEditMode&&currentWidgets.length===0){
+    return  <div className="mt-4 rounded-lg bg-gray-50 p-6 text-center">
+    <p className="text-gray-600">
+      No dashboard data available
+    </p>
+  </div>
+  }
+
   return (
     <>
       <DndContext
@@ -266,9 +276,9 @@ export function DraggableDashboard({
         onDragCancel={handleDragCancel}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[14rem]">
-          <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
+         { <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
             {currentWidgets.map((widget) => (
-              isEditMode ? (
+             (
                 <EditableWidget
                   key={widget.id}
                   id={widget.id}
@@ -281,24 +291,14 @@ export function DraggableDashboard({
                   onToggleChecklistItem={handleToggleChecklistItem} // Added prop
                   isEditMode={isEditMode}
                 />
-              ) : (
-                <SortableWidget
-                  key={widget.id}
-                  id={widget.id}
-                  widget={widget}
-                  // isExpanded is derived from widget.rowSpan
-                  onToggleRowSpan={handleToggleRowSpan} // Renamed prop and confirmed handler
-                  onToggleChecklistItem={handleToggleChecklistItem} // Added prop
-                  isEditMode={isEditMode}
-                />
-              )
+              ) 
             ))}
-          </SortableContext>
+          </SortableContext>}
           
           {/* Add widget button in edit mode */}
           {isEditMode && (
             <div 
-              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
+              className="bg-white/80 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
               onClick={() => setIsAddWidgetModalOpen(true)}
               role="button"
               tabIndex={0}
