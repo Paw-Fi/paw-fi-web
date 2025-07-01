@@ -3,13 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
 
-// Add Deno namespace declaration for TypeScript
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
-
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
@@ -101,7 +94,6 @@ serve(async (req) => {
           last4: pm.card?.last4,
           exp_month: pm.card?.exp_month,
           exp_year: pm.card?.exp_year,
-          is_default: pm.id === subscription.default_payment_method,
         }))
 
         return new Response(JSON.stringify({

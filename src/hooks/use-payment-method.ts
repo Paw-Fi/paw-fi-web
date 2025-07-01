@@ -8,7 +8,6 @@ interface PaymentMethod {
   last4: string;
   exp_month: number;
   exp_year: number;
-  is_default: boolean;
 }
 
 // Fetcher function for payment methods

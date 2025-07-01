@@ -406,9 +406,9 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
                   <h4 className={`text-md font-semibold ${priorityStyles.textColor.split(' ')[0]} dark:${priorityStyles.textColor.split(' ')[1]} group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors`}>
                     {action.title}
                   </h4>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${priorityStyles.badgeTextColor} ${priorityStyles.badgeBgColor}`}>
+               {action.priority&&   <span className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${priorityStyles.badgeTextColor} ${priorityStyles.badgeBgColor}`}>
                     {action.priority.charAt(0).toUpperCase() + action.priority.slice(1)} Priority
-                  </span>
+                  </span>}
                 </div>
               </div>
               <p className={`text-sm ${priorityStyles.textColor} mb-3 grow leading-relaxed pl-8`}>

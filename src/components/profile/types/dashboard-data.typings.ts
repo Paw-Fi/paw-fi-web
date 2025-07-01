@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 
 export interface IBaseWidget {
   id: string; // Unique identifier for the widget itself (Mandatory)
+  type: string;
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
   columnSpan: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)

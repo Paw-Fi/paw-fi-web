@@ -1,6 +1,5 @@
 export const dashboardTemplate3: any[] =[
   {
-    "id": "retirementOutlook",
     "type": "retirementReadiness",
     "title": "Retirement Readiness",
     "icon": "fas fa-umbrella-beach",
@@ -34,7 +33,6 @@ export const dashboardTemplate3: any[] =[
     }
   },
   {
-    "id": "majorSavingsGoals",
     "type": "enhancedSavingsGoals",
     "title": "Major Savings Goals",
     "icon": "fas fa-piggy-bank",
@@ -65,7 +63,6 @@ export const dashboardTemplate3: any[] =[
     ]
   },
   {
-    "id": "insuranceSummary",
     "type": "insuranceCoverage",
     "title": "Insurance Overview",
     "icon": "fas fa-shield-alt",
@@ -95,7 +92,6 @@ export const dashboardTemplate3: any[] =[
     ]
   },
   {
-    "id": "financialChecklist",
     "type": "checklist",
     "title": "Financial To-Do List",
     "icon": "fas fa-tasks",

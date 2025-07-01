@@ -4,27 +4,20 @@ CREATE TABLE IF NOT EXISTS dashboard_views (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  is_default BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Ensure each user can only have one default view
-  CONSTRAINT unique_default_view_per_user UNIQUE (user_id, is_default) 
-    DEFERRABLE INITIALLY DEFERRED
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create dashboard_widgets table to store widgets for each view
 CREATE TABLE IF NOT EXISTS dashboard_widgets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   view_id UUID NOT NULL REFERENCES dashboard_views(id) ON DELETE CASCADE,
-  widget_id VARCHAR(255) NOT NULL, -- Original widget ID from the frontend
-  widget_type VARCHAR(50) NOT NULL, -- Type of widget (metricCard, progressBarList, etc.)
+  type VARCHAR(50) NOT NULL, -- Type of widget (metricCard, progressBarList, etc.)
   title VARCHAR(255) NOT NULL,
   icon VARCHAR(100) NOT NULL,
+  order INTEGER DEFAULT 0 NOT NULL,
   column_span SMALLINT NOT NULL CHECK (column_span IN (1, 2)),
   row_span SMALLINT DEFAULT 1 CHECK (row_span IN (1, 2)),
-  position_x INTEGER NOT NULL, -- X position in the grid
-  position_y INTEGER NOT NULL, -- Y position in the grid
   widget_data JSONB NOT NULL, -- Store all widget-specific data as JSON
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

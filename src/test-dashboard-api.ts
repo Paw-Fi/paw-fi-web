@@ -25,7 +25,6 @@ async function testDashboardAPI() {
       const result = await createDashboardViewFromTemplate(userId, {
         templateId: templates[0].id,
         viewName: 'Test View',
-        isDefault: true
       });
       console.log('Created view:', result);
     } else {

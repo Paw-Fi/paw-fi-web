@@ -4,13 +4,13 @@ import {
   getAllDashboardViews, 
   getDashboardViewById, 
   getDefaultDashboardView,
-  updateDashboardWidget,
   createDashboardViewFromTemplate,
   convertDashboardWidgetToWidget,
-  reorderDashboardWidgets,
-  getAllDashboardTemplates
+  getAllDashboardTemplates,
+  updateDashboardViewWithWidgets
 } from '@/lib/api/dashboard';
 import { DashboardView, DashboardWidget } from '@/types/dashboard.types';
+import { toast } from 'react-toastify';
 
 // Define status type for better type safety
 export type DashboardStatus = 'idle' | 'loading' | 'succeeded' | 'failed' | 'no_views';
@@ -132,7 +132,6 @@ export const createDashboardViewFromTemplateThunk = createAsyncThunk(
       const result = await createDashboardViewFromTemplate(userId, {
         templateId,
         viewName,
-        isDefault: true // Make this the default view
       });
       
       const widgets = result.widgets.map(convertDashboardWidgetToWidget);
@@ -150,39 +149,42 @@ export const saveDashboard = createAsyncThunk(
     try {
       const state = getState() as { dashboard: DashboardState };
       const viewId = state.dashboard.currentViewId;
+      const currentView = state.dashboard.views.find(view => view.id === viewId);
       
-      if (!viewId) {
+      if (!viewId || !currentView) {
         throw new Error('No current view selected');
       }
       
-      // Update each widget in Supabase
-      const updatePromises = dashboardConfig.map(async (widget: Widget, index: number) => {
-        // Calculate position based on index (this is a simplified example)
-        const position_x = index % 2; // Example: 2 columns grid
-        const position_y = Math.floor(index / 2); // Example: row calculation
-        
-        return updateDashboardWidget(userId, widget.id, {
-          widgetId: widget.id,
+      // Send the entire dashboard view with all widgets in a single request
+      const response = await updateDashboardViewWithWidgets(userId, {
+        viewId,
+        name: currentView.name,
+        description: currentView.description,
+        widgets: dashboardConfig.map(widget => ({
+          id: widget.id,
           title: widget.title,
+          type: widget.type,
           icon: widget.icon,
           column_span: widget.columnSpan as 1 | 2,
           row_span: widget.rowSpan as 1 | 2,
-          position_x,
-          position_y,
           widget_data: widget.data
-        });
+        }))
       });
       
-      await Promise.all(updatePromises);
+      // Return the updated widgets from the backend (with IDs for new widgets)
+      const updatedWidgets = response.widgets.map((widget: any) => ({
+        id: widget.id,
+        type: widget.type,
+        title: widget.title,
+        icon: widget.icon,
+        columnSpan: widget.column_span,
+        rowSpan: widget.row_span,
+        data: widget.widget_data
+      }));
       
-      // Reorder widgets if needed
-      await reorderDashboardWidgets(userId, {
-        viewId,
-        widgetIds: dashboardConfig.map(widget => widget.id)
-      });
-      
-      return dashboardConfig;
+      return updatedWidgets;
     } catch (error) {
+      toast.error("Error saving dashboard, Please try again later")
       console.error('Error saving dashboard:', error);
       return rejectWithValue((error as Error).message);
     }

@@ -46,7 +46,6 @@ export default function TestDashboardAPI() {
       const response = await createDashboardViewFromTemplate(userId, {
         templateId,
         viewName: 'Test View ' + new Date().toISOString(),
-        isDefault: true
       });
       setResult(response);
       console.log('Created view:', response);

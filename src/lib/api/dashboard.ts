@@ -7,7 +7,8 @@ import {
   UpdateViewRequest,
   UpdateWidgetRequest,
   CreateWidgetRequest,
-  ReorderWidgetsRequest
+  ReorderWidgetsRequest,
+  UpdateDashboardViewWithWidgetsRequest
 } from '@/types/dashboard.types';
 import { 
   useMutation,
@@ -140,23 +141,6 @@ async function fetchDefaultDashboardView(userId: string) {
   };
 }
 
-/**
- * React hook for getting the default dashboard view
- */
-export function useDefaultDashboardView(
-  userId: string,
-  options?: Omit<UseQueryOptions<
-    { view: DashboardView; widgets: DashboardWidget[] },
-    Error
-  >, 'queryKey' | 'queryFn'>
-) {
-  return useQuery({
-    queryKey: dashboardKeys.defaultView(userId),
-    queryFn: () => fetchDefaultDashboardView(userId),
-    ...options
-  });
-}
-
 // Keep the original function for backward compatibility
 export async function getDefaultDashboardView(userId: string) {
   return fetchDefaultDashboardView(userId);
@@ -245,6 +229,33 @@ export async function updateDashboardView(
 }
 
 /**
+ * Update a dashboard view with all its widgets in a single operation
+ */
+export async function updateDashboardViewWithWidgets(
+  userId: string,
+  request: UpdateDashboardViewWithWidgetsRequest
+) {
+  // Destructure viewId from request to avoid duplicate property in body
+  const { viewId, ...requestData } = request;
+  
+  const { data, error } = await supabase.functions.invoke('dashboard-views', {
+    method: 'PUT',
+    body: {
+      action: 'update-with-widgets',
+      userId,
+      viewId,
+      ...requestData
+    }
+  });
+
+  if (error) {
+    throw new Error(`Failed to update dashboard with widgets: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
  * Delete a dashboard view
  */
 export async function deleteDashboardView(userId: string, viewId: string) {
@@ -264,131 +275,6 @@ export async function deleteDashboardView(userId: string, viewId: string) {
   return data;
 }
 
-/**
- * Update a dashboard widget
- */
-export async function updateDashboardWidget(
-  userId: string,
-  widgetId: string,
-  request: UpdateWidgetRequest
-) {
-  const { data, error } = await supabase.functions.invoke('dashboard-widgets', {
-    method: 'PUT',
-    body: {
-      action: 'update',
-      userId,
-      widgetId,
-      ...request
-    }
-  });
-
-  if (error) {
-    throw new Error(`Failed to update dashboard widget: ${error.message}`);
-  }
-
-  return data;
-}
-
-/**
- * Create a new dashboard widget
- */
-async function createWidget(
-  userId: string,
-  request: CreateWidgetRequest
-) {
-  const { data, error } = await supabase.functions.invoke('dashboard-widgets', {
-    method: 'POST',
-    body: {
-      action: 'create',
-      userId,
-      ...request
-    }
-  });
-
-  if (error) {
-    throw new Error(`Failed to create dashboard widget: ${error.message}`);
-  }
-
-  return data;
-}
-
-/**
- * React hook for creating a dashboard widget
- */
-export function useCreateDashboardWidget(
-  options?: UseMutationOptions<
-    any,
-    Error,
-    { userId: string; request: CreateWidgetRequest }
-  >
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ userId, request }: { userId: string; request: CreateWidgetRequest }) => 
-      createWidget(userId, request),
-    onSuccess: (_, { userId, request }) => {
-      // Invalidate the specific view query to refetch widgets
-      if (request.viewId) {
-        queryClient.invalidateQueries({ 
-          queryKey: dashboardKeys.view(userId, request.viewId)
-        });
-      }
-    },
-    ...options
-  });
-}
-
-// Keep the original function for backward compatibility
-export async function createDashboardWidget(
-  userId: string,
-  request: CreateWidgetRequest
-) {
-  return createWidget(userId, request);
-}
-
-/**
- * Delete a dashboard widget
- */
-export async function deleteDashboardWidget(userId: string, widgetId: string) {
-  const { data, error } = await supabase.functions.invoke('dashboard-widgets', {
-    method: 'DELETE',
-    body: {
-      action: 'delete',
-      userId,
-      widgetId
-    }
-  });
-
-  if (error) {
-    throw new Error(`Failed to delete dashboard widget: ${error.message}`);
-  }
-
-  return data;
-}
-
-/**
- * Reorder dashboard widgets
- */
-export async function reorderDashboardWidgets(
-  userId: string,
-  request: ReorderWidgetsRequest
-) {
-  const { data, error } = await supabase.functions.invoke('dashboard-widgets', {
-    method: 'PUT',
-    body: {
-      action: 'reorder',
-      userId,
-      ...request
-    }
-  });
-
-  if (error) {
-    throw new Error(`Failed to reorder dashboard widgets: ${error.message}`);
-  }
-
-  return data;
-}
 
 /**
  * Get all available dashboard templates
@@ -428,17 +314,13 @@ export async function getAllDashboardTemplates() {
  */
 export function convertDashboardWidgetToWidget(widget: DashboardWidget): Widget {
   return {
-    id: widget.widget_id,
+    id: widget.id,
     title: widget.title,
     icon: widget.icon,
     columnSpan: widget.column_span,
     rowSpan: widget.row_span || 1,
-    type: widget.widget_type as any,
+    type: widget.type as any,
     data: widget.widget_data,
-    position: {
-      x: widget.position_x,
-      y: widget.position_y
-    }
   };
 }
 
@@ -448,14 +330,11 @@ export function convertDashboardWidgetToWidget(widget: DashboardWidget): Widget 
 export function convertWidgetToDashboardWidget(widget: Widget, viewId: string): Omit<DashboardWidget, 'id' | 'created_at' | 'updated_at'> {
   return {
     view_id: viewId,
-    widget_id: widget.id,
-    widget_type: widget.type,
+    type: widget.type,
     title: widget.title,
     icon: widget.icon,
     column_span: widget.columnSpan,
     row_span: widget.rowSpan || 1,
-    position_x: widget.position?.x || 0,
-    position_y: widget.position?.y || 0,
     widget_data: widget.data
   };
 }

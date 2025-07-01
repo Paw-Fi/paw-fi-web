@@ -161,7 +161,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faChartPie,
     defaultData: {
-      id: generateId("widget-pc"),
       type: "pieChart" as const,
       title: "Expense Categories",
       icon: "fas fa-chart-pie",
@@ -213,7 +212,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     component: QuickCashFlowSummaryFormExt,
     icon: faExchangeAlt,
     defaultData: {
-      id: generateId("widget-qcf"),
       type: "quickCashFlowSummary",
       title: "Cash Flow Summary",
       icon: "faExchangeAlt",
@@ -232,7 +230,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     component: DebtVisualizerFormExt,
     icon: faCreditCard,
     defaultData: {
-      id: generateId("widget-dv"),
       type: "debtVisualizer",
       title: "Debt Visualizer",
       icon: "faCreditCard",
@@ -249,7 +246,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     title: "Next Best Actions",
     icon: faLightbulb, // Use the imported IconDefinition
     defaultData: {
-      id: generateId("widget-nba"),
       type: "nextBestAction",
       title: "Next Best Actions",
       icon: "faLightbulb",
@@ -265,7 +261,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     component: RetirementReadinessFormExt,
     icon: faUmbrellaBeach,
     defaultData: {
-      id: generateId("widget-rr"),
       type: "retirementReadiness",
       title: "Retirement Readiness",
       icon: "faUmbrellaBeach",
@@ -301,7 +296,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faPiggyBank,
     defaultData: {
-      id: generateId("widget-esg"),
       type: "enhancedSavingsGoals",
       title: "Savings Goals",
       icon: "faPiggyBank",
@@ -319,7 +313,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faList,
     defaultData: {
-      id: generateId("widget-dl"),
       type: "dataList" as const,
       title: "New Data List",
       icon: "faList",
@@ -335,7 +328,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faTasks,
     defaultData: {
-      id: generateId("widget-pbl"),
       type: "progressBarList" as const,
       title: "My Progress",
       icon: "faTasks",
@@ -364,7 +356,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faCheckSquare,
     defaultData: {
-      id: generateId("widget-mc"),
       type: "metricCard" as const,
       title: "Key Metric",
       icon: "faCheckSquare",
@@ -393,7 +384,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faLightbulb,
     defaultData: {
-      id: generateId("widget-tc"),
       type: "tipCard" as const,
       title: "Helpful Tip",
       icon: "faLightbulb",
@@ -420,7 +410,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faCalendar,
     defaultData: {
-      id: generateId("widget-cc"),
       type: "countdownCard" as const,
       title: "Event Countdown",
       icon: "faCalendar",
@@ -447,7 +436,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faChartBar,
     defaultData: {
-      id: generateId("widget-bc"),
       type: "barChart" as const,
       title: "Sample Bar Chart",
       icon: "faChartBar",
@@ -486,7 +474,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faChartLine,
     defaultData: {
-      id: generateId("widget-lc"),
       type: "lineChart" as const,
       title: "Sample Line Chart",
       icon: "faChartLine",
@@ -526,7 +513,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     icon: faHeartbeat,
     title: "Financial Health Scorecard", // Title for the "Add Widget" list entry
     defaultData: {
-      id: generateId("widget-fhs"),
       type: "financialHealthScorecard",
       title: "Financial Health Score",
       icon: "faHeartbeat",
@@ -557,7 +543,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     icon: faShieldAlt, // Icon for the "Add Widget" list entry
     title: "Insurance Coverage", // Title for the "Add Widget" list entry
     defaultData: {
-      id: generateId("widget-insurance"),
       type: "insuranceCoverage",
       title: "Insurance Policies",
       icon: "faShieldAlt",
@@ -574,7 +559,6 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     component: ChecklistForm,
     icon: faListCheck,
     defaultData: {
-      id: generateId("widget-cl"),
       type: "checklist",
       title: "My Checklist",
       icon: "faListCheck",

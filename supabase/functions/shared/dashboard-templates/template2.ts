@@ -1,7 +1,6 @@
 
 export const dashboardTemplate2: any[] =[
   {
-    "id": "keyMetricsDashboard",
     "type": "metricCard",
     "title": "Key Financial Overview",
     "icon": "fas fa-chart-pie",
@@ -36,7 +35,6 @@ export const dashboardTemplate2: any[] =[
     "displayMode": "carousel"
   },
   {
-    "id": "personalGoals",
     "type": "progressBarList",
     "title": "My Personal Goals",
     "icon": "fas fa-bullseye",
@@ -71,7 +69,6 @@ export const dashboardTemplate2: any[] =[
     "sortBy": "progress"
   },
   {
-    "id": "upcomingDeadlines",
     "type": "countdownCard",
     "title": "Important Dates",
     "icon": "fas fa-hourglass-half",

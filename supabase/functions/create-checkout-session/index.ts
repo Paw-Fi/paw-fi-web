@@ -5,13 +5,6 @@ import { corsHeaders } from '../shared/cors.ts'
 import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
 import { SUBSCRIPTION_PRICES } from '../shared/stripe-subscription-prices.ts'
 
-// Add Deno namespace declaration for TypeScript
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
-
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',

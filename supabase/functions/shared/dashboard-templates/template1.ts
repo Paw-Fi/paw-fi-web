@@ -1,14 +1,33 @@
 
 export const dashboardTemplate1: any[] =[
   {
-    "id": "actionableSteps",
     "type": "nextBestAction",
     "title": "Your Next Priority Actions",
     "icon": "fas fa-gavel",
     "columnSpan": 1,
     "data": [
       {
-        "id": "nba-auto-invest",
+        "id": "expenseCategoryPieChart",
+        "type": "pieChart",
+        "title": "Monthly Expense Categories",
+        "icon": "fas fa-chart-pie",
+        "columnSpan": 1,
+        "data": {
+          "dataPoints": [
+            { "id": "chart-exp-cat-1", "label": "Housing", "value": 1200, "color": "#FF6384", "displayOrder": 1 },
+            { "id": "chart-exp-cat-2", "label": "Transportation", "value": 400, "color": "#36A2EB", "displayOrder": 2 },
+            { "id": "chart-exp-cat-3", "label": "Food", "value": 600, "color": "#FFCE56", "displayOrder": 3 },
+            { "id": "chart-exp-cat-4", "label": "Utilities", "value": 300, "color": "#4BC0C0", "displayOrder": 4 },
+            { "id": "chart-exp-cat-5", "label": "Entertainment", "value": 200, "color": "#9966FF", "displayOrder": 5 },
+            { "id": "chart-exp-cat-6", "label": "Other", "value": 150, "color": "#FF9F40", "displayOrder": 6 }
+          ],
+          "xAxisLabel": "Category",
+          "yAxisLabel": "Amount ($)"
+        },
+        "height": 280,
+        "showLegend": true
+      },
+      {
         "title": "Setup Automated Investing",
         "message": "Automate monthly contributions to your brokerage account.",
         "priority": "high",
@@ -20,7 +39,6 @@ export const dashboardTemplate1: any[] =[
         "displayOrder": 1
       },
       {
-        "id": "nba-review-insurance",
         "title": "Review Life Insurance Coverage",
         "message": "Assess if current life insurance meets family's future needs.",
         "priority": "medium",
@@ -31,7 +49,6 @@ export const dashboardTemplate1: any[] =[
         "displayOrder": 2
       },
       {
-        "id": "nba-refinance-car",
         "title": "Refinance Car Loan",
         "message": "Check for lower interest rates on your car loan.",
         "priority": "low",
@@ -44,7 +61,6 @@ export const dashboardTemplate1: any[] =[
     "filterByPriority": "high"
   },
   {
-    "id": "cashFlowSummary",
     "type": "quickCashFlowSummary",
     "title": "Monthly Cash Flow Summary",
     "icon": "fas fa-coins",
@@ -67,7 +83,6 @@ export const dashboardTemplate1: any[] =[
     "showProjections": true
   },
   {
-    "id": "debtProgress",
     "type": "debtVisualizer",
     "title": "Debt Payoff Progress",
     "icon": "fas fa-hand-holding-dollar",
@@ -101,7 +116,6 @@ export const dashboardTemplate1: any[] =[
     ]
   },
   {
-    "id": "financialHealthOverview",
     "type": "financialHealthScorecard",
     "title": "Financial Health Score",
     "icon": "fas fa-heartbeat",
@@ -138,7 +152,6 @@ export const dashboardTemplate1: any[] =[
     }
   },
   {
-    "id": "nextActions",
     "type": "nextBestAction",
     "title": "Recommended Actions",
     "icon": "fas fa-clipboard-check",
@@ -167,7 +180,6 @@ export const dashboardTemplate1: any[] =[
     ]
   },
   {
-    "id": "cashFlowSnapshot",
     "type": "quickCashFlowSummary",
     "title": "Monthly Cash Flow",
     "icon": "fas fa-exchange-alt",
@@ -187,7 +199,6 @@ export const dashboardTemplate1: any[] =[
     }
   },
   {
-    "id": "debtOverview",
     "type": "debtVisualizer",
     "title": "Debt Breakdown",
     "icon": "fas fa-credit-card",

@@ -160,32 +160,7 @@ export function PaymentMethodManager({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {method.is_default && (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                        <FontAwesomeIcon
-                          icon={faCheckCircle}
-                          className="mr-1 h-3 w-3"
-                        />
-                        Default
-                      </span>
-                    )}
-                    {!method.is_default && (
-                      <button
-                        onClick={() => updateDefaultPaymentMethod(method.id)}
-                        disabled={isMutating}
-                        className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        {isMutating ? (
-                          <FontAwesomeIcon
-                            icon={faSpinner}
-                            className="mr-1 h-3 w-3 animate-spin"
-                          />
-                        ) : (
-                          "Set Default"
-                        )}
-                      </button>
-                    )}
+                  <div className="flex items-center space-x-2">                  
                     <button
                       onClick={() => detachPaymentMethod(method.id)}
                       disabled={isMutating}

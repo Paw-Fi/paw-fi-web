@@ -5,37 +5,10 @@ import { getTemplateById } from "../shared/template-loader.ts";
 
 console.log(`Function "dashboard-views" up and running!`);
 
-// Types for dashboard views
-interface DashboardView {
-  id?: string;
-  user_id: string;
-  name: string;
-  description?: string;
-  is_default: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface DashboardWidget {
-  id?: string;
-  view_id: string;
-  widget_id: string;
-  widget_type: string;
-  title: string;
-  icon?: string;
-  column_span: number;
-  row_span: number;
-  position_x: number;
-  position_y: number;
-  widget_data: any;
-  created_at?: string;
-  updated_at?: string;
-}
 
 interface CreateViewFromTemplateRequest {
   templateId: string;
   viewName: string;
-  isDefault: boolean;
   action?: string;
   userId?: string;
 }
@@ -43,13 +16,11 @@ interface CreateViewFromTemplateRequest {
 interface CreateViewRequest {
   name: string;
   description?: string;
-  isDefault: boolean;
 }
 
 interface UpdateViewRequest {
   name?: string;
   description?: string;
-  isDefault?: boolean;
 }
 
 // Helper function to create error response
@@ -184,6 +155,8 @@ Deno.serve(async (req: Request) => {
         return await handleCreateFromTemplate(req.method, requestData, supabase, headers);
       case 'update':
         return await handleUpdate(req.method, requestData, supabase, headers);
+      case 'update-with-widgets':
+        return await handleUpdateWithWidgets(req.method, requestData, supabase, headers);
       case 'delete':
         return await handleDelete(req.method, requestData, supabase, headers);
       case 'get-all':
@@ -231,7 +204,6 @@ async function handleGetAll(
       .from('dashboard_views')
       .select('*')
       .eq('user_id', userId)
-      .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
       
     if (error) {
@@ -277,9 +249,7 @@ async function handleGetById(
       .from('dashboard_widgets')
       .select('*')
       .eq('view_id', viewId)
-      .order('position_y', { ascending: true })
-      .order('position_x', { ascending: true });
-      
+      .order('order', { ascending: true });
     if (widgetsError) {
       return createErrorResponse(500, 'Failed to fetch dashboard widgets', widgetsError, headers);
     }
@@ -311,7 +281,6 @@ async function handleGetDefault(
       .from('dashboard_views')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_default', true)
       .single();
       
     if (viewError) {
@@ -333,8 +302,7 @@ async function handleGetDefault(
         .from('dashboard_widgets')
         .select('*')
         .eq('view_id', recentView.id)
-        .order('position_y', { ascending: true })
-        .order('position_x', { ascending: true });
+        .order('order', { ascending: true })
         
       if (widgetsError) {
         return createErrorResponse(500, 'Failed to fetch dashboard widgets', widgetsError, headers);
@@ -351,8 +319,7 @@ async function handleGetDefault(
       .from('dashboard_widgets')
       .select('*')
       .eq('view_id', view.id)
-      .order('position_y', { ascending: true })
-      .order('position_x', { ascending: true });
+      .order('order', { ascending: true })
       
     if (widgetsError) {
       return createErrorResponse(500, 'Failed to fetch dashboard widgets', widgetsError, headers);
@@ -379,7 +346,7 @@ async function handleCreateFromTemplate(
       return createErrorResponse(405, 'Method not allowed', `Method ${method} not allowed for create-from-template`, headers);
     }
     
-    const { userId, templateId, viewName, isDefault = false } = requestData;
+    const { userId, templateId, viewName} = requestData;
     
     if (!userId || !templateId || !viewName) {
       return createErrorResponse(400, 'Missing required parameters', 'userId, templateId, and viewName are required', headers);
@@ -399,7 +366,6 @@ async function handleCreateFromTemplate(
           user_id: userId,
           name: viewName,
           description: template.info?.description || '',
-          is_default: isDefault
         }
       ])
       .select()
@@ -410,17 +376,15 @@ async function handleCreateFromTemplate(
     }
     
     // Create the widgets
-    const widgetInserts = template.widgets.map((widget: any) => ({
+    const widgetInserts = template.widgets.map((widget: any, index: number) => ({
       view_id: view.id,
-      widget_id: widget.id,
-      widget_type: widget.type,
+      // Don't specify widget_id, let Supabase generate it
+      type: widget.type,
       title: widget.title,
       icon: widget.icon,
-      column_span: widget.columnSpan,
+      column_span: widget.columnSpan || 1,
       row_span: widget.rowSpan || 1,
-      position_x: widget.position?.x || 0,
-      position_y: widget.position?.y || 0,
-      widget_data: widget.data
+      widget_data: widget.data // Use widget.data directly
     }));
     
     const { data: widgets, error: widgetsError } = await supabase
@@ -453,29 +417,28 @@ async function handleUpdate(
       return createErrorResponse(405, 'Method not allowed', `Method ${method} not allowed for update`, headers);
     }
     
-    const { userId, viewId, name, description, isDefault } = requestData;
+    const { userId, viewId, name, description } = requestData;
     
     if (!userId || !viewId) {
-      return createErrorResponse(400, 'Missing required parameters', 'userId and viewId are required', headers);
+      return createErrorResponse(400, 'Missing required fields', 'userId and viewId are required', headers);
     }
     
-    // Check if the view exists and belongs to the user
+    // Verify the user owns this view
     const { data: existingView, error: checkError } = await supabase
       .from('dashboard_views')
-      .select('id')
+      .select('*')
       .eq('id', viewId)
       .eq('user_id', userId)
       .single();
       
     if (checkError) {
-      return createErrorResponse(404, 'Dashboard view not found', checkError, headers);
+      return createErrorResponse(404, 'Dashboard view not found or access denied', checkError, headers);
     }
     
     // Update the view
-    const updateData: any = {};
+    const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (isDefault !== undefined) updateData.is_default = isDefault;
     
     const { data: view, error: updateError } = await supabase
       .from('dashboard_views')
@@ -489,21 +452,168 @@ async function handleUpdate(
       return createErrorResponse(500, 'Failed to update dashboard view', updateError, headers);
     }
     
-    // If this view is set as default, unset default flag on all other views
-    if (isDefault) {
-      await supabase
-        .from('dashboard_views')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .neq('id', viewId);
-    }
-    
     return new Response(
       JSON.stringify({ view }),
       { status: 200, headers }
     );
   } catch (error) {
     return createErrorResponse(500, 'Error updating dashboard view', error, headers);
+  }
+}
+
+// Handler for updating a dashboard view with all its widgets in a single transaction
+async function handleUpdateWithWidgets(
+  method: string,
+  requestData: any,
+  supabase: any,
+  headers: Record<string, string>
+): Promise<Response> {
+  try {
+    if (method !== 'PUT') {
+      return createErrorResponse(405, 'Method not allowed', `Method ${method} not allowed for update-with-widgets`, headers);
+    }
+    
+    const { userId, viewId, name, description, widgets } = requestData;
+    
+    if (!userId || !viewId || !widgets) {
+      return createErrorResponse(400, 'Missing required fields', 'userId, viewId, and widgets are required', headers);
+    }
+    
+    // Verify the user owns this view
+    const { data: existingView, error: checkError } = await supabase
+      .from('dashboard_views')
+      .select('*')
+      .eq('id', viewId)
+      .eq('user_id', userId)
+      .single();
+      
+    if (checkError) {
+      return createErrorResponse(404, 'Dashboard view not found or access denied', checkError, headers);
+    }
+    
+    // Update the view first
+    const updateData: Record<string, any> = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    
+    const { data: updatedView, error: updateViewError } = await supabase
+      .from('dashboard_views')
+      .update(updateData)
+      .eq('id', viewId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+      
+    if (updateViewError) {
+      return createErrorResponse(500, 'Failed to update dashboard view', updateViewError, headers);
+    }
+    
+    // Get existing widgets to determine which ones to add, update, or delete
+    const { data: existingWidgets, error: widgetsError } = await supabase
+      .from('dashboard_widgets')
+      .select('id')
+      .eq('view_id', viewId);
+      
+    if (widgetsError) {
+      return createErrorResponse(500, 'Failed to fetch existing widgets', widgetsError, headers);
+    }
+    
+    // Create sets of widget IDs for easier comparison
+    const existingWidgetIds = new Set(existingWidgets.map((w: any) => w.id));
+    
+    // Separate widgets into those with IDs (to update) and those without IDs (to insert)
+    const widgetsToUpdate: any[] = [];
+    const widgetsToInsert: any[] = [];
+    
+    // Track which existing widget IDs are in the payload
+    const widgetIdsInPayload = new Set<string>();
+    
+    // Process each widget in the payload and preserve their order
+    widgets.forEach((widget: any, index: number) => {
+      const baseWidget = {
+        view_id: viewId,
+        type: widget.type,  // Add the type field
+        title: widget.title,
+        icon: widget.icon,
+        column_span: widget.column_span,
+        row_span: widget.row_span,
+        widget_data: widget.widget_data,
+        order: index  // Set the order based on the array index to preserve frontend ordering
+      };
+      
+      if (widget.id) {
+        // If widget has an ID, add it to the update list
+        widgetsToUpdate.push({
+          ...baseWidget,
+          id: widget.id
+        });
+        widgetIdsInPayload.add(widget.id);
+      } else {
+        // If widget has no ID, add it to the insert list (backend will generate ID)
+        widgetsToInsert.push(baseWidget);
+      }
+    });
+    
+    // Widgets to delete (exist in DB but not in the new payload)
+    const widgetsToDelete = [...existingWidgetIds].filter(id => !widgetIdsInPayload.has(id as string));
+    
+    // Delete widgets that are no longer in the dashboard
+    if (widgetsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('dashboard_widgets')
+        .delete()
+        .eq('view_id', viewId)
+        .in('id', widgetsToDelete);
+        
+      if (deleteError) {
+        return createErrorResponse(500, 'Failed to delete removed widgets', deleteError, headers);
+      }
+    }
+    
+    // Update existing widgets
+    if (widgetsToUpdate.length > 0) {
+      const { error: updateError } = await supabase
+        .from('dashboard_widgets')
+        .upsert(widgetsToUpdate, { onConflict: 'id' });
+        
+      if (updateError) {
+        return createErrorResponse(500, 'Failed to update existing widgets', updateError, headers);
+      }
+    }
+    
+    // Insert new widgets
+    if (widgetsToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('dashboard_widgets')
+        .insert(widgetsToInsert);
+        
+      if (insertError) {
+        return createErrorResponse(500, 'Failed to insert new widgets', insertError, headers);
+      }
+    }
+    
+    // Get the updated widgets to return in the response
+    // Order by the new 'order' field to preserve frontend ordering
+    const { data: updatedWidgets, error: getWidgetsError } = await supabase
+      .from('dashboard_widgets')
+      .select('*')
+      .eq('view_id', viewId)
+      .order('order', { ascending: true });
+      
+    if (getWidgetsError) {
+      return createErrorResponse(500, 'Failed to fetch updated widgets', getWidgetsError, headers);
+    }
+    
+    return new Response(
+      JSON.stringify({
+        view: updatedView,
+        widgets: updatedWidgets
+      }),
+      { status: 200, headers }
+    );
+  } catch (error) {
+    console.error('Error updating dashboard with widgets:', error);
+    return createErrorResponse(500, 'Error updating dashboard with widgets', error, headers);
   }
 }
 
@@ -528,7 +638,6 @@ async function handleDelete(
     // Check if the view exists and belongs to the user
     const { data: existingView, error: checkError } = await supabase
       .from('dashboard_views')
-      .select('id, is_default')
       .eq('id', viewId)
       .eq('user_id', userId)
       .single();
@@ -572,23 +681,6 @@ async function handleDelete(
       return createErrorResponse(500, 'Failed to delete dashboard view', viewError, headers);
     }
     
-    // If the deleted view was the default, set another view as default
-    if (existingView.is_default) {
-      const { data: otherView, error: otherViewError } = await supabase
-        .from('dashboard_views')
-        .select('id')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (!otherViewError && otherView) {
-        await supabase
-          .from('dashboard_views')
-          .update({ is_default: true })
-          .eq('id', otherView.id);
-      }
-    }
     
     return new Response(
       JSON.stringify({ success: true }),
@@ -635,7 +727,7 @@ async function handleCreate(
   headers: Record<string, string>
 ): Promise<Response> {
   try {
-    const { userId, name, description, isDefault = false } = requestData;
+    const { userId, name, description } = requestData;
     
     if (!userId || !name) {
       return createErrorResponse(400, 'Missing required parameters', 'userId and name are required', headers);
@@ -649,7 +741,6 @@ async function handleCreate(
           user_id: userId,
           name,
           description,
-          is_default: isDefault
         }
       ])
       .select()
@@ -657,15 +748,6 @@ async function handleCreate(
       
     if (viewError) {
       return createErrorResponse(500, 'Failed to create dashboard view', viewError, headers);
-    }
-    
-    // If this view is set as default, unset default flag on all other views
-    if (isDefault) {
-      await supabase
-        .from('dashboard_views')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .neq('id', view.id);
     }
     
     return new Response(
@@ -684,7 +766,6 @@ async function getAllViews(supabase: any, userId: string, headers: Record<string
       .from('dashboard_views')
       .select('*')
       .eq('user_id', userId)
-      .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -723,8 +804,6 @@ async function getViewById(supabase: any, userId: string, viewId: string, header
       .from('dashboard_widgets')
       .select('*')
       .eq('view_id', viewId)
-      .order('position_y', { ascending: true })
-      .order('position_x', { ascending: true });
 
     if (widgetsError) {
       return createErrorResponse(500, 'Failed to fetch dashboard widgets', widgetsError, headers);
@@ -753,7 +832,6 @@ async function getDefaultView(supabase: any, userId: string, headers: Record<str
       .from('dashboard_views')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_default', true)
       .single();
 
     if (viewError) {
@@ -789,7 +867,7 @@ async function createViewFromTemplate(
   try {
     console.log('Creating view from template:', request);
     
-    const { templateId, viewName, isDefault } = request;
+    const { templateId, viewName } = request;
 
     if (!templateId) {
       return createErrorResponse(400, 'Template ID is required', null, headers);
@@ -805,19 +883,6 @@ async function createViewFromTemplate(
       return createErrorResponse(404, 'Template not found', null, headers);
     }
 
-    // If this is the default view, unset any existing default views
-    if (isDefault) {
-      const { error: updateError } = await supabase
-        .from('dashboard_views')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .eq('is_default', true);
-
-      if (updateError) {
-        console.error('Error unsetting existing default views:', updateError);
-      }
-    }
-
     // Create the view
     const { data: view, error: viewError } = await supabase
       .from('dashboard_views')
@@ -825,7 +890,6 @@ async function createViewFromTemplate(
         user_id: userId,
         name: viewName,
         description: template.info.description,
-        is_default: isDefault
       })
       .select()
       .single();
@@ -837,14 +901,11 @@ async function createViewFromTemplate(
     // Create widgets for the view
     const widgets = template.widgets.map((widget: any, index: number) => ({
       view_id: view.id,
-      widget_id: widget.id,
-      widget_type: widget.type,
+      type: widget.type,
       title: widget.title,
       icon: widget.icon,
       column_span: widget.columnSpan || 1,
       row_span: widget.rowSpan || 1,
-      position_x: widget.position?.x || index % 2,
-      position_y: widget.position?.y || Math.floor(index / 2),
       widget_data: widget.data
     }));
 
@@ -880,24 +941,12 @@ async function createEmptyView(
   headers: Record<string, string>
 ) {
   try {
-    const { name, description, isDefault } = request;
+    const { name, description } = request;
 
     if (!name) {
       return createErrorResponse(400, 'View name is required', null, headers);
     }
 
-    // If this is the default view, unset any existing default views
-    if (isDefault) {
-      const { error: updateError } = await supabase
-        .from('dashboard_views')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .eq('is_default', true);
-
-      if (updateError) {
-        console.error('Error unsetting existing default views:', updateError);
-      }
-    }
 
     // Create the view
     const { data: view, error: viewError } = await supabase
@@ -906,7 +955,6 @@ async function createEmptyView(
         user_id: userId,
         name,
         description,
-        is_default: isDefault
       })
       .select()
       .single();
@@ -939,7 +987,7 @@ async function updateView(
   headers: Record<string, string>
 ) {
   try {
-    const { name, description, isDefault } = request;
+    const { name, description } = request;
 
     // Verify the user owns this view
     const { data: existingView, error: checkError } = await supabase
@@ -952,25 +1000,10 @@ async function updateView(
     if (checkError) {
       return createErrorResponse(404, 'Dashboard view not found or access denied', checkError, headers);
     }
-
-    // If this is being set as the default view, unset any existing default views
-    if (isDefault) {
-      const { error: updateError } = await supabase
-        .from('dashboard_views')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .eq('is_default', true);
-
-      if (updateError) {
-        console.error('Error unsetting existing default views:', updateError);
-      }
-    }
-
     // Update the view
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (isDefault !== undefined) updateData.is_default = isDefault;
 
     const { data: updatedView, error: updateError } = await supabase
       .from('dashboard_views')
@@ -992,6 +1025,59 @@ async function updateView(
     );
   } catch (error) {
     return createErrorResponse(500, 'Error updating dashboard view', error, headers);
+  }
+}
+
+// Function to update a view and all its widgets in a single transaction
+async function updateViewWithWidgets(
+  supabase: any,
+  userId: string,
+  viewId: string,
+  request: any,
+  headers: Record<string, string>
+) {
+  try {
+    const { name, description, widgets } = request;
+
+    // Verify the user owns this view
+    const { data: existingView, error: checkError } = await supabase
+      .from('dashboard_views')
+      .select('*')
+      .eq('id', viewId)
+      .eq('user_id', userId)
+      .single();
+
+    if (checkError) {
+      return createErrorResponse(404, 'Dashboard view not found or access denied', checkError, headers);
+    }
+
+    // Start a transaction to update both the view and widgets
+    const { data, error } = await supabase.rpc('update_dashboard_with_widgets', {
+      p_view_id: viewId,
+      p_name: name || existingView.name,
+      p_description: description !== undefined ? description : existingView.description,
+      p_widgets: widgets
+    });
+
+    if (error) {
+      return createErrorResponse(500, 'Failed to update dashboard with widgets', error, headers);
+    }
+
+    // Return the updated view and widgets
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Dashboard updated successfully',
+        data
+      }),
+      {
+        status: 200,
+        headers
+      }
+    );
+  } catch (error) {
+    console.error('Error updating dashboard with widgets:', error);
+    return createErrorResponse(500, 'Error updating dashboard with widgets', error, headers);
   }
 }
 
