@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
+import { SUBSCRIPTION_PRICES } from '../shared/stripe-subscription-prices.ts';
 
 // Add Deno namespace declaration for TypeScript
 declare const Deno: {
@@ -20,19 +21,6 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Define subscription plan prices (same as in create-checkout-session)
-const SUBSCRIPTION_PRICES = {
-  free: null,
-  plus: {
-    monthly: 'price_1Rdnr1QWGCWFEEyn2WEuezFa',
-    yearly: 'price_1Rdpz7QWGCWFEEyn76b3aM9I',
-  },
-  premium: {
-    monthly: 'price_1Rdnr1QWGCWFEEyn2WEuezFa',
-    yearly: 'price_1Rdpz7QWGCWFEEyn76b3aM9I',
-  },
-}
 
 serve(async (req) => {
   try {

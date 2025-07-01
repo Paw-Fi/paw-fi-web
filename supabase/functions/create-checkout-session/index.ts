@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
 import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
+import { SUBSCRIPTION_PRICES } from '../shared/stripe-subscription-prices.ts'
 
 // Add Deno namespace declaration for TypeScript
 declare const Deno: {
@@ -21,22 +22,6 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Define subscription plan prices
-const SUBSCRIPTION_PRICES = {
-  free: null, // Map of plan types to Stripe price IDs
-// IMPORTANT: Replace these placeholder IDs with your actual Stripe price IDs from your Stripe Dashboard
-// You can find these under Products > [Your Product] > Pricing
-// They will look like: price_1NcJX4KL6JzIj83kMgLtXyzB
-  plus: {
-    monthly: 'price_1Rdnr1QWGCWFEEyn2WEuezFa', // REPLACE: Your Plus plan monthly price ID from Stripe Dashboard
-    yearly: 'price_1Rdpz7QWGCWFEEyn76b3aM9I',   // REPLACE: Your Plus plan yearly price ID from Stripe Dashboard
-  },
-  premium: {
-    monthly: 'price_1Rdnr1QWGCWFEEyn2WEuezFa', // REPLACE: Your Premium plan monthly price ID from Stripe Dashboard
-    yearly: 'price_1Rdpz7QWGCWFEEyn76b3aM9I',   // REPLACE: Your Premium plan yearly price ID from Stripe Dashboard
-  },
-}
 
 serve(async (req) => {
   try {
