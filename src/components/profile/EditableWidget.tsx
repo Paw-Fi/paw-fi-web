@@ -20,16 +20,11 @@ import { WidgetFactory } from "./widgets/WidgetFactory";
 interface EditableWidgetProps {
   widget: IBaseWidget;
   id: string;
-  // isExpanded is derived from widget.rowSpan, so it's removed
-  onToggleRowSpan: (id: string) => void; // Renamed from onToggleHeight
+  // isExpanded is derived from widget.row_span, so it's removed
+  onTogglerow_span: (id: string) => void; // Renamed from onToggleHeight
   onRemoveWidget: (id: string) => void;
   onEditWidget: (id: string) => void;
-  onToggleColumnSpan: (id: string) => void;
-  onToggleChecklistItem?: (
-    widgetId: string,
-    itemId: string,
-    isCompleted: boolean,
-  ) => void; // Added prop
+  onTogglecolumn_span: (id: string) => void;
   isEditMode?: boolean;
 }
 
@@ -37,11 +32,10 @@ export function EditableWidget({
   widget,
   id,
   // isExpanded is removed
-  onToggleRowSpan, // Renamed from onToggleHeight
+  onTogglerow_span, // Renamed from onToggleHeight
   onRemoveWidget,
   onEditWidget,
-  onToggleColumnSpan,
-  onToggleChecklistItem, // Destructure added prop
+  onTogglecolumn_span,
   isEditMode = true,
 }: EditableWidgetProps) {
   const {
@@ -65,7 +59,7 @@ export function EditableWidget({
       ref={setNodeRef}
       style={style}
       data-id={id}
-      className={`bg-white/80 ${widget.rowSpan === 2 ? "row-span-2" : "row-span-1"} // Use widget.rowSpan ${widget.columnSpan === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
+      className={`bg-white/80 ${widget.row_span === 2 ? "row-span-2" : "row-span-1"} // Use widget.row_span ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
         isEditMode
           ? "border-primary-500/70 dark:border-primary-400/70 rounded-xl border-2 border-dashed shadow-md "
           : "rounded-xl border border-slate-300/70 shadow-lg group-hover:shadow-xl dark:border-slate-700/50 "
@@ -76,7 +70,6 @@ export function EditableWidget({
       <div className="h-full">
         <WidgetFactory
           widget={widget}
-          onToggleChecklistItem={onToggleChecklistItem}
           controls={
             isEditMode ? (
               <div className="ml-1 flex items-center gap-2.5">
@@ -103,40 +96,40 @@ export function EditableWidget({
 
                 {/* Expand/collapse height button */}
                 <button
-                  onClick={() => onToggleRowSpan(id)}
+                  onClick={() => onTogglerow_span(id)}
                   aria-label={
-                    widget.rowSpan === 2
+                    widget.row_span === 2
                       ? "Compress to 1 row"
                       : "Expand to 2 rows"
                   }
                   title={
-                    widget.rowSpan === 2
+                    widget.row_span === 2
                       ? "Compress to 1 row"
                       : "Expand to 2 rows"
                   }
                 >
                   <FontAwesomeIcon
-                    icon={widget.rowSpan === 2 ? faCompress : faExpand}
+                    icon={widget.row_span === 2 ? faCompress : faExpand}
                     className="h-3 w-3 text-gray-600 dark:text-gray-300"
                   />
                 </button>
 
                 {/* Toggle column span button */}
                 <button
-                  onClick={() => onToggleColumnSpan(id)}
+                  onClick={() => onTogglecolumn_span(id)}
                   aria-label={
-                    widget.columnSpan === 2
+                    widget.column_span === 2
                       ? "Set to 1 column width"
                       : "Set to 2 columns width"
                   }
                   title={
-                    widget.columnSpan === 2
+                    widget.column_span === 2
                       ? "Set to 1 column width"
                       : "Set to 2 columns width"
                   }
                 >
                   <FontAwesomeIcon
-                    icon={widget.columnSpan === 2 ? faCompressAlt : faExpandAlt}
+                    icon={widget.column_span === 2 ? faCompressAlt : faExpandAlt}
                     className="h-3 w-3 text-gray-600"
                   />
                 </button>

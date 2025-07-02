@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS dashboard_widgets (
   order INTEGER DEFAULT 0 NOT NULL,
   column_span SMALLINT NOT NULL CHECK (column_span IN (1, 2)),
   row_span SMALLINT DEFAULT 1 CHECK (row_span IN (1, 2)),
-  widget_data JSONB NOT NULL, -- Store all widget-specific data as JSON
+  data JSONB NOT NULL, -- Store all widget-specific data as JSON
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

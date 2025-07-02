@@ -150,7 +150,8 @@ function getCategoryIcon(category?: string) {
 }
 
 export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialHealthScorecardWidget }) {
-  const { data, showIndividualScores = true } = widget;
+  const { data = true } = widget;
+  const showIndividualScores = data.showIndividualScores;
 
   const overallStatusStyles = useMemo(() => getFinancialStatusStyles(data?.overallStatus), [data?.overallStatus]);
 
@@ -684,6 +685,7 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
 // Enhanced Savings Goals Widget
 export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSavingsGoalsWidget }) {
   const { data } = widget;
+  const { items, groupByCategory, showProgress } = data;
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -693,39 +695,79 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
     }
   };
   
+  // Group goals by category if groupByCategory is true
+  const goalsByCategory = useMemo(() => {
+    if (!groupByCategory) return null;
+    
+    const grouped: Record<string, typeof items> = {};
+    items.forEach(goal => {
+      const category = goal.category || 'Uncategorized';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(goal);
+    });
+    return grouped;
+  }, [items, groupByCategory]);
+  
+  const renderGoal = (goal: typeof items[0], index: number) => {
+    const progress = (goal.savedAmount / goal.targetAmount) * 100;
+    
+    return (
+      <div key={goal.id || index} className="border-b border-gray-100 dark:border-gray-700/30 pb-3 last:border-0">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {goal.name}
+          </span>
+          <span className={`text-xs font-medium ${getStatusColor(goal.status)}`}>
+            {goal.status}
+          </span>
+        </div>
+        
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <span>${goal.savedAmount?.toLocaleString()} of ${goal?.targetAmount?.toLocaleString()}</span>
+          <span>Est. completion: {goal.estimatedCompletionDate}</span>
+        </div>
+        
+        {(showProgress !== false) && (
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+            <div 
+              className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
+                goal.status === 'Behind' ? 'bg-yellow-500' : 'bg-primary'
+              }`}
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-4">
-        {data.map((goal, index) => {
-          const progress = (goal.savedAmount / goal.targetAmount) * 100;
-          
-          return (
-            <div key={index} className="border-b border-gray-100 dark:border-gray-700/30 pb-3 last:border-0">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {goal.name}
-                </span>
-                <span className={`text-xs font-medium ${getStatusColor(goal.status)}`}>
-                  {goal.status}
-                </span>
-              </div>
-              
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>${goal.savedAmount?.toLocaleString()} of ${goal?.targetAmount?.toLocaleString()}</span>
-                <span>Est. completion: {goal.estimatedCompletionDate}</span>
-              </div>
-              
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                <div 
-                  className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
-                    goal.status === 'Behind' ? 'bg-yellow-500' : 'bg-primary'
-                  }`}
-                  style={{ width: `${progress}%` }}
-                ></div>
+        {goalsByCategory ? (
+          // Render grouped by category
+          Object.entries(goalsByCategory).map(([category, goals]) => (
+            <div key={category} className="mb-4">
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{category}</h4>
+              <div className="space-y-3">
+                {goals.map((goal, index) => renderGoal(goal, index))}
               </div>
             </div>
-          );
-        })}
+          ))
+        ) : (
+          // Render flat list
+          items.map((goal, index) => renderGoal(goal, index))
+        )}
+        
+        {(!items || items.length === 0) && (
+          <div className="text-center py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/5 dark:bg-slate-800/20">
+            <FontAwesomeIcon icon={faPiggyBank} className="w-10 h-10 text-slate-400 dark:text-slate-500 mb-3" />
+            <p className="font-medium text-slate-600 dark:text-slate-300">No savings goals found.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Add your savings goals to see them here.</p>
+          </div>
+        )}
       </div>
     </Widget>
   );
@@ -733,15 +775,12 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
 
 // Insurance Coverage Widget
 export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverageWidget }) {
-  // Handle both data structures: direct array or items property
-  // This supports both the sample data format and the form component format
-  const items = Array.isArray(widget.data) ? widget.data : widget.data?.items;
+  const { data } = widget;
+  const { items, showPremiums, showRenewalDates } = data;
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div 
-        className="space-y-4 p-1"      
-      >
+      <div className="space-y-4 p-1">
         {Array.isArray(items) && items.length > 0 ? (
           items.map((item, index) => (
             <motion.div 
@@ -765,12 +804,36 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
                   {item.provider && <p className="text-sm text-slate-500 dark:text-slate-400">{item.provider}</p>}
                 </div>
               </div>
-              <div className="mt-3 text-right">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Coverage</p>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  {item.coverage ? item.coverage : 
-                   (typeof item.coverageAmount === 'number' ? `$${item.coverageAmount.toLocaleString()}` : '$0')}
-                </p>
+              
+              <div className="mt-3">
+                {/* Coverage information */}
+                <div className="text-right">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Coverage</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                    {item.coverage ? item.coverage : 
+                     (typeof item.coverageAmount === 'number' ? `$${item.coverageAmount.toLocaleString()}` : '$0')}
+                  </p>
+                </div>
+                
+                {/* Premium information - conditionally shown */}
+                {showPremiums && item.premium && (
+                  <div className="text-right mt-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Premium</p>
+                    <p className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                      ${item.premium.toLocaleString()}/mo
+                    </p>
+                  </div>
+                )}
+                
+                {/* Renewal date - conditionally shown */}
+                {showRenewalDates && item.renewalDate && (
+                  <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex justify-end items-center">
+                    <span className="mr-1">Renewal:</span>
+                    <span className="font-medium">
+                      {new Date(item.renewalDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))

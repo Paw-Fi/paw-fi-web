@@ -165,9 +165,9 @@ export const saveDashboard = createAsyncThunk(
           title: widget.title,
           type: widget.type,
           icon: widget.icon,
-          column_span: widget.columnSpan as 1 | 2,
-          row_span: widget.rowSpan as 1 | 2,
-          widget_data: widget.data
+          column_span: widget.column_span as 1 | 2,
+          row_span: widget.row_span as 1 | 2,
+          data: widget.data
         }))
       });
       
@@ -177,9 +177,9 @@ export const saveDashboard = createAsyncThunk(
         type: widget.type,
         title: widget.title,
         icon: widget.icon,
-        columnSpan: widget.column_span,
-        rowSpan: widget.row_span,
-        data: widget.widget_data
+        column_span: widget.column_span,
+        row_span: widget.row_span,
+        data: widget.data
       }));
       
       return updatedWidgets;

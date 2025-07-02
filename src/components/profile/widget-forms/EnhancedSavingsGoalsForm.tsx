@@ -44,22 +44,24 @@ interface WidgetFormProps<T> {
 }
 
 export const EnhancedSavingsGoalsForm: React.FC<WidgetFormProps<IEnhancedSavingsGoalsWidget>> = ({ data: widgetData, onDataChange }) => {
-  const [items, setItems] = useState<IEnhancedSavingsGoalItem[]>(widgetData.data || []);
-  const [showGroupByCategory, setShowGroupByCategory] = useState<boolean>(widgetData.groupByCategory || false);
-  const [showProgress, setShowProgress] = useState<boolean>(widgetData.showProgress || true);
+  const [items, setItems] = useState<IEnhancedSavingsGoalItem[]>(widgetData.data?.items || []);
+  const [showGroupByCategory, setShowGroupByCategory] = useState<boolean>(widgetData.data?.groupByCategory || false);
+  const [showProgress, setShowProgress] = useState<boolean>(widgetData.data?.showProgress || true);
 
   useEffect(() => {
-    setItems(widgetData.data || []);
-    setShowGroupByCategory(widgetData.groupByCategory || false);
-    setShowProgress(widgetData.showProgress || true);
-  }, [widgetData.data, widgetData.groupByCategory, widgetData.showProgress]);
+    setItems(widgetData.data?.items || []);
+    setShowGroupByCategory(widgetData.data?.groupByCategory || false);
+    setShowProgress(widgetData.data?.showProgress || true);
+  }, [widgetData.data?.items, widgetData.data?.groupByCategory, widgetData.data?.showProgress]);
 
   const propagateChangesUp = (updatedItems: IEnhancedSavingsGoalItem[], groupByCategory?: boolean, showProgress?: boolean) => {
     onDataChange({ 
       ...widgetData, 
-      data: updatedItems,
-      groupByCategory: groupByCategory !== undefined ? groupByCategory : widgetData.groupByCategory,
-      showProgress: showProgress !== undefined ? showProgress : widgetData.showProgress
+      data: {
+        items: updatedItems,
+        groupByCategory: groupByCategory !== undefined ? groupByCategory : widgetData.data?.groupByCategory || false,
+        showProgress: showProgress !== undefined ? showProgress : widgetData.data?.showProgress || true
+      }
     });
   };
 

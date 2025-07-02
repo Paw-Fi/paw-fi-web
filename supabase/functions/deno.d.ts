@@ -94,7 +94,7 @@ declare module 'https://esm.sh/@supabase/supabase-js@2.7.1' {
   export function createClient(supabaseUrl: string, supabaseKey: string, options?: SupabaseClientOptions): SupabaseClient;
 }
 
-declare namespace Deno {
+export declare namespace Deno {
   interface Addr {
     transport: 'tcp' | 'udp';
     hostname: string;

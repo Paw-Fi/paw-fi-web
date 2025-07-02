@@ -164,10 +164,10 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "pieChart" as const,
       title: "Expense Categories",
       icon: "fas fa-chart-pie",
-      columnSpan: 1,
-      rowSpan: 1,
-      showLegend: true,
+      column_span: 1,
+      row_span: 1,
       data: {
+        showLegend: true,
         dataPoints: [
           {
             id: generateId("dp-pc1"),
@@ -215,8 +215,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "quickCashFlowSummary",
       title: "Cash Flow Summary",
       icon: "faExchangeAlt",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: {
         inflows: [],
         outflows: [],
@@ -233,8 +233,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "debtVisualizer",
       title: "Debt Visualizer",
       icon: "faCreditCard",
-      columnSpan: 2,
-      rowSpan: 1,
+      column_span: 2,
+      row_span: 1,
       strategy: "avalanche",
       data: [] as IDebtItem[],
     } as Omit<IDebtVisualizerWidget, "createdAt" | "updatedAt"> & {
@@ -249,8 +249,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "nextBestAction",
       title: "Next Best Actions",
       icon: "faLightbulb",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: [] as INextBestActionData, // INextBestActionData is INextBestActionItem[]
       maxDisplayItems: 3,
       filterByPriority: undefined,
@@ -264,8 +264,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "retirementReadiness",
       title: "Retirement Readiness",
       icon: "faUmbrellaBeach",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: (() => {
         const firstScenarioId = generateId("ret-scen");
         return {
@@ -296,15 +296,18 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faPiggyBank,
     defaultData: {
+      id: "new-savings-goals",
       type: "enhancedSavingsGoals",
       title: "Savings Goals",
       icon: "faPiggyBank",
-      columnSpan: 2,
-      rowSpan: 1,
-      data: [],
-      groupByCategory: false,
-      showProgress: true,
-    },
+      column_span: 2,
+      row_span: 1,
+      data: {
+        items: [],
+        groupByCategory: false,
+        showProgress: true,
+      },
+    } as Omit<IEnhancedSavingsGoalsWidget, "createdAt" | "updatedAt"> & { id: string },
   },
   dataList: {
     component: DataListFormExt as React.ComponentType<{
@@ -316,9 +319,14 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "dataList" as const,
       title: "New Data List",
       icon: "faList",
-      columnSpan: 2,
-      rowSpan: 1,
-      data: [] as IDataListItem[],
+      column_span: 2,
+      row_span: 1,
+      data: {
+        items: [] as IDataListItem[],
+        tip: '',
+        groupByCategory: false,
+        showTotals: false
+      },
     } as Omit<IDataListWidget, "createdAt" | "updatedAt"> & { id: string },
   },
   progressBarList: {
@@ -328,23 +336,26 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     }>,
     icon: faTasks,
     defaultData: {
+      id: generateId("widget"),
       type: "progressBarList" as const,
       title: "My Progress",
       icon: "faTasks",
-      columnSpan: 1,
-      rowSpan: 1,
-      data: [
-        {
-          id: generateId("progress-item"),
-          label: "New Goal",
-          current: 0,
-          max: 100,
-          color: "#4CAF50",
-          displayOrder: 0,
-        },
-      ],
-      showPercentages: true,
-      sortBy: "custom" as const,
+      column_span: 1,
+      row_span: 1,
+      data: {
+        items: [
+          {
+            id: generateId("progress-item"),
+            label: "New Goal",
+            current: 0,
+            max: 100,
+            color: "#4CAF50",
+            displayOrder: 0,
+          },
+        ],
+        showPercentages: true,
+        sortBy: "custom" as const,
+      },
     } as Omit<IProgressBarListWidget, "createdAt" | "updatedAt"> & {
       id: string;
     },
@@ -359,8 +370,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "metricCard" as const,
       title: "Key Metric",
       icon: "faCheckSquare",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: {
         title: "Key Performance Indicators",
         description: "Monitor your important metrics.",
@@ -387,8 +398,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "tipCard" as const,
       title: "Helpful Tip",
       icon: "faLightbulb",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: {
         tips: [
           {
@@ -413,8 +424,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "countdownCard" as const,
       title: "Event Countdown",
       icon: "faCalendar",
-      columnSpan: 1,
-      rowSpan: 1,
+      column_span: 1,
+      row_span: 1,
       data: {
         id: "cd-1",
         title: "Next Holiday",
@@ -439,8 +450,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "barChart" as const,
       title: "Sample Bar Chart",
       icon: "faChartBar",
-      columnSpan: 2,
-      rowSpan: 1,
+      column_span: 2,
+      row_span: 1,
       data: {
         dataPoints: [
           {
@@ -477,8 +488,8 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "lineChart" as const,
       title: "Sample Line Chart",
       icon: "faChartLine",
-      columnSpan: 2,
-      rowSpan: 1,
+      column_span: 2,
+      row_span: 1,
       data: {
         dataPoints: [
           {
@@ -516,10 +527,10 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "financialHealthScorecard",
       title: "Financial Health Score",
       icon: "faHeartbeat",
-      columnSpan: 2,
-      rowSpan: 1,
-      showIndividualScores: true, // Default setting for the widget
+      column_span: 2,
+      row_span: 1,
       data: {
+      showIndividualScores: true, // Default setting for the widget
         items: [
           // Optionally, start with one default item or keep empty
           // {
@@ -546,11 +557,13 @@ export const widgetTypeConfig: WidgetTypeConfig = {
       type: "insuranceCoverage",
       title: "Insurance Policies",
       icon: "faShieldAlt",
-      columnSpan: 1,
-      rowSpan: 1,
-      data: { items: [] as IInsuranceCoverageItem[] },
-      showPremiums: true,
-      showRenewalDates: true,
+      column_span: 1,
+      row_span: 1,
+      data: { 
+        items: [] as IInsuranceCoverageItem[],
+        showPremiums: true,
+        showRenewalDates: true,
+      },
     } as Omit<IInsuranceCoverageWidget, "createdAt" | "updatedAt"> & {
       id: string;
     },
@@ -559,25 +572,30 @@ export const widgetTypeConfig: WidgetTypeConfig = {
     component: ChecklistForm,
     icon: faListCheck,
     defaultData: {
+      id: "new-checklist",
       type: "checklist",
       title: "My Checklist",
       icon: "faListCheck",
-      columnSpan: 2,
-      rowSpan: 1,
-      data: [
-        {
-          id: "i1-cl",
-          task: "Review monthly budget",
-          isCompleted: false,
-          displayOrder: 0,
-        },
-        {
-          id: "i2-cl",
-          task: "Plan retirement contributions",
-          isCompleted: false,
-          displayOrder: 1,
-        },
-      ] as IChecklistItem[],
+      column_span: 2,
+      row_span: 1,
+      data: {
+        items: [
+          {
+            id: "i1-cl",
+            task: "Review monthly budget",
+            isCompleted: false,
+            displayOrder: 0,
+          },
+          {
+            id: "i2-cl",
+            task: "Plan retirement contributions",
+            isCompleted: false,
+            displayOrder: 1,
+          },
+        ] as IChecklistItem[],
+        showCompleted: true,
+        sortBy: "custom"
+      },
     } as Omit<IChecklistWidget, "createdAt" | "updatedAt"> & { id: string },
   },
 };
@@ -760,20 +778,20 @@ export default function WidgetEditModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label
-                  htmlFor="widget-columnSpan"
+                  htmlFor="widget-column_span"
                   className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
                   Column Span
                 </Label>
                 <Input
-                  id="widget-columnSpan"
+                  id="widget-column_span"
                   type="number"
                   min="1"
                   max="2"
-                  value={formData.columnSpan || 1}
+                  value={formData.column_span || 1}
                   onChange={(e) =>
                     handleGlobalSettingChange(
-                      "columnSpan",
+                      "column_span",
                       (parseInt(e.target.value, 10) as 1 | 2) || 1,
                     )
                   }
@@ -782,20 +800,20 @@ export default function WidgetEditModal({
               </div>
               <div>
                 <Label
-                  htmlFor="widget-rowSpan"
+                  htmlFor="widget-row_span"
                   className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
                   Row Span (Optional)
                 </Label>
                 <Input
-                  id="widget-rowSpan"
+                  id="widget-row_span"
                   type="number"
                   min="1"
                   max="2"
-                  value={formData.rowSpan || ""}
+                  value={formData.row_span || ""}
                   onChange={(e) =>
                     handleGlobalSettingChange(
-                      "rowSpan",
+                      "row_span",
                       (parseInt(e.target.value, 10) as 1 | 2) || undefined,
                     )
                   }

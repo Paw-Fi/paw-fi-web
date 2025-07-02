@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/auth-context";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, Fragment } from "react";
 import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,6 +14,7 @@ import {
   faExclamationTriangle,
   faRefresh,
   faChevronDown,
+  faHeartPulse,
 } from "@fortawesome/free-solid-svg-icons";
 import { ConfirmationModal } from "@/components/profile/modals/ConfirmationModal";
 import { SkeletonDashboard } from "@/components/profile/SkeletonDashboard";
@@ -273,6 +274,15 @@ function Profile() {
                     <h1 className="text-2xl font-bold text-gray-800">
                       Dashboard
                     </h1>
+                    
+                    {/* Financial Health Quiz button */}
+                    <Link
+                      to="/financial-health"
+                      className="ml-4 flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                    >
+                      <FontAwesomeIcon icon={faHeartPulse} className="mr-2" />
+                      Financial Health Quiz
+                    </Link>
 
                     {/* View selector dropdown - always visible */}
                     <div className="relative ml-4">

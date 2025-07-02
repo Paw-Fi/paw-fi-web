@@ -153,6 +153,8 @@ Deno.serve(async (req: Request) => {
     switch (action) {
       case 'create-from-template':
         return await handleCreateFromTemplate(req.method, requestData, supabase, headers);
+      case 'create-with-widgets':
+        return await createViewWithWidgets(supabase, requestData);
       case 'update':
         return await handleUpdate(req.method, requestData, supabase, headers);
       case 'update-with-widgets':
@@ -382,9 +384,9 @@ async function handleCreateFromTemplate(
       type: widget.type,
       title: widget.title,
       icon: widget.icon,
-      column_span: widget.columnSpan || 1,
-      row_span: widget.rowSpan || 1,
-      widget_data: widget.data // Use widget.data directly
+      column_span: widget.column_span || 1,
+      row_span: widget.row_span || 1,
+      data: widget.data // Use widget.data directly
     }));
     
     const { data: widgets, error: widgetsError } = await supabase
@@ -404,6 +406,115 @@ async function handleCreateFromTemplate(
     return createErrorResponse(500, 'Error creating dashboard view from template', error, headers);
   }
 }
+
+/**
+ * Creates a new dashboard view with the provided widgets
+ * 
+ * This allows the frontend to pass custom widget data directly instead of relying
+ * on a backend template, useful for dynamic content like financial quiz results.
+ * 
+ * @param supabase The Supabase client
+ * @param request The request object containing view data and widgets
+ * @returns The created dashboard view or an error
+ */
+export async function createViewWithWidgets(
+  supabase: SupabaseClient,
+  request: any,
+) {
+  try {
+    // Validate request
+    const { viewName,userId, description, widgets } = request;
+    if(!userId){
+      return {
+        status: 400,
+        body: {
+          error: 'Invalid request. userId is required.'
+        }
+      };
+    }
+    
+    if (!viewName || !widgets || !Array.isArray(widgets)) {
+      return {
+        status: 400,
+        body: {
+          error: 'Invalid request. viewName and widgets array are required.'
+        }
+      };
+    }
+    
+    // Create the dashboard view
+    const { data: createdView, error: viewError } = await supabase
+      .from('dashboard_views')
+      .insert([
+        {
+          name: viewName,
+          description: description || '',
+          user_id: userId
+        }
+      ])
+      .select('*')
+      .single();
+    
+    if (viewError) {
+      console.error('Error creating dashboard view:', viewError);
+      return {
+        status: 500,
+        body: {
+          error: 'Failed to create dashboard view',
+          details: viewError
+        }
+      };
+    }
+    
+    // Prepare widgets with the new view ID
+    const widgetsToInsert = widgets.map((widget) => ({
+      ...widget,
+      view_id: createdView.id
+    }));
+    
+    // Insert all widgets for this view
+    const { error: widgetsError } = await supabase
+      .from('dashboard_widgets')
+      .insert(widgetsToInsert);
+    
+    if (widgetsError) {
+      console.error('Error creating dashboard widgets:', widgetsError);
+      
+      // If widgets fail, delete the view to avoid orphaned views
+      await supabase
+        .from('dashboard_views')
+        .delete()
+        .eq('id', createdView.id);
+      
+      return {
+        status: 500,
+        body: {
+          error: 'Failed to create dashboard widgets',
+          details: widgetsError
+        }
+      };
+    }
+    
+    // Return success with created view
+    return {
+      status: 200,
+      body: {
+        message: 'Dashboard view created successfully',
+        view: createdView
+      }
+    };
+  } catch (error) {
+    console.error('Unexpected error in createViewWithWidgets:', error);
+    return {
+      status: 500,
+      body: {
+        error: 'An unexpected error occurred',
+        details: error instanceof Error ? error.message : String(error)
+      }
+    };
+  }
+}
+
 
 // Handler for updating a dashboard view
 async function handleUpdate(
@@ -537,7 +648,7 @@ async function handleUpdateWithWidgets(
         icon: widget.icon,
         column_span: widget.column_span,
         row_span: widget.row_span,
-        widget_data: widget.widget_data,
+        data: widget.data,
         order: index  // Set the order based on the array index to preserve frontend ordering
       };
       
@@ -904,9 +1015,9 @@ async function createViewFromTemplate(
       type: widget.type,
       title: widget.title,
       icon: widget.icon,
-      column_span: widget.columnSpan || 1,
-      row_span: widget.rowSpan || 1,
-      widget_data: widget.data
+      column_span: widget.column_span || 1,
+      row_span: widget.row_span || 1,
+      data: widget.data
     }));
 
     const { data: createdWidgets, error: widgetsError } = await supabase

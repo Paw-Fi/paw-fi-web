@@ -52,7 +52,7 @@ title: string
 
 icon: string (Must be a valid FontAwesome React icon name: "faSparkles", "faPiggyBank", "faBriefcase", "faHandshake", "faTrendingUp", "faDollarSign", "faCalendar", "faTarget", "faLightbulb", "faLink", "faWallet", "faReceipt", "faCreditCard", "faBanknote", "faShieldCheck", "faBarChart2", "faLineChartIcon", "faChevronsRight", "faHome", "faCar")
 
-columnSpan: 1 | 2 (Widgets will occupy 1 or 2 columns in a 2-column grid layout on large screens, and always 2 columns on small screens).
+column_span: 1 | 2 (Widgets will occupy 1 or 2 columns in a 2-column grid layout on large screens, and always 2 columns on small screens).
 
 type: A literal string specifying the widget type.
 
@@ -205,7 +205,7 @@ Assign unique ids for each widget.
 
 Match icon names exactly to the list provided.
 
-Maintain the columnSpan: 1 | 2 format.
+Maintain the column_span: 1 | 2 format.
 
 DON'T:
 
@@ -243,7 +243,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "financialHealthScorecard",
       "title": "Financial Health",
       "icon": "ShieldCheck",
-      "columnSpan": 1,
+      "column_span": 1,
       "data": {
         "score": 60,
         "status": "Fair",
@@ -255,7 +255,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "nextBestAction",
       "title": "Your Next Step",
       "icon": "ChevronsRight",
-      "columnSpan": 1,
+      "column_span": 1,
       "data": {
         "message": "Prioritize paying off your high-interest credit card debt ($1500 @ 20%).",
         "callToAction": "Debt Payoff Plan"
@@ -266,7 +266,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "quickCashFlowSummary",
       "title": "Monthly Cash Flow",
       "icon": "Banknote",
-      "columnSpan": 2,
+      "column_span": 2,
       "data": {
         "income": 4500,
         "expenses": 2000
@@ -277,7 +277,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "debtVisualizer",
       "title": "Debt Payoff Plan",
       "icon": "CreditCard",
-      "columnSpan": 2,
+      "column_span": 2,
       "strategy": "avalanche",
       "data": [
         { "name": "Credit Card", "currentBalance": 1500, "originalBalance": 1500, "interestRate": 20, "minPayment": 50, "payoffDate": "Dec 2025" },
@@ -289,7 +289,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "enhancedSavingsGoals",
       "title": "Your Savings Goals",
       "icon": "Target",
-      "columnSpan": 1,
+      "column_span": 1,
       "data": [
         { "name": "Emergency Fund", "savedAmount": 2000, "targetAmount": 5000, "estimatedCompletionDate": "Mar 2026", "status": "Behind" },
         { "name": "Europe Trip", "savedAmount": 500, "targetAmount": 3000, "estimatedCompletionDate": "Dec 2026", "status": "Behind" }
@@ -300,7 +300,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "retirementReadiness",
       "title": "Retirement Readiness",
       "icon": "Handshake",
-      "columnSpan": 1,
+      "column_span": 1,
       "data": {
         "score": 30,
         "status": "Needs Significant Work",
@@ -314,7 +314,7 @@ AI's Turn 4 (Example - Dashboard Generation): "Great, I have enough information 
       "type": "tipCard",
       "title": "AI Tips",
       "icon": "Lightbulb",
-      "columnSpan": 2,
+      "column_span": 2,
       "data": {
         "currentTipIndex": 0,
         "tips": [

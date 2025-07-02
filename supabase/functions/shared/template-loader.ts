@@ -1,9 +1,5 @@
 // Template loader for dashboard templates
-import { dashboardTemplate1 } from "./dashboard-templates/template1.ts";
-import { dashboardTemplate2 } from "./dashboard-templates/template2.ts";
-import { dashboardTemplate3 } from "./dashboard-templates/template3.ts";
-
-// Template metadata
+import { dashboardTemplate1, dashboardTemplate2, dashboardTemplate3, dashboardTemplate4, dashboardTemplate5 } from "./dashboard-templates/template.ts";
 export interface TemplateInfo {
   id: string;
   name: string;
@@ -16,29 +12,47 @@ export const templates: Record<string, { info: TemplateInfo; widgets: any[] }> =
   "1": {
     info: {
       id: "1",
-      name: "Financial Focus",
-      description: "A dashboard focused on financial health and action items",
-      category: "finance"
+      name: "Financial Overview",
+      description: "A high-level summary of your key metrics, financial health, and immediate actions.",
+      category: "Finance"
     },
     widgets: dashboardTemplate1
   },
   "2": {
     info: {
       id: "2",
-      name: "Personal Goals",
-      description: "Track your personal goals and financial metrics",
-      category: "personal"
+      name: "Goals & Future Planning",
+      description: "Focus on long-term goals like retirement, major savings, and debt reduction.",
+      category: "Planning"
     },
     widgets: dashboardTemplate2
   },
   "3": {
     info: {
       id: "3",
-      name: "Long-term Planning",
-      description: "Focus on retirement, savings goals, and insurance",
-      category: "planning"
+      name: "Spending Deep Dive",
+      description: "Analyze your expenses, cash flow, and budgeting in detail.",
+      category: "Budgeting"
     },
     widgets: dashboardTemplate3
+  },
+  "4": {
+    info: {
+      id: "4",
+      name: "Assets & Protection",
+      description: "Track your investments, insurance coverage, and employment benefits.",
+      category: "Assets"
+    },
+    widgets: dashboardTemplate4
+  },
+  "5": {
+    info: {
+      id: "5",
+      name: "Action Center",
+      description: "A dashboard to manage your financial tasks, priorities, and personal goals.",
+      category: "Productivity"
+    },
+    widgets: dashboardTemplate5
   }
 };
 

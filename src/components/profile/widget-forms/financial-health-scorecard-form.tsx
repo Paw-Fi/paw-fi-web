@@ -19,12 +19,12 @@ const statusOptions: IFinancialHealthItem['status'][] = ['Excellent', 'Good', 'F
 
 export function FinancialHealthScorecardForm({ data: widgetDataProp, onDataChange }: FinancialHealthScorecardFormProps) {
   const [items, setItems] = useState<IFinancialHealthItem[]>(widgetDataProp.data.items || []);
-  const [showIndividualScores, setShowIndividualScores] = useState<boolean>(widgetDataProp.showIndividualScores === undefined ? true : widgetDataProp.showIndividualScores);
+  const [showIndividualScores, setShowIndividualScores] = useState<boolean>(widgetDataProp.data.showIndividualScores === undefined ? true : widgetDataProp.data.showIndividualScores);
   const [widgetTitle, setWidgetTitle] = useState<string>(widgetDataProp.title);
 
   useEffect(() => {
     setItems(widgetDataProp.data.items || []);
-    setShowIndividualScores(widgetDataProp.showIndividualScores === undefined ? true : widgetDataProp.showIndividualScores);
+    setShowIndividualScores(widgetDataProp.data.showIndividualScores === undefined ? true : widgetDataProp.data.showIndividualScores);
     setWidgetTitle(widgetDataProp.title);
   }, [widgetDataProp]);
 
@@ -75,8 +75,8 @@ export function FinancialHealthScorecardForm({ data: widgetDataProp, onDataChang
     const newWidgetData: IFinancialHealthScorecardWidget = {
       ...widgetDataProp,
       title: updatedTitle,
-      showIndividualScores: updatedShowScores,
       data: {
+        showIndividualScores: updatedShowScores,
         ...widgetDataProp.data,
         items: updatedItems,
         // overallScore and overallStatus are typically calculated by the display component, not stored here

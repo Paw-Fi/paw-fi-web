@@ -32,9 +32,9 @@ const getTrendColor = (trend: IMetricCardItem['trend']) => {
 };
 
 export function MetricCard({ widget }: MetricCardProps) {
-  const { data: dataArray } = widget;
+  const { data } = widget;
 
-  if (!dataArray || dataArray.length === 0) {
+  if (!data || !data.metrics || data.metrics.length === 0) {
     return (
       <Widget widget={widget} controls={widget.controls}>
         <div className="flex items-center justify-center h-full p-6 text-sm text-slate-500 dark:text-slate-400">
@@ -45,10 +45,10 @@ export function MetricCard({ widget }: MetricCardProps) {
   }
 
   // Assuming we display the first metric item for now.
-  const data = dataArray[0];
+  const metricItem = data.metrics[0];
 
   // Calculate progress percentage (progress is 0.0 to 1.0)
-  const progressPercentage = data?.progress? data.progress * 100 : 0;
+  const progressPercentage = metricItem?.progress ? metricItem.progress * 100 : 0;
 
   return (
     <Widget widget={widget} controls={widget.controls}>
@@ -57,33 +57,33 @@ export function MetricCard({ widget }: MetricCardProps) {
         <div>
           <div className="flex items-baseline space-x-2">
             <span className="text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              {data?.currency}{data?.value}
+              {metricItem?.currency}{metricItem?.value}
             </span>
           </div>
 
-          {data?.trend && data?.trendPercentage && (
-            <div className={`mt-2 flex items-center text-sm ${getTrendColor(data.trend)}`}>
-              <TrendIcon trend={data.trend} />
+          {metricItem?.trend && metricItem?.trendPercentage && (
+            <div className={`mt-2 flex items-center text-sm ${getTrendColor(metricItem.trend)}`}>
+              <TrendIcon trend={metricItem.trend} />
               <span className="ml-1.5 font-medium">
-                {data.trendPercentage} vs last period
+                {metricItem.trendPercentage} vs last period
               </span>
             </div>
           )}
           
-          {/* data.description is used here as the primary textual content for the metric item itself */} 
-          {data?.description && (
+          {/* metricItem.description is used here as the primary textual content for the metric item itself */} 
+          {metricItem?.description && (
              <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
-              {data.description}
+              {metricItem.description}
             </p>
           )}
         </div>
 
         {/* Bottom section: Progress Bar and Goal */} 
-        {data?.progress && (
+        {metricItem?.progress && (
           <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
               <span>Progress</span> {/* Static label "Progress" */} 
-              {data?.goalLabel && <span>Target: {data.goalLabel}</span>}
+              {metricItem?.goalLabel && <span>Target: {metricItem.goalLabel}</span>}
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
               <div

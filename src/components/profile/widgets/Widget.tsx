@@ -26,7 +26,7 @@ export function Widget({ widget, children, className = '', controls }: WidgetPro
     <div 
       className={`     
         h-full flex flex-col
-        ${widget.columnSpan === 2 ? 'col-span-2' : 'col-span-1'}
+        ${widget.column_span === 2 ? 'col-span-2' : 'col-span-1'}
         ${className}
       `}    
     >
