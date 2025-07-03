@@ -134,6 +134,7 @@ function CheckoutPage() {
 
         // @ts-ignore - Stripe is loaded via script tag
         const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+        console.log("Stripe loaded:",import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
         // Check if user is logged in
         if (!user || !user.id) {
@@ -215,6 +216,7 @@ function CheckoutPage() {
             toast.success("Payment successful!");
           },
         };
+        console.log("Stripe options:", options);
 
         // Create and mount Express Checkout Element
         const elements = stripe.elements(options);
