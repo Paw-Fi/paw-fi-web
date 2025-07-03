@@ -33,3 +33,6 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+# Note: Need to grant access to the secrets to the app engine service account by using:
+# firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
