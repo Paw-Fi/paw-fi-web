@@ -425,11 +425,11 @@ export default function HomePage() {
               Explore Courses
             </Link>
             <Link
-              to="/dashboard/chat"
+              to="/dashboard"
               className="font-medium text-purple-600 hover:text-purple-800"
             >
               <Button className="bg-purple-600 hover:bg-purple-700">
-                Chat with AI
+               Dashboard <FontAwesomeIcon icon={faArrowRight}  className="ml-2"/>
               </Button>
             </Link>
           </div>

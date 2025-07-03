@@ -30,13 +30,13 @@ CREATE TABLE IF NOT EXISTS public.user_stripe_mapping (
 
 -- Create RLS policies for the subscriptions table
 -- Allow users to read only their own subscription data
-CREATE POLICY IF NOT EXISTS "Users can view their own subscriptions"
+CREATE POLICY "Users can view their own subscriptions"
     ON public.subscriptions
     FOR SELECT
     USING (auth.uid() = user_id);
 
 -- Only allow service role to insert/update/delete subscription data
-CREATE POLICY IF NOT EXISTS "Service role can manage all subscriptions"
+CREATE POLICY "Service role can manage all subscriptions"
     ON public.subscriptions
     FOR ALL
     USING (auth.role() = 'service_role');
@@ -45,13 +45,13 @@ CREATE POLICY IF NOT EXISTS "Service role can manage all subscriptions"
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for the user_stripe_mapping table
-CREATE POLICY IF NOT EXISTS "Users can view their own stripe mapping"
+CREATE POLICY "Users can view their own stripe mapping"
     ON public.user_stripe_mapping
     FOR SELECT
     USING (auth.uid() = user_id);
 
 -- Only allow service role to insert/update/delete stripe mapping data
-CREATE POLICY IF NOT EXISTS "Service role can manage all stripe mappings"
+CREATE POLICY "Service role can manage all stripe mappings"
     ON public.user_stripe_mapping
     FOR ALL
     USING (auth.role() = 'service_role');
