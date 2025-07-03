@@ -154,7 +154,7 @@ Deno.serve(async (req: Request) => {
       case 'create-from-template':
         return await handleCreateFromTemplate(req.method, requestData, supabase, headers);
       case 'create-with-widgets':
-        return await createViewWithWidgets(supabase, requestData);
+        return await createViewWithWidgets(supabase, requestData, headers);
       case 'update':
         return await handleUpdate(req.method, requestData, supabase, headers);
       case 'update-with-widgets':
@@ -418,28 +418,29 @@ async function handleCreateFromTemplate(
  * @returns The created dashboard view or an error
  */
 export async function createViewWithWidgets(
-  supabase: SupabaseClient,
+  supabase: any,
   request: any,
+  headers: Record<string, string>
 ) {
   try {
     // Validate request
-    const { viewName,userId, description, widgets } = request;
+    const { viewName, userId, description, widgets } = request;
     if(!userId){
-      return {
-        status: 400,
-        body: {
+      return new Response(
+        JSON.stringify({
           error: 'Invalid request. userId is required.'
-        }
-      };
+        }),
+        { status: 400, headers }
+      );
     }
     
     if (!viewName || !widgets || !Array.isArray(widgets)) {
-      return {
-        status: 400,
-        body: {
+      return new Response(
+        JSON.stringify({
           error: 'Invalid request. viewName and widgets array are required.'
-        }
-      };
+        }),
+        { status: 400, headers }
+      );
     }
     
     // Create the dashboard view
@@ -457,13 +458,13 @@ export async function createViewWithWidgets(
     
     if (viewError) {
       console.error('Error creating dashboard view:', viewError);
-      return {
-        status: 500,
-        body: {
+      return new Response(
+        JSON.stringify({
           error: 'Failed to create dashboard view',
           details: viewError
-        }
-      };
+        }),
+        { status: 500, headers }
+      );
     }
     
     // Prepare widgets with the new view ID
@@ -475,7 +476,8 @@ export async function createViewWithWidgets(
     // Insert all widgets for this view
     const { error: widgetsError } = await supabase
       .from('dashboard_widgets')
-      .insert(widgetsToInsert);
+      .insert(widgetsToInsert)
+      .select(); 
     
     if (widgetsError) {
       console.error('Error creating dashboard widgets:', widgetsError);
@@ -484,34 +486,35 @@ export async function createViewWithWidgets(
       await supabase
         .from('dashboard_views')
         .delete()
-        .eq('id', createdView.id);
+        .eq('id', createdView.id)
+        .select();
       
-      return {
-        status: 500,
-        body: {
+      return new Response(
+        JSON.stringify({
           error: 'Failed to create dashboard widgets',
           details: widgetsError
-        }
-      };
+        }),
+        { status: 500, headers }
+      );
     }
     
     // Return success with created view
-    return {
-      status: 200,
-      body: {
+    return new Response(
+      JSON.stringify({
         message: 'Dashboard view created successfully',
         view: createdView
-      }
-    };
+      }),
+      { status: 200, headers }
+    );
   } catch (error) {
     console.error('Unexpected error in createViewWithWidgets:', error);
-    return {
-      status: 500,
-      body: {
+    return new Response(
+      JSON.stringify({
         error: 'An unexpected error occurred',
         details: error instanceof Error ? error.message : String(error)
-      }
-    };
+      }),
+      { status: 500, headers }
+    );
   }
 }
 

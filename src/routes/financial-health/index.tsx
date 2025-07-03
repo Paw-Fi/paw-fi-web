@@ -1,6 +1,6 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import FinancialHealthQuiz from '@/components/financial-health/FinancialHealthQuiz';
+import { FinancialHealthQuiz } from '@/components/financial-health/FinancialHealthQuiz';
 import { Widget } from '@/components/profile/types/dashboard-data.typings';
 
 export const Route = createFileRoute('/financial-health/')({
@@ -20,7 +20,7 @@ function FinancialHealthPage() {
           Answer a few questions to assess your financial health and get personalized recommendations.
         </p>
         
-        <FinancialHealthQuiz onComplete={handleQuizComplete} />
+        <FinancialHealthQuiz />
       </div>
   );
 }

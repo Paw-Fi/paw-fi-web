@@ -1,851 +1,1082 @@
-import React, { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faChevronRight, 
-  faChevronLeft, 
-  faCheck, 
-  faHeartPulse, 
-  faCoins, 
-  faChartLine,
-  faShieldAlt,
-  faPiggyBank,
-  faMoneyBillWave,
-  faFileInvoiceDollar,
-  faHandHoldingUsd,
-  faTachometerAlt,
-  faStar
-} from '@fortawesome/free-solid-svg-icons';
-import { Widget } from '../profile/types/dashboard-data.typings';
-import { v4 as uuidv4 } from 'uuid';
-import { calculateResults, generateDashboardWidgets, QuizAnswers, CalculationResults } from './quiz-calculations';
-import { useQuizDashboard } from './useQuizDashboard';
-import { useNavigate } from '@tanstack/react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { motion, AnimatePresence } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronLeft,
+  faChevronRight,
+  faCheck,
+} from "@fortawesome/free-solid-svg-icons";
+import { useQuizDashboard } from "./useQuizDashboard";
+import {
+  calculateResults,
+  generateDashboardWidgets,
+  CalculationResults,
+} from "./quiz-calculations";
 
-// Define types for quiz questions and answers
+// Types
+type QuestionCategory =
+  | "current-situation"
+  | "liquidity-needs"
+  | "risk-assessment"
+  | "time-horizon"
+  | "financial-goals";
+
+type QuestionType =
+  | "single-choice"
+  | "multiple-choice"
+  | "number-input"
+  | "slider";
+
+interface QuestionOption {
+  value: string;
+  label: string;
+}
+
 interface QuizQuestion {
   id: string;
   question: string;
   description?: string;
-  icon: any;
-  type: 'single-choice' | 'multiple-choice' | 'number-input' | 'slider';
-  options?: { value: string; label: string }[];
+  type: QuestionType;
+  options?: QuestionOption[];
   min?: number;
   max?: number;
   step?: number;
   unit?: string;
+  category: QuestionCategory;
+  optionsPerRow?: 2 | 3 | 4; // Controls how many option buttons appear per row
+  placeholder?: string;
 }
 
-// Define types for quiz state
+interface CategoryInfo {
+  id: QuestionCategory;
+  title: string;
+  description: string;
+  color: string;
+}
+
 interface QuizState {
-  currentIndex: number;
-  answers: Record<string, any>;
+  answers: Record<string, string | string[] | number | boolean>;
+  activeCategory: QuestionCategory;
+  showResults: boolean;
+  calculationResults: ExtendedCalculationResults | null;
+  dashboardName: string;
   isComplete: boolean;
-  calculationResults: CalculationResults | null;
 }
 
-// Helper to check if an answer is selected in a multiple-choice question
-const isAnswerSelected = (answers: any, questionId: string, value: string): boolean => {
-  if (!answers[questionId]) return false;
-  if (Array.isArray(answers[questionId])) {
-    return answers[questionId].includes(value);
-  }
-  return answers[questionId] === value;
-};
+interface ExtendedCalculationResults extends CalculationResults {
+  healthScore: number;
+  healthAssessment: string;
+  projectedRetirementFund: number;
+  yearsUntilRetirement: number;
+  monthlyRetirementIncome: number;
+}
+
+// Category information
+const categories: CategoryInfo[] = [
+  {
+    id: "current-situation",
+    title: "Current Financial Situation",
+    description: "Tell us about your current financial status",
+    color: "bg-blue-100 text-blue-600",
+  },
+  {
+    id: "liquidity-needs",
+    title: "Liquidity Needs",
+    description: "How quickly might you need access to your money?",
+    color: "bg-green-100 text-green-600",
+  },
+  {
+    id: "risk-assessment",
+    title: "Risk Assessment",
+    description: "How comfortable are you with investment risk?",
+    color: "bg-purple-100 text-purple-600",
+  },
+  {
+    id: "time-horizon",
+    title: "Time Horizon",
+    description: "When will you need your investments?",
+    color: "bg-amber-100 text-amber-600",
+  },
+  {
+    id: "financial-goals",
+    title: "Financial Goals",
+    description: "What are you saving and investing for?",
+    color: "bg-indigo-100 text-indigo-600",
+  },
+];
 
 // Quiz questions array
 const quizQuestions: QuizQuestion[] = [
   {
-    id: 'current-age',
-    question: 'What is your current age?',
-    description: 'This helps us calculate your retirement timeline.',
-    icon: faHeartPulse,
-    type: 'number-input',
+    id: "current-age",
+    question: "What is your current age?",
+    description: "This helps us calculate your retirement timeline.",
+    type: "number-input",
     min: 0,
-    max: 100
+    max: 100,
+    category: "current-situation",
   },
   {
-    id: 'retirement-age',
-    question: 'At what age do you plan to retire?',
-    description: 'This helps us calculate your investment horizon.',
-    icon: faHeartPulse,
-    type: 'number-input',
+    id: "retirement-age",
+    question: "At what age do you plan to retire?",
+    description: "This helps us calculate your investment horizon.",
+    type: "number-input",
     min: 0,
-    max: 100
+    max: 100,
+    category: "time-horizon",
   },
   {
-    id: 'annual-contribution',
-    question: 'How much can you contribute annually to investments?',
-    description: 'Consider your regular savings for long-term goals.',
-    icon: faCoins,
-    type: 'number-input',
-    unit: '$'
+    id: "debt-level",
+    question: "How much total debt do you have?",
+    description: "Add up all loans, credit cards, and other money you owe.",
+    type: "number-input",
+    unit: "$",
+    category: "current-situation",
+  },
+
+  {
+    id: "current-assets",
+    question: "What is the total value of your current investable assets?",
+    description: "Include savings, investments, and other liquid assets.",
+    type: "number-input",
+    unit: "$",
+    category: "current-situation",
   },
   {
-    id: 'current-assets',
-    question: 'What is the total value of your current investable assets?',
-    description: 'Include savings, investments, and other liquid assets.',
-    icon: faChartLine,
-    type: 'number-input',
-    unit: '$'
+    id: "target-retirement",
+    question: "What is your target retirement fund goal?",
+    description: "The amount you would like to have saved by retirement.",
+    type: "number-input",
+    unit: "$",
+    category: "financial-goals",
   },
   {
-    id: 'target-retirement',
-    question: 'What is your target retirement fund goal?',
-    description: 'The amount you would like to have saved by retirement.',
-    icon: faPiggyBank,
-    type: 'number-input',
-    unit: '$'
+    id: "emergency-fund",
+    question:
+      "How many months of expenses can your emergency fund cover?",
+    description:
+      "Experts recommend 3-6 months of basic living expenses.",
+    type: "number-input",
+    min: 0,
+    max: 36,
+    unit: " months",
+    category: "liquidity-needs",
   },
   {
-    id: 'return-rate',
-    question: 'What annual return rate do you expect on your investments?',
-    description: 'Typical market averages range from 6-8% before inflation.',
-    icon: faChartLine,
-    type: 'slider',
+    id: "investment-goals",
+    question: "What are your primary investment goals?",
+    description: "Select all that apply to your situation.",
+    type: "multiple-choice",
+    options: [
+      { value: "retirement", label: "Retirement" },
+      { value: "education", label: "Education" },
+      { value: "home", label: "Home purchase" },
+      { value: "wealth", label: "General wealth building" },
+      { value: "income", label: "Generate income" },
+    ],
+    optionsPerRow: 3,
+    category: "financial-goals",
+  },
+  {
+    id: "time-horizon",
+    question: "When do you expect to need most of your investments?",
+    description: "This helps determine appropriate investment vehicles.",
+    type: "single-choice",
+    options: [
+      { value: "short", label: "Short term (0-3 years)" },
+      { value: "medium", label: "Medium term (3-7 years)" },
+      { value: "long", label: "Long term (7+ years)" },
+    ],
+    optionsPerRow: 3,
+    category: "time-horizon",
+  },
+  {
+    id: "annual-contribution",
+    question: "How much can you contribute annually to investments?",
+    description: "Consider your regular savings for long-term goals.",
+    type: "number-input",
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "debt-type",
+    question: "What types of debt do you currently have?",
+    description: "Select all that apply to your situation.",
+    type: "multiple-choice",
+    options: [
+      { value: "mortgage", label: "Mortgage" },
+      { value: "student", label: "Student loans" },
+      { value: "auto", label: "Auto loans" },
+      { value: "credit-card", label: "Credit card debt" },
+      { value: "personal-loan", label: "Personal loan" },
+      { value: "medical-debt", label: "Medical debt" },
+    ],
+    optionsPerRow: 3,
+    category: "current-situation",
+  },
+  {
+    id: "liquidity-importance",
+    question: "How important is liquidity (quick access to your money) to you?",
+    description: "This helps determine suitable investment types.",
+    type: "single-choice",
+    options: [
+      {
+        value: "very-important",
+        label: "Very important - Need frequent access",
+      },
+      { value: "important", label: "Important - May need occasional access" },
+      {
+        value: "somewhat-important",
+        label: "Somewhat important - Rarely need access",
+      },
+      {
+        value: "not-important",
+        label: "Not important - Can lock up funds long-term",
+      },
+    ],
+    category: "liquidity-needs",
+  },
+  {
+    id: "market-downturn",
+    question: "How would you react to a 20% market downturn?",
+    description:
+      "This helps assess your emotional response to market volatility.",
+    type: "single-choice",
+    options: [
+      { value: "sell", label: "Sell to prevent further losses" },
+      { value: "worried", label: "Worried but would not sell" },
+      { value: "wait", label: "Wait and see before making changes" },
+      { value: "buy-more", label: "Buy more investments at lower prices" },
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "investment-knowledge",
+    question: "How would you rate your investment knowledge?",
+    description: "Be honest about your familiarity with investment concepts.",
+    type: "single-choice",
+    options: [
+      { value: "beginner", label: "Beginner - Limited knowledge" },
+      { value: "intermediate", label: "Intermediate - Understand basics" },
+      {
+        value: "advanced",
+        label: "Advanced - Comfortable with complex investments",
+      },
+      { value: "expert", label: "Expert - Professional knowledge" },
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "housing-situation",
+    question: "What is your current housing situation?",
+    description: "This helps us understand your housing expenses and assets.",
+    type: "single-choice",
+    options: [
+      { value: "rent", label: "Renting" },
+      { value: "own-mortgage", label: "Own with mortgage" },
+      { value: "own-paid", label: "Own outright (no mortgage)" },
+      { value: "other", label: "Other arrangement" },
+    ],
+    category: "current-situation",
+  },
+  {
+    id: "expected-return",
+    question: "What annual return do you expect from your investments?",
+    description: "Typical market averages range from 6-8% before inflation.",
+    type: "slider",
     min: 0,
     max: 12,
     step: 0.1,
-    unit: '%'
+    unit: "%",
+    category: "financial-goals",
   },
   {
-    id: 'emergency-fund',
-    question: 'How many months of expenses do you have in an emergency fund?',
-    description: 'Financial experts recommend 3-6 months of expenses.',
-    icon: faShieldAlt,
-    type: 'multiple-choice',
-    options: [
-      { value: 'none', label: 'No emergency fund' },
-      { value: 'less-than-1', label: 'Less than 1 month' },
-      { value: '1-3', label: '1-3 months' },
-      { value: '3-6', label: '3-6 months' },
-      { value: 'more-than-6', label: 'More than 6 months' }
-    ]
-  },
-  {
-    id: 'savings-rate',
-    question: 'What percentage of your income do you save each month?',
-    description: 'Include retirement contributions and other savings.',
-    icon: faMoneyBillWave,
-    type: 'slider',
+    id: "inflation-rate",
+    question: "What inflation rate do you expect over your investment horizon?",
+    description: "Historical average is around 2-3% in the US.",
+    type: "slider",
     min: 0,
-    max: 50,
-    step: 1,
-    unit: '%'
+    max: 10,
+    step: 0.1,
+    unit: "%",
+    category: "risk-assessment",
   },
   {
-    id: 'monthly-income',
-    question: 'What is your monthly income after taxes?',
-    description: 'Your take-home pay used for expenses and savings.',
-    icon: faCoins,
-    type: 'number-input',
-    unit: '$'
-  },
-  {
-    id: 'monthly-expenses',
-    question: 'What are your total monthly expenses?',
-    description: 'Include all regular spending: housing, food, utilities, etc.',
-    icon: faFileInvoiceDollar,
-    type: 'number-input',
-    unit: '$'
-  },
-  {
-    id: 'debt-types',
-    question: 'What types of debt do you currently have?',
-    description: 'Select all that apply.',
-    icon: faHandHoldingUsd,
-    type: 'multiple-choice',
+    id: "education-timeframe",
+    question: "If saving for education, when will funds be needed?",
+    description: "This helps determine appropriate education savings vehicles.",
+    type: "single-choice",
     options: [
-      { value: 'none', label: 'No debt' },
-      { value: 'credit-card', label: 'Credit card debt' },
-      { value: 'student-loans', label: 'Student loans' },
-      { value: 'mortgage', label: 'Mortgage' },
-      { value: 'car-loan', label: 'Car loan' },
-      { value: 'personal-loan', label: 'Personal loan' },
-      { value: 'other', label: 'Other debt' }
-    ]
+      { value: "0-2", label: "0-2 years" },
+      { value: "3-5", label: "3-5 years" },
+      { value: "6-10", label: "6-10 years" },
+      { value: "10+", label: "10+ years" },
+    ],
+    optionsPerRow: 4,
+    category: "time-horizon",
   },
   {
-    id: 'risk-profile',
-    question: 'How would you describe your investment risk tolerance?',
-    description: 'This helps determine appropriate investment strategies.',
-    icon: faChartLine,
-    type: 'single-choice',
+    id: "insurance-coverage",
+    question: "Which types of insurance coverage do you currently have?",
+    description: "Select all that apply to your current situation.",
+    type: "multiple-choice",
     options: [
-      { value: 'conservative', label: 'Conservative - Avoid risk, accept lower returns' },
-      { value: 'moderate', label: 'Moderate - Balance between risk and returns' },
-      { value: 'aggressive', label: 'Aggressive - Accept higher risk for potentially higher returns' }
-    ]
+      { value: "health", label: "Health insurance" },
+      { value: "life", label: "Life insurance" },
+      { value: "disability", label: "Disability insurance" },
+      { value: "auto", label: "Auto insurance" },
+      { value: "home", label: "Home/renters insurance" },
+      { value: "umbrella", label: "Umbrella policy" },
+      { value: "ltc", label: "Long-term care insurance" },
+    ],
+    optionsPerRow: 3,
+    category: "risk-assessment",
   },
   {
-    id: 'time-horizon',
-    question: 'When do you need to access most of your investments?',
-    description: 'Shorter timelines generally mean lower risk tolerance.',
-    icon: faChartLine,
-    type: 'single-choice',
+    id: "financial-priorities",
+    question: "What are your top financial priorities right now?",
+    description: "Select up to 3 that are most important to you.",
+    type: "multiple-choice",
     options: [
-      { value: 'short', label: 'Short-term (0-5 years)' },
-      { value: 'medium', label: 'Medium-term (5-10 years)' },
-      { value: 'long', label: 'Long-term (10+ years)' }
-    ]
+      { value: "debt-reduction", label: "Reducing debt" },
+      { value: "emergency-fund", label: "Building emergency fund" },
+      { value: "retirement", label: "Retirement savings" },
+      { value: "home", label: "Buying a home" },
+      { value: "education", label: "Education savings" },
+      { value: "income", label: "Increasing income" },
+      { value: "tax-efficiency", label: "Tax efficiency" },
+      { value: "estate-planning", label: "Estate planning" },
+    ],
+    optionsPerRow: 3,
+    category: "financial-goals",
   },
   {
-    id: 'insurance-coverage',
-    question: 'Which types of insurance coverage do you currently have?',
-    description: 'Select all that apply.',
-    icon: faShieldAlt,
-    type: 'multiple-choice',
+    id: "health-status",
+    question: "How would you describe your overall health?",
+    description: "Health status can impact financial planning needs.",
+    type: "single-choice",
     options: [
-      { value: 'none', label: 'No insurance' },
-      { value: 'health', label: 'Health insurance' },
-      { value: 'life', label: 'Life insurance' },
-      { value: 'disability', label: 'Disability insurance' },
-      { value: 'home', label: 'Home/rental insurance' },
-      { value: 'auto', label: 'Auto insurance' }
-    ]
-  }
+      { value: "excellent", label: "Excellent - No health concerns" },
+      { value: "good", label: "Good - Minor health concerns" },
+      { value: "fair", label: "Fair - Some health issues" },
+      { value: "poor", label: "Poor - Significant health concerns" },
+    ],
+    category: "risk-assessment",
+  },
 ];
 
-interface FinancialHealthQuizProps {
-  onComplete: (widgets: Widget[]) => void;
-}
+// Helper function to check if an answer is selected in multiple choice questions
+const isAnswerSelected = (
+  answers: Record<string, string | string[] | number | boolean>,
+  questionId: string,
+  value: string,
+): boolean => {
+  if (!answers[questionId]) return false;
+  if (Array.isArray(answers[questionId])) {
+    return (answers[questionId] as string[]).includes(value);
+  }
+  return answers[questionId] === value;
+};
 
-const FinancialHealthQuiz: React.FC<FinancialHealthQuizProps> = ({ onComplete }) => {
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.5 } },
+};
+
+const categoryVariants = {
+  hidden: { opacity: 0, x: 20 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  exit: { opacity: 0, x: -20, transition: { duration: 0.3 } },
+};
+
+const resultVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+};
+
+export function FinancialHealthQuiz() {
   const navigate = useNavigate();
-  const { status, error, createdViewId, createDashboardFromQuiz } = useQuizDashboard();
-  
-  // Initialize quiz state
-  const [quizState, setQuizState] = useState<QuizState>({
-    currentIndex: 0,
+  const {
+    createDashboardFromQuiz,
+    status,
+    error: dashboardError,
+  } = useQuizDashboard();
+  const [error, setError] = useState<string | null>(null);
+
+  // Initial quiz state
+  const [state, setState] = useState<QuizState>({
     answers: {},
+    activeCategory: "current-situation",
+    showResults: false,
+    calculationResults: null,
+    dashboardName: "My Financial Health Assessment",
     isComplete: false,
-    calculationResults: null
   });
-  
-  const [dashboardName, setDashboardName] = useState('My Financial Health Dashboard');
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [generatedWidgets, setGeneratedWidgets] = useState<Widget[] | null>(null);
 
-  // Handle moving to the next question
-  const handleNext = () => {
-    if (quizState.currentIndex < quizQuestions.length - 1) {
-      setQuizState(prevState => ({
-        ...prevState,
-        currentIndex: prevState.currentIndex + 1
-      }));
-    } else {
-      // Calculate results and mark as complete
-      const results = calculateResults(quizState.answers);
-      const widgets = generateDashboardWidgets(results);
-      
-      setQuizState(prevState => ({
-        ...prevState,
-        isComplete: true,
-        calculationResults: results
-      }));
-      
-      setGeneratedWidgets(widgets);
-      setShowNameInput(true);
-    }
-  };
-  
-  // Handle dashboard creation
-  const handleCreateDashboard = async () => {
-    if (!generatedWidgets) return;
-    console.log("generatedWidgets",generatedWidgets)
-    const viewId = await createDashboardFromQuiz(dashboardName, generatedWidgets);
-    
-    if (viewId) {
-      // Navigate to the dashboard view
-      navigate({ to: '/dashboard' });
-      
-      if (onComplete) {
-        onComplete(generatedWidgets);
+  // Group questions by category
+  const questionsByCategory = useMemo<
+    Record<QuestionCategory, QuizQuestion[]>
+  >(() => {
+    const categories: Record<QuestionCategory, QuizQuestion[]> = {
+      "current-situation": [],
+      "liquidity-needs": [],
+      "risk-assessment": [],
+      "time-horizon": [],
+      "financial-goals": [],
+    };
+
+    quizQuestions.forEach((question: QuizQuestion) => {
+      if (question.category) {
+        categories[question.category].push(question);
       }
-    }
-  };
+    });
+    return categories;
+  }, []);
 
-  // Handle moving to the previous question
-  const handlePrevious = () => {
-    if (quizState.currentIndex > 0) {
-      setQuizState(prevState => ({
-        ...prevState,
-        currentIndex: prevState.currentIndex - 1
-      }));
-    }
-  };
+  // Calculate progress
+  const progress = useMemo(() => {
+    const current= state.activeCategory?
+    Object.keys(questionsByCategory).indexOf(
+        state.activeCategory,
+      )  :0
+      const total = Object.keys(questionsByCategory).length;
+      return current / total;
+    
+  }, [state.activeCategory]);
+  // Helper function to get category label
+  const getCategoryLabel = useCallback((category: QuestionCategory): string => {
+    const found = categories.find((c) => c.id === category);
+    return found ? found.title : "";
+  }, []);
+
+  // Helper function to check if a category is complete
+  const isCategoryComplete = useCallback(
+    (category: QuestionCategory): boolean => {
+      const categoryQuestions = questionsByCategory[category] || [];
+
+      // If there are no questions in this category, consider it complete
+      if (categoryQuestions.length === 0) return true;
+
+      // Check if all questions in the category have been answered
+      return categoryQuestions.every((question: QuizQuestion) => {
+        const answer = state.answers[question.id];
+
+        // For multiple choice questions, ensure at least one option is selected
+        if (question.type === "multiple-choice") {
+          return Array.isArray(answer) && answer.length > 0;
+        }
+
+        // For all other question types, ensure an answer exists
+        return answer !== undefined && answer !== "";
+      });
+    },
+    [questionsByCategory, state.answers],
+  );
 
   // Handle answer changes
-  const handleAnswerChange = (questionId: string, value: any) => {
-    const currentQuestion = quizQuestions.find(q => q.id === questionId);
-    
-    if (currentQuestion?.type === 'multiple-choice') {
-      setQuizState(prevState => {
-        // Get current answers for this question (or initialize empty array)
-        const currentAnswers = Array.isArray(prevState.answers[questionId]) 
-          ? [...prevState.answers[questionId]] 
-          : [];
-        
-        // Toggle the selected value
-        if (currentAnswers.includes(value)) {
-          // Remove the value if already selected
-          const updatedAnswers = currentAnswers.filter(item => item !== value);
+  const handleAnswerChange = useCallback(
+    (questionId: string, value: string | string[] | number | boolean) => {
+      setState((prev) => {
+        // Handle multiple choice questions (toggle selection)
+        if (Array.isArray(prev.answers[questionId])) {
+          const currentAnswers = prev.answers[questionId] as string[];
+          let newAnswers: string[];
+
+          if (currentAnswers.includes(value as string)) {
+            // Remove the value if already selected
+            newAnswers = currentAnswers.filter((v) => v !== value);
+          } else {
+            // Add the value if not selected
+            newAnswers = [...currentAnswers, value as string];
+          }
+
           return {
-            ...prevState,
+            ...prev,
             answers: {
-              ...prevState.answers,
-              [questionId]: updatedAnswers.length > 0 ? updatedAnswers : undefined
-            }
-          };
-        } else {
-          // Add the value if not already selected
-          return {
-            ...prevState,
-            answers: {
-              ...prevState.answers,
-              [questionId]: [...currentAnswers, value]
-            }
+              ...prev.answers,
+              [questionId]: newAnswers,
+            },
           };
         }
+
+        // Handle single choice, number input, and slider questions
+        return {
+          ...prev,
+          answers: {
+            ...prev.answers,
+            [questionId]: value,
+          },
+        };
       });
-    } else {
-      // For single-choice, number-input, and slider, just set the value directly
-      setQuizState(prevState => ({
-        ...prevState,
-        answers: {
-          ...prevState.answers,
-          [questionId]: value
+    },
+    [],
+  );
+
+  // Helper function for multiple choice questions
+  const handleMultipleChoiceChange = useCallback(
+    (questionId: string, value: string) => {
+      setState((prev) => {
+        const currentAnswers = (prev.answers[questionId] as string[]) || [];
+        let newAnswers: string[];
+
+        if (currentAnswers.includes(value)) {
+          // Remove the value if it's already selected
+          newAnswers = currentAnswers.filter((v) => v !== value);
+        } else {
+          // Add the value if it's not already selected
+          newAnswers = [...currentAnswers, value];
         }
+
+        return {
+          ...prev,
+          answers: {
+            ...prev.answers,
+            [questionId]: newAnswers,
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  // Helper function to render input fields (number-input, slider) with responsive layout
+  const renderInputFields = useCallback(
+    (category: QuestionCategory) => {
+      const inputQuestions = questionsByCategory[category]?.filter(
+        (question: QuizQuestion) =>
+          question.type === "number-input" || question.type === "slider",
+      );
+
+      if (!inputQuestions || inputQuestions.length === 0) {
+        return null;
+      }
+
+      return (
+        <div
+          className={`grid grid-cols-1 ${inputQuestions.length === 1 ? "" : "md:grid-cols-2"} gap-6`}
+        >
+          {inputQuestions.map((question: QuizQuestion) => (
+            <div key={question.id} className="">
+              <h3 className="mb-1 text-sm font-medium text-gray-800">
+                {question.question}
+                {question.type === "slider" && (
+                    <span className="text-md text-bold text-green-600 ml-2">
+                      {state.answers[question.id] || question.min}
+                      {question.unit}
+                    </span>
+                  )}
+              </h3>
+              {question.description && (
+                <p className="mb-1 mb-4 text-xs text-gray-600">
+                  {question.description}
+
+                
+                </p>
+              )}
+
+              {question.type === "number-input" && (
+                <input
+                  type="number"
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                  placeholder={question.placeholder || ""}
+                  value={(state.answers[question.id] as string) || ""}
+                  onChange={(e) =>
+                    handleAnswerChange(question.id, e.target.value)
+                  }
+                  min={question.min}
+                  max={question.max}
+                  step={question.step || 1}
+                />
+              )}
+
+              {question.type === "slider" && (
+                <div className="mt-2">
+                  <input
+                    type="range"
+                    className="w-full"
+                    min={question.min}
+                    max={question.max}
+                    step={question.step || 1}
+                    value={
+                      (state.answers[question.id] as number) || question.min
+                    }
+                    onChange={(e) =>
+                      handleAnswerChange(question.id, parseInt(e.target.value))
+                    }
+                  />
+                  <div className="mt-1 flex justify-between text-xs text-gray-500">
+                    <span>
+                      {question.min}
+                      {question.unit}
+                    </span>
+                    <span>
+                      {((question?.max || 0) - (question?.min || 0)) / 2}
+                      {question.unit}
+                    </span>
+                    <span>
+                      {question.max}
+                      {question.unit}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    },
+    [questionsByCategory, state.answers, handleAnswerChange],
+  );
+
+  // Check if all categories are complete
+  const isQuizComplete = useCallback((): boolean => {
+    return categories.every((category) => isCategoryComplete(category.id));
+  }, [isCategoryComplete]);
+
+  // Handle quiz completion
+  const handleCompleteQuiz = useCallback(() => {
+    // Calculate results based on answers
+    console.log('Quiz answers before calculation:', state.answers);
+    const baseResults = calculateResults(state.answers);
+    
+    console.log('Base calculation results:', baseResults);
+    
+    // Map the base results to the extended results format
+    const currentAge = state.answers['current-age'] as number || 30;
+    const retirementAge = state.answers['retirement-age'] as number || 65;
+    
+    // Create extended results with additional properties
+    const extendedResults: ExtendedCalculationResults = {
+      ...baseResults,
+      healthScore: baseResults.financialHealthScore.overallScore,
+      healthAssessment: baseResults.financialHealthScore.status,
+      projectedRetirementFund: baseResults.portfolioProjection.futureValue,
+      yearsUntilRetirement: retirementAge - currentAge,
+      monthlyRetirementIncome: baseResults.portfolioProjection.futureValue / (25 * 12) // Simple estimation
+    };
+    
+    console.log('Extended calculation results:', extendedResults);
+
+    // Update state to show results
+    setState((prev) => {
+      console.log('Setting calculation results:', extendedResults);
+      return {
+        ...prev,
+        isComplete: true,
+        calculationResults: extendedResults,
+        showResults: true,
+      };
+    });
+  }, [state.answers]);
+
+  // Handle dashboard creation and navigation
+  const handleCreateDashboard = useCallback(async () => {
+    if (!state.calculationResults) return;
+
+    // Create dashboard view with the generated widgets
+    try {
+      const viewName = state.dashboardName || "Financial Health Assessment";
+      const widgets = generateDashboardWidgets(state.calculationResults);
+
+      // Create the dashboard view
+      await createDashboardFromQuiz(viewName, widgets);
+
+      // Navigate to the dashboard
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      console.error("Error creating dashboard:", err);
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setError(`Error creating dashboard: ${errorMessage}`);
+    }
+  }, [
+    state.calculationResults,
+    state.dashboardName,
+    navigate,
+    createDashboardFromQuiz,
+  ]);
+
+  // Handle submitting the quiz
+  const handleSubmitQuiz = useCallback(() => {
+    if (!isQuizComplete()) {
+      setError("Please complete all questions before submitting.");
+      return;
+    }
+
+    handleCompleteQuiz();
+  }, [isQuizComplete, handleCompleteQuiz]);
+
+  // Handle dashboard name change
+  const handleDashboardNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setState((prev) => ({
+        ...prev,
+        dashboardName: e.target.value,
+      }));
+    },
+    [],
+  );
+
+  // Handle category change
+  const handleCategoryChange = useCallback((category: QuestionCategory) => {
+    setState((prev) => ({
+      ...prev,
+      activeCategory: category,
+    }));
+  }, []);
+
+  // Initialize multiple choice answers as arrays
+  useEffect(() => {
+    const initialAnswers = { ...state.answers };
+
+    quizQuestions.forEach((question) => {
+      if (question.type === "multiple-choice" && !initialAnswers[question.id]) {
+        initialAnswers[question.id] = [];
+      }
+    });
+
+    if (
+      Object.keys(initialAnswers).length > Object.keys(state.answers).length
+    ) {
+      setState((prev) => ({
+        ...prev,
+        answers: initialAnswers,
       }));
     }
-  };
+  }, []);
 
-  // Determine if the current question has been answered
-  const isCurrentQuestionAnswered = () => {
-    const currentQuestion = quizQuestions[quizState.currentIndex];
-    return quizState.answers[currentQuestion.id] !== undefined;
-  };
-
-  // Current question to display
-  const currentQuestion = quizQuestions[quizState.currentIndex];
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.6, ease: "easeOut" }
-    },
-    exit: { 
-      opacity: 0, 
-      y: -20,
-      transition: { duration: 0.3 }
-    }
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { 
-      opacity: 1, 
-      scale: 1, 
-      y: 0,
-      transition: { duration: 0.5, ease: "easeOut" }
-    }
-  };
-
-  const optionVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      x: 0,
-      transition: { delay: i * 0.1, duration: 0.4 }
-    }),
-    hover: { 
-      scale: 1.02,
-      transition: { duration: 0.2 }
-    },
-    tap: { scale: 0.98 }
-  };
-
+  // Render the quiz
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
-        <div className="absolute -bottom-32 left-40 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
-      </div>
-
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="text-center mb-12"
-        >
+    <div className="flex min-h-screen items-start justify-center bg-gray-50 px-3 py-6 sm:px-4 sm:py-12">
+      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+        {/* Results screen */}
+        {state.showResults ? (
           <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            className="inline-block mb-4"
+            initial="hidden"
+            animate="visible"
+            variants={resultVariants}
+            className="w-full"
           >
-            <FontAwesomeIcon icon={faChartLine} className="text-6xl text-purple-300" />
-          </motion.div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent">
-            Financial Health Assessment
-          </h1>
-          <p className="text-xl text-purple-200 max-w-2xl mx-auto">
-            Discover your financial wellness and unlock personalized insights
-          </p>
-        </motion.div>
-        
-        <AnimatePresence mode="wait">
-          {!quizState.isComplete ? (
-            <motion.div
-              key="quiz"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={cardVariants}
-              className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl"
-            >
-              {/* Progress indicator */}
-              <div className="mb-8">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-medium text-purple-200">Progress</span>
-                  <span className="text-sm font-medium text-purple-200">
-                    {quizState.currentIndex + 1} of {quizQuestions.length}
-                  </span>
-                </div>
-                <div className="h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full shadow-lg"
-                    initial={{ width: 0 }}
-                    animate={{ 
-                      width: `${((quizState.currentIndex + 1) / quizQuestions.length) * 100}%` 
-                    }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                  />
-                </div>
+            <div className="p-8 sm:p-10">
+              <div className="mb-8 border-b border-gray-100 pb-6">
+                <h2 className="mb-2 text-2xl font-bold text-gray-800">
+                  Financial Health Assessment Results
+                </h2>
+                <p className="text-gray-600">
+                  Review your financial health assessment and create a
+                  personalized dashboard.
+                </p>
               </div>
-              
-              {/* Question */}
-              <motion.div 
-                key={currentQuestion.id}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.5 }}
-                className="mb-10"
-              >
-                <div className="flex items-start mb-6">
-                  <motion.div 
-                    whileHover={{ scale: 1.1, rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center mr-6 shadow-lg flex-shrink-0"
-                  >
-                    <FontAwesomeIcon icon={currentQuestion.icon} className="text-white text-xl" />
-                  </motion.div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 leading-tight">
-                      {currentQuestion.question}
+
+              {state.calculationResults && (
+                <div className="space-y-8">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+                    <h3 className="mb-4 text-xl font-semibold text-blue-800">
+                      Your Financial Health Score
                     </h3>
-                    {currentQuestion.description && (
-                      <p className="text-purple-200 text-lg leading-relaxed">
-                        {currentQuestion.description}
-                      </p>
+                    <div className="flex items-center justify-center">
+                      <div className="flex h-32 w-32 items-center justify-center rounded-full border-8 border-blue-500 bg-white shadow-lg">
+                        <span className="text-3xl font-bold text-blue-700">
+                          {state.calculationResults?.healthScore || 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-center text-blue-700">
+                      {state.calculationResults?.healthAssessment || 'No assessment available'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 bg-white p-6">
+                    <h3 className="mb-4 text-xl font-semibold text-gray-800">
+                      Retirement Projection
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          Projected Retirement Fund:
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          $
+                          {state.calculationResults?.projectedRetirementFund?.toLocaleString() || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          Years Until Retirement:
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {state.calculationResults?.yearsUntilRetirement?.toLocaleString()  || 'N/A'} years
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          Monthly Income in Retirement:
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          $
+                          {state.calculationResults?.monthlyRetirementIncome?.toLocaleString() || 'N/A'}
+                          /month
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 bg-white p-6">
+                    <h3 className="mb-4 text-xl font-semibold text-gray-800">
+                      Create Your Financial Dashboard
+                    </h3>
+                    <div className="mb-4">
+                      <label
+                        htmlFor="dashboard-name"
+                        className="mb-1 block text-sm font-medium text-gray-700"
+                      >
+                        Dashboard Name
+                      </label>
+                      <input
+                        type="text"
+                        id="dashboard-name"
+                        value={state.dashboardName}
+                        onChange={handleDashboardNameChange}
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                        placeholder="My Financial Health Dashboard"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleCreateDashboard}
+                      disabled={status === "creating"}
+                      className="flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {status === "creating"
+                        ? "Creating Dashboard..."
+                        : "Create Dashboard"}
+                    </button>
+
+                    {error && (
+                      <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-4 text-red-700">
+                        {error}
+                      </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Question input */}
-                <div className="space-y-4">
-                  {currentQuestion.type === 'single-choice' && (
-                    <div className="space-y-3">
-                      {currentQuestion.options?.map((option, index) => (
-                        <motion.div
-                          key={option.value}
-                          custom={index}
-                          variants={optionVariants}
-                          initial="hidden"
-                          animate="visible"
-                          whileHover="hover"
-                          whileTap="tap"
-                          className={`p-4 backdrop-blur-md rounded-2xl cursor-pointer transition-all duration-300 border ${
-                            quizState.answers[currentQuestion.id] === option.value 
-                              ? 'border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/25' 
-                              : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-purple-300'
-                          }`}
-                          onClick={() => handleAnswerChange(currentQuestion.id, option.value)}
-                        >
-                          <div className="flex items-center">
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 transition-all ${
-                              quizState.answers[currentQuestion.id] === option.value 
-                                ? 'border-purple-400 bg-purple-400' 
-                                : 'border-purple-300'
-                            }`}>
-                              {quizState.answers[currentQuestion.id] === option.value && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
-                                </motion.div>
-                              )}
-                            </div>
-                            <span className="text-white font-medium text-lg">{option.label}</span>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {currentQuestion.type === 'multiple-choice' && (
-                    <div className="space-y-3">
-                      {currentQuestion.options?.map((option, index) => (
-                        <motion.div
-                          key={option.value}
-                          custom={index}
-                          variants={optionVariants}
-                          initial="hidden"
-                          animate="visible"
-                          whileHover="hover"
-                          whileTap="tap"
-                          className={`p-4 backdrop-blur-md rounded-2xl cursor-pointer transition-all duration-300 border ${
-                            isAnswerSelected(quizState.answers, currentQuestion.id, option.value)
-                              ? 'border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-500/25' 
-                              : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-purple-300'
-                          }`}
-                          onClick={() => handleAnswerChange(currentQuestion.id, option.value)}
-                        >
-                          <div className="flex items-center">
-                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center mr-4 transition-all ${
-                              isAnswerSelected(quizState.answers, currentQuestion.id, option.value)
-                                ? 'border-purple-400 bg-purple-400' 
-                                : 'border-purple-300'
-                            }`}>
-                              {isAnswerSelected(quizState.answers, currentQuestion.id, option.value) && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
-                                </motion.div>
-                              )}
-                            </div>
-                            <span className="text-white font-medium text-lg">{option.label}</span>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {currentQuestion.type === 'number-input' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="flex max-w-md"
-                    >
-                      {currentQuestion.unit === '$' && (
-                        <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-white/20 bg-white/10 text-purple-200 font-medium backdrop-blur-md">
-                          {currentQuestion.unit}
-                        </span>
-                      )}
-                      <input
-                        type="number"
-                        className={`block w-full border-white/20 ${currentQuestion.unit === '$' ? 'rounded-r-xl' : 'rounded-xl'} focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 bg-white/10 backdrop-blur-md text-white placeholder-purple-300 font-medium text-lg px-4 py-3 transition-all`}
-                        value={quizState.answers[currentQuestion.id] || ''}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          if (!isNaN(value) && (currentQuestion.min === undefined || value >= currentQuestion.min) &&
-                              (currentQuestion.max === undefined || value <= currentQuestion.max)) {
-                            handleAnswerChange(currentQuestion.id, value);
-                          } else if (e.target.value === '') {
-                            handleAnswerChange(currentQuestion.id, undefined);
-                          }
-                        }}
-                        min={currentQuestion.min}
-                        max={currentQuestion.max}
-                        step={currentQuestion.step || 1}
-                        placeholder={`Enter value${currentQuestion.unit ? ` in ${currentQuestion.unit}` : ''}`}
-                      />
-                      {currentQuestion.unit !== '$' && currentQuestion.unit && (
-                        <span className="inline-flex items-center px-4 rounded-r-xl border border-l-0 border-white/20 bg-white/10 text-purple-200 font-medium backdrop-blur-md">
-                          {currentQuestion.unit}
-                        </span>
-                      )}
-                    </motion.div>
-                  )}
-                  
-                  {currentQuestion.type === 'slider' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="space-y-6 max-w-lg"
-                    >
-                      <div className="flex justify-between text-sm text-purple-300">
-                        <span>{currentQuestion.min}{currentQuestion.unit}</span>
-                        <span>{currentQuestion.max}{currentQuestion.unit}</span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="range"
-                          className="w-full h-3 bg-white/20 rounded-full appearance-none cursor-pointer backdrop-blur-md slider-thumb"
-                          value={quizState.answers[currentQuestion.id] || currentQuestion.min}
-                          onChange={(e) => handleAnswerChange(currentQuestion.id, parseFloat(e.target.value))}
-                          min={currentQuestion.min}
-                          max={currentQuestion.max}
-                          step={currentQuestion.step || 1}
-                          style={{
-                            background: `linear-gradient(to right, rgb(168 85 247) 0%, rgb(168 85 247) ${((quizState.answers[currentQuestion.id] || currentQuestion.min!) - currentQuestion.min!) / (currentQuestion.max! - currentQuestion.min!) * 100}%, rgba(255,255,255,0.2) ${((quizState.answers[currentQuestion.id] || currentQuestion.min!) - currentQuestion.min!) / (currentQuestion.max! - currentQuestion.min!) * 100}%, rgba(255,255,255,0.2) 100%)`
-                          }}
-                        />
-                      </div>
-                      {quizState.answers[currentQuestion.id] !== undefined && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="text-center"
-                        >
-                          <div className="inline-block bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold text-2xl px-6 py-3 rounded-2xl shadow-lg">
-                            {quizState.answers[currentQuestion.id]}{currentQuestion.unit}
-                          </div>
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-              
-              {/* Navigation buttons */}
-              <div className="flex justify-between items-center pt-8">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handlePrevious}
-                  disabled={quizState.currentIndex === 0}
-                  className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${
-                    quizState.currentIndex === 0
-                      ? 'text-purple-400 cursor-not-allowed'
-                      : 'text-white hover:bg-white/10 backdrop-blur-md border border-white/20'
-                  }`}
-                >
-                  <FontAwesomeIcon icon={faChevronLeft} className="mr-2" />
-                  Previous
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleNext}
-                  disabled={!isCurrentQuestionAnswered()}
-                  className={`flex items-center px-8 py-3 rounded-xl font-medium transition-all ${
-                    isCurrentQuestionAnswered()
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
-                      : 'bg-white/20 text-purple-300 cursor-not-allowed'
-                  }`}
-                >
-                  {quizState.currentIndex < quizQuestions.length - 1 ? (
-                    <>
-                      Next
-                      <FontAwesomeIcon icon={faChevronRight} className="ml-2" />
-                    </>
-                  ) : (
-                    <>
-                      Complete Assessment
-                      <FontAwesomeIcon icon={faCheck} className="ml-2" />
-                    </>
-                  )}
-                </motion.button>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="w-full"
+          >
+            {/* Header with progress bar */}
+            <div className="border-b border-gray-100 p-6 sm:p-8">
+              <div className="mb-2 flex items-center justify-between">
+                <h1 className="text-xl font-semibold text-gray-800">
+                  Financial Health Assessment
+                </h1>
+                <span className="text-sm font-medium text-gray-500">
+                  {Math.round(progress * 100)}% Complete
+                </span>
               </div>
-            </motion.div>
-          ) : showNameInput ? (
-            <motion.div
-              key="nameInput"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={cardVariants}
-              className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl text-center max-w-2xl mx-auto"
-            >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center mb-6 shadow-lg"
-              >
-                <FontAwesomeIcon icon={faTachometerAlt} className="text-white text-3xl" />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <h3 className="text-3xl font-bold mb-4 text-white">Assessment Complete!</h3>
-                <p className="text-purple-200 text-lg mb-8">
-                  Name your personalized financial dashboard and unlock your insights
-                </p>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="mb-8"
-              >
-                <label htmlFor="dashboardName" className="block text-lg font-medium text-purple-200 mb-3 text-left">
-                  Dashboard Name
-                </label>
-                <input
-                  type="text"
-                  id="dashboardName"
-                  className="w-full border border-white/20 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent bg-white/10 backdrop-blur-md text-white placeholder-purple-300 font-medium text-lg transition-all"
-                  value={dashboardName}
-                  onChange={(e) => setDashboardName(e.target.value)}
-                  placeholder="My Financial Health Dashboard"
-                />
-              </motion.div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                onClick={handleCreateDashboard}
-                disabled={status === 'creating' || !dashboardName.trim()}
-                className={`w-full flex justify-center items-center py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                  status === 'creating' || !dashboardName.trim() ? 
-                  'bg-white/20 text-purple-300 cursor-not-allowed' : 
-                  'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
-                }`}
-              >
-                {status === 'creating' ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-6 h-6 border-2 border-white border-t-transparent rounded-full mr-3"
-                    />
-                    Creating Dashboard...
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faStar} className="mr-3" />
-                    Create My Dashboard
-                  </>
-                )}
-              </motion.button>
-              
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="mt-6 p-4 bg-red-500/20 border border-red-400/30 rounded-xl text-red-200 backdrop-blur-md"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-                
-                {status === 'success' && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="mt-6 p-4 bg-green-500/20 border border-green-400/30 rounded-xl text-green-200 backdrop-blur-md"
-                  >
-                    <FontAwesomeIcon icon={faCheck} className="mr-2" />
-                    Dashboard created successfully! Redirecting...
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="complete"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={cardVariants}
-              className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl text-center max-w-2xl mx-auto"
-            >
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-24 h-24 mx-auto bg-gradient-to-br from-green-400 to-emerald-400 rounded-full flex items-center justify-center mb-6 shadow-lg"
-              >
-                <FontAwesomeIcon icon={faCheck} className="text-white text-3xl" />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <h3 className="text-3xl font-bold mb-4 text-white">Assessment Complete!</h3>
-                <p className="text-purple-200 text-lg mb-8">
-                  Your personalized financial dashboard is being generated...
-                </p>
-                
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-12 h-12 border-4 border-purple-400 border-t-transparent rounded-full mx-auto"
+                  className="h-full rounded-full bg-blue-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress * 100}%` }}
+                  transition={{ duration: 0.5 }}
                 />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Main content area */}
+            <div className="bg-white p-8 sm:p-10">
+          
+
+              {/* Category tabs */}
+              <div className="mb-8 flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryChange(category.id)}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${state.activeCategory === category.id ? `${category.color} shadow-sm` : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                  >
+                    {category.title}
+                    {isCategoryComplete(category.id) && (
+                      <FontAwesomeIcon
+                        icon={faCheck}
+                        className="ml-2 text-xs"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Questions for active category */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={state.activeCategory}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={categoryVariants}
+                  className="space-y-4"
+                >
+                  {state.activeCategory && (
+                    <div className="mb-6 flex flex-col gap-4 space-y-4">
+                      {/* Render input fields (number-input, slider) with responsive layout */}
+                      {renderInputFields(state.activeCategory)}
+
+                      {/* Render choice questions (single-choice, multiple-choice) */}
+                      {questionsByCategory[state.activeCategory]
+                        ?.filter(
+                          (q) =>
+                            q.type === "single-choice" ||
+                            q.type === "multiple-choice",
+                        )
+                        .map((question) => (
+                          <div key={question.id} className="">
+                            <h3 className="mb-1 text-sm font-medium text-gray-800">
+                              {question.question}
+                            </h3>
+                            {question.description && (
+                              <p className="mb-2 mb-4 text-xs text-gray-600">
+                                {question.description}
+                              </p>
+                            )}
+
+                            {/* Single Choice Question */}
+                            {question.type === "single-choice" &&
+                              question.options && (
+                                <div
+                                  className={`grid grid-cols-1 ${question.optionsPerRow === 4 ? "md:grid-cols-4" : question.optionsPerRow === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-2`}
+                                >
+                                  {question.options.map((option) => (
+                                    <button
+                                      key={option.value}
+                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                      onClick={() =>
+                                        handleAnswerChange(
+                                          question.id,
+                                          option.value,
+                                        )
+                                      }
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                            {/* Multiple Choice Question */}
+                            {question.type === "multiple-choice" &&
+                              question.options && (
+                                <div
+                                  className={`grid grid-cols-1 ${question.optionsPerRow === 4 ? "md:grid-cols-4" : question.optionsPerRow === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-2`}
+                                >
+                                  {question.options.map((option) => {
+                                    const isSelected =
+                                      Array.isArray(
+                                        state.answers[question.id],
+                                      ) &&
+                                      (
+                                        state.answers[question.id] as string[]
+                                      )?.includes(option.value);
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                        onClick={() =>
+                                          handleMultipleChoiceChange(
+                                            question.id,
+                                            option.value,
+                                          )
+                                        }
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Footer with navigation buttons */}
+            <div className="flex items-center justify-between border-t border-gray-100 p-6 sm:p-8">
+              <button
+                className="flex items-center rounded-lg border border-gray-200 px-4 py-2.5 font-medium text-gray-600 transition-all hover:bg-gray-100"
+                onClick={() => {
+                  // Find previous category
+                  const categoryList = Object.keys(
+                    questionsByCategory,
+                  ) as QuestionCategory[];
+                  const currentIndex = state.activeCategory
+                    ? categoryList.indexOf(state.activeCategory)
+                    : -1;
+                  if (currentIndex > 0) {
+                    handleCategoryChange(categoryList[currentIndex - 1]);
+                  }
+                }}
+                disabled={
+                  state.activeCategory
+                    ? Object.keys(questionsByCategory).indexOf(
+                        state.activeCategory,
+                      ) <= 0
+                    : true
+                }
+              >
+                <FontAwesomeIcon icon={faChevronLeft} className="mr-2" />
+                Previous
+              </button>
+
+              {state.activeCategory &&
+              Object.keys(questionsByCategory).indexOf(state.activeCategory) <
+                Object.keys(questionsByCategory).length - 1 ? (
+                <button
+                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-blue-500 text-white hover:bg-blue-600" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                  onClick={() => {
+                    // Only proceed if category is complete
+                    if (isCategoryComplete(state.activeCategory)) {
+                      // Find next category
+                      const categoryList = Object.keys(
+                        questionsByCategory,
+                      ) as QuestionCategory[];
+                      const currentIndex = state.activeCategory
+                        ? categoryList.indexOf(state.activeCategory)
+                        : -1;
+                      if (currentIndex < categoryList.length - 1) {
+                        handleCategoryChange(categoryList[currentIndex + 1]);
+                      }
+                    }
+                  }}
+                  disabled={!isCategoryComplete(state.activeCategory)}
+                >
+                  Next
+                  <FontAwesomeIcon icon={faChevronRight} className="ml-2" />
+                </button>
+              ) : (
+                <button
+                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) && isQuizComplete() ? "bg-green-500 text-white hover:bg-green-600" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                  onClick={handleSubmitQuiz}
+                  disabled={!isCategoryComplete(state.activeCategory) || !isQuizComplete()}
+                >
+                  Complete Assessment
+                  <FontAwesomeIcon icon={faCheck} className="ml-2" />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
       </div>
-      
-      {/* Custom styles for slider */}
-      <style jsx>{`
-        .slider-thumb::-webkit-slider-thumb {
-          appearance: none;
-          height: 24px;
-          width: 24px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, rgb(168 85 247), rgb(236 72 153));
-          cursor: pointer;
-          border: 2px solid white;
-          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
-          transition: all 0.2s ease;
-        }
-        
-        .slider-thumb::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
-          box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
-        }
-        
-        .slider-thumb::-moz-range-thumb {
-          height: 24px;
-          width: 24px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, rgb(168 85 247), rgb(236 72 153));
-          cursor: pointer;
-          border: 2px solid white;
-          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
-          transition: all 0.2s ease;
-        }
-        
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
-};
+}
 
 export default FinancialHealthQuiz;

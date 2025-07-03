@@ -5,17 +5,22 @@ import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
-  faGear,
-  faPencilAlt,
+  faChartBar,
   faCheck,
-  faTimes,
-  faPlus,
-  faLightbulb,
-  faExclamationTriangle,
-  faRefresh,
   faChevronDown,
+  faChevronUp,
+  faExclamationTriangle,
+  faGear,
   faHeartPulse,
+  faLightbulb,
+  faPencilAlt,
+  faPlus,
+  faRefresh,
+  faSave,
+  faTimes,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import { useQuizDashboard } from "@/components/financial-health/useQuizDashboard";
 import { ConfirmationModal } from "@/components/profile/modals/ConfirmationModal";
 import { SkeletonDashboard } from "@/components/profile/SkeletonDashboard";
 import { useDashboard, STORAGE_KEYS } from "@/hooks/use-dashboard";
@@ -25,15 +30,14 @@ import {
   createDashboardViewFromTemplateThunk,
   setDefaultTemplates,
   resetTemplatesError,
-  setCurrentViewId,
 } from "@/store/slices/dashboardSlice";
-import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { DashboardView } from "@/types/dashboard.types";
 import { useCookie } from "@/utils/use-cookie";
 import { Modal } from "@/components/ui/modal";
+import { Widget } from "@/components/profile/types/dashboard-data.typings";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -161,6 +165,7 @@ function Profile() {
   };
 
   // Handle creating a new dashboard view from template
+  // Create a dashboard from a template or as an empty dashboard
   const handleCreateView = async () => {
     if (!user?.id || !selectedTemplate || !newViewName.trim()) {
       return;
@@ -169,13 +174,31 @@ function Profile() {
     setIsCreatingView(true);
 
     try {
-      const result = await dispatch(
-        createDashboardViewFromTemplateThunk({
-          userId: user.id,
-          templateId: selectedTemplate,
-          viewName: newViewName.trim(),
-        }),
-      ).unwrap();
+      let result;
+      
+      // Handle empty dashboard creation
+      if (selectedTemplate === "empty") {
+        // Use the quiz dashboard hook to create an empty dashboard
+        const quizDashboard = useQuizDashboard();
+        
+        // Create a dashboard with an empty widget list
+        const viewId = await quizDashboard.createDashboardFromQuiz(newViewName.trim(), []);
+        
+        if (viewId) {
+          result = { view: { id: viewId } };
+        } else {
+          throw new Error("Failed to create empty dashboard");
+        }
+      } else {
+        // Create dashboard from template
+        result = await dispatch(
+          createDashboardViewFromTemplateThunk({
+            userId: user.id,
+            templateId: selectedTemplate,
+            viewName: newViewName.trim(),
+          }),
+        ).unwrap();
+      }
 
       // Save the new view ID to cookies
       if (result?.view?.id) {
@@ -471,8 +494,11 @@ function Profile() {
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
+        title={views.length === 0
+          ? "Create Your First Dashboard"
+          : "Create New Dashboard View"}
         footer={() => (
-          <div className="">
+          <div className=" flex gap-4">
             <button
               type="button"
               onClick={handleCreateView}
@@ -507,16 +533,10 @@ function Profile() {
         )}
       >
         {/* Modal panel */}
-        <div className="inline-block transform overflow-hidden bg-white text-left align-bottom transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:align-middle">
-          <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+        <div className="inline-block transform overflow-hidden bg-white text-left align-bottom transition-all">
+          <div className="">
             <div className="sm:flex sm:items-start">
-              <div className="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                  {views.length === 0
-                    ? "Create Your First Dashboard"
-                    : "Create New Dashboard View"}
-                </h3>
-
+              <div className="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">               
                 <div className="mt-4">
                   {templatesStatus === "loading" && templates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8">
@@ -566,11 +586,9 @@ function Profile() {
                       </button>
                     </div>
                   ) : (
-                    <>
-                      <h4 className="mb-4 text-lg font-medium">
-                        Select a Template
-                      </h4>
-                      <div className="mb-6 grid gap-4 md:grid-cols-2">
+                    <>                 
+                      <div className="mb-6 grid gap-4 md:grid-cols-2">                      
+                        {/* Template Options */}
                         {templates.map((template) => (
                           <div
                             key={template.id}
@@ -601,6 +619,35 @@ function Profile() {
                             </p>
                           </div>
                         ))}
+                          {/* Empty Dashboard Option */}
+                          <div
+                          key="empty-dashboard"
+                          className={`cursor-pointer rounded-lg border p-4 transition-all ${
+                            selectedTemplate === "empty"
+                              ? "border-primary bg-primary bg-opacity-10"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => setSelectedTemplate("empty")}
+                        >
+                          <div className="mb-2 flex items-center">
+                            <div
+                              className={`mr-3 flex h-10 w-10 items-center justify-center rounded-full ${
+                                selectedTemplate === "empty"
+                                  ? "bg-primary text-white"
+                                  : "bg-gray-100"
+                              }`}
+                            >
+                              <FontAwesomeIcon
+                                icon={faPlus}
+                                className="h-5 w-5"
+                              />
+                            </div>
+                            <h4 className="font-medium">Empty Dashboard</h4>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Start with a blank dashboard and add widgets later
+                          </p>
+                        </div>
                       </div>
 
                       <div className="mb-4">

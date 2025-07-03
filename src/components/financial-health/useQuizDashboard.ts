@@ -36,12 +36,6 @@ export function useQuizDashboard() {
       return null;
     }
     
-    if (!widgets.length) {
-      setError('No widgets to display');
-      setStatus('error');
-      return null;
-    }
-    
     setStatus('creating');
     setError(null);
     
@@ -49,11 +43,11 @@ export function useQuizDashboard() {
       // Use the centralized API function
       const result = await createDashboardWithWidgets({
         viewName,
-        description: 'Created from Financial Health Quiz',
+        description: '',
         widgets,
         userId: user.id
       });
-      
+      console.log("result",result)
       // Save the new view ID to cookies
       if (result?.view?.id) {
         setCookie(STORAGE_KEYS.CURRENT_VIEW_ID, result.view.id, { days: 30 });
