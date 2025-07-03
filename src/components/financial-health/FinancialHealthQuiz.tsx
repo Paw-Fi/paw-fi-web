@@ -650,13 +650,17 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
           <div key={question.id} className="w-full">
             <h3 className="mb-1 text-sm font-medium text-gray-800">
               {question.question}
+          {question.type === "slider" &&     <span className="text-md ml-2 font-bold text-green-500">
+              {state.answers[question.id] || question.min}%
+
+              </span>}
             </h3>
             {question.description && (
               <p className="mb-4 text-xs text-gray-600">{question.description}</p>
             )}
 
             {question.type === "number-input" && (
-              <div className="relative">
+              <div className="relative rounded-lg border border-transparent">
                 {question.unit && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                     {question.unit}
@@ -664,13 +668,13 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 )}
                 <input
                   type="number"
-                  value={Number(state.answers[question.id]) || 0}
+                  value={Number(state.answers[question.id]) || undefined}
                   onChange={(e) => handleAnswerChange(question.id, Number(e.target.value))}
                   min={question.min}
                   max={question.max}
                   step={question.step || 1}
                   placeholder={question.placeholder}
-                  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
+                  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
                 />
               </div>
             )}
@@ -682,7 +686,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     {question.min}%
                   </span>
                   <span className="text-xs font-medium">
-                    {state.answers[question.id] || question.min}%
+                  {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
                   </span>
                   <span className="text-xs text-gray-500">
                     {question.max}%
@@ -697,7 +701,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   onChange={(e) =>
                     handleAnswerChange(question.id, Number(e.target.value))
                   }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary"
                 />
               </div>
             )}
@@ -712,6 +716,10 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             <div key={question.id}>
               <h3 className="mb-1 text-sm font-medium text-gray-800">
                 {question.question}
+               {question.type === "slider" &&  <span className="text-md ml-2 font-bold text-green-500">
+              {state.answers[question.id] || question.min}%
+
+              </span>}
               </h3>
               {question.description && (
                 <p className="mb-2 text-xs text-gray-600">
@@ -736,7 +744,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     max={question.max}
                     step={question.step || 1}
                     placeholder={question.placeholder}
-                    className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
+                    className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
                   />
                 </div>
               )}
@@ -745,13 +753,13 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      {question.min}%
+                      {question?.min}%
                     </span>
                     <span className="text-xs font-medium">
-                      {state.answers[question.id] || question.min}%
+                      {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
                     </span>
                     <span className="text-xs text-gray-500">
-                      {question.max}%
+                      {question?.max}%
                     </span>
                   </div>
                   <input
@@ -763,7 +771,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     onChange={(e) =>
                       handleAnswerChange(question.id, Number(e.target.value))
                     }
-                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary"
                   />
                 </div>
               )}
@@ -786,7 +794,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-16 text-center"
           >
-            <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-blue-500"></div>
+            <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-primary"></div>
             <h3 className="mb-3 text-xl font-semibold text-gray-800">
               Analyzing Your Financial Profile
             </h3>
@@ -876,7 +884,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   id="dashboard-name"
                   value={state.dashboardName}
                   onChange={handleDashboardNameChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   placeholder="My Financial Health Dashboard"
                 />
               </div>
@@ -884,7 +892,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <button
                 onClick={handleCreateDashboard}
                 disabled={status === "creating"}
-                className="flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "creating"
                   ? "Creating Dashboard..."
@@ -917,7 +925,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <motion.div
-                  className="h-full rounded-full bg-blue-500"
+                  className="h-full rounded-full bg-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress * 100}%` }}
                   transition={{ duration: 0.5 }}
@@ -990,7 +998,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                                   {question.options.map((option) => (
                                     <button
                                       key={option.value}
-                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                                       onClick={() =>
                                         handleAnswerChange(
                                           question.id,
@@ -1021,7 +1029,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                                     return (
                                       <button
                                         key={option.value}
-                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                                         onClick={() =>
                                           handleMultipleChoiceChange(
                                             question.id,
@@ -1075,7 +1083,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               Object.keys(questionsByCategory).indexOf(state.activeCategory) <
                 Object.keys(questionsByCategory).length - 1 ? (
                 <button
-                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-blue-500 text-white hover:bg-blue-600" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
                   onClick={() => {
                     // Only proceed if category is complete
                     if (isCategoryComplete(state.activeCategory)) {

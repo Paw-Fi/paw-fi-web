@@ -26,6 +26,7 @@ import {
   faIdBadge,
   faBars,
   faTimes,
+  faGauge,
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -33,6 +34,14 @@ import { toast } from "react-toastify";
 import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
+
+
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/dashboard/learning",
+  "/dashboard/user-settings",
+  "/dashboard/membership",
+];
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -123,7 +132,7 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard"},
+    { id: "home", label: "Dashboard", icon: faGauge, path: "/dashboard"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
@@ -236,11 +245,6 @@ export function Dashboard() {
     }
   };
 
-  const PROTECTED_ROUTES = [
-    "/dashboard",
-    "/dashboard/learning",
-    "/dashboard/user-settings",
-  ];
 
   // Toggle mobile menu
   const toggleMobileMenu = () => {

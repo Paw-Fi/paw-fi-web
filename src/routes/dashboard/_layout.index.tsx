@@ -30,6 +30,8 @@ import { useCookie } from "@/utils/use-cookie";
 import { Modal } from "@/components/ui/modal";
 import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import FinancialHealthQuiz from "@/components/financial-health/FinancialHealthQuiz";
+import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
+import { ChatPopup } from "@/components/dashboard-chat/ChatPopup";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -56,6 +58,7 @@ function Profile() {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [showFinancialHealthQuiz, setShowFinancialHealthQuiz] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const { getCookie, setCookie } = useCookie();
 
   // Use our custom dashboard hook
@@ -265,8 +268,8 @@ function Profile() {
           </div>
         ) : status === "no_views" ? (
           <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center max-w-md p-8 bg-white rounded-lg shadow-lg">
-              <FontAwesomeIcon icon={faHeartPulse} className="text-blue-500 text-4xl mb-4" />
+            <div className="text-center max-w-md ">
+              <FontAwesomeIcon icon={faHeartPulse} className="text-primary text-4xl mb-4" />
               <h2 className="mb-3 text-2xl font-semibold text-gray-800">
                 No Dashboard Views Yet
               </h2>
@@ -275,7 +278,7 @@ function Profile() {
               </p>
               <button
                 onClick={() => setShowFinancialHealthQuiz(true)}
-                className="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-md flex items-center justify-center w-full"
+                className="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-secondary transition-colors shadow-md flex items-center justify-center w-full"
               >
                 <FontAwesomeIcon icon={faLightbulb} className="mr-2" />
                 Take Financial Health Quiz
@@ -686,6 +689,9 @@ function Profile() {
           </div>
         </div>
       </Modal>
+
+      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+      {isChatOpen && <ChatPopup onClose={() => setIsChatOpen(false)} />}
     </>
   );
 }
