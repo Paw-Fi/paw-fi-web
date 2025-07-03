@@ -705,7 +705,6 @@ export default function WidgetEditModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="2xl"
       contentClassName="p-0 bg-white dark:bg-slate-800 border border-slate-300/30 dark:border-slate-700/30 shadow-2xl rounded-xl overflow-hidden"
     title={`Edit ${displayFormTitle}`}
       footer={

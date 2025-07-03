@@ -62,6 +62,8 @@ interface QuizState {
   calculationResults: ExtendedCalculationResults | null;
   dashboardName: string;
   isComplete: boolean;
+  isProcessing: boolean;
+  currentTip: number;
 }
 
 interface ExtendedCalculationResults extends CalculationResults {
@@ -160,7 +162,6 @@ const quizQuestions: QuizQuestion[] = [
     type: "number-input",
     min: 0,
     max: 36,
-    unit: " months",
     category: "liquidity-needs",
   },
   {
@@ -396,15 +397,15 @@ const resultVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-export function FinancialHealthQuiz() {
+export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
+  const {onDashboardCreated} = props;
   const navigate = useNavigate();
-  const {
-    createDashboardFromQuiz,
-    status,
-    error: dashboardError,
-  } = useQuizDashboard();
-  const [error, setError] = useState<string | null>(null);
+  const { createDashboardFromQuiz } = useQuizDashboard();
 
+  // State for error handling
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'creating' | 'complete'>('idle');
+  
   // Initial quiz state
   const [state, setState] = useState<QuizState>({
     answers: {},
@@ -413,227 +414,158 @@ export function FinancialHealthQuiz() {
     calculationResults: null,
     dashboardName: "My Financial Health Assessment",
     isComplete: false,
+    isProcessing: false,
+    currentTip: 0,
   });
 
-  // Group questions by category
-  const questionsByCategory = useMemo<
-    Record<QuestionCategory, QuizQuestion[]>
-  >(() => {
-    const categories: Record<QuestionCategory, QuizQuestion[]> = {
-      "current-situation": [],
-      "liquidity-needs": [],
-      "risk-assessment": [],
-      "time-horizon": [],
-      "financial-goals": [],
+  // Group questions by category for easier rendering
+  const questionsByCategory = useMemo(() => {
+    const grouped: Record<QuestionCategory, QuizQuestion[]> = {
+      'current-situation': [],
+      'liquidity-needs': [],
+      'risk-assessment': [],
+      'time-horizon': [],
+      'financial-goals': [],
     };
-
-    quizQuestions.forEach((question: QuizQuestion) => {
-      if (question.category) {
-        categories[question.category].push(question);
+    
+    quizQuestions.forEach((question) => {
+      if (grouped[question.category]) {
+        grouped[question.category].push(question);
       }
     });
-    return categories;
-  }, []);
-
-  // Calculate progress
-  const progress = useMemo(() => {
-    const current= state.activeCategory?
-    Object.keys(questionsByCategory).indexOf(
-        state.activeCategory,
-      )  :0
-      const total = Object.keys(questionsByCategory).length;
-      return current / total;
     
-  }, [state.activeCategory]);
-  // Helper function to get category label
-  const getCategoryLabel = useCallback((category: QuestionCategory): string => {
-    const found = categories.find((c) => c.id === category);
-    return found ? found.title : "";
+    return grouped;
   }, []);
+  
+  // Calculate progress through the quiz
+  const progress = useMemo(() => {
+    const totalCategories = categories.length;
+    const currentCategoryIndex = categories.findIndex(
+      (category) => category.id === state.activeCategory
+    );
+    return (currentCategoryIndex + 1) / totalCategories;
+  }, [state.activeCategory]);
+  
+  // Investment tips to show during processing
+  const investmentTips = [
+    "Diversify your investments across different asset classes to reduce risk.",
+    "Consider setting up automatic contributions to your retirement accounts.",
+    "Emergency funds should cover 3-6 months of essential expenses.",
+    "Review your investment portfolio at least once a year.",
+    "Tax-advantaged accounts like 401(k)s and IRAs can boost your long-term returns.",
+    "Dollar-cost averaging can help reduce the impact of market volatility.",
+    "As you approach retirement, gradually shift to more conservative investments.",
+    "Consider low-cost index funds for long-term investing.",
+    "Rebalance your portfolio periodically to maintain your target asset allocation.",
+    "Compound interest is powerful - start investing early and consistently."
+  ];
 
-  // Helper function to check if a category is complete
+  // Rotate through investment tips during processing
+  useEffect(() => {
+    let tipInterval: NodeJS.Timeout;
+    
+    if (state.isProcessing) {
+      tipInterval = setInterval(() => {
+        setState(prev => ({
+          ...prev,
+          currentTip: (prev.currentTip + 1) % investmentTips.length
+        }));
+      }, 3000); // Change tip every 3 seconds
+    }
+    
+    return () => {
+      if (tipInterval) clearInterval(tipInterval);
+    };
+  }, [state.isProcessing, investmentTips.length]);
+
+  // Check if a category is complete (all questions answered)
   const isCategoryComplete = useCallback(
     (category: QuestionCategory): boolean => {
-      const categoryQuestions = questionsByCategory[category] || [];
-
-      // If there are no questions in this category, consider it complete
-      if (categoryQuestions.length === 0) return true;
-
-      // Check if all questions in the category have been answered
-      return categoryQuestions.every((question: QuizQuestion) => {
-        const answer = state.answers[question.id];
-
-        // For multiple choice questions, ensure at least one option is selected
+      const questions = questionsByCategory[category] || [];
+      return questions.every((question) => {
         if (question.type === "multiple-choice") {
-          return Array.isArray(answer) && answer.length > 0;
+          return (
+            Array.isArray(state.answers[question.id]) &&
+            (state.answers[question.id] as string[]).length > 0
+          );
         }
-
-        // For all other question types, ensure an answer exists
-        return answer !== undefined && answer !== "";
+        return state.answers[question.id] !== undefined;
       });
     },
-    [questionsByCategory, state.answers],
+    [questionsByCategory, state.answers]
   );
 
-  // Handle answer changes
-  const handleAnswerChange = useCallback(
-    (questionId: string, value: string | string[] | number | boolean) => {
-      setState((prev) => {
-        // Handle multiple choice questions (toggle selection)
-        if (Array.isArray(prev.answers[questionId])) {
-          const currentAnswers = prev.answers[questionId] as string[];
-          let newAnswers: string[];
+  // Check if the entire quiz is complete
+  const isQuizComplete = useCallback((): boolean => {
+    return categories.every((category) => isCategoryComplete(category.id));
+  }, [categories, isCategoryComplete]);
 
-          if (currentAnswers.includes(value as string)) {
-            // Remove the value if already selected
-            newAnswers = currentAnswers.filter((v) => v !== value);
-          } else {
-            // Add the value if not selected
-            newAnswers = [...currentAnswers, value as string];
-          }
+  // Handle answer changes for single-choice and number inputs
+  const handleAnswerChange = (questionId: string, value: string | number | boolean | string[]) => {
+    setState((prev) => ({
+      ...prev,
+      answers: {
+        ...prev.answers,
+        [questionId]: value,
+      },
+    }));
+  };
 
-          return {
-            ...prev,
-            answers: {
-              ...prev.answers,
-              [questionId]: newAnswers,
-            },
-          };
-        }
-
-        // Handle single choice, number input, and slider questions
-        return {
-          ...prev,
-          answers: {
-            ...prev.answers,
-            [questionId]: value,
-          },
-        };
-      });
-    },
-    [],
-  );
-
-  // Helper function for multiple choice questions
+  // Handle multiple-choice questions (toggle selection)
   const handleMultipleChoiceChange = useCallback(
     (questionId: string, value: string) => {
       setState((prev) => {
-        const currentAnswers = (prev.answers[questionId] as string[]) || [];
-        let newAnswers: string[];
-
-        if (currentAnswers.includes(value)) {
-          // Remove the value if it's already selected
-          newAnswers = currentAnswers.filter((v) => v !== value);
-        } else {
-          // Add the value if it's not already selected
-          newAnswers = [...currentAnswers, value];
-        }
+        const currentAnswers = prev.answers[questionId] as string[] || [];
+        const updatedAnswers = currentAnswers.includes(value)
+          ? currentAnswers.filter((item) => item !== value)
+          : [...currentAnswers, value];
 
         return {
           ...prev,
           answers: {
             ...prev.answers,
-            [questionId]: newAnswers,
+            [questionId]: updatedAnswers,
           },
         };
       });
     },
-    [],
+    []
   );
 
-  // Helper function to render input fields (number-input, slider) with responsive layout
-  const renderInputFields = useCallback(
-    (category: QuestionCategory) => {
-      const inputQuestions = questionsByCategory[category]?.filter(
-        (question: QuizQuestion) =>
-          question.type === "number-input" || question.type === "slider",
-      );
+  // Handle category change
+  const handleCategoryChange = useCallback((category: QuestionCategory) => {
+    setState((prev) => ({
+      ...prev,
+      activeCategory: category,
+    }));
+  }, []);
 
-      if (!inputQuestions || inputQuestions.length === 0) {
-        return null;
-      }
-
-      return (
-        <div
-          className={`grid grid-cols-1 ${inputQuestions.length === 1 ? "" : "md:grid-cols-2"} gap-6`}
-        >
-          {inputQuestions.map((question: QuizQuestion) => (
-            <div key={question.id} className="">
-              <h3 className="mb-1 text-sm font-medium text-gray-800">
-                {question.question}
-                {question.type === "slider" && (
-                    <span className="text-md text-bold text-green-600 ml-2">
-                      {state.answers[question.id] || question.min}
-                      {question.unit}
-                    </span>
-                  )}
-              </h3>
-              {question.description && (
-                <p className="mb-1 mb-4 text-xs text-gray-600">
-                  {question.description}
-
-                
-                </p>
-              )}
-
-              {question.type === "number-input" && (
-                <input
-                  type="number"
-                  className="w-full rounded-md border border-gray-300 p-2 text-sm"
-                  placeholder={question.placeholder || ""}
-                  value={(state.answers[question.id] as string) || ""}
-                  onChange={(e) =>
-                    handleAnswerChange(question.id, e.target.value)
-                  }
-                  min={question.min}
-                  max={question.max}
-                  step={question.step || 1}
-                />
-              )}
-
-              {question.type === "slider" && (
-                <div className="mt-2">
-                  <input
-                    type="range"
-                    className="w-full"
-                    min={question.min}
-                    max={question.max}
-                    step={question.step || 1}
-                    value={
-                      (state.answers[question.id] as number) || question.min
-                    }
-                    onChange={(e) =>
-                      handleAnswerChange(question.id, parseInt(e.target.value))
-                    }
-                  />
-                  <div className="mt-1 flex justify-between text-xs text-gray-500">
-                    <span>
-                      {question.min}
-                      {question.unit}
-                    </span>
-                    <span>
-                      {((question?.max || 0) - (question?.min || 0)) / 2}
-                      {question.unit}
-                    </span>
-                    <span>
-                      {question.max}
-                      {question.unit}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      );
+  // Handle dashboard name change
+  const handleDashboardNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setState((prev) => ({
+        ...prev,
+        dashboardName: e.target.value,
+      }));
     },
-    [questionsByCategory, state.answers, handleAnswerChange],
+    []
   );
 
-  // Check if all categories are complete
-  const isQuizComplete = useCallback((): boolean => {
-    return categories.every((category) => isCategoryComplete(category.id));
-  }, [isCategoryComplete]);
+  // Handle quiz submission
+  const handleSubmitQuiz = useCallback(() => {
+    if (!isQuizComplete()) {
+      setError("Please complete all questions before submitting.");
+      return;
+    }
+
+    // Start processing state with loading indicator
+    setState(prev => ({ ...prev, isProcessing: true }));
+    
+    // Simulate processing time (7 seconds)
+    setTimeout(() => {
+      handleCompleteQuiz();
+    }, 7000);
+  }, [isQuizComplete]);
 
   // Handle quiz completion
   const handleCompleteQuiz = useCallback(() => {
@@ -644,8 +576,9 @@ export function FinancialHealthQuiz() {
     console.log('Base calculation results:', baseResults);
     
     // Map the base results to the extended results format
-    const currentAge = state.answers['current-age'] as number || 30;
-    const retirementAge = state.answers['retirement-age'] as number || 65;
+    // Ensure proper number conversion for age values
+    const currentAge = Number(state.answers['current-age']) || 30;
+    const retirementAge = Number(state.answers['retirement-age']) || 65;
     
     // Create extended results with additional properties
     const extendedResults: ExtendedCalculationResults = {
@@ -667,198 +600,300 @@ export function FinancialHealthQuiz() {
         isComplete: true,
         calculationResults: extendedResults,
         showResults: true,
+        isProcessing: false, // End processing state
       };
     });
   }, [state.answers]);
 
-  // Handle dashboard creation and navigation
+  // Handle dashboard creation
   const handleCreateDashboard = useCallback(async () => {
     if (!state.calculationResults) return;
-
-    // Create dashboard view with the generated widgets
+    
+    setStatus('creating');
+    setError(null);
+    
     try {
-      const viewName = state.dashboardName || "Financial Health Assessment";
+      // Generate dashboard widgets from calculation results
       const widgets = generateDashboardWidgets(state.calculationResults);
-
-      // Create the dashboard view
-      await createDashboardFromQuiz(viewName, widgets);
-
+      
+      // Create dashboard using the quiz dashboard hook
+      await createDashboardFromQuiz(
+        state.dashboardName,
+        widgets
+      );
+      
+      setStatus('complete');
+      onDashboardCreated();
+      
       // Navigate to the dashboard
-      navigate({ to: "/dashboard" });
+      navigate({ to: '/dashboard' });
     } catch (err) {
-      console.error("Error creating dashboard:", err);
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setError(`Error creating dashboard: ${errorMessage}`);
+      console.error('Error creating dashboard:', err);
+      setError('Failed to create dashboard. Please try again.');
+      setStatus('idle');
     }
-  }, [
-    state.calculationResults,
-    state.dashboardName,
-    navigate,
-    createDashboardFromQuiz,
-  ]);
+  }, [state.calculationResults, state.dashboardName, createDashboardFromQuiz, navigate, onDashboardCreated]);
 
-  // Handle submitting the quiz
-  const handleSubmitQuiz = useCallback(() => {
-    if (!isQuizComplete()) {
-      setError("Please complete all questions before submitting.");
-      return;
-    }
+  // Render input fields (number-input, slider) with responsive layout
+  const renderInputFields = useCallback(
+    (category: QuestionCategory) => {
+      const inputQuestions = questionsByCategory[category]?.filter(
+        (q) => q.type === "number-input" || q.type === "slider"
+      );
 
-    handleCompleteQuiz();
-  }, [isQuizComplete, handleCompleteQuiz]);
+      if (!inputQuestions || inputQuestions.length === 0) return null;
 
-  // Handle dashboard name change
-  const handleDashboardNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setState((prev) => ({
-        ...prev,
-        dashboardName: e.target.value,
-      }));
-    },
-    [],
-  );
+      // If there's only one input question, make it full width
+      if (inputQuestions.length === 1) {
+        const question = inputQuestions[0];
+        return (
+          <div key={question.id} className="w-full">
+            <h3 className="mb-1 text-sm font-medium text-gray-800">
+              {question.question}
+            </h3>
+            {question.description && (
+              <p className="mb-4 text-xs text-gray-600">{question.description}</p>
+            )}
 
-  // Handle category change
-  const handleCategoryChange = useCallback((category: QuestionCategory) => {
-    setState((prev) => ({
-      ...prev,
-      activeCategory: category,
-    }));
-  }, []);
+            {question.type === "number-input" && (
+              <div className="relative">
+                {question.unit && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {question.unit}
+                  </span>
+                )}
+                <input
+                  type="number"
+                  value={Number(state.answers[question.id]) || 0}
+                  onChange={(e) => handleAnswerChange(question.id, Number(e.target.value))}
+                  min={question.min}
+                  max={question.max}
+                  step={question.step || 1}
+                  placeholder={question.placeholder}
+                  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
+                />
+              </div>
+            )}
 
-  // Initialize multiple choice answers as arrays
-  useEffect(() => {
-    const initialAnswers = { ...state.answers };
-
-    quizQuestions.forEach((question) => {
-      if (question.type === "multiple-choice" && !initialAnswers[question.id]) {
-        initialAnswers[question.id] = [];
+            {question.type === "slider" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    {question.min}%
+                  </span>
+                  <span className="text-xs font-medium">
+                    {state.answers[question.id] || question.min}%
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {question.max}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={question.min}
+                  max={question.max}
+                  step={question.step || 1}
+                  value={Number(state.answers[question.id]) || question.min}
+                  onChange={(e) =>
+                    handleAnswerChange(question.id, Number(e.target.value))
+                  }
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                />
+              </div>
+            )}
+          </div>
+        );
       }
-    });
 
-    if (
-      Object.keys(initialAnswers).length > Object.keys(state.answers).length
-    ) {
-      setState((prev) => ({
-        ...prev,
-        answers: initialAnswers,
-      }));
-    }
-  }, []);
+      // Otherwise, create a responsive grid for multiple input questions
+      return (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {inputQuestions.map((question) => (
+            <div key={question.id}>
+              <h3 className="mb-1 text-sm font-medium text-gray-800">
+                {question.question}
+              </h3>
+              {question.description && (
+                <p className="mb-2 text-xs text-gray-600">
+                  {question.description}
+                </p>
+              )}
+
+              {question.type === "number-input" && (
+                <div className="relative">
+                  {question.unit && (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      {question.unit}
+                    </span>
+                  )}
+                  <input
+                    type="number"
+                    value={state.answers[question.id] || ""}
+                    onChange={(e) =>
+                      handleAnswerChange(question.id, Number(e.target.value))
+                    }
+                    min={question.min}
+                    max={question.max}
+                    step={question.step || 1}
+                    placeholder={question.placeholder}
+                    className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
+                  />
+                </div>
+              )}
+
+              {question.type === "slider" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">
+                      {question.min}%
+                    </span>
+                    <span className="text-xs font-medium">
+                      {state.answers[question.id] || question.min}%
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {question.max}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={question.min}
+                    max={question.max}
+                    step={question.step || 1}
+                    value={Number(state.answers[question.id]) || question.min}
+                    onChange={(e) =>
+                      handleAnswerChange(question.id, Number(e.target.value))
+                    }
+                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    },
+    [questionsByCategory, state.answers, handleAnswerChange]
+  );
 
   // Render the quiz
   return (
-    <div className="flex min-h-screen items-start justify-center bg-gray-50 px-3 py-6 sm:px-4 sm:py-12">
-      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
-        {/* Results screen */}
-        {state.showResults ? (
+    <div className="flex items-start justify-center">
+      <div className="w-full">
+        {/* Processing state with loading indicator and investment tips */}
+        {state.isProcessing ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-16 text-center"
+          >
+            <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-blue-500"></div>
+            <h3 className="mb-3 text-xl font-semibold text-gray-800">
+              Analyzing Your Financial Profile
+            </h3>
+            <p className="mb-8 max-w-md text-gray-600">
+              We're creating your personalized financial dashboard based on your answers...
+            </p>
+            <div className="max-w-md rounded-lg border border-blue-100 bg-blue-50 p-6">
+              <h4 className="mb-3 font-medium text-blue-800">Financial Tip</h4>
+              <p className="text-blue-700">
+                {investmentTips[state.currentTip]}
+              </p>
+            </div>
+          </motion.div>
+        ) : state.showResults ? (
           <motion.div
             initial="hidden"
             animate="visible"
             variants={resultVariants}
-            className="w-full"
+            className="mx-auto max-w-3xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
           >
-            <div className="p-8 sm:p-10">
-              <div className="mb-8 border-b border-gray-100 pb-6">
-                <h2 className="mb-2 text-2xl font-bold text-gray-800">
-                  Financial Health Assessment Results
-                </h2>
-                <p className="text-gray-600">
-                  Review your financial health assessment and create a
-                  personalized dashboard.
-                </p>
-              </div>
+            <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">
+              Your Financial Health Assessment
+            </h2>
 
-              {state.calculationResults && (
-                <div className="space-y-8">
-                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
-                    <h3 className="mb-4 text-xl font-semibold text-blue-800">
-                      Your Financial Health Score
-                    </h3>
-                    <div className="flex items-center justify-center">
-                      <div className="flex h-32 w-32 items-center justify-center rounded-full border-8 border-blue-500 bg-white shadow-lg">
-                        <span className="text-3xl font-bold text-blue-700">
-                          {state.calculationResults?.healthScore || 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-center text-blue-700">
-                      {state.calculationResults?.healthAssessment || 'No assessment available'}
+            {state.calculationResults && (
+              <div className="mb-8 space-y-6">
+                <div className="rounded-lg bg-blue-50 p-6">
+                  <h3 className="mb-2 text-lg font-semibold text-blue-800">
+                    Financial Health Score: {state.calculationResults.healthScore.toFixed(1)}/10
+                  </h3>
+                  <p className="text-blue-700">
+                    Your financial health is rated as{" "}
+                    <span className="font-medium">
+                      {state.calculationResults.healthAssessment}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Projected Retirement Fund
+                    </h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ${state.calculationResults.projectedRetirementFund.toLocaleString()}
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 bg-white p-6">
-                    <h3 className="mb-4 text-xl font-semibold text-gray-800">
-                      Retirement Projection
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">
-                          Projected Retirement Fund:
-                        </span>
-                        <span className="font-semibold text-gray-800">
-                          $
-                          {state.calculationResults?.projectedRetirementFund?.toLocaleString() || 'N/A'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">
-                          Years Until Retirement:
-                        </span>
-                        <span className="font-semibold text-gray-800">
-                          {state.calculationResults?.yearsUntilRetirement?.toLocaleString()  || 'N/A'} years
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">
-                          Monthly Income in Retirement:
-                        </span>
-                        <span className="font-semibold text-gray-800">
-                          $
-                          {state.calculationResults?.monthlyRetirementIncome?.toLocaleString() || 'N/A'}
-                          /month
-                        </span>
-                      </div>
-                    </div>
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Years Until Retirement
+                    </h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {state.calculationResults.yearsUntilRetirement} years
+                    </p>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 bg-white p-6">
-                    <h3 className="mb-4 text-xl font-semibold text-gray-800">
-                      Create Your Financial Dashboard
-                    </h3>
-                    <div className="mb-4">
-                      <label
-                        htmlFor="dashboard-name"
-                        className="mb-1 block text-sm font-medium text-gray-700"
-                      >
-                        Dashboard Name
-                      </label>
-                      <input
-                        type="text"
-                        id="dashboard-name"
-                        value={state.dashboardName}
-                        onChange={handleDashboardNameChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                        placeholder="My Financial Health Dashboard"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleCreateDashboard}
-                      disabled={status === "creating"}
-                      className="flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {status === "creating"
-                        ? "Creating Dashboard..."
-                        : "Create Dashboard"}
-                    </button>
-
-                    {error && (
-                      <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-4 text-red-700">
-                        {error}
-                      </div>
-                    )}
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Estimated Monthly Income in Retirement
+                    </h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ${state.calculationResults.monthlyRetirementIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}/month
+                    </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-lg border border-gray-200 bg-white p-6">
+              <h3 className="mb-4 text-lg font-semibold text-gray-800">
+                Create Your Financial Dashboard
+              </h3>
+              <p className="mb-4 text-gray-600">
+                We'll create a personalized dashboard based on your assessment results.
+              </p>
+              
+              <div className="mb-4">
+                <label
+                  htmlFor="dashboard-name"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Dashboard Name
+                </label>
+                <input
+                  type="text"
+                  id="dashboard-name"
+                  value={state.dashboardName}
+                  onChange={handleDashboardNameChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  placeholder="My Financial Health Dashboard"
+                />
+              </div>
+
+              <button
+                onClick={handleCreateDashboard}
+                disabled={status === "creating"}
+                className="flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {status === "creating"
+                  ? "Creating Dashboard..."
+                  : "Create Dashboard"}
+              </button>
+
+              {error && (
+                <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-4 text-red-700">
+                  {error}
                 </div>
               )}
             </div>
@@ -871,13 +906,13 @@ export function FinancialHealthQuiz() {
             className="w-full"
           >
             {/* Header with progress bar */}
-            <div className="border-b border-gray-100 p-6 sm:p-8">
+            <div className=" my-4">
               <div className="mb-2 flex items-center justify-between">
-                <h1 className="text-xl font-semibold text-gray-800">
-                  Financial Health Assessment
-                </h1>
+              <span className="text-sm font-medium text-gray-500">
+                  Step { Object.keys(questionsByCategory).indexOf(state.activeCategory) +1 } of {categories.length}
+                </span>
                 <span className="text-sm font-medium text-gray-500">
-                  {Math.round(progress * 100)}% Complete
+                  {categories.find((category)=> category.id === state.activeCategory)?.title}
                 </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-gray-100">
@@ -891,11 +926,11 @@ export function FinancialHealthQuiz() {
             </div>
 
             {/* Main content area */}
-            <div className="bg-white p-8 sm:p-10">
+            <div className="mt-8">
           
 
               {/* Category tabs */}
-              <div className="mb-8 flex flex-wrap gap-2">
+              {/* <div className="mb-8 flex flex-wrap gap-2">
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -911,7 +946,7 @@ export function FinancialHealthQuiz() {
                     )}
                   </button>
                 ))}
-              </div>
+              </div> */}
 
               {/* Questions for active category */}
               <AnimatePresence mode="wait">
@@ -933,7 +968,7 @@ export function FinancialHealthQuiz() {
                         ?.filter(
                           (q) =>
                             q.type === "single-choice" ||
-                            q.type === "multiple-choice",
+                            q.type === "multiple-choice"
                         )
                         .map((question) => (
                           <div key={question.id} className="">

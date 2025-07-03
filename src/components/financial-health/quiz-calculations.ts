@@ -233,7 +233,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     type: 'financialHealthScorecard',
     title: 'Your Financial Health Score',
     icon: 'fas fa-heartbeat',
-    column_span: 1,
+    column_span: 2,
+    row_span: 2,
     data: {
       items: [
         { id: uuidv4(), category: 'Savings', score: results.financialHealthScore.savingsScore, status: getScoreStatus(results.financialHealthScore.savingsScore), explanation: 'Based on your monthly savings rate.', weight: 0.4, displayOrder: 1 },
@@ -314,6 +315,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     title: 'Recommended Actions',
     icon: 'fas fa-clipboard-check',
     column_span: 1,
+    row_span: 2,
     data: results.nextSteps.map((step, index) => ({
       id: uuidv4(),
       title: `Priority ${index + 1}`,
@@ -330,7 +332,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     type: 'tipCard',
     title: 'Smart Investment Tips',
     icon: 'fas fa-lightbulb',
-    column_span: 2,
+    column_span: 1,
     data: {
       tips: results.investingGuidance.map((tip, index) => ({
         id: uuidv4(),
@@ -380,7 +382,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       type: 'tipCard',
       title: 'Debt Management',
       icon: 'fas fa-credit-card',
-      column_span: 1,
+      column_span: 2,
       data: {
         tips: [
           { id: uuidv4(), title: 'Debt Payoff Strategy', content: 'Consider using the Avalanche method (highest interest first) or Snowball method (smallest balances first).', displayOrder: 1 },

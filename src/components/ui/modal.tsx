@@ -13,7 +13,7 @@ interface ModalProps {
   overlayClassName?: string;
   contentClassName?: string;
   disableOverlayClick?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
+  width?: "standard" | "wide";
   fullHeight?: boolean;
   title?: string;
   description?: string;
@@ -31,6 +31,7 @@ export function Modal({
   title = "",
   description = "",
   footer,
+  width="standard"
 }: ModalProps) {
   // Lock body scroll when modal is open
   useLockBodyScroll(isOpen);
@@ -106,7 +107,8 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed inset-0 z-30 flex items-center justify-center p-4"
+        className={classNames("fixed inset-0 z-30 flex items-center justify-center p-4",
+        )}
       >
         {/* Backdrop */}
         <motion.div
@@ -131,22 +133,23 @@ export function Modal({
           onClick={(e) => e.stopPropagation()}
           role="document"
           className={classNames(
-            "relative z-50 flex w-[90vw] flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl lg:w-[40rem]",
+            "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl ",
             fullHeight ? "h-[90vh]" : "max-h-[90vh]",
+            width === "standard" ? "w-[90vw] lg:w-[40rem]" : "w-[90vw] lg:w-[50rem]",
             contentClassName,
           )}
         >
-          <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
+        {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
             {title && <h2 className="text-xl font-semibold">{title}</h2>}
             {description && (
               <p className="text-sm text-gray-500">{description}</p>
             )}
-          </div>
+          </div>}
 
           <div className="flex-1 overflow-scroll w-full">{children}</div>
-          <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
-            {footer && footer()}
-          </div>
+         {footer&& <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
+            {footer()}
+          </div>}
         </motion.div>
       </div>
     )}

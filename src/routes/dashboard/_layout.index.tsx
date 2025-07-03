@@ -1,24 +1,18 @@
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBell,
-  faChartBar,
   faCheck,
   faChevronDown,
-  faChevronUp,
   faExclamationTriangle,
-  faGear,
   faHeartPulse,
   faLightbulb,
   faPencilAlt,
   faPlus,
   faRefresh,
-  faSave,
   faTimes,
-  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "@/components/financial-health/useQuizDashboard";
 import { ConfirmationModal } from "@/components/profile/modals/ConfirmationModal";
@@ -31,13 +25,11 @@ import {
   setDefaultTemplates,
   resetTemplatesError,
 } from "@/store/slices/dashboardSlice";
-import AmbientHalo from "@/components/ui/ambient-halo";
-import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { DashboardView } from "@/types/dashboard.types";
 import { useCookie } from "@/utils/use-cookie";
 import { Modal } from "@/components/ui/modal";
 import { Widget } from "@/components/profile/types/dashboard-data.typings";
+import FinancialHealthQuiz from "@/components/financial-health/FinancialHealthQuiz";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -63,6 +55,7 @@ function Profile() {
   const [isCreatingView, setIsCreatingView] = useState(false);
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [showFinancialHealthQuiz, setShowFinancialHealthQuiz] = useState(false);
   const { getCookie, setCookie } = useCookie();
 
   // Use our custom dashboard hook
@@ -85,6 +78,7 @@ function Profile() {
     loadDashboardView,
   } = useDashboard(user?.id);
 
+
   // Load saved dashboard configuration on initial render
   useEffect(() => {
     if (user && status === "idle") {
@@ -98,23 +92,23 @@ function Profile() {
     }
   }, [user, loadDashboard, status, getCookie, views, loadDashboardView]);
 
-  // Load templates if we need to show the template selection UI
+ // Load templates if we need to show the template selection UI
   useEffect(() => {
     if (
-      (status === "no_views" || isTemplateModalOpen) &&
+      (status === "no_views") &&
       templatesStatus === "idle"
     ) {
       dispatch(fetchDashboardTemplates());
-      setIsTemplateModalOpen(true);
+     // setIsTemplateModalOpen(true);
     }
-  }, [status, templatesStatus, dispatch, isTemplateModalOpen]);
+  }, [status, templatesStatus, dispatch]);
 
   // Show template modal automatically if there are no views
-  useEffect(() => {
-    if (status === "no_views") {
-      setIsTemplateModalOpen(true);
-    }
-  }, [status]);
+  // useEffect(() => {
+  //   if (status === "no_views") {
+  //     (true);
+  //   }
+  // }, [status]);
 
   // If templates fail to load, use default templates after a timeout
   useEffect(() => {
@@ -255,6 +249,12 @@ function Profile() {
     }
   }, [hasUnsavedChanges, isConfirmModalOpen, loadDashboardView, setCookie]);
 
+  const handleHealthQuizCompleted = () => {
+    setShowFinancialHealthQuiz(false);
+    loadDashboard();
+
+  };
+
   return (
     <>
       {
@@ -265,11 +265,21 @@ function Profile() {
           </div>
         ) : status === "no_views" ? (
           <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center">
-              <h2 className="mb-4 text-xl font-medium text-gray-700">
-                Setting up your dashboard...
+            <div className="text-center max-w-md p-8 bg-white rounded-lg shadow-lg">
+              <FontAwesomeIcon icon={faHeartPulse} className="text-blue-500 text-4xl mb-4" />
+              <h2 className="mb-3 text-2xl font-semibold text-gray-800">
+                No Dashboard Views Yet
               </h2>
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+              <p className="mb-6 text-gray-600">
+                Get a personalized financial dashboard by answering a few questions about your financial situation and goals.
+              </p>
+              <button
+                onClick={() => setShowFinancialHealthQuiz(true)}
+                className="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-md flex items-center justify-center w-full"
+              >
+                <FontAwesomeIcon icon={faLightbulb} className="mr-2" />
+                Take Financial Health Quiz
+              </button>
             </div>
           </div>
         ) : status === "failed" ? (
@@ -296,17 +306,8 @@ function Profile() {
                   <div className="flex items-center">
                     <h1 className="text-2xl font-bold text-gray-800">
                       Dashboard
-                    </h1>
-                    
-                    {/* Financial Health Quiz button */}
-                    <Link
-                      to="/financial-health"
-                      className="ml-4 flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                    >
-                      <FontAwesomeIcon icon={faHeartPulse} className="mr-2" />
-                      Financial Health Quiz
-                    </Link>
-
+                    </h1>                   
+                  
                     {/* View selector dropdown - always visible */}
                     <div className="relative ml-4">
                       <button
@@ -480,6 +481,17 @@ function Profile() {
         confirmText="Discard Changes"
         cancelText="Continue Editing"
       />
+
+      {/* Financial Health Quiz Modal */}
+      <Modal
+      isOpen={showFinancialHealthQuiz}
+      width="wide"
+      disableOverlayClick
+      onClose={() => setShowFinancialHealthQuiz(false)}
+      >
+      <FinancialHealthQuiz onDashboardCreated={handleHealthQuizCompleted}/>
+      </Modal>        
+      
 
       {/* Click outside handler for view dropdown */}
       {isViewDropdownOpen && (
