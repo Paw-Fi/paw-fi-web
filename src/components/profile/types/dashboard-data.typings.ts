@@ -5,8 +5,8 @@ export interface IBaseWidget {
   type: string;
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
-  columnSpan: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
-  rowSpan?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
+  column_span: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
+  row_span?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
   controls?: ReactNode; // Optional React components for widget controls in header
 }
 
@@ -27,7 +27,7 @@ export interface IMetricCardItem {
   description?: string; // (Optional) Brief description
   progress?: number; // (Optional) 0.0 - 1.0, for progress bars (e.g., 0.75 for 75%)
   goalLabel?: string; // (Optional) Label for the goal associated with progress
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
+  displayOrder?: number; // (Optional) Numeric hint for display sorting,
 }
 export interface IMetricCardData {
   title?: string; // Optional title for the whole card
@@ -44,7 +44,11 @@ export interface IProgressBarListItem {
   color?: string; // (Optional) Custom color for the progress bar (e.g., '#4CAF50')
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface IProgressBarListData extends Array<IProgressBarListItem> {}
+export interface IProgressBarListData {
+  items: IProgressBarListItem[];
+  showPercentages?: boolean;
+  sortBy?: 'progress' | 'alphabetical' | 'custom';
+}
 
 // Tip Card Widget
 export interface ITipCardListItem {
@@ -59,6 +63,7 @@ export interface ITipCardData {
   tips: ITipCardListItem[];
   currentTipIndex: number;
   autoRotate?: boolean; // (Optional) Whether to auto-cycle through tips
+  filterByCategory?: string; // Show only tips from specific category
 }
 export interface ITipCardWidget extends IBaseWidget {
   type: 'tipCard';
@@ -95,7 +100,13 @@ export interface IDataListItem {
   category?: string; // (Optional) Optional grouping (e.g., "Assets", "Liabilities", "Fixed Expenses")
   displayOrder: number; // (Mandatory) Numeric hint for display sorting
 }
-export interface IDataListData extends Array<IDataListItem> {}
+export interface IDataListData {
+  items: IDataListItem[];
+  tip?: string;
+  footerLink?: { text: string; url: string; icon: string; };
+  groupByCategory?: boolean;
+  showTotals?: boolean;
+}
 
 // 6. CHART DATA - Enhanced with metadata
 export interface IChartDataPoint {
@@ -112,6 +123,7 @@ export interface IChartData {
   yAxisLabel?: string; // (Optional) Label for the Y-axis
   height?: number;
   showLegend?: boolean;
+  showDataPoints?: boolean; // (Optional) For line charts, whether to show data points
   title?: string;
 }
 
@@ -129,6 +141,7 @@ export interface IFinancialHealthScorecardData {
   items: IFinancialHealthItem[]; // (Mandatory) Array of individual financial health assessments
   overallScore?: number; // (Optional) Calculated overall score
   overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // (Optional) Overall status
+  showIndividualScores?: boolean; // (Optional) Whether to show individual scores
 }
 
 // 8. NEXT BEST ACTION - Now supports multiple actions
@@ -208,7 +221,11 @@ export interface IEnhancedSavingsGoalItem {
   autoContribution?: number; // (Optional) Monthly auto-contribution amount
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface IEnhancedSavingsGoalsData extends Array<IEnhancedSavingsGoalItem> {}
+export interface IEnhancedSavingsGoalsData {
+  items: IEnhancedSavingsGoalItem[];
+  groupByCategory?: boolean;
+  showProgress?: boolean;
+}
 
 // 13. INSURANCE COVERAGE - Enhanced with IDs
 export interface IInsuranceCoverageItem {
@@ -231,6 +248,8 @@ export interface IInsuranceCoverageItem {
 
 export interface IInsuranceCoverageData {
   items: IInsuranceCoverageItem[];
+  showPremiums?: boolean;
+  showRenewalDates?: boolean;
 }
 
 // 14. CHECKLIST - Enhanced (already had IDs)
@@ -245,7 +264,11 @@ export interface IChecklistItem {
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
 
-export interface IChecklistData extends Array<IChecklistItem> {}
+export interface IChecklistData {
+  items: IChecklistItem[];
+  showCompleted?: boolean;
+  sortBy?: 'dueDate' | 'priority' | 'alphabetical' | 'custom';
+}
 
 // Removed 'IMultipleChecklistsData' and 'ICategoryChecklist' as they are no longer a distinct type for the widget.
 // Users can use multiple IChecklistWidgets with different IDs and titles to achieve the same effect.
@@ -255,14 +278,11 @@ export interface IChecklistData extends Array<IChecklistItem> {}
 // =============================================================================
 export interface IMetricCardWidget extends IBaseWidget {
   type: 'metricCard';
-  data: IMetricCardItem[];
-  displayMode?: 'carousel' | 'grid' | 'list'; // How to display multiple metrics
+  data: IMetricCardData;
 }
 export interface IProgressBarListWidget extends IBaseWidget {
   type: 'progressBarList';
   data: IProgressBarListData;
-  showPercentages?: boolean;
-  sortBy?: 'progress' | 'alphabetical' | 'custom';
 }
 export interface ICountdownCardWidget extends IBaseWidget {
   type: 'countdownCard';
@@ -271,33 +291,22 @@ export interface ICountdownCardWidget extends IBaseWidget {
 export interface ITipCardWidget extends IBaseWidget {
   type: 'tipCard';
   data: ITipCardData;
-  filterByCategory?: string; // Show only tips from specific category
 }
 export interface IDataListWidget extends IBaseWidget {
   type: 'dataList';
   data: IDataListData;
-  tip?: string;
-  footerLink?: { text: string; url: string; icon: string; };
-  groupByCategory?: boolean;
-  showTotals?: boolean;
 }
 export interface IBarChartWidget extends IBaseWidget {
   type: 'barChart';
   data: IChartData;
-  height?: number;
-  showLegend?: boolean;
 }
 export interface ILineChartWidget extends IBaseWidget {
   type: 'lineChart';
   data: IChartData;
-  height?: number;
-  showLegend?: boolean;
-  showDataPoints?: boolean;
 }
 export interface IFinancialHealthScorecardWidget extends IBaseWidget {
   type: 'financialHealthScorecard';
   data: IFinancialHealthScorecardData;
-  showIndividualScores?: boolean;
 }
 export interface INextBestActionWidget extends IBaseWidget {
   type: 'nextBestAction';
@@ -320,19 +329,14 @@ export interface IDebtVisualizerWidget extends IBaseWidget {
 export interface IRetirementReadinessWidget extends IBaseWidget {
   type: 'retirementReadiness';
   data: IRetirementReadinessData;
-  allowScenarioSwitching?: boolean;
 }
 export interface IEnhancedSavingsGoalsWidget extends IBaseWidget {
   type: 'enhancedSavingsGoals';
   data: IEnhancedSavingsGoalsData;
-  groupByCategory?: boolean;
-  showProgress?: boolean;
 }
 export interface IInsuranceCoverageWidget extends IBaseWidget {
   type: 'insuranceCoverage';
-  data: IInsuranceCoverageItem[];
-  showPremiums?: boolean;
-  showRenewalDates?: boolean;
+  data: IInsuranceCoverageData;
 }
 export type Priority = 'low' | 'medium' | 'high';
 
@@ -346,12 +350,15 @@ export interface IChecklistItem {
   notes?: string; // (Optional) Additional notes for the task
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
-export interface IChecklistWidget extends IBaseWidget {
-  type: 'checklist';
-  data: IChecklistItem[]; // (Mandatory) Array of tasks
+export interface IChecklistData {
+  items: IChecklistItem[]; // (Mandatory) Array of tasks
   showCompleted?: boolean; // (Optional) Whether to show completed tasks
   sortBy?: 'dueDate' | 'priority' | 'alphabetical' | 'custom'; // (Optional) Sorting preference
-  onToggleItem?: (id: string, isCompleted: boolean) => void; // (Optional) Callback for item completion toggle
+}
+
+export interface IChecklistWidget extends IBaseWidget {
+  type: 'checklist';
+  data: IChecklistData;
 }
 // Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
 
@@ -359,8 +366,6 @@ export interface IChecklistWidget extends IBaseWidget {
 export interface IPieChartWidget extends IBaseWidget {
   type: 'pieChart';
   data: IChartData;
-  height?: number;
-  showLegend?: boolean;
 }
 
 export type Widget =

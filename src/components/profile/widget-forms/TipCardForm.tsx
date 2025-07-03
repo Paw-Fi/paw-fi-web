@@ -96,7 +96,7 @@ export function TipCardForm({ data: widgetData, onDataChange }: WidgetFormProps<
       ...widgetData,
       data: {
         ...widgetData.data,
-        items: [...tips, newTip],
+        tips: [...tips, newTip],
       },
     });
   }, [tips, widgetData, onDataChange]);

@@ -15,17 +15,20 @@ import { Widget } from './Widget';
 
 // Data List Widget
 export function DataListWidget({ widget }: { widget: IDataListWidget }) {
-  const { data, tip, footerLink } = widget;
-  if (!data || data.length === 0) {
+  const { data } = widget;
+  
+  if (!data || !data.items || data.items.length === 0) {
     return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
   }
+  
+  const { items, tip, footerLink, groupByCategory, showTotals } = data;
   
   return (
     <Widget widget={widget} controls={widget.controls}>
       <div className="space-y-4 p-1"> {/* Adjusted base padding slightly if Widget itself has substantial padding */}
-        {data.map((item, index) => (
+        {items.map((item, index) => (
           <div 
-            key={index} 
+            key={item.id || index} 
             className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-slate-700 last:border-0"
           >
             <span className="text-sm text-slate-500 dark:text-slate-400">{item.label}</span>
@@ -57,8 +60,9 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
 
 // Progress Bar List Widget
 export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidget }) {
-  const { data, showPercentages = true } = widget;
-  if (!data || data.length === 0) {
+  const { data } = widget;
+  const { items = [], showPercentages = true, sortBy = 'custom' } = data;
+  if (!items || items.length === 0) {
     return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
   }
   
@@ -78,10 +82,10 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   };
   
   // Sort items based on widget settings
-  const sortedItems = [...data].sort((a, b) => {
-    if (widget.sortBy === 'alphabetical') {
+  const sortedItems = [...items].sort((a, b) => {
+    if (sortBy === 'alphabetical') {
       return a.label.localeCompare(b.label);
-    } else if (widget.sortBy === 'progress') {
+    } else if (sortBy === 'progress') {
       return (b.current / b.max) - (a.current / a.max);
     }
     // Default to displayOrder or original order
@@ -192,7 +196,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
           {/* Image with responsive sizing */}
           {currentCountdownItem.image && (
             <div 
-              className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
+              className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
             >
               <img 
                 src={currentCountdownItem.image} 
@@ -204,7 +208,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
           
           {/* Title with responsive sizing */}
           <h3 
-            className={`font-medium text-slate-700 dark:text-slate-200 ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-base line-clamp-2 mb-1' : 'text-sm line-clamp-1'}`}
+            className={`font-medium text-slate-700 dark:text-slate-200 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-base line-clamp-2 mb-1' : 'text-sm line-clamp-1'}`}
           >
             {displayTitle}
           </h3>
@@ -212,14 +216,14 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
           {/* Days counter with responsive sizing */}
           <div className="flex flex-col items-center">
             <div 
-              className={`font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-6xl' : 'text-4xl'}`}
+              className={`font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-6xl' : 'text-4xl'}`}
             >
               {currentCountdownItem.targetDate 
                 ? (daysRemaining <= 0 ? '0' : daysRemaining)
                 : '—'}
             </div>
             <div 
-              className={`text-slate-600 dark:text-slate-300 font-medium ${(widget.columnSpan === 2 || (widget.rowSpan ?? 1) > 1) ? 'text-sm' : 'text-xs'}`}
+              className={`text-slate-600 dark:text-slate-300 font-medium ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-sm' : 'text-xs'}`}
             >
               {!currentCountdownItem.targetDate 
                 ? 'No target date set'
@@ -232,7 +236,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
           </div>
           
           {/* Target date - only show if there's room */}
-          {currentCountdownItem.targetDate && (widget.rowSpan ?? 1) > 1 && (
+          {currentCountdownItem.targetDate && (widget.row_span ?? 1) > 1 && (
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 bg-slate-100 dark:bg-slate-800/50 py-0.5 px-2 rounded-full">
               {formattedDate}
             </div>

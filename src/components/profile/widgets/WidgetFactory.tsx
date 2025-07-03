@@ -26,11 +26,10 @@ import { TipCardWidget } from "./tip-card-widget";
 
 interface WidgetFactoryProps {
   widget: IBaseWidget;
-  onToggleChecklistItem?: (widgetId: string, itemId: string, isCompleted: boolean) => void;
   controls?: React.ReactNode; // Added for control buttons
 }
 
-export function WidgetFactory({ widget, onToggleChecklistItem, controls }: WidgetFactoryProps) {
+export function WidgetFactory({ widget, controls }: WidgetFactoryProps) {
   // Cast the widget to any to access the type property
   const widgetType = (widget as Widget).type;
 

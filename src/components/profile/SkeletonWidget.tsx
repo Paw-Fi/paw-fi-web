@@ -3,16 +3,16 @@
 import React from 'react';
 
 interface SkeletonWidgetProps {
-  columnSpan?: 1 | 2;
+  column_span?: 1 | 2;
   isExpanded?: boolean;
 }
 
-export function SkeletonWidget({ columnSpan = 1, isExpanded = false }: SkeletonWidgetProps) {
+export function SkeletonWidget({ column_span = 1, isExpanded = false }: SkeletonWidgetProps) {
   return (
     <div 
       className={`
         ${isExpanded ? 'row-span-2' : 'row-span-1'}
-        ${columnSpan === 2 ? 'col-span-2' : 'col-span-1'}
+        ${column_span === 2 ? 'col-span-2' : 'col-span-1'}
         bg-white rounded-xl shadow-lg overflow-hidden animate-pulse
       `}
     >

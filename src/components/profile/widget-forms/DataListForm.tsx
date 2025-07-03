@@ -60,7 +60,10 @@ interface WidgetFormProps<T = any> {
 }
 
 export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps<IDataListWidget>) {
-  const initialItems: IDataListItem[] = widgetData.data || [];
+  // Initialize data structure if it doesn't exist
+  const initialData = widgetData.data || { items: [] };
+  const initialItems: IDataListItem[] = initialData.items || [];
+  
   // Ensure items are sorted by displayOrder initially for dnd-kit
   const [items, setItems] = useState<IDataListItem[]>(() => 
     [...initialItems].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
@@ -68,9 +71,9 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
   const [isDragging, setIsDragging] = useState(false);
 
   React.useEffect(() => {
-    const sortedInitialItems = [...(widgetData.data || [])].sort((a,b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    const sortedInitialItems = [...(widgetData.data?.items || [])].sort((a,b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     setItems(sortedInitialItems);
-  }, [widgetData.data]);
+  }, [widgetData.data?.items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -88,7 +91,13 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
       i === index ? { ...item, [field]: value } : item
     );
     setItems(newItems);
-    onDataChange({ ...widgetData, data: newItems });
+    onDataChange({ 
+      ...widgetData, 
+      data: {
+        ...widgetData.data,
+        items: newItems
+      }
+    });
   };
 
   const addItem = () => {
@@ -101,14 +110,26 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
     };
     const newItems = [...items, newItem];
     setItems(newItems);
-    onDataChange({ ...widgetData, data: newItems });
+    onDataChange({ 
+      ...widgetData, 
+      data: {
+        ...widgetData.data,
+        items: newItems
+      }
+    });
   };
 
   const removeItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index)
       .map((item, idx) => ({ ...item, displayOrder: idx }));
     setItems(newItems);
-    onDataChange({ ...widgetData, data: newItems });
+    onDataChange({ 
+      ...widgetData, 
+      data: {
+        ...widgetData.data,
+        items: newItems
+      }
+    });
   };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -120,7 +141,13 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
         let newOrderedItems = arrayMove(items, oldIndex, newIndex);
         newOrderedItems = newOrderedItems.map((item, idx) => ({ ...item, displayOrder: idx }));
         setItems(newOrderedItems);
-        onDataChange({ ...widgetData, data: newOrderedItems });
+        onDataChange({ 
+          ...widgetData, 
+          data: {
+            ...widgetData.data,
+            items: newOrderedItems
+          }
+        });
       }
     }
     setIsDragging(false);
@@ -137,6 +164,55 @@ export function DataListForm({ data: widgetData, onDataChange }: WidgetFormProps
           onChange={(e) => onDataChange({ ...widgetData, title: e.target.value })}
           placeholder="Enter title"
         />
+      </div>
+      
+      <div className="space-y-2">
+        <Label>Tip (Optional)</Label>
+        <Input
+          value={widgetData.data?.tip || ''}
+          onChange={(e) => onDataChange({ 
+            ...widgetData, 
+            data: {
+              ...widgetData.data,
+              tip: e.target.value
+            }
+          })}
+          placeholder="Enter a helpful tip"
+        />
+      </div>
+      
+      <div className="flex items-center space-x-2 mb-4">
+        <input
+          type="checkbox"
+          id="groupByCategory"
+          checked={widgetData.data?.groupByCategory || false}
+          onChange={(e) => onDataChange({ 
+            ...widgetData, 
+            data: {
+              ...widgetData.data,
+              groupByCategory: e.target.checked
+            }
+          })}
+          className="h-4 w-4"
+        />
+        <Label htmlFor="groupByCategory">Group by category</Label>
+      </div>
+      
+      <div className="flex items-center space-x-2 mb-4">
+        <input
+          type="checkbox"
+          id="showTotals"
+          checked={widgetData.data?.showTotals || false}
+          onChange={(e) => onDataChange({ 
+            ...widgetData, 
+            data: {
+              ...widgetData.data,
+              showTotals: e.target.checked
+            }
+          })}
+          className="h-4 w-4"
+        />
+        <Label htmlFor="showTotals">Show totals</Label>
       </div>
       
       <div className="space-y-2">

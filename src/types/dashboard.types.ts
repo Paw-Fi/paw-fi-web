@@ -19,7 +19,7 @@ export interface DashboardWidget {
   icon: string;
   column_span: 1 | 2;
   row_span: 1 | 2;
-  widget_data: any;
+  data: any;
   created_at: string;
   updated_at: string;
 }
@@ -61,7 +61,7 @@ export interface UpdateDashboardViewWithWidgetsRequest {
     icon: string;
     column_span: 1 | 2;
     row_span: 1 | 2;
-    widget_data: any;
+    data: any;
   }[];
 }
 
@@ -71,7 +71,7 @@ export interface UpdateWidgetRequest {
   icon?: string;
   column_span?: 1 | 2;
   row_span?: 1 | 2;
-  widget_data?: any;
+  data?: any;
 }
 
 export interface CreateWidgetRequest {
@@ -81,7 +81,7 @@ export interface CreateWidgetRequest {
   icon: string;
   column_span: 1 | 2;
   row_span?: 1 | 2;
-  widget_data: any;
+  data: any;
 }
 
 export interface ReorderWidgetsRequest {

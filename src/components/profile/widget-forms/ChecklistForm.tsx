@@ -75,7 +75,9 @@ function SortableChecklistItem({ item, index, onItemChange, onRemoveItem }: Sort
 }
 
 export function ChecklistForm({ data: widgetData, onDataChange }: WidgetFormProps<IChecklistWidget>) {
-  const [items, setItems] = useState<IChecklistItem[]>(Array.isArray(widgetData.data) ? widgetData.data : []);
+  const [items, setItems] = useState<IChecklistItem[]>(widgetData.data?.items || []);
+  const [showCompleted, setShowCompleted] = useState<boolean>(widgetData.data?.showCompleted || false);
+  const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'alphabetical' | 'custom'>(widgetData.data?.sortBy || 'custom');
 
   useEffect(() => {
     // Ensure displayOrder is consistent if not already set or if items are new
@@ -84,11 +86,9 @@ export function ChecklistForm({ data: widgetData, onDataChange }: WidgetFormProp
       const updatedItemsWithOrder = items.map((item, idx) => ({ ...item, displayOrder: idx }));
       if (JSON.stringify(items) !== JSON.stringify(updatedItemsWithOrder)) {
         setItems(updatedItemsWithOrder);
-        // Avoid calling onDataChange here if it's just an initial setup or internal sync
-        // onDataChange({ ...widgetData, data: updatedItemsWithOrder });
       }
     }
-  }, [items, widgetData]); // Removed onDataChange from dependencies to avoid loop
+  }, [items]); // Removed widgetData from dependencies to avoid loop
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -104,7 +104,14 @@ export function ChecklistForm({ data: widgetData, onDataChange }: WidgetFormProp
         if (field in currentItem) {
             (currentItem[field] as string | boolean) = value;
              setItems(newItems);
-             onDataChange({ ...widgetData, data: newItems });
+             onDataChange({ 
+               ...widgetData, 
+               data: {
+                 items: newItems,
+                 showCompleted,
+                 sortBy
+               }
+             });
         } else {
             console.warn(`Field ${field} not found in item at index ${index}`);
         }
@@ -122,13 +129,27 @@ export function ChecklistForm({ data: widgetData, onDataChange }: WidgetFormProp
     };
     const newItems = [...items, newItem];
     setItems(newItems);
-    onDataChange({ ...widgetData, data: newItems });
+    onDataChange({ 
+      ...widgetData, 
+      data: {
+        items: newItems,
+        showCompleted,
+        sortBy
+      }
+    });
   };
 
   const removeItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index).map((item, idx) => ({ ...item, displayOrder: idx })); // Re-index displayOrder
     setItems(newItems);
-    onDataChange({ ...widgetData, data: newItems });
+    onDataChange({ 
+      ...widgetData, 
+      data: {
+        items: newItems,
+        showCompleted,
+        sortBy
+      }
+    });
   };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -139,11 +160,18 @@ export function ChecklistForm({ data: widgetData, onDataChange }: WidgetFormProp
         const newIndex = currentItems.findIndex((item) => item.id === over.id.toString());
         const reorderedItems = arrayMove(currentItems, oldIndex, newIndex);
         const finalItems = reorderedItems.map((item, index) => ({ ...item, displayOrder: index }));
-        onDataChange({ ...widgetData, data: finalItems });
+        onDataChange({ 
+          ...widgetData, 
+          data: {
+            items: finalItems,
+            showCompleted,
+            sortBy
+          }
+        });
         return finalItems;
       });
     }
-  }, [onDataChange, widgetData]);
+  }, [onDataChange, widgetData, showCompleted, sortBy]);
 
   return (
     <div className="space-y-4">

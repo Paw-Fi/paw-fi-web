@@ -44,14 +44,45 @@ interface WidgetFormProps<T> {
 }
 
 export const ProgressBarListForm: React.FC<WidgetFormProps<IProgressBarListWidget>> = ({ data: widgetData, onDataChange }) => {
-  const [items, setItems] = useState<IProgressBarListItem[]>(widgetData.data || []);
+  const [items, setItems] = useState<IProgressBarListItem[]>(widgetData.data?.items || []);
+  const [showPercentages, setShowPercentages] = useState<boolean>(widgetData.data?.showPercentages ?? true);
+  const [sortBy, setSortBy] = useState<IProgressBarListData['sortBy']>(widgetData.data?.sortBy || 'custom');
 
   useEffect(() => {
-    setItems(widgetData.data || []);
+    setItems(widgetData.data?.items || []);
+    setShowPercentages(widgetData.data?.showPercentages ?? true);
+    setSortBy(widgetData.data?.sortBy || 'custom');
   }, [widgetData.data]);
 
   const propagateChangesUp = (updatedItems: IProgressBarListItem[]) => {
-    onDataChange({ ...widgetData, data: updatedItems });
+    onDataChange({
+      ...widgetData,
+      data: {
+        ...widgetData.data,
+        items: updatedItems,
+        showPercentages,
+        sortBy
+      }
+    });
+  };
+  
+  const updateWidgetSettings = (field: 'showPercentages' | 'sortBy', value: any) => {
+    if (field === 'showPercentages') {
+      setShowPercentages(value);
+    } else if (field === 'sortBy') {
+      setSortBy(value);
+    }
+    
+    onDataChange({
+      ...widgetData,
+      data: {
+        ...widgetData.data,
+        items,
+        [field]: value,
+        showPercentages: field === 'showPercentages' ? value : showPercentages,
+        sortBy: field === 'sortBy' ? value : sortBy
+      }
+    });
   };
 
   const handleItemChange = (index: number, field: keyof IProgressBarListItem, value: any) => {
@@ -158,6 +189,36 @@ export const ProgressBarListForm: React.FC<WidgetFormProps<IProgressBarListWidge
           })}
           placeholder="Enter widget title"
         />
+      </div>
+      
+      <div className="space-y-2">
+        <Label>Display Options</Label>
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="showPercentages"
+              checked={showPercentages}
+              onChange={(e) => updateWidgetSettings('showPercentages', e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <Label htmlFor="showPercentages" className="text-sm font-normal">Show percentages instead of values</Label>
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <Label htmlFor="sortBy" className="text-sm">Sort progress bars by</Label>
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) => updateWidgetSettings('sortBy', e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
+            >
+              <option value="custom">Custom order (drag to reorder)</option>
+              <option value="alphabetical">Alphabetical</option>
+              <option value="progress">Progress (highest first)</option>
+            </select>
+          </div>
+        </div>
       </div>
       
       <div className="space-y-2">

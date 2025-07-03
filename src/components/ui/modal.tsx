@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import classNames from "classnames";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface ModalProps {
   overlayClassName?: string;
   contentClassName?: string;
   disableOverlayClick?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
+  width?: "standard" | "wide";
   fullHeight?: boolean;
   title?: string;
   description?: string;
@@ -30,6 +31,7 @@ export function Modal({
   title = "",
   description = "",
   footer,
+  width="standard"
 }: ModalProps) {
   // Lock body scroll when modal is open
   useLockBodyScroll(isOpen);
@@ -100,55 +102,57 @@ export function Modal({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-30 flex items-center justify-center p-4"
+   createPortal( <AnimatePresence>
+    {isOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={classNames("fixed inset-0 z-30 flex items-center justify-center p-4",
+        )}
+      >
+        {/* Backdrop */}
+        <motion.div
+          className={classNames(
+            "fixed inset-0 z-50 flex-1 flex-col",
+            overlayClassName,
+          )}
+          onClick={!disableOverlayClick ? onClose : undefined}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={overlayVariants}
+          aria-hidden="true"
+        />
+
+        {/* Modal content */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={contentVariants}
+          onClick={(e) => e.stopPropagation()}
+          role="document"
+          className={classNames(
+            "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl ",
+            fullHeight ? "h-[90vh]" : "max-h-[90vh]",
+            width === "standard" ? "w-[90vw] lg:w-[40rem]" : "w-[90vw] lg:w-[50rem]",
+            contentClassName,
+          )}
         >
-          {/* Backdrop */}
-          <motion.div
-            className={classNames(
-              "fixed inset-0 z-50 flex-1 flex-col",
-              overlayClassName,
+        {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
+            {title && <h2 className="text-xl font-semibold">{title}</h2>}
+            {description && (
+              <p className="text-sm text-gray-500">{description}</p>
             )}
-            onClick={!disableOverlayClick ? onClose : undefined}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={overlayVariants}
-            aria-hidden="true"
-          />
+          </div>}
 
-          {/* Modal content */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={contentVariants}
-            onClick={(e) => e.stopPropagation()}
-            role="document"
-            className={classNames(
-              "relative z-50 flex w-[90vw] flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl lg:w-[40rem]",
-              fullHeight ? "h-[90vh]" : "max-h-[90vh]",
-              contentClassName,
-            )}
-          >
-            <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
-              {title && <h2 className="text-xl font-semibold">{title}</h2>}
-              {description && (
-                <p className="text-sm text-gray-500">{description}</p>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-scroll w-full">{children}</div>
-            <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
-              {footer && footer()}
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+          <div className="flex-1 overflow-scroll w-full">{children}</div>
+         {footer&& <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
+            {footer()}
+          </div>}
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>, document.body)
   );
 }

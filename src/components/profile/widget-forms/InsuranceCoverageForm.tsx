@@ -41,38 +41,28 @@ const SortableInsuranceItem: React.FC<SortableInsuranceItemProps> = ({ item, chi
 
 // The main form component
 export const InsuranceCoverageForm: React.FC<WidgetFormProps<IInsuranceCoverageWidget>> = ({ data: widgetData, onDataChange }) => {
-  // Handle both data structures: direct array or items property
-  // This supports both the sample data format and the form component format
-  const getInitialItems = () => {
-    if (Array.isArray(widgetData.data)) {
-      return widgetData.data as IInsuranceCoverageItem[];
-    } else if (widgetData.data?.items) {
-      return widgetData.data.items;
-    }
-    return [];
-  };
-
-  // Initialize state from the items array (handling both data structures)
-  const [items, setItems] = useState<IInsuranceCoverageItem[]>(getInitialItems());
-  const [showPremiums, setShowPremiums] = useState<boolean>(widgetData.showPremiums ?? true);
-  const [showRenewalDates, setShowRenewalDates] = useState<boolean>(widgetData.showRenewalDates ?? true);
+  // Initialize state from the items array in the nested data object
+  const [items, setItems] = useState<IInsuranceCoverageItem[]>(widgetData.data?.items || []);
+  const [showPremiums, setShowPremiums] = useState<boolean>(widgetData.data?.showPremiums ?? true);
+  const [showRenewalDates, setShowRenewalDates] = useState<boolean>(widgetData.data?.showRenewalDates ?? true);
 
   // Effect to sync state if the prop changes from outside
   useEffect(() => {
-    setItems(getInitialItems());
-    setShowPremiums(widgetData.showPremiums ?? true);
-    setShowRenewalDates(widgetData.showRenewalDates ?? true);
-  }, [widgetData]);
+    setItems(widgetData.data?.items || []);
+    setShowPremiums(widgetData.data?.showPremiums ?? true);
+    setShowRenewalDates(widgetData.data?.showRenewalDates ?? true);
+  }, [widgetData.data?.items, widgetData.data?.showPremiums, widgetData.data?.showRenewalDates]);
 
   // Update parent component with changes
   const propagateChanges = (updatedItems: IInsuranceCoverageItem[], updatedShowPremiums?: boolean, updatedShowRenewalDates?: boolean) => {
-    // Always use the IInsuranceCoverageData structure with items property
-    // This ensures TypeScript compatibility with IInsuranceCoverageWidget
+    // Use the IInsuranceCoverageData structure with all properties nested in data
     const newData = {
       ...widgetData,
-      data: { items: updatedItems },
-      showPremiums: updatedShowPremiums !== undefined ? updatedShowPremiums : showPremiums,
-      showRenewalDates: updatedShowRenewalDates !== undefined ? updatedShowRenewalDates : showRenewalDates,
+      data: { 
+        items: updatedItems,
+        showPremiums: updatedShowPremiums !== undefined ? updatedShowPremiums : showPremiums,
+        showRenewalDates: updatedShowRenewalDates !== undefined ? updatedShowRenewalDates : showRenewalDates,
+      }
     };
     onDataChange(newData);
   };
@@ -225,11 +215,12 @@ export const InsuranceCoverageForm: React.FC<WidgetFormProps<IInsuranceCoverageW
                 <div>
                   <Label htmlFor={`status-${item.id}`}>Status</Label>
                   <Select
-                    onValueChange={(value: string) => handleItemChange(item.id, 'status', value)}
+                    onValueChange={(value) => handleItemChange(item.id, 'status', value)}
                     value={item.status || 'Adequate'}
+                    options={[]}
                   >
                     <SelectTrigger id={`status-trigger-${item.id}`}>
-                      <SelectValue placeholder="Select status..." />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Adequate">Adequate</SelectItem>

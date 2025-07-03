@@ -317,10 +317,10 @@ export function convertDashboardWidgetToWidget(widget: DashboardWidget): Widget 
     id: widget.id,
     title: widget.title,
     icon: widget.icon,
-    columnSpan: widget.column_span,
-    rowSpan: widget.row_span || 1,
+    column_span: widget.column_span,
+    row_span: widget.row_span || 1,
     type: widget.type as any,
-    data: widget.widget_data,
+    data: widget.data,
   };
 }
 
@@ -333,8 +333,59 @@ export function convertWidgetToDashboardWidget(widget: Widget, viewId: string): 
     type: widget.type,
     title: widget.title,
     icon: widget.icon,
-    column_span: widget.columnSpan,
-    row_span: widget.rowSpan || 1,
-    widget_data: widget.data
+    column_span: widget.column_span,
+    row_span: widget.row_span || 1,
+    data: widget.data
   };
+}
+
+/**
+ * Create a new dashboard view with a set of widgets (for Financial Health Quiz)
+ */
+export interface CreateViewWithWidgetsRequest {
+  viewName: string;
+  description?: string;
+  widgets: Widget[];
+  userId: string;
+}
+
+/**
+ * Create a dashboard view directly with widgets (for quiz results, etc.)
+ */
+export async function createDashboardWithWidgets(request: CreateViewWithWidgetsRequest) {
+  const { data, error } = await supabase.functions.invoke('dashboard-views', {
+    method: 'POST',
+    body: {
+      action: 'create-with-widgets',
+      ...request
+    }
+  });
+
+  if (error) {
+    throw new Error(`Failed to create dashboard with widgets: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * React hook for creating a dashboard view with widgets
+ */
+export function useCreateDashboardWithWidgets(
+  options?: UseMutationOptions<
+    any,
+    Error,
+    CreateViewWithWidgetsRequest
+  >
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (request: CreateViewWithWidgetsRequest) => createDashboardWithWidgets(request),
+    onSuccess: (_, { userId }) => {
+      // Invalidate views queries to refetch
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.views(userId) });
+    },
+    ...options
+  });
 }

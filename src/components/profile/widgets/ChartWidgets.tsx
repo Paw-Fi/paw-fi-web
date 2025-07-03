@@ -99,7 +99,8 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
 
 // Bar Chart Widget
 export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
-  const { data: chartDataDefinition, title, icon } = widget;
+  const { data: chartDataDefinition } = widget;
+  const { title = 'Bar Chart' } = chartDataDefinition || {};
 
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
@@ -145,10 +146,25 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
   };
 
   const chartOptions = getChartOptions(title);
+  const { height, showLegend } = chartDataDefinition || {};
+  
+  // Modify options based on data properties
+  if (showLegend === false) {
+    chartOptions.plugins = {
+      ...chartOptions.plugins,
+      legend: {
+        ...chartOptions.plugins?.legend,
+        display: false
+      }
+    };
+  }
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="h-full w-full flex items-center justify-center">
+      <div 
+        className="h-full w-full flex items-center justify-center"
+        style={height ? { height: `${height}px` } : undefined}
+      >
         <Bar 
           data={chartData} 
           options={{
@@ -164,7 +180,8 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
 
 // Line Chart Widget
 export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
-  const { data: chartDataDefinition, title } = widget;
+  const { data: chartDataDefinition } = widget;
+  const { title = 'Line Chart' } = chartDataDefinition || {};
 
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
@@ -199,10 +216,34 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
   };
 
   const chartOptions = getChartOptions(chartDataDefinition.xAxisLabel || title);
+  const { height, showLegend, showDataPoints } = chartDataDefinition || {};
+  
+  // Modify options based on data properties
+  if (showLegend === false) {
+    chartOptions.plugins = {
+      ...chartOptions.plugins,
+      legend: {
+        ...chartOptions.plugins?.legend,
+        display: false
+      }
+    };
+  }
+  
+  // Modify point radius based on showDataPoints
+  if (showDataPoints === false) {
+    chartData.datasets = chartData.datasets.map(dataset => ({
+      ...dataset,
+      pointRadius: 0,
+      pointHoverRadius: 3
+    }));
+  }
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="h-full w-full flex items-center justify-center">
+      <div 
+        className="h-full w-full flex items-center justify-center"
+        style={height ? { height: `${height}px` } : undefined}
+      >
         <Line 
           data={chartData} 
           options={{
@@ -218,7 +259,8 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
 
 // Pie Chart Widget
 export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
-  const { data: chartDataDefinition, title } = widget;
+  const { data: chartDataDefinition } = widget;
+  const { title = 'Pie Chart', showLegend } = chartDataDefinition || {};
 
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
@@ -295,6 +337,17 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
   });
   
   const chartOptions = getPieChartOptions(title);
+  
+  // Modify options based on data properties
+  if (showLegend === false) {
+    chartOptions.plugins = {
+      ...chartOptions.plugins,
+      legend: {
+        ...chartOptions.plugins?.legend,
+        display: false
+      }
+    };
+  }
 
   return (
     <Widget widget={widget} controls={widget.controls}>

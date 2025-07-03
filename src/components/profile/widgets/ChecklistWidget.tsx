@@ -33,14 +33,14 @@ const getPriorityBorderColor = (priority?: Priority): string => {
 
 interface ChecklistWidgetProps {
   widget: IChecklistWidget;
-  onToggleItem?: (itemId: string, isCompleted: boolean) => void;
 }
 
-export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) {
-  const { data, showCompleted = true, sortBy = 'custom' } = widget; // onToggleItem is now a direct prop
+export function ChecklistWidget({ widget }: ChecklistWidgetProps) {
+  const { data } = widget;
+  const { items = [], showCompleted = true, sortBy = 'custom' } = data || {};
   // `title` and `icon` from `widget` are used by the <Widget /> wrapper
 
-  if (!data || data.length === 0) {
+  if (!items || items.length === 0) {
     return (
       <Widget widget={widget} controls={widget.controls}>
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -54,7 +54,7 @@ export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) 
     );
   }
 
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = [...items].sort((a, b) => {
     if (sortBy === 'dueDate' && a.dueDate && b.dueDate) {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     } else if (sortBy === 'priority') {
@@ -81,20 +81,11 @@ export function ChecklistWidget({ widget, onToggleItem }: ChecklistWidgetProps) 
             `}
           >
             <div 
-              onClick={() => onToggleItem && onToggleItem(item.id, !item.isCompleted)} 
-              className="cursor-pointer mr-4 mt-1 flex-shrink-0"
-              aria-label={item.isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  onToggleItem && onToggleItem(item.id, !item.isCompleted);
-                }
-              }}
+              className="mr-4 mt-1 flex-shrink-0"
             >
               <FontAwesomeIcon 
                 icon={item.isCompleted ? faCheckSquare : faSquare} 
-                className={`w-6 h-6 ${item.isCompleted ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors'}`}
+                className={`w-6 h-6 ${item.isCompleted ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}
               />
             </div>
 

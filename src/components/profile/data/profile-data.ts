@@ -6,7 +6,7 @@ export const dashboardData: Widget[] =[
     "type": "pieChart",
     "title": "Monthly Expense Categories",
     "icon": "fas fa-chart-pie",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "dataPoints": [
         { "id": "chart-exp-cat-1", "label": "Housing", "value": 1200, "color": "#FF6384", "displayOrder": 1 },
@@ -17,87 +17,90 @@ export const dashboardData: Widget[] =[
         { "id": "chart-exp-cat-6", "label": "Other", "value": 150, "color": "#FF9F40", "displayOrder": 6 }
       ],
       "xAxisLabel": "Category",
-      "yAxisLabel": "Amount ($)"
-    },
-    "height": 280,
-    "showLegend": true
+      "yAxisLabel": "Amount ($)",
+      "height": 280,
+      "showLegend": true
+    }
   },
   {
     "id": "keyMetricsDashboard",
     "type": "metricCard",
     "title": "Key Financial Overview",
     "icon": "fas fa-chart-pie",
-    "columnSpan": 1,
-    "data": [
-      {
-        "id": "metric-networth",
-        "value": "150,000.00",
-        "currency": "$",
-        "trend": "up",
-        "trendPercentage": "7.5",
-        "description": "Total Assets minus Liabilities",
-        "displayOrder": 1
-      },
-      {
-        "id": "metric-liquid-cash",
-        "value": "8,500.00",
-        "currency": "$",
-        "description": "Available Cash",
-        "displayOrder": 2
-      },
-      {
-        "id": "metric-investment-gain",
-        "value": "1,200.00",
-        "currency": "$",
-        "trend": "up",
-        "trendPercentage": "3.1",
-        "description": "Monthly Investment Gain",
-        "displayOrder": 3
-      }
-    ],
-    "displayMode": "carousel"
+    "column_span": 1,
+    "data": {
+      "metrics": [
+        {
+          "id": "metric-networth",
+          "value": "150,000.00",
+          "currency": "$",
+          "trend": "up",
+          "trendPercentage": "7.5",
+          "description": "Total Assets minus Liabilities",
+          "displayOrder": 1
+        },
+        {
+          "id": "metric-liquid-cash",
+          "value": "8,500.00",
+          "currency": "$",
+          "description": "Available Cash",
+          "displayOrder": 2
+        },
+        {
+          "id": "metric-investment-gain",
+          "value": "1,200.00",
+          "currency": "$",
+          "trend": "up",
+          "trendPercentage": "3.1",
+          "description": "Monthly Investment Gain",
+          "displayOrder": 3
+        }
+      ]
+    }
   },
   {
     "id": "personalGoals",
     "type": "progressBarList",
     "title": "My Personal Goals",
     "icon": "fas fa-bullseye",
-    "columnSpan": 1,
-    "data": [
-      {
-        "id": "goal-read",
-        "label": "Books Read This Year",
-        "current": 13,
-        "max": 20,
-        "color": "#4CAF50",
-        "displayOrder": 1
-      },
-      {
-        "id": "goal-learn-code",
-        "label": "Coding Course Progress",
-        "current": 8,
-        "max": 10,
-        "color": "#2196F3",
-        "displayOrder": 2
-      },
-      {
-        "id": "goal-volunteer",
-        "label": "Volunteer Hours",
-        "current": 20,
-        "max": 50,
-        "color": "#FFC107",
-        "displayOrder": 3
-      }
-    ],
-    "showPercentages": true,
-    "sortBy": "progress"
+    "column_span": 1,
+    "data": {
+      "items": [
+        {
+          "id": "goal-read",
+          "label": "Books Read This Year",
+          "current": 13,
+          "max": 20,
+          "color": "#4CAF50",
+          "displayOrder": 1
+        },
+        {
+          "id": "goal-learn-code",
+          "label": "Coding Course Progress",
+          "current": 8,
+          "max": 10,
+          "color": "#2196F3",
+          "displayOrder": 2
+        },
+        {
+          "id": "goal-volunteer",
+          "label": "Volunteer Hours",
+          "current": 20,
+          "max": 50,
+          "color": "#FFC107",
+          "displayOrder": 3
+        }
+      ],
+      "showPercentages": true,
+      "sortBy": "progress"
+    }
   },
   {
     "id": "upcomingDeadlines",
     "type": "countdownCard",
     "title": "Important Dates",
     "icon": "fas fa-hourglass-half",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "id": "countdown-trip",
       "title": "Summer Vacation to Italy",
@@ -111,7 +114,7 @@ export const dashboardData: Widget[] =[
     "type": "tipCard",
     "title": "Smart Money Tips",
     "icon": "fas fa-lightbulb",
-    "columnSpan": 2,
+    "column_span": 2,
     "data": {
       "tips": [
         {
@@ -142,35 +145,39 @@ export const dashboardData: Widget[] =[
     "type": "dataList",
     "title": "Savings Accounts",
     "icon": "fas fa-piggy-bank",
-    "columnSpan": 1,
-    "data": [
-      { "id": "dl-sav-1", "label": "Checking Account", "value": "2,500.00", "currency": "$", "category": "Liquid", "displayOrder": 1 },
-      { "id": "dl-sav-2", "label": "High-Yield Savings", "value": "8,000.00", "currency": "$", "category": "Savings", "displayOrder": 2 },
-      { "id": "dl-sav-3", "label": "Investment Account", "value": "45,000.00", "currency": "$", "category": "Investments", "displayOrder": 3 }
-    ],
-    "groupByCategory": true,
-    "showTotals": true,
-    "tip": "Consider diversifying your investments.",
-    "footerLink": { "text": "View All Accounts", "url": "#", "icon": "fas fa-chevron-circle-right" }
+    "column_span": 1,
+    "data": {
+      "items": [
+        { "id": "dl-sav-1", "label": "Checking Account", "value": "2,500.00", "currency": "$", "category": "Liquid", "displayOrder": 1 },
+        { "id": "dl-sav-2", "label": "High-Yield Savings", "value": "8,000.00", "currency": "$", "category": "Savings", "displayOrder": 2 },
+        { "id": "dl-sav-3", "label": "Investment Account", "value": "45,000.00", "currency": "$", "category": "Investments", "displayOrder": 3 }
+      ],
+      "groupByCategory": true,
+      "showTotals": true,
+      "tip": "Consider diversifying your investments.",
+      "footerLink": { "text": "View All Accounts", "url": "#", "icon": "fas fa-chevron-circle-right" }
+    }
   },
   {
     "id": "employeeBenefits",
     "type": "dataList",
     "title": "My Benefits",
     "icon": "fas fa-briefcase",
-    "columnSpan": 1,
-    "data": [
-      { "id": "dl-ben-1", "label": "401K Match", "value": "6%", "currency": "", "displayOrder": 1 },
-      { "id": "dl-ben-2", "label": "Health Insurance Deductible", "value": "1,500.00", "currency": "$", "displayOrder": 2 },
-      { "id": "dl-ben-3", "label": "PTO Remaining", "value": "120", "currency": "hours", "displayOrder": 3 }
-    ]
+    "column_span": 1,
+    "data": {
+      "items": [
+        { "id": "dl-ben-1", "label": "401K Match", "value": "6%", "currency": "", "displayOrder": 1 },
+        { "id": "dl-ben-2", "label": "Health Insurance Deductible", "value": "1,500.00", "currency": "$", "displayOrder": 2 },
+        { "id": "dl-ben-3", "label": "PTO Remaining", "value": "120", "currency": "hours", "displayOrder": 3 }
+      ]
+    }
   },
   {
     "id": "monthlyExpenseBarChart",
     "type": "barChart",
     "title": "Monthly Expense Breakdown",
     "icon": "fas fa-chart-bar",
-    "columnSpan": 2,
+    "column_span": 2,
     "data": {
       "dataPoints": [
         { "id": "chart-exp-1", "label": "Rent", "value": 1500, "color": "#FF6384", "displayOrder": 1 },
@@ -180,17 +187,17 @@ export const dashboardData: Widget[] =[
         { "id": "chart-exp-5", "label": "Dining Out", "value": 350, "color": "#9966FF", "displayOrder": 5 }
       ],
       "xAxisLabel": "Expense Category",
-      "yAxisLabel": "Amount ($)"
-    },
-    "height": 280,
-    "showLegend": false
+      "yAxisLabel": "Amount ($)",
+      "height": 280,
+      "showLegend": false
+    }
   },
   {
     "id": "investmentGrowthLineChart",
     "type": "lineChart",
     "title": "Investment Portfolio Growth",
     "icon": "fas fa-chart-line",
-    "columnSpan": 2,
+    "column_span": 2,
     "data": {
       "dataPoints": [
         { "id": "chart-inv-1", "label": "Jan", "value": 40000, "displayOrder": 1 },
@@ -201,18 +208,18 @@ export const dashboardData: Widget[] =[
         { "id": "chart-inv-6", "label": "Jun", "value": 44000, "displayOrder": 6 }
       ],
       "xAxisLabel": "Month",
-      "yAxisLabel": "Portfolio Value ($)"
-    },
-    "height": 280,
-    "showDataPoints": true,
-    "showLegend": false
+      "yAxisLabel": "Portfolio Value ($)",
+      "height": 280,
+      "showDataPoints": true,
+      "showLegend": false
+    }
   },
   {
     "id": "overallHealthScore",
     "type": "financialHealthScorecard",
     "title": "Comprehensive Health Report",
     "icon": "fas fa-heart-pulse",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "items": [
         {
@@ -253,16 +260,16 @@ export const dashboardData: Widget[] =[
         }
       ],
       "overallScore": 73,
-      "overallStatus": "Good"
-    },
-    "showIndividualScores": true
+      "overallStatus": "Good",
+      "showIndividualScores": true
+    }
   },
   {
     "id": "actionableSteps",
     "type": "nextBestAction",
     "title": "Your Next Priority Actions",
     "icon": "fas fa-gavel",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": [
       {
         "id": "nba-auto-invest",
@@ -305,7 +312,7 @@ export const dashboardData: Widget[] =[
     "type": "quickCashFlowSummary",
     "title": "Monthly Cash Flow Summary",
     "icon": "fas fa-coins",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "inflows": [
         { "id": "inc-salary", "title": "Main Salary", "value": 5000, "category": "Employment", "frequency": "monthly", "isRecurring": true, "displayOrder": 1 },
@@ -328,7 +335,7 @@ export const dashboardData: Widget[] =[
     "type": "debtVisualizer",
     "title": "Debt Payoff Progress",
     "icon": "fas fa-hand-holding-dollar",
-    "columnSpan": 2,
+    "column_span": 2,
     "strategy": "avalanche",
     "data": [
       {
@@ -362,7 +369,7 @@ export const dashboardData: Widget[] =[
     "type": "financialHealthScorecard",
     "title": "Financial Health Score",
     "icon": "fas fa-heartbeat",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "items": [
         {
@@ -399,7 +406,7 @@ export const dashboardData: Widget[] =[
     "type": "nextBestAction",
     "title": "Recommended Actions",
     "icon": "fas fa-clipboard-check",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": [
       {
         "id": "nba-debt",
@@ -428,7 +435,7 @@ export const dashboardData: Widget[] =[
     "type": "quickCashFlowSummary",
     "title": "Monthly Cash Flow",
     "icon": "fas fa-exchange-alt",
-    "columnSpan": 2,
+    "column_span": 2,
     "data": {
       "inflows": [
         { "id": "cf-in-salary", "title": "Salary", "value": 5000, "category": "Primary Income", "frequency": "monthly", "displayOrder": 1 },
@@ -448,7 +455,7 @@ export const dashboardData: Widget[] =[
     "type": "debtVisualizer",
     "title": "Debt Breakdown",
     "icon": "fas fa-credit-card",
-    "columnSpan": 2,
+    "column_span": 2,
     "strategy": "avalanche",
     "data": [
       {
@@ -480,7 +487,7 @@ export const dashboardData: Widget[] =[
     "type": "retirementReadiness",
     "title": "Retirement Readiness",
     "icon": "fas fa-umbrella-beach",
-    "columnSpan": 1,
+    "column_span": 1,
     "data": {
       "scenarios": [
         {
@@ -514,91 +521,99 @@ export const dashboardData: Widget[] =[
     "type": "enhancedSavingsGoals",
     "title": "Major Savings Goals",
     "icon": "fas fa-piggy-bank",
-    "columnSpan": 1,
-    "data": [
-      {
-        "id": "esg-house",
-        "name": "House Down Payment",
-        "savedAmount": 25000,
-        "targetAmount": 50000,
-        "estimatedCompletionDate": "Dec 2026",
-        "status": "On Track",
-        "category": "Home",
-        "priority": "high",
-        "displayOrder": 1
-      },
-      {
-        "id": "esg-travel",
-        "name": "World Trip",
-        "savedAmount": 3000,
-        "targetAmount": 15000,
-        "estimatedCompletionDate": "Jun 2027",
-        "status": "Behind",
-        "category": "Travel",
-        "priority": "medium",
-        "displayOrder": 2
-      }
-    ]
+    "column_span": 1,
+    "data": {
+      "items": [
+        {
+          "id": "esg-house",
+          "name": "House Down Payment",
+          "savedAmount": 25000,
+          "targetAmount": 50000,
+          "estimatedCompletionDate": "Dec 2026",
+          "status": "On Track",
+          "category": "Home",
+          "priority": "high",
+          "displayOrder": 1
+        },
+        {
+          "id": "esg-travel",
+          "name": "World Trip",
+          "savedAmount": 3000,
+          "targetAmount": 15000,
+          "estimatedCompletionDate": "Jun 2027",
+          "status": "Behind",
+          "category": "Travel",
+          "priority": "medium",
+          "displayOrder": 2
+        }
+      ]
+    }
   },
   {
     "id": "insuranceSummary",
     "type": "insuranceCoverage",
     "title": "Insurance Overview",
     "icon": "fas fa-shield-alt",
-    "columnSpan": 1,
-    "data": [
-      {
-        "id": "ins-health",
-        "type": "Health Insurance",
-        "provider": "MediCare Plus",
-        "coverage": "$1M annual limit, $5k deductible",
-        "premium": 350,
-        "status": "Adequate",
-        "renewalDate": "2026-01-01",
-        "displayOrder": 1
-      },
-      {
-        "id": "ins-auto",
-        "type": "Auto Insurance",
-        "provider": "AutoSecure",
-        "coverage": "Comprehensive, $500 deductible",
-        "premium": 120,
-        "status": "Review Recommended",
-        "suggestion": "Shop for better rates or increased liability.",
-        "renewalDate": "2025-09-15",
-        "displayOrder": 2
-      }
-    ]
+    "column_span": 1,
+    "data": {
+      "items": [
+        {
+          "id": "ins-health",
+          "type": "Health Insurance",
+          "provider": "MediCare Plus",
+          "coverage": "$1M annual limit, $5k deductible",
+          "premium": 350,
+          "status": "Adequate",
+          "renewalDate": "2026-01-01",
+          "displayOrder": 1
+        },
+        {
+          "id": "ins-auto",
+          "type": "Auto Insurance",
+          "provider": "AutoSecure",
+          "coverage": "Comprehensive, $500 deductible",
+          "premium": 120,
+          "status": "Review Recommended",
+          "suggestion": "Shop for better rates or increased liability.",
+          "renewalDate": "2025-09-15",
+          "displayOrder": 2
+        }
+      ]
+    }
   },
   {
     "id": "financialChecklist",
     "type": "checklist",
     "title": "Financial To-Do List",
     "icon": "fas fa-tasks",
-    "columnSpan": 1,
-    "data": [
-      {
-        "id": "chk-will",
-        "task": "Update will and estate plan",
-        "isCompleted": false,
-        "dueDate": "2025-12-31",
-        "priority": "high",
-        "displayOrder": 1
-      },
-      {
-        "id": "chk-budget-review",
-        "task": "Monthly budget review",
-        "isCompleted": true,
-        "category": "Budgeting",
-        "displayOrder": 2
-      },
-      {
-        "id": "chk-invest-review",
-        "task": "Quarterly investment portfolio review",
-        "isCompleted": false,
-        "priority": "medium",
-        "displayOrder": 3
-      }
-    ]
+    "column_span": 1,
+    "data": {
+      "items": [
+        {
+          "id": "chk-will",
+          "task": "Update will and estate plan",
+          "isCompleted": false,
+          "dueDate": "2025-12-31",
+          "priority": "high",
+          "displayOrder": 1
+        },
+        {
+          "id": "chk-budget-review",
+          "task": "Monthly budget review",
+          "isCompleted": true,
+          "category": "Budgeting",
+          "displayOrder": 2
+        },
+        {
+          "id": "chk-invest-review",
+          "task": "Quarterly investment portfolio review",
+          "isCompleted": false,
+          "priority": "medium",
+          "displayOrder": 3
+        }
+      ],
+      "showCompleted": true,
+      "sortBy": "priority"
+    }
   }
 ]

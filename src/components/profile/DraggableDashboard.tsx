@@ -103,16 +103,18 @@ export function DraggableDashboard({
     setActiveId(null);
   };
 
-  const handleToggleRowSpan = (id: string) => {
+  // handleToggleChecklistItem function removed as part of the checklist widget refactoring
+  // Checklist items are now managed internally by the ChecklistWidget component
+
+  const handleTogglecolumn_span = (id: string) => {
     const widgetIndex = currentWidgets.findIndex(w => w.id === id);
     if (widgetIndex === -1) return;
 
     const updatedWidgets = currentWidgets.map((widget, index) => {
       if (index === widgetIndex) {
-        const currentRowSpan = widget.rowSpan || 1; // Default to 1 if undefined
         return {
           ...widget,
-          rowSpan: (currentRowSpan === 2 ? 1 : 2) as (1 | 2),
+          column_span: (widget.column_span === 2 ? 1 : 2) as (1 | 2),
         };
       }
       return widget;
@@ -124,15 +126,16 @@ export function DraggableDashboard({
     }
   };
 
-  const handleToggleColumnSpan = (id: string) => {
+  const handleTogglerow_span = (id: string) => {
     const widgetIndex = currentWidgets.findIndex(w => w.id === id);
     if (widgetIndex === -1) return;
 
     const updatedWidgets = currentWidgets.map((widget, index) => {
       if (index === widgetIndex) {
+        const currentrow_span = widget.row_span || 1; // Default to 1 if undefined
         return {
           ...widget,
-          columnSpan: (widget.columnSpan === 2 ? 1 : 2) as (1 | 2),
+          row_span: (currentrow_span === 2 ? 1 : 2) as (1 | 2),
         };
       }
       return widget;
@@ -141,49 +144,13 @@ export function DraggableDashboard({
     dispatch(updateWidgets(updatedWidgets));
     if (onUpdateWidgets) {
       onUpdateWidgets(updatedWidgets);
-    }
-  };
-
-  const handleToggleChecklistItem = (widgetId: string, itemId: string, isCompleted: boolean) => {
-    const widgetIndex = currentWidgets.findIndex(w => w.id === widgetId);
-    if (widgetIndex === -1) {
-      console.warn(`handleToggleChecklistItem: Widget with id ${widgetId} not found.`);
-      return;
-    }
-
-    const targetWidget = currentWidgets[widgetIndex] as Widget;
-
-    if ((targetWidget as any).type !== 'checklist' || !Array.isArray((targetWidget as any).items)) {
-      console.warn('handleToggleChecklistItem: Target is not a valid checklist widget or items are missing/not an array.');
-      return;
-    }
-
-    const items = (targetWidget as any).items as { id: string; isCompleted: boolean }[];
-    const itemIndex = items.findIndex(item => item.id === itemId);
-
-    if (itemIndex === -1) {
-      console.warn(`handleToggleChecklistItem: Item with id ${itemId} not found in widget ${widgetId}.`);
-      return;
     }
     
-    const updatedItems = items.map(item =>
-      item.id === itemId ? { ...item, isCompleted: isCompleted } : item
-    );
-
-    const updatedWidget = {
-      ...targetWidget,
-      items: updatedItems,
-    };
-
-    const updatedWidgets = currentWidgets.map((w, index) =>
-      index === widgetIndex ? updatedWidget : w
-    );
-
-    dispatch(updateWidgets(updatedWidgets as Widget[]));
-    if (onUpdateWidgets) {
-      onUpdateWidgets(updatedWidgets as Widget[]);
-    }
   };
+  
+
+  // handleToggleChecklistItem function removed as part of the checklist widget refactoring
+  // Checklist items are now managed internally by the ChecklistWidget component
 
   const handleRemoveWidget = (id: string) => {
     const updatedWidgets = currentWidgets.filter(widget => widget.id !== id);
@@ -225,7 +192,7 @@ export function DraggableDashboard({
     }
   };
 
-  const handleAddWidget = (newWidgetData: Omit<Widget, 'rowSpan' | 'columnSpan'> & Partial<Pick<Widget, 'rowSpan' | 'columnSpan'>>) => {
+  const handleAddWidget = (newWidgetData: Omit<Widget, 'row_span' | 'column_span'> & Partial<Pick<Widget, 'row_span' | 'column_span'>>) => {
     const shouldBeExpanded = [
       'barChart',
       'lineChart',
@@ -239,8 +206,8 @@ export function DraggableDashboard({
     const newWidgetWithLayout: Widget = {
       ...newWidgetData,
       id: newWidgetData.id || uuidv4(),
-      rowSpan: newWidgetData.rowSpan ?? (shouldBeExpanded ? 2 : 1),
-      columnSpan: newWidgetData.columnSpan ?? 1, // Default columnSpan to 1 if not provided
+      row_span: newWidgetData.row_span ?? (shouldBeExpanded ? 2 : 1),
+      column_span: newWidgetData.column_span ?? 1, // Default column_span to 1 if not provided
     } as Widget;
 
     const updatedWidgets = [...currentWidgets, newWidgetWithLayout];
@@ -283,12 +250,11 @@ export function DraggableDashboard({
                   key={widget.id}
                   id={widget.id}
                   widget={widget}
-                  // isExpanded prop removed, EditableWidget now uses widget.rowSpan directly
-                  onToggleRowSpan={handleToggleRowSpan} // Renamed from onToggleHeight
+                  // isExpanded prop removed, EditableWidget now uses widget.row_span directly
+                  onTogglerow_span={handleTogglerow_span} // Renamed from onToggleHeight
                   onRemoveWidget={handleRemoveWidget}
                   onEditWidget={handleEditWidget}
-                  onToggleColumnSpan={handleToggleColumnSpan}
-                  onToggleChecklistItem={handleToggleChecklistItem} // Added prop
+                  onTogglecolumn_span={handleTogglecolumn_span}
                   isEditMode={isEditMode}
                 />
               ) 
@@ -321,14 +287,14 @@ export function DraggableDashboard({
         <DragOverlay dropAnimation={null}>
           {activeId && activeWidget && draggedNodeRect ? (
             <div 
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.columnSpan === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${activeWidget.rowSpan === 2 ? 'md:row-span-2' : 'md:row-span-1'}`}
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${activeWidget.row_span === 2 ? 'md:row-span-2' : 'md:row-span-1'}`}
               style={{
                 width: draggedNodeRect.width,
                 height: draggedNodeRect.height,
                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', // Enhanced shadow
               }}
             >
-              <WidgetFactory widget={activeWidget} onToggleChecklistItem={handleToggleChecklistItem} />
+              <WidgetFactory widget={activeWidget} />
             </div>
           ) : null}
         </DragOverlay>
