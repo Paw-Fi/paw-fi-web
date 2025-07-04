@@ -35,6 +35,8 @@ import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
 const DISCORD_URL = "https://discord.gg/RZdG7GpX";
+import { MotionGlobalConfig } from 'framer-motion';
+
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
@@ -217,6 +219,7 @@ function BasicLessonCard({
 
 import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
+import { useDeviceType } from "@/hooks/use-device-type";
 
 function WaitlistForm() {
   const handleSubmit = async (e: React.FormEvent) => {
@@ -271,6 +274,11 @@ export default function HomePage() {
   const [animationComplete, setAnimationComplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const {isMobile } = useDeviceType();
+
+  if (isMobile) {
+    MotionGlobalConfig.skipAnimations = true;
+  }
   // Handle Enter key press
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && chatQuery.trim()) {
