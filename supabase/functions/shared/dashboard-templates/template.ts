@@ -23,13 +23,24 @@ export const dashboardTemplate1: any[] = [
     "icon": "fas fa-heartbeat",
     "column_span": 1,
     "data": {
-      "items": [
-        { "id": "fhs-budget", "category": "Budgeting", "score": 85, "status": "Excellent", "explanation": "Spending is well-managed and within income.", "displayOrder": 1 },
-        { "id": "fhs-savings", "category": "Savings", "score": 70, "status": "Good", "explanation": "Consistent savings, but emergency fund could be larger.", "displayOrder": 2 },
-        { "id": "fhs-debt", "category": "Debt", "score": 60, "status": "Fair", "explanation": "Some high-interest debt impacting overall health.", "displayOrder": 3 }
-      ],
-      "overallScore": 72,
-      "overallStatus": "Good"
+      "quizAnswers": {
+        "monthly-income": 5000,
+        "monthly-expenses": 4250,
+        "emergency-fund-months": 4,
+        "insurance-policies": ["health", "auto"],
+        "debt-amount-mortgage": 250000,
+        "debt-amount-credit": 2500,
+        "debt-amount-student": 15000,
+        "debt-amount-other": 0,
+        "health-checkup-frequency": "yearly",
+        "current-age": 35,
+        "retirement-age": 65,
+        "annual-contribution": 6000,
+        "current-investments": 75000,
+        "investing-frequency": "monthly",
+        "risk-tolerance": 6
+      },
+      "showIndividualScores": true
     }
   },
   {
@@ -92,9 +103,25 @@ export const dashboardTemplate2: any[] = [
     "column_span": 1,
     "row_span": 2,
     "data": {
+      "quizAnswers": {
+        "monthly-income": 5000,
+        "monthly-expenses": 4250,
+        "emergency-fund-months": 4,
+        "insurance-policies": ["health", "auto"],
+        "debt-amount-mortgage": 250000,
+        "debt-amount-credit": 2500,
+        "debt-amount-student": 15000,
+        "debt-amount-other": 0,
+        "health-checkup-frequency": "yearly",
+        "current-age": 35,
+        "retirement-age": 65,
+        "current-investments": 75000,
+        "investment-percentage": 15,
+        "risk-tolerance": "moderate"
+      },
       "scenarios": [
-        { "id": "ret-scen-current", "scenarioName": "Current Path", "score": 65, "status": "Needs Significant Work", "projectionAmount": 850000, "projectionDate": "Age 67", "explanation": "Based on current savings rate.", "assumptions": "4% real return, $300/mo", "displayOrder": 1 },
-        { "id": "ret-scen-optimized", "scenarioName": "Optimized", "score": 80, "status": "On Track", "projectionAmount": 1200000, "projectionDate": "Age 65", "explanation": "With increased contributions.", "assumptions": "5% real return, $600/mo", "displayOrder": 2 }
+        { "id": "ret-scen-current", "scenarioName": "Current Path", "score": 65, "progressPercentage": 35, "status": "Needs Significant Work", "projectionAmount": 850000, "projectionDate": "Age 67", "explanation": "Based on current savings rate.", "assumptions": "4% real return, $300/mo", "displayOrder": 1 },
+        { "id": "ret-scen-optimized", "scenarioName": "Optimized", "score": 80, "progressPercentage": 60, "status": "On Track", "projectionAmount": 1200000, "projectionDate": "Age 65", "explanation": "With increased contributions.", "assumptions": "5% real return, $600/mo", "displayOrder": 2 }
       ],
       "currentScenarioId": "ret-scen-current"
     }

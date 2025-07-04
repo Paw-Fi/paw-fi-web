@@ -47,6 +47,26 @@ interface StatusStyles {
   ringColor?: string;
 }
 
+// Helper to get actual color values for SVG elements
+function getStatusColorValue(status?: string): string {
+  const s = status?.toLowerCase();
+  switch (s) {
+    case 'excellent':
+      return '#10b981'; // emerald-500
+    case 'good':
+      return '#0ea5e9'; // sky-500
+    case 'fair':
+      return '#f59e0b'; // amber-500
+    case 'needs attention':
+    case 'needs improvement':
+      return '#f97316'; // orange-500
+    case 'poor':
+      return '#ef4444'; // red-500
+    default:
+      return '#64748b'; // slate-500
+  }
+}
+
 type FinancialStatus = 'Excellent' | 'Good' | 'Fair' | 'Needs Attention' | string | undefined;
 
 function getFinancialStatusStyles(status?: FinancialStatus): StatusStyles {
@@ -149,13 +169,461 @@ function getCategoryIcon(category?: string) {
   }
 }
 
+// Define the types for the financial health calculation results
+/**
+ * Type definition for debt status
+ */
+export interface DebtStatus {
+  debtFree: boolean;
+  debtTypes: string[];
+}
+
+export interface IFinancialHealthCalculationResult {
+  overallScore: number;
+  status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention';
+  items: Array<{
+    id: string;
+    category: string;
+    score: number;
+    status: string;
+    explanation: string;
+  }>;
+  // Added fields for debt status and retirement projection information
+  debtStatus?: DebtStatus;
+  projectedRetirementFund?: number;
+  monthlyRetirementIncome?: number;
+  progressPercentage?: number;
+}
+
+export interface QuizAnswers {
+  [key: string]: any;
+}
+
+/**
+ * Calculates a financial health score and retirement projections based on quiz answers
+ * This is an exported utility function that can be used by any component
+ * @param quizAnswers - Object containing raw financial data like income, expenses, etc.
+ * @returns Financial health calculation result with overall score, status, breakdown items, and retirement projections
+ */
+export function calculateFinancialHealthScore(quizAnswers: QuizAnswers): IFinancialHealthCalculationResult {
+  console.log('Running calculateFinancialHealthScore with answers:', quizAnswers);
+
+  // Extract and validate required granular data
+  const monthlyIncome = typeof quizAnswers['monthly-income'] === 'number' ? quizAnswers['monthly-income'] : 0;
+  const monthlyExpenses = typeof quizAnswers['monthly-expenses'] === 'number' ? quizAnswers['monthly-expenses'] : 0;
+  const emergencyFundMonths = typeof quizAnswers['emergency-fund-months'] === 'number' ? quizAnswers['emergency-fund-months'] : 
+                               (typeof quizAnswers['emergency-fund'] === 'number' && monthlyExpenses > 0 ? 
+                                Math.floor(quizAnswers['emergency-fund'] / monthlyExpenses) : 0);
+  
+  // Extract insurance policies (handle both array and string formats)
+  let insurancePolicies: string[] = [];
+  if (Array.isArray(quizAnswers['insurance-policies'])) {
+    insurancePolicies = quizAnswers['insurance-policies'];
+  } else if (Array.isArray(quizAnswers['insurance-coverage'])) {
+    insurancePolicies = quizAnswers['insurance-coverage'];
+  }
+  
+  // Handle debt fields - recognize both amount fields and type arrays
+  // Extract debt amounts
+  let debtMortgage = typeof quizAnswers['debt-amount-mortgage'] === 'number' ? quizAnswers['debt-amount-mortgage'] : 0;
+  let debtCredit = typeof quizAnswers['debt-amount-credit'] === 'number' ? quizAnswers['debt-amount-credit'] : 0;
+  let debtStudent = typeof quizAnswers['debt-amount-student'] === 'number' ? quizAnswers['debt-amount-student'] : 0;
+  let debtOther = typeof quizAnswers['debt-amount-other'] === 'number' ? quizAnswers['debt-amount-other'] : 0;
+  
+  // Parse debt types from quiz answers - handling both strings and arrays
+  let debtTypes: string[] = [];
+  const totalDebtAmount = typeof quizAnswers['debt-level'] === 'number' ? quizAnswers['debt-level'] : 0;
+  
+  // Handle debt-type array - always use this if available
+  if (Array.isArray(quizAnswers['debt-type'])) {
+    // Filter out 'none' if other debt types are present
+    if (quizAnswers['debt-type'].length > 1) {
+      debtTypes = quizAnswers['debt-type'].filter(type => type !== 'none');
+    } else {
+      debtTypes = [...quizAnswers['debt-type']];
+    }
+  }
+  
+  // Handle housing situation as a debt type
+  if (quizAnswers['housing-situation'] === 'own-mortgage' && !debtTypes.includes('mortgage')) {
+    debtTypes.push('mortgage');
+  }
+  
+  console.log('Debt types detected from quiz answers:', debtTypes);
+  
+  // If we have debt types and a total debt amount, always distribute the debt
+  // Do this regardless of whether specific amounts are set, as the debt-level is likely more accurate
+  if (debtTypes.length > 0 && totalDebtAmount > 0 && debtTypes[0] !== 'none') {
+    // Reset any existing debt amounts since we're redistributing based on debt-type
+    debtMortgage = 0;
+    debtCredit = 0; 
+    debtStudent = 0;
+    debtOther = 0;
+    
+    // Simple distribution - divide debt equally among types
+    const perTypeAmount = totalDebtAmount / debtTypes.length;
+    
+    debtTypes.forEach(debtType => {
+      if (debtType.includes('mortgage')) {
+        debtMortgage += perTypeAmount;
+      }
+      else if (debtType.includes('credit')) {
+        debtCredit += perTypeAmount;
+      }
+      else if (debtType.includes('student')) {
+        debtStudent += perTypeAmount;
+      }
+      else {
+        // personal-loan and any other type
+        debtOther += perTypeAmount;
+      }
+    });
+    
+    console.log('Debt distribution after allocation:', {
+      debtMortgage, debtCredit, debtStudent, debtOther, totalDebtAmount
+    });
+  }
+  
+  // Always create a derived debtTypes array based on the actual numeric debt amounts
+  // This ensures consistency between debt types and amounts
+  const calculatedDebtTypes: string[] = [];
+  if (debtMortgage > 0) calculatedDebtTypes.push('mortgage');
+  if (debtCredit > 0) calculatedDebtTypes.push('credit-card');
+  if (debtStudent > 0) calculatedDebtTypes.push('student');
+  if (debtOther > 0) calculatedDebtTypes.push('personal-loan');
+  
+  // If no debts have amounts but we have debt types from the quiz, use those
+  if (calculatedDebtTypes.length === 0 && debtTypes.length > 0 && debtTypes[0] !== 'none') {
+    debtTypes.forEach(type => {
+      if (!calculatedDebtTypes.includes(type)) calculatedDebtTypes.push(type);
+    });
+  }
+  
+  console.log('Final calculated debt types:', calculatedDebtTypes);
+  
+  // Health checkup frequency
+  const healthCheckupFrequency = quizAnswers['health-checkup-frequency'] || 
+                                (quizAnswers['health-status'] === 'excellent' ? 'yearly' : 
+                                 quizAnswers['health-status'] === 'good' ? 'yearly' : 'asneeded');
+  
+  // 1. Calculate Savings Score (40% of total)
+  // Compute savings rate from income and expenses
+  const savingsAmount = Math.max(0, monthlyIncome - monthlyExpenses);
+  const savingsRate = monthlyIncome > 0 ? (savingsAmount / monthlyIncome) * 100 : 0;
+  
+  // Calculate income adequacy factor - higher income gives a slight boost to savings score
+  // This assumes a median household income of around $5000/month
+  const incomeAdequacyFactor = Math.min(1.25, Math.max(0.75, monthlyIncome / 5000));
+  
+  let savingsScore = 0;
+  if (savingsRate >= 20) {
+    savingsScore = 100 * incomeAdequacyFactor;
+  } else if (savingsRate >= 10) {
+    savingsScore = 75 * incomeAdequacyFactor;
+  } else if (savingsRate >= 5) {
+    savingsScore = 50 * incomeAdequacyFactor;
+  } else {
+    savingsScore = 25 * incomeAdequacyFactor;
+  }
+  
+  // Cap the score at 100
+  savingsScore = Math.min(100, savingsScore);
+
+  // 2. Calculate Emergency Fund Score (30% of total)
+  let emergencyFundScore = 0;
+  if (emergencyFundMonths >= 6) {
+    emergencyFundScore = 100;
+  } else if (emergencyFundMonths >= 3) {
+    emergencyFundScore = 75;
+  } else if (emergencyFundMonths >= 1) {
+    emergencyFundScore = 50;
+  } else {
+    emergencyFundScore = 25;
+  }
+
+  // 3. Risk Management Score (30% of total)
+  // Evaluate debt composition
+  const totalDebt = debtMortgage + debtCredit + debtStudent + debtOther;
+  
+  // Assess credit card debt relative to income
+  // If credit card debt > 2x monthly income, it's high risk
+  // If credit card debt < monthly income, it's moderate risk
+  // This provides a more nuanced assessment based on income
+  const creditCardDebtRatio = monthlyIncome > 0 ? debtCredit / monthlyIncome : 0;
+  const hasHighRiskDebt = creditCardDebtRatio > 2;
+  const hasModerateRiskDebt = creditCardDebtRatio > 1 && creditCardDebtRatio <= 2;
+  
+  // Calculate debt-to-income ratio (monthly)
+  // Rough estimate of monthly debt payments (simplified)
+  const monthlyDebtPayment = (debtCredit * 0.03) + // Approx 3% min payment on credit cards
+                           (debtMortgage / 12 * 0.006) + // Approx mortgage payment
+                           (debtStudent / 12 * 0.01) + // Approx student loan payment
+                           (debtOther / 12 * 0.02); // Approx other debt payment
+  
+  // Calculate debt-to-income ratio and cap it at 100% for scoring purposes
+  const debtToIncomeRatio = monthlyIncome > 0 ? Math.min(100, (monthlyDebtPayment / monthlyIncome) * 100) : 0;
+  
+  // Evaluate insurance coverage
+  const hasAdequateInsurance = Array.isArray(insurancePolicies) && 
+                             insurancePolicies.length >= 2 && 
+                             (insurancePolicies.includes('health') || insurancePolicies.includes('medical'));
+  
+  // Regular health checkups are good risk management
+  const hasRegularHealthCheckups = healthCheckupFrequency === 'yearly' || healthCheckupFrequency === 'biannual';
+  
+  // Income-based adjustment for insurance assessment
+  // Higher income = higher expectation for insurance coverage
+  const insuranceCoverageExpectation = monthlyIncome > 5000 ? 3 : 2; // Expected number of policies
+  const hasOptimalInsurance = Array.isArray(insurancePolicies) && 
+                             insurancePolicies.length >= insuranceCoverageExpectation &&
+                             (insurancePolicies.includes('health') || insurancePolicies.includes('medical'));
+  
+  let riskManagementScore = 0;
+  if (hasOptimalInsurance && !hasHighRiskDebt && !hasModerateRiskDebt && debtToIncomeRatio < 36 && hasRegularHealthCheckups) {
+    riskManagementScore = 100;
+  } else if (hasAdequateInsurance && !hasHighRiskDebt && debtToIncomeRatio < 43) {
+    riskManagementScore = 75;
+  } else if ((hasAdequateInsurance && hasModerateRiskDebt) || debtToIncomeRatio < 50) {
+    riskManagementScore = 50;
+  } else {
+    riskManagementScore = 25;
+  }
+
+  // 4. Overall score and status
+  // Calculate overall score with weights
+  const overallScore = Math.round((savingsScore * 0.4) + (emergencyFundScore * 0.3) + (riskManagementScore * 0.3));
+  
+  // Determine status based on score
+  let status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention';
+  if (overallScore >= 90) {
+    status = 'Excellent';
+  } else if (overallScore >= 75) {
+    status = 'Good';
+  } else if (overallScore >= 60) {
+    status = 'Fair';
+  } else {
+    status = 'Needs Attention';
+  }
+  
+  // Generate breakdown items
+  const items: Array<{
+    id: string;
+    category: string;
+    score: number;
+    status: string;
+    explanation: string;
+  }> = [
+    {
+      id: 'savings-rate',
+      category: 'Savings',
+      score: savingsScore,
+      status: getScoreStatus(savingsScore),
+      explanation: `You're saving ${savingsRate.toFixed(1)}% of your ${monthlyIncome >= 5000 ? 'above-average' : 'monthly'} income of $${monthlyIncome.toLocaleString()}. ${savingsRate >= 20 ? 
+        'Great job! Maintaining a 20%+ savings rate puts you on track for financial independence.' : 
+        (savingsRate >= 10 ? 
+          'Good progress. Try to increase to 20% for optimal financial health.' : 
+          `Consider ${monthlyExpenses > monthlyIncome * 0.9 ? 'reducing expenses' : 'increasing savings'} to save at least 10-20% of your income.`)
+      }`
+    },
+    {
+      id: 'emergency-fund',
+      category: 'Emergency Fund',
+      score: emergencyFundScore,
+      status: getScoreStatus(emergencyFundScore),
+      explanation: emergencyFundScore >= 75 
+        ? `Your emergency fund covers ${emergencyFundMonths} months of expenses.` 
+        : `Your emergency fund covers ${emergencyFundMonths} months. Work towards 3-6 months coverage.`
+    },
+    {
+      id: 'risk-management',
+      category: 'Risk Management',
+      score: riskManagementScore,
+      status: getScoreStatus(riskManagementScore),
+      explanation: hasHighRiskDebt 
+        ? `Your credit card debt is ${creditCardDebtRatio.toFixed(1)}x your monthly income. Focus on reducing this high-interest debt to improve financial security.` 
+        : (hasModerateRiskDebt 
+            ? `Your credit card debt is ${creditCardDebtRatio.toFixed(1)}x your monthly income. Consider paying this down more aggressively.`
+            : (hasAdequateInsurance 
+               ? `You have ${insurancePolicies?.length || 0} insurance policies, which provides adequate coverage for your income level.` 
+               : `Consider expanding your insurance coverage to at least ${insuranceCoverageExpectation} policies to protect against risks.`)
+          )
+    }
+  ];
+
+  // Retirement Projections Calculation
+  // Extract retirement-specific fields from quiz answers with robust fallbacks
+  const retirementAge = typeof quizAnswers['retirement-age'] === 'number' ? quizAnswers['retirement-age'] : 65;
+  const currentAge = typeof quizAnswers['current-age'] === 'number' ? quizAnswers['current-age'] : 35;
+  
+  // Calculate raw years until retirement (can be negative)
+  const rawYearsUntilRetirement = retirementAge - currentAge;
+  
+  // Handle different possible fields for current investments
+  const currentInvestments = 
+    typeof quizAnswers['current-investments'] === 'number' ? quizAnswers['current-investments'] : 
+    typeof quizAnswers['current-assets'] === 'number' ? quizAnswers['current-assets'] : 0;
+  
+  // Handle multiple possible contribution fields
+  let annualContribution = typeof quizAnswers['annual-contribution'] === 'number' ? quizAnswers['annual-contribution'] : 0;
+  
+  // If we don't have annual contribution but have monthly savings and investment percentage
+  if (annualContribution === 0 && savingsAmount > 0) {
+    // Try to extract investment percentage from various fields
+    const investmentPercentage = 
+      typeof quizAnswers['investment-percentage'] === 'number' ? quizAnswers['investment-percentage'] : 
+      typeof quizAnswers['investing-percentage'] === 'number' ? quizAnswers['investing-percentage'] : 20;
+    
+    // Calculate monthly contribution and convert to annual
+    const monthlyContribution = savingsAmount * (investmentPercentage / 100);
+    annualContribution = monthlyContribution * 12;
+  }
+  
+  // Handle various forms of return rate
+  let annualReturnRate = 0.07; // Default to 7%
+  
+  // Try to extract from expected-return field first (common in quiz)
+  if (typeof quizAnswers['expected-return'] === 'number') {
+    // Make sure the rate is reasonable (sometimes users enter very small numbers like 1.3%)
+    // If less than 5, assume it's a percentage already (e.g., 1.3%)
+    if (quizAnswers['expected-return'] < 5) {
+      annualReturnRate = Math.max(0.01, quizAnswers['expected-return'] / 100); // Minimum 1%
+    } else {
+      // If greater than 5, assume it's in basis points (e.g., 500 = 5%)
+      annualReturnRate = quizAnswers['expected-return'] / 10000;
+    }
+  }
+  // Fall back to return-rate
+  else if (typeof quizAnswers['return-rate'] === 'number') {
+    annualReturnRate = quizAnswers['return-rate'] / 100; // Convert from percentage to decimal
+  }
+  // Fall back to risk tolerance
+  else {
+    const riskTolerance = 
+      typeof quizAnswers['risk-tolerance'] === 'string' ? quizAnswers['risk-tolerance'].toLowerCase() : 
+      typeof quizAnswers['risk-tolerance'] === 'number' ? 
+        (quizAnswers['risk-tolerance'] <= 3 ? 'conservative' : 
+         quizAnswers['risk-tolerance'] <= 7 ? 'moderate' : 'aggressive') : 'moderate';
+    
+    switch (riskTolerance) {
+      case 'conservative': annualReturnRate = 0.05; break;
+      case 'moderate': annualReturnRate = 0.07; break;
+      case 'aggressive': annualReturnRate = 0.09; break;
+      default: annualReturnRate = 0.07;
+    }
+  }
+  
+  console.log('Retirement calculation inputs:', { 
+    currentAge, retirementAge, rawYearsUntilRetirement,
+    currentInvestments, annualContribution, annualReturnRate 
+  });
+  
+  // Handle calculation differently based on whether retirement age is in past or future
+  let projectedRetirementFund = currentInvestments;
+  let monthlyRetirementIncome = 0;
+  let progressPercentage = 0;
+  const targetRetirement = typeof quizAnswers['target-retirement'] === 'number' ? 
+    quizAnswers['target-retirement'] : 1000000; // Default to $1M if not specified
+  
+  if (rawYearsUntilRetirement <= 0) {
+    // Already at or past retirement age - use current assets with no growth
+    projectedRetirementFund = currentInvestments;
+    monthlyRetirementIncome = projectedRetirementFund * 0.0033; // 4% annual withdrawal rate
+    progressPercentage = targetRetirement > 0 ? 
+      Math.min(100, Math.round((projectedRetirementFund / targetRetirement) * 100)) : 0;
+  } else {
+    // Future retirement - calculate compound growth
+    const yearsUntilRetirement = rawYearsUntilRetirement;
+    
+    // Compound interest formula: FV = PV(1+r)^t + PMT*((1+r)^t-1)/r
+    const annualFactor = Math.pow(1 + annualReturnRate, yearsUntilRetirement);
+    projectedRetirementFund = currentInvestments * annualFactor;
+    
+    // Add contributions only if we have contributions and rate > 0
+    if (annualContribution > 0 && annualReturnRate > 0) {
+      projectedRetirementFund += annualContribution * ((annualFactor - 1) / annualReturnRate);
+    } else if (annualContribution > 0) {
+      // If rate is 0 or negative, just add the contributions
+      projectedRetirementFund += annualContribution * yearsUntilRetirement;
+    }
+    
+    // Calculate monthly retirement income (4% safe withdrawal rate annually = 0.33% monthly)
+    monthlyRetirementIncome = projectedRetirementFund * 0.0033;
+    
+    // Calculate progress percentage toward target
+    progressPercentage = targetRetirement > 0 ? 
+      Math.min(100, Math.round((projectedRetirementFund / targetRetirement) * 100)) : 0;
+  }
+  
+  // Make sure we return non-zero values even in edge cases
+  projectedRetirementFund = Math.max(0, Math.round(projectedRetirementFund));
+  monthlyRetirementIncome = Math.max(0, Math.round(monthlyRetirementIncome));
+  progressPercentage = Math.max(0, progressPercentage);
+
+  // If no debt or only debtTypes array exists with 'none', mark as debt free
+  const debtFree = (calculatedDebtTypes.length === 0 && debtTypes.length === 0) || 
+                   (debtTypes.length === 1 && debtTypes[0] === 'none');
+  
+  console.log('Final calculation results:', {
+    overallScore,
+    status,
+    debtStatus: { debtFree, debtTypes: calculatedDebtTypes },
+    projectedRetirementFund: Math.round(projectedRetirementFund),
+    monthlyRetirementIncome: Math.round(monthlyRetirementIncome),
+    progressPercentage,
+    rawYearsUntilRetirement
+  });
+  
+  return {
+    overallScore,
+    status,
+    items,
+    // Add debtStatus object with debtFree flag and debtTypes array
+    debtStatus: {
+      debtFree,
+      debtTypes: calculatedDebtTypes
+    },
+    // Add retirement-related fields
+    projectedRetirementFund: Math.round(projectedRetirementFund),
+    monthlyRetirementIncome: Math.round(monthlyRetirementIncome),
+    progressPercentage
+  };
+}
+
+// Helper function to get status based on score
+function getScoreStatus(score: number): 'Excellent' | 'Good' | 'Fair' | 'Needs Attention' {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Good';
+  if (score >= 60) return 'Fair';
+  return 'Needs Attention';
+}
+
 export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialHealthScorecardWidget }) {
-  const { data = true } = widget;
-  const showIndividualScores = data.showIndividualScores;
+  // Always calculate scores from raw quiz answers
+  const { data } = widget;
+  
+  // Calculate scores directly from quiz answers
+  const calculatedData = useMemo(() => {
+    if (data?.quizAnswers) {
+      const result = calculateFinancialHealthScore(data.quizAnswers);
+      return {
+        ...data,
+        overallScore: result.overallScore,
+        overallStatus: result.status,
+        items: result.items
+      };
+    }
+    return {
+      ...data,
+      overallScore: 0,
+      overallStatus: 'Not Evaluated',
+      items: []
+    };
+  }, [data]);
+  
+  const showIndividualScores = calculatedData.showIndividualScores !== false;
+  const overallStatusStyles = useMemo(() => getFinancialStatusStyles(calculatedData?.overallStatus), [calculatedData?.overallStatus]);
 
-  const overallStatusStyles = useMemo(() => getFinancialStatusStyles(data?.overallStatus), [data?.overallStatus]);
-
-  if (!data || !data.overallScore) {
+  if (!calculatedData || !calculatedData.quizAnswers) {
     return (
       <Widget widget={widget} controls={widget.controls}>
         <div className="p-6 text-center">
@@ -167,7 +635,7 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
     );
   }
 
-  const overallScoreNormalized = Math.max(0, Math.min(100, data.overallScore));
+  const overallScoreNormalized = Math.max(0, Math.min(100, calculatedData.overallScore || 0));
   const radius = 45;
   const circumference = 2 * Math.PI * radius; // Approx 282.74
 
@@ -188,20 +656,18 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
                 cx="50" cy="50" r={radius}
                 fill="none"
                 strokeWidth="8"
-                stroke="rgba(200, 200, 200, 0.5)" // Debug: Hardcoded background stroke
+                stroke="rgba(200, 200, 200, 0.5)" 
               />
               {/* Foreground Progress Circle */}
-              <motion.circle // Changed back to motion.circle
+              <circle
                 cx="50" cy="50" r={radius}
                 fill="none"
                 strokeWidth="8"
                 strokeLinecap="round"
-                stroke="blue" // Debug: Hardcoded foreground stroke
-                strokeDasharray={circumference} // Re-added strokeDasharray
-                strokeDashoffset={circumference / 4} // Debug: Static offset to show 3/4 of circle
-                // variants={scoreCircleVariants} // Debug: Animation variants still commented out
-                // custom={overallScoreNormalized} // Debug: Custom prop still commented out
-                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }} // Kept for orientation
+                stroke={getStatusColorValue(calculatedData.overallStatus)}
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference - (overallScoreNormalized / 100) * circumference}
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -211,48 +677,51 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
           </div>
           <div className="flex-grow">
             <motion.h3 variants={itemVariants} className={`text-2xl md:text-3xl font-semibold ${overallStatusStyles.textColor}`}>
-              {data.overallStatus || 'Not Evaluated'}
+              {calculatedData.overallStatus || 'Not Evaluated'}
             </motion.h3>
-            {data.overallScore && (
-                <motion.p variants={itemVariants} className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    Your overall financial health score is {Math.round(overallScoreNormalized)} out of 100.
-                </motion.p>
-            )}
+            <motion.p variants={itemVariants} className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Your overall financial health score is {Math.round(overallScoreNormalized)} out of 100.
+            </motion.p>
           </div>
         </motion.div>
 
         {/* Score Breakdown Section */}
-        {showIndividualScores && data.items && data.items.length > 0 && (
+        {showIndividualScores && calculatedData.items && calculatedData.items.length > 0 && (
           <motion.div variants={itemVariants} className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700/50">
             <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">Score Breakdown</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.items.map((item) => {
+              {calculatedData.items.map((item) => {
                 const itemStatusStyles = getFinancialStatusStyles(item.status);
                 const itemScoreNormalized = Math.max(0, Math.min(100, item.score));
                 return (
                   <motion.div 
                     key={item.id} 
                     variants={itemVariants}
-                    className={`p-4 rounded-xl border ${itemStatusStyles.borderColor} ${itemStatusStyles.bgColor} shadow-lg hover:shadow-xl transition-shadow duration-300 bg-opacity-70 dark:bg-opacity-70 backdrop-blur-md`}
+                    className={`p-4 rounded-xl border ${itemStatusStyles.borderColor} ${itemStatusStyles.bgColor} shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col group`}
                   >
-                    <div className="flex items-center mb-2">
-                      <FontAwesomeIcon icon={getCategoryIcon(item.category)} className={`w-5 h-5 mr-3 ${itemStatusStyles.iconColor}`} />
-                      <h5 className="text-md font-semibold text-slate-700 dark:text-slate-200 flex-grow truncate" title={item.category}>{item.category}</h5>
-                      <span className={`text-sm font-bold ${itemStatusStyles.textColor}`}>{itemScoreNormalized}/100</span>
+                    <div className="flex items-start mb-2">
+                      <FontAwesomeIcon icon={getCategoryIcon(item.category)} className={`w-5 h-5 mr-3 mt-0.5 shrink-0 ${itemStatusStyles.iconColor}`} />
+                      <div className="flex-grow">
+                        <h4 className={`text-md font-semibold ${itemStatusStyles.textColor.split(' ')[0]} dark:${itemStatusStyles.textColor.split(' ')[1]} group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors`}>
+                          {item.category}
+                        </h4>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${itemStatusStyles.textColor} ${itemStatusStyles.bgColor}`}>
+                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        </span>
+                      </div>
                     </div>
+                    <p className={`text-sm ${itemStatusStyles.textColor} mb-3 grow leading-relaxed pl-8`}>
+                      {item.explanation}
+                    </p>
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 my-2">
-                        <motion.div 
-                            className={`h-2 rounded-full ${item.category === 'Debt' ? 'bg-yellow-400' : itemStatusStyles.progressColor.replace('text-', 'bg-')}`} 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${itemScoreNormalized}%` }}
-                            transition={{ duration: 0.8, ease: 'easeOut' }}
-                        />
+                      <motion.div 
+                        className={`h-2 rounded-full ${itemStatusStyles.progressColor.replace('text-', 'bg-')}`} 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${itemScoreNormalized}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                      />
                     </div>
-                    {item.explanation && (
-                      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {item.explanation}
-                      </p>
-                    )}
+                    <span className={`text-sm font-bold ${itemStatusStyles.textColor}`}>{itemScoreNormalized}/100</span>
                   </motion.div>
                 );
               })}
@@ -387,7 +856,7 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <motion.div 
+      <div 
         className="p-4 md:p-2 flex flex-col space-y-4"
         variants={cardVariants}
         initial="hidden"
@@ -396,7 +865,7 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
         {actionsToDisplay.map((action) => {
           const priorityStyles = getPriorityStyles(action.priority);
           return (
-            <motion.div 
+            <div 
               key={action.id} 
               variants={itemVariants}
               className={`p-4 rounded-xl border ${priorityStyles.borderColor} ${priorityStyles.bgColor} shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col group`}
@@ -428,10 +897,10 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
                   </a>
                 </div>
               )}
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
     </Widget>
   );
 }
@@ -443,14 +912,14 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
   if (!data || data.length === 0) {
     return (
       <Widget widget={widget} controls={widget.controls}>
-        <motion.div 
+        <div 
           className="p-6 text-center flex flex-col items-center justify-center h-full min-h-[200px]" // Added min-h for better empty state visibility
           variants={cardVariants} initial="hidden" animate="visible"
         >
           <FontAwesomeIcon icon={faCircleCheck} className="text-4xl text-emerald-500 dark:text-emerald-400 mb-4" />
           <h4 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-1">No Debts to Display!</h4>
           <p className="text-sm text-slate-500 dark:text-slate-400">Looks like you're debt-free or haven't added any debts yet.</p>
-        </motion.div>
+        </div>
       </Widget>
     );
   }
@@ -488,14 +957,14 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <motion.div 
+      <div 
         className="p-4 md:p-5 flex flex-col space-y-5"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Overall Summary Card */}
-        <motion.div 
+        <div 
           variants={itemVariants}
           className="p-5 rounded-xl bg-slate-100/80 dark:bg-slate-800/70 backdrop-blur-lg shadow-xl border border-slate-200 dark:border-slate-700/80" // Enhanced glassmorphism
         >
@@ -529,14 +998,14 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
           </div>
           
           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3.5">
-            <motion.div 
+            <div 
               className="bg-gradient-to-r from-emerald-400 to-green-500 dark:from-emerald-500 dark:to-green-600 h-3.5 rounded-full" // Removed transition-all, Framer handles it
               initial={{ width: '0%' }}
               animate={{ width: `${overallProgressPercentage}%` }}
               transition={{ duration: 1, ease: "circOut" }}
-            ></motion.div>
+            ></div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Individual Debt Cards */}
         <div className="space-y-3.5">
@@ -545,7 +1014,7 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
             const isFocusDebt = index === 0;
 
             return (
-              <motion.div 
+              <div 
                 key={debt.id || `debt-${index}`} // Ensure unique key
                 variants={itemVariants}
                 className={`p-4 rounded-xl border shadow-md hover:shadow-lg transition-shadow duration-300 ${isFocusDebt ? 'border-primary-500/70 dark:border-primary-400/80 bg-primary-50/60 dark:bg-primary-900/40 backdrop-blur-md' : 'bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border-slate-200 dark:border-slate-700/60'}`} // Enhanced glassmorphism
@@ -575,18 +1044,18 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
                   <div className="absolute left-0 top-0 bottom-0 flex items-center"> {/* This div is for potential icon if needed next to bar */}
                     {/* Icon could go here if desired */}
                   </div>
-                  <motion.div 
+                  <div 
                     className={`h-full rounded-full ${isFocusDebt ? 'bg-gradient-to-r from-primary-400 to-primary-600' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`} // Gradient progress bar
                     initial={{ width: '0%' }}
                     animate={{ width: `${individualProgress}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                  ></motion.div>
+                  ></div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
-      </motion.div>
+      </div>
     </Widget>
   );
 }
@@ -598,9 +1067,35 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
   const { data: retirementData, title } = widget;
   const [selectedScenarioId, setSelectedScenarioId] = useState(retirementData.currentScenarioId);
 
+  // Calculate retirement projections from raw quiz answers if available
+  const calculatedProjections = useMemo(() => {
+    if (retirementData.quizAnswers) {
+      const result = calculateFinancialHealthScore(retirementData.quizAnswers);
+      return {
+        projectedRetirementFund: result.projectedRetirementFund,
+        monthlyRetirementIncome: result.monthlyRetirementIncome,
+        // Calculate retirement progress percentage (against typical retirement goal of $1.5M)
+        progressPercentage: Math.min(100, Math.round((result.projectedRetirementFund || 0) / 1500000 * 100))
+      };
+    }
+    return null;
+  }, [retirementData.quizAnswers]);
+
   const currentScenario = useMemo(() => {
-    return retirementData.scenarios.find(s => s.id === selectedScenarioId);
-  }, [retirementData.scenarios, selectedScenarioId]);
+    const scenario = retirementData.scenarios.find(s => s.id === selectedScenarioId);
+    
+    // If we have calculated projections, use those values instead of hardcoded ones
+    if (calculatedProjections && scenario) {
+      return {
+        ...scenario,
+        projectedRetirementFund: calculatedProjections.projectedRetirementFund || scenario.projectedRetirementFund,
+        monthlyRetirementIncome: calculatedProjections.monthlyRetirementIncome || scenario.monthlyRetirementIncome,
+        progressPercentage: calculatedProjections.progressPercentage || scenario.progressPercentage
+      };
+    }
+    
+    return scenario;
+  }, [retirementData.scenarios, selectedScenarioId, calculatedProjections]);
 
   const getStatusColor = (status?: string) => {
     if (!status) return 'text-gray-500';
@@ -783,7 +1278,7 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
       <div className="space-y-4 p-1">
         {Array.isArray(items) && items.length > 0 ? (
           items.map((item, index) => (
-            <motion.div 
+            <div 
               key={item.id || index} 
               variants={itemVariants}
               className="p-4 rounded-xl border border-white/20 dark:border-slate-700/50 bg-white/20 dark:bg-slate-800/40 shadow-lg backdrop-blur-md hover:shadow-xl transition-shadow duration-300"
@@ -835,17 +1330,17 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           ))
         ) : (
-          <motion.div 
+          <div 
             variants={itemVariants} 
             className="text-center py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/5 dark:bg-slate-800/20"
           >
             <FontAwesomeIcon icon={faShieldAlt} className="w-10 h-10 text-slate-400 dark:text-slate-500 mb-3" />
             <p className="font-medium text-slate-600 dark:text-slate-300">No insurance policies found.</p>
             <p className="text-sm text-slate-500 dark:text-slate-400">Add your policies to see them here.</p>
-          </motion.div>
+          </div>
         )}
       </div>
     </Widget>

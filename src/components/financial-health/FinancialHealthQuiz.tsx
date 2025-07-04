@@ -8,6 +8,7 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "./useQuizDashboard";
+import { calculateFinancialHealthScore } from "../profile/widgets/FinancialWidgets";
 import {
   calculateResults,
   generateDashboardWidgets,
@@ -120,6 +121,15 @@ const quizQuestions: QuizQuestion[] = [
     category: "current-situation",
   },
   {
+    id: "monthly-income",
+    question: "What is your monthly income?",
+    description: "Your gross monthly income before taxes and deductions.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
     id: "retirement-age",
     question: "At what age do you plan to retire?",
     description: "This helps us calculate your investment horizon.",
@@ -129,14 +139,13 @@ const quizQuestions: QuizQuestion[] = [
     category: "time-horizon",
   },
   {
-    id: "debt-level",
-    question: "How much total debt do you have?",
-    description: "Add up all loans, credit cards, and other money you owe.",
+    id: "annual-contribution",
+    question: "How much can you contribute annually to investments?",
+    description: "Consider your regular savings for long-term goals.",
     type: "number-input",
     unit: "$",
     category: "current-situation",
   },
-
   {
     id: "current-assets",
     question: "What is the total value of your current investable assets?",
@@ -193,9 +202,9 @@ const quizQuestions: QuizQuestion[] = [
     category: "time-horizon",
   },
   {
-    id: "annual-contribution",
-    question: "How much can you contribute annually to investments?",
-    description: "Consider your regular savings for long-term goals.",
+    id: "debt-level",
+    question: "How much total debt do you have?",
+    description: "Add up all loans, credit cards, and other money you owe.",
     type: "number-input",
     unit: "$",
     category: "current-situation",
@@ -564,7 +573,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     // Simulate processing time (7 seconds)
     setTimeout(() => {
       handleCompleteQuiz();
-    }, 7000);
+    }, 8000);
   }, [isQuizComplete]);
 
   // Handle quiz completion
@@ -575,19 +584,26 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     
     console.log('Base calculation results:', baseResults);
     
-    // Map the base results to the extended results format
+    // Calculate financial health score using the shared utility
+    const financialHealthResult = calculateFinancialHealthScore(state.answers);
+    console.log('Financial health calculation result:', financialHealthResult);
+    
     // Ensure proper number conversion for age values
     const currentAge = Number(state.answers['current-age']) || 30;
     const retirementAge = Number(state.answers['retirement-age']) || 65;
     
+    // Use retirement projections from the financial health utility
+    const projectedRetirementFund = financialHealthResult.projectedRetirementFund || 0;
+    const monthlyRetirementIncome = financialHealthResult.monthlyRetirementIncome || 0;
+    
     // Create extended results with additional properties
     const extendedResults: ExtendedCalculationResults = {
       ...baseResults,
-      healthScore: baseResults.financialHealthScore.overallScore,
-      healthAssessment: baseResults.financialHealthScore.status,
-      projectedRetirementFund: baseResults.portfolioProjection.futureValue,
+      healthScore: financialHealthResult.overallScore, 
+      healthAssessment: financialHealthResult.status,
+      projectedRetirementFund,
       yearsUntilRetirement: retirementAge - currentAge,
-      monthlyRetirementIncome: baseResults.portfolioProjection.futureValue / (25 * 12) // Simple estimation
+      monthlyRetirementIncome
     };
     
     console.log('Extended calculation results:', extendedResults);
@@ -736,7 +752,13 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   )}
                   <input
                     type="number"
-                    value={state.answers[question.id] || ""}
+                    value={(() => {
+                      const val = state.answers[question.id];
+                      if (val === undefined || val === null) return '';
+                      if (typeof val === 'number') return val;
+                      if (typeof val === 'string' && !isNaN(Number(val))) return val;
+                      return '';
+                    })()}
                     onChange={(e) =>
                       handleAnswerChange(question.id, Number(e.target.value))
                     }
@@ -823,7 +845,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <div className="mb-8 space-y-6">
                 <div className="rounded-lg bg-blue-50 p-6">
                   <h3 className="mb-2 text-lg font-semibold text-blue-800">
-                    Financial Health Score: {state.calculationResults.healthScore.toFixed(1)}/10
+                    Financial Health Score: {state.calculationResults.healthScore.toFixed(0)}/100
                   </h3>
                   <p className="text-blue-700">
                     Your financial health is rated as{" "}

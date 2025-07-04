@@ -61,7 +61,6 @@ function Profile() {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [showFinancialHealthQuiz, setShowFinancialHealthQuiz] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [showFinetuneSection, setShowFinetuneSection] = useState(false); // New state for finetune section visibility
   const { getCookie, setCookie } = useCookie();
 
@@ -109,6 +108,12 @@ function Profile() {
      // setIsTemplateModalOpen(true);
     }
   }, [status, templatesStatus, dispatch]);
+
+  useEffect(() => {
+    if (isTemplateModalOpen) {
+      dispatch(fetchDashboardTemplates());
+    }
+  }, [isTemplateModalOpen]);
 
   // Show template modal automatically if there are no views
   // useEffect(() => {
@@ -425,13 +430,13 @@ function Profile() {
                       </>
                     ) : (
                       <div className="flex items-center space-x-2">
-                         <button
+                         {/* <button
                       onClick={() => setShowFinetuneSection(!showFinetuneSection)}
                       className="flex items-center justify-center text-sm font-medium text-gray-700"
                       title="Finetune your financial data"
                     >
                       <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
-                    </button>
+                    </button> */}
                         <button
                           onClick={toggleEditMode}
                           className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"
@@ -709,8 +714,7 @@ function Profile() {
         </div>
       </Modal>
 
-      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
-      {isChatOpen && <ChatPopup onClose={() => setIsChatOpen(false)} />}
+      <FloatingChatButton />
     </>
   );
 }

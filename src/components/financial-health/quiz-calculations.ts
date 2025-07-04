@@ -10,13 +10,8 @@ export interface CalculationResults {
     progressPercentage: number;
     retirementAge: number;
   };
-  financialHealthScore: {
-    overallScore: number;
-    savingsScore: number;
-    emergencyFundScore: number;
-    riskManagementScore: number;
-    status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention';
-  };
+  // Raw quiz answers are now passed directly to widgets for score calculation
+  // financialHealthScore field removed as it's now calculated by the widget
   cashFlow: {
     monthlySavings: number;
     savingsRatePercent: number;
@@ -34,6 +29,8 @@ export interface CalculationResults {
     aggressive: number;
   };
   nextSteps: string[];
+  // Store the original quiz answers for widget calculations
+  quizAnswers: QuizAnswers;
 }
 
 // Interface for quiz answers
@@ -46,12 +43,12 @@ export interface QuizAnswers {
  */
 export function calculateResults(answers: QuizAnswers): CalculationResults {
   // Calculate portfolio projection
-  const currentAge = answers['current-age'] || 30;
-  const retirementAge = answers['retirement-age'] || 65;
-  const annualContribution = answers['annual-contribution'] || 0;
-  const currentAssets = answers['current-assets'] || 0;
-  const targetRetirement = answers['target-retirement'] || 1000000;
-  const returnRate = (answers['return-rate'] || 6) / 100; // Convert percentage to decimal
+  const currentAge = answers['current-age'];
+  const retirementAge = answers['retirement-age'];
+  const annualContribution = answers['annual-contribution'];
+  const currentAssets = answers['current-assets'];
+  const targetRetirement = answers['target-retirement'];
+  const returnRate = answers['return-rate'] / 100; // Convert percentage to decimal
 
   const timePeriodsInYears = retirementAge - currentAge;
 
@@ -63,56 +60,9 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
   const progressPercentage = Math.min(100, Math.round((futureValue / targetRetirement) * 100));
   const onTrack = futureValue >= targetRetirement;
 
-  // Calculate financial health score
-  // 1. Savings Score (40%)
-  const savingsRate = answers['savings-rate'] || 0;
-  let savingsScore = 0;
-  if (savingsRate >= 20) {
-    savingsScore = 100;
-  } else if (savingsRate >= 10) {
-    savingsScore = 70;
-  } else {
-    savingsScore = 50;
-  }
-
-  // 2. Emergency Fund Score (30%)
-  const emergencyFund = answers['emergency-fund'] || 'none';
-  let emergencyFundScore = 0;
-  if (emergencyFund === 'more-than-6' || emergencyFund === '3-6') {
-    emergencyFundScore = 100;
-  } else {
-    emergencyFundScore = 60;
-  }
-
-  // 3. Risk Management Score (30%)
-  const insuranceCoverage = answers['insurance-coverage'] || [];
+  // Financial health score calculation has been moved to the widget
+  // This function now focuses on other calculations and preserves the raw quiz answers
   const debtTypes = answers['debt-types'] || [];
-  const hasHighRiskDebt = debtTypes.includes('credit-card') || debtTypes.includes('personal-loan');
-  const hasAdequateInsurance =
-    (Array.isArray(insuranceCoverage) && insuranceCoverage.length > 2) ||
-    (typeof insuranceCoverage === 'string' && insuranceCoverage !== 'none');
-
-  let riskManagementScore = 0;
-  if (hasAdequateInsurance && !hasHighRiskDebt) {
-    riskManagementScore = 100;
-  } else {
-    riskManagementScore = 50;
-  }
-
-  // Calculate overall score with weights
-  const overallScore = Math.round((savingsScore * 0.4) + (emergencyFundScore * 0.3) + (riskManagementScore * 0.3));
-
-  // Determine status based on overall score
-  let status: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention';
-  if (overallScore >= 90) {
-    status = 'Excellent';
-  } else if (overallScore >= 75) {
-    status = 'Good';
-  } else if (overallScore >= 60) {
-    status = 'Fair';
-  } else {
-    status = 'Needs Attention';
-  }
 
   // Calculate cash flow
   const monthlyIncome = answers['monthly-income'] || 0;
@@ -157,11 +107,8 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     assetAllocation = { conservative: 40, balanced: 50, aggressive: 60 };
   }
 
-  // Next steps recommendations
+  // Next steps recommendations - passing just basic data since financialHealth score is calculated in widget
   const nextSteps = determineNextSteps(answers, {
-    savingsScore,
-    emergencyFundScore,
-    riskManagementScore,
     debtFree,
     progressPercentage
   });
@@ -174,13 +121,6 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
       progressPercentage,
       retirementAge
     },
-    financialHealthScore: {
-      overallScore,
-      savingsScore,
-      emergencyFundScore,
-      riskManagementScore,
-      status
-    },
     cashFlow: {
       monthlySavings,
       savingsRatePercent,
@@ -189,32 +129,46 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     },
     debtStatus: {
       debtFree,
-      debtTypes: debtTypes === 'none' ? [] : (Array.isArray(debtTypes) ? debtTypes : [debtTypes])
+      debtTypes
     },
     investingGuidance,
     assetAllocation,
-    nextSteps
+    nextSteps,
+    // Store the original quiz answers for widget calculations
+    quizAnswers: answers
   };
 }
 
 /**
  * Determine next action steps based on assessment results
+ * @param answers - Raw quiz answers
+ * @param params - Basic parameters for determining next steps
  */
-function determineNextSteps(answers: QuizAnswers, scores: any): string[] {
+function determineNextSteps(answers: QuizAnswers, params: { debtFree: boolean, progressPercentage: number }): string[] {
   const nextSteps: string[] = [];
 
-  if (scores.emergencyFundScore < 100) {
+  // Check emergency fund based directly on answers
+  const emergencyFund = answers['emergency-fund'] || 'none';
+  if (emergencyFund !== 'more-than-6' && emergencyFund !== '3-6') {
     nextSteps.push('Build an emergency fund covering 3-6 months of expenses');
   }
-  if (!scores.debtFree) {
+  
+  // Check debt status
+  if (!params.debtFree) {
     nextSteps.push('Create a debt repayment strategy focusing on high-interest debt first');
   }
-  if (scores.savingsScore < 70) {
+  
+  // Check savings rate directly from answers
+  const savingsRate = answers['savings-rate'] || 0;
+  if (savingsRate < 15) {
     nextSteps.push('Increase monthly savings rate to at least 15% of income');
   }
-  if (scores.progressPercentage < 70) {
+  
+  // Check retirement progress
+  if (params.progressPercentage < 70) {
     nextSteps.push('Increase retirement contributions to stay on track with goals');
   }
+  
   nextSteps.push('Review your asset allocation annually');
   nextSteps.push('Ensure adequate insurance coverage for your needs');
 
@@ -236,13 +190,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     column_span: 2,
     row_span: 2,
     data: {
-      items: [
-        { id: uuidv4(), category: 'Savings', score: results.financialHealthScore.savingsScore, status: getScoreStatus(results.financialHealthScore.savingsScore), explanation: 'Based on your monthly savings rate.', weight: 0.4, displayOrder: 1 },
-        { id: uuidv4(), category: 'Emergency Fund', score: results.financialHealthScore.emergencyFundScore, status: getScoreStatus(results.financialHealthScore.emergencyFundScore), explanation: 'Based on months of expenses covered.', weight: 0.3, displayOrder: 2 },
-        { id: uuidv4(), category: 'Risk Management', score: results.financialHealthScore.riskManagementScore, status: getScoreStatus(results.financialHealthScore.riskManagementScore), explanation: 'Based on insurance and debt.', weight: 0.3, displayOrder: 3 }
-      ],
-      overallScore: results.financialHealthScore.overallScore,
-      overallStatus: results.financialHealthScore.status,
+      // We no longer pass precomputed scores - the widget will calculate them from quizAnswers
+      quizAnswers: results.quizAnswers,
       showIndividualScores: true
     },
   });
@@ -255,11 +204,15 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     icon: 'fas fa-umbrella-beach',
     column_span: 1,
     data: {
+      // Pass the raw quiz answers for dynamic calculation in the widget
+      quizAnswers: results.quizAnswers,
       scenarios: [
         {
           id: 'current-path',
           scenarioName: 'Current Path',
           score: results.portfolioProjection.onTrack ? 80 : 60,
+          // Add the required progressPercentage field
+          progressPercentage: results.portfolioProjection.progressPercentage,
           status: results.portfolioProjection.onTrack ? 'On Track' : 'Needs Adjustment',
           projectionAmount: Math.round(results.portfolioProjection.futureValue),
           projectionDate: `At Age ${results.portfolioProjection.retirementAge}`,

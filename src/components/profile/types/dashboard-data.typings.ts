@@ -138,10 +138,13 @@ export interface IFinancialHealthItem {
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
 export interface IFinancialHealthScorecardData {
-  items: IFinancialHealthItem[]; // (Mandatory) Array of individual financial health assessments
-  overallScore?: number; // (Optional) Calculated overall score
-  overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // (Optional) Overall status
-  showIndividualScores?: boolean; // (Optional) Whether to show individual scores
+  items?: IFinancialHealthItem[]; // Array of individual financial health assessments
+  overallScore?: number; // Calculated overall score (will be computed if not provided)
+  overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // Overall status (will be computed if not provided)
+  showIndividualScores?: boolean; // Whether to show individual scores
+  quizAnswers?: {
+    [key: string]: any;
+  }; // Raw quiz answers for score calculation
 }
 
 // 8. NEXT BEST ACTION - Now supports multiple actions
@@ -193,7 +196,8 @@ export interface IDebtVisualizerData extends Array<IDebtItem> {}
 // 11. RETIREMENT READINESS - Now supports multiple scenarios
 export interface IRetirementScenario {
   id: string; // (Mandatory) Unique ID for the scenario
-  scenarioName: string; // (Mandatory) e.g., "Current Path"
+  scenarioName: string; // (Mandatory) Name of the scenario (e.g., "Default", "Aggressive Saving")
+  progressPercentage: number; // (Mandatory) Progress towards retirement goal (e.g., 55 for 55%)
   score: number; // (Mandatory) e.g., 65
   status: string; // (Mandatory) e.g., "Needs Significant Work"
   projectionAmount: number; // (Mandatory) Projected retirement savings amount
@@ -201,11 +205,23 @@ export interface IRetirementScenario {
   explanation: string; // (Mandatory) Explanation for this scenario's assessment
   assumptions: string; // (Mandatory) What this scenario assumes
   displayOrder: number; // (Mandatory) Numeric hint for display sorting
+  
+  // Dynamically calculated retirement data
+  projectedRetirementFund?: number; // Calculated from quiz answers if available
+  monthlyRetirementIncome?: number; // Calculated from quiz answers if available
 }
 
 export interface IRetirementReadinessData {
   scenarios: IRetirementScenario[]; // (Mandatory) Array of retirement scenarios
   currentScenarioId: string; // (Mandatory) ID of the currently active/selected scenario
+  quizAnswers?: {
+    [key: string]: any;
+  }; // Raw quiz answers for score calculation
+  retirementProjections?: {
+    projectedRetirementAge: number;
+    projectedRetirementFund: number;
+    monthlyRetirementIncome: number;
+  }; // Retirement projections based on quiz answers
 }
 
 // 12. ENHANCED SAVINGS GOALS - Already array-based, adding IDs
