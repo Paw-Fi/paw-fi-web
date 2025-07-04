@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState, useMemo,useEffect } from "react";
 import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,6 +12,7 @@ import {
   faPencilAlt,
   faPlus,
   faRefresh,
+  faSlidersH, // Added for finetune icon
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "@/components/financial-health/useQuizDashboard";
@@ -32,6 +33,8 @@ import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import FinancialHealthQuiz from "@/components/financial-health/FinancialHealthQuiz";
 import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 import { ChatPopup } from "@/components/dashboard-chat/ChatPopup";
+import FinancialHealthFinetune from "@/components/financial-health/FinancialHealthFinetune"; // Import Finetune component
+import classNames from "classnames";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -59,6 +62,7 @@ function Profile() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [showFinancialHealthQuiz, setShowFinancialHealthQuiz] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showFinetuneSection, setShowFinetuneSection] = useState(false); // New state for finetune section visibility
   const { getCookie, setCookie } = useCookie();
 
   // Use our custom dashboard hook
@@ -309,7 +313,7 @@ function Profile() {
                   <div className="flex items-center">
                     <h1 className="text-2xl font-bold text-gray-800">
                       Dashboard
-                    </h1>                   
+                    </h1>
                   
                     {/* View selector dropdown - always visible */}
                     <div className="relative ml-4">
@@ -420,7 +424,14 @@ function Profile() {
                         </button>
                       </>
                     ) : (
-                      <>
+                      <div className="flex items-center space-x-2">
+                         <button
+                      onClick={() => setShowFinetuneSection(!showFinetuneSection)}
+                      className="flex items-center justify-center text-sm font-medium text-gray-700"
+                      title="Finetune your financial data"
+                    >
+                      <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
+                    </button>
                         <button
                           onClick={toggleEditMode}
                           className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"
@@ -431,10 +442,18 @@ function Profile() {
                             className="h-5 w-5 text-gray-600"
                           />
                         </button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* Finetune Section */}
+              {showFinetuneSection && !isEditMode && data && (
+                <FinancialHealthFinetune
+                  currentDashboardWidgets={Array.isArray(data) ? data : []}
+                  onUpdateDashboard={handleUpdateWidgets}
+                />
               )}
 
               {/* Dashboard with loading state */}
@@ -493,7 +512,7 @@ function Profile() {
       onClose={() => setShowFinancialHealthQuiz(false)}
       >
       <FinancialHealthQuiz onDashboardCreated={handleHealthQuizCompleted}/>
-      </Modal>        
+      </Modal>               
       
 
       {/* Click outside handler for view dropdown */}

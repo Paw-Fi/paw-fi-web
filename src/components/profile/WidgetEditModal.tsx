@@ -823,13 +823,13 @@ export default function WidgetEditModal({
             </div>
           </div>
 
-          {ActiveForm ? (
+          {/* {ActiveForm ? (
             renderActiveForm
           ) : (
             <p className="text-center text-gray-500 dark:text-gray-400">
               No specific form for this widget type or widget data is missing.
             </p>
-          )}
+          )} */}
         </motion.div>
       </form>
     </Modal>

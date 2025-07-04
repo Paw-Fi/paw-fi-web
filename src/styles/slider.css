@@ -1,0 +1,25 @@
+ /* For WebKit browsers (Chrome, Safari, Edge) */
+ .custom-range-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default appearance */
+    width: 16px; /* Adjust as needed */
+    height: 16px; /* Adjust as needed */
+    border-radius: 50%; /* Makes it a circle */
+    background: #FFFFFF; /* White color */
+    cursor: pointer;
+    margin-top: -7px; /* Adjust to vertically center the thumb on the track */
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3); /* Optional: add a subtle shadow */
+  }
+
+  /* For Firefox */
+  .custom-range-thumb::-moz-range-thumb {
+
+    background: #FFFFFF; /* White color */
+   
+  }
+
+  /* For Internet Explorer (though modern IE/Edge primarily use WebKit rules) */
+  .custom-range-thumb::-ms-thumb {
+   
+    background: #FFFFFF; /* White color */
+
+  }
