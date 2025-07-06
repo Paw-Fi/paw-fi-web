@@ -208,6 +208,15 @@ const quizQuestions: QuizQuestion[] = [
     category: "current-situation",
   },
   {
+    id: "monthly-expenses",
+    question: "What are your approximate monthly expenses?",
+    description: "Include an estimate of all regular monthly expenditures such as housing, utilities, food, transportation, etc.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
     id: "retirement-age",
     question: "At what age do you plan to retire?",
     description: "This helps us calculate your investment horizon.",
@@ -281,7 +290,7 @@ const quizQuestions: QuizQuestion[] = [
   },
   {
     id: "debt-level",
-    question: "How much total debt do you have?",
+    question: "How much total debt do you have at the moment?",
     description: "Add up all loans, credit cards, and other money you owe.",
     type: "number-input",
     unit: "$",

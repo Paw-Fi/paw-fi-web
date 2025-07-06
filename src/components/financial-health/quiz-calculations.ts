@@ -266,7 +266,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
   widgets.push({
     id: uuidv4(),
     type: 'progressBarList',
-    title: 'Retirement Goal Progress',
+    title: 'Your Retirement Goal',
     icon: 'fas fa-bullseye',
     column_span: 2,
     row_span: 1,
@@ -291,7 +291,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     widgets.push({
       id: uuidv4(),
       type: 'financialHealthScorecard',
-      title: 'Your Financial Health Score',
+      title: 'Your Financial Health',
       icon: 'fas fa-heartbeat',
       column_span: 2,
       row_span: 4,
@@ -306,7 +306,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
  widgets.push({
   id: uuidv4(),
   type: 'retirementReadiness',
-  title: 'Retirement Outlook',
+  title: 'Will you reach your goal?',
   icon: 'fas fa-umbrella-beach',
   column_span: 2,
   row_span: 3,
@@ -370,7 +370,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     widgets.push({
       id: uuidv4(),
       type: 'metricCard',
-      title: 'Key Financial Metrics',
+      title: 'Monthly Savings Rate',
       icon: 'fas fa-chart-pie',
       column_span: 2,
       row_span: 2,
@@ -401,7 +401,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     widgets.push({
       id: uuidv4(),
       type: 'pieChart',
-      title: 'Suggested Portfolio Allocation',
+      title: 'Suggested Allocation',
       icon: 'fas fa-chart-pie',
       column_span: 2,
       row_span: 4,
@@ -539,7 +539,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     widgets.push({
       id: uuidv4(),
       type: 'tipCard',
-      title: 'Debt Management',
+      title: 'Investment Advice for You',
       icon: 'fas fa-credit-card',
       column_span: 2,
       row_span: 2,
@@ -560,6 +560,30 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/econbasics-L9`,
             displayOrder: 2,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'econbasics-L9') || null
+          },
+          { 
+            id: uuidv4(), 
+            title: 'Interest Rate Fundamentals', 
+            content: 'Understanding how interest compounds on debt can help you prioritize which debts to pay off first.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/tvm-L3`,
+            displayOrder: 3,
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'tvm-L3') || null
+          },
+          { 
+            id: uuidv4(), 
+            title: 'Credit Score Management', 
+            content: 'Learn how managing your debt responsibly can improve your credit score and lower your future borrowing costs.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/creditbasics-L2`,
+            displayOrder: 4,
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'creditbasics-L2') || null
+          },
+          { 
+            id: uuidv4(), 
+            title: 'Debt-to-Income Ratio', 
+            content: 'Maintaining a healthy debt-to-income ratio is crucial for financial stability and future borrowing opportunities.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/budgeting-L4`,
+            displayOrder: 5,
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'budgeting-L4') || null
           }
         ],
         currentTipIndex: 0,
