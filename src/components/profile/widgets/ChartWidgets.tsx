@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useRef, useEffect } from 'react';
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -271,6 +272,13 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
       </Widget>
     );
   }
+  
+  // Extract the allocation percentages for the explanation text
+  const stocksData = chartDataDefinition.dataPoints.find(dp => dp.label === 'Stocks');
+  const bondsData = chartDataDefinition.dataPoints.find(dp => dp.label === 'Bonds');
+  
+  const stocksPercentage = stocksData ? stocksData.value : 0;
+  const bondsPercentage = bondsData ? bondsData.value : 0;
 
   const labels = chartDataDefinition.dataPoints.map(dp => dp.label);
   const values = chartDataDefinition.dataPoints.map(dp => dp.value);
@@ -351,13 +359,21 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="h-full w-full flex items-center justify-center">
-        <div className="w-full max-w-sm">
+      <div className="h-full w-full flex flex-col items-center justify-center">
+        <div className="w-full max-w-sm mb-4">
           <Pie 
             data={chartData} 
             options={chartOptions} 
           />
         </div>
+        
+        {stocksPercentage > 0 && bondsPercentage > 0 && (
+          <div className="text-center px-4 pb-4">
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
+              Based on your risk score and time horizon: <strong>{stocksPercentage}%</strong> stocks / <strong>{bondsPercentage}%</strong> bonds
+            </p>
+          </div>
+        )}
       </div>
     </Widget>
   );
@@ -379,48 +395,82 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
 
   const totalIncome = cashFlowData.inflows.reduce((sum, item) => sum + item.value, 0);
   const totalExpenses = cashFlowData.outflows.reduce((sum, item) => sum + item.value, 0);
+  const savings = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : '0.0';
 
   const chartData = {
-    labels: ['Income', 'Expenses'],
+    labels: ['Income', 'Savings', 'Expenses'],
     datasets: [
       {
         label: cashFlowData.projectedPeriod ? `${cashFlowData.projectedPeriod} Amount ($)` : 'Amount ($)',
-        data: [totalIncome, totalExpenses],
+        data: [totalIncome, savings, totalExpenses],
         backgroundColor: [
-          'rgba(16, 185, 129, 0.6)', // Green for income
-          'rgba(239, 68, 68, 0.6)',  // Red for expenses
+          'rgba(16, 185, 129, 0.7)', // Green for income
+          'rgba(79, 70, 229, 0.7)',  // Purple for savings
+          'rgba(239, 68, 68, 0.7)',  // Red for expenses
         ],
         borderColor: [
           'rgba(16, 185, 129, 1)',
+          'rgba(79, 70, 229, 1)',
           'rgba(239, 68, 68, 1)',
         ],
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: 8,
+        barThickness: 40,
       },
     ],
   };
 
-  const savings = totalIncome - totalExpenses;
-  const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : '0.0';
+  const chartOptions = {
+    ...getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : '')),
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)', // Light grid lines
+        },
+        ticks: {
+          callback: (value: any) => `${value}`
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return `$${context.raw.toLocaleString()}`;
+          }
+        }
+      }
+    }
+  };
 
-  const chartOptions = getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : ''));
+  // Define a resize observer reference for responsive handling
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<any>(null);
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="flex flex-col h-full p-1"> {/* Adjusted padding slightly */} 
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-green-50 dark:bg-green-500/10 p-3 rounded-lg shadow-sm">
-            <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Income</div>
-            <div className="text-lg font-semibold text-green-600 dark:text-green-400">${totalIncome.toLocaleString()}</div>
-          </div>
-          <div className="bg-red-50 dark:bg-red-500/10 p-3 rounded-lg shadow-sm">
-            <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Expenses</div>
-            <div className="text-lg font-semibold text-red-600 dark:text-red-400">${totalExpenses.toLocaleString()}</div>
-          </div>
-        </div>
-        
-        <div className="flex-grow h-40"> {/* Added fixed height for chart area */} 
+      <div className="flex flex-col h-full p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+        <div 
+          ref={chartContainerRef}
+          className="flex-grow w-full flex items-center justify-center relative" 
+          style={{ minHeight: '100px', maxHeight: '500px' }}
+        > 
           <Bar 
+            ref={(ref) => {
+              if (ref) {
+                chartInstanceRef.current = ref;
+              }
+            }}
             data={chartData} 
             options={{
               ...chartOptions,

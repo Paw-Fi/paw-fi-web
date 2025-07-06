@@ -111,6 +111,84 @@ const categories: CategoryInfo[] = [
 
 // Quiz questions array
 const quizQuestions: QuizQuestion[] = [
+  // Investment risk profile questions
+  {
+    id: "paid-all-debt",
+    question: "Have you currently paid all the debt (e.g., mortgage, credit cards, student loans)?",
+    description: "Your debt status affects recommended investment strategies.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "expect-lump-sum",
+    question: "Do you expect lump sum income in the future (e.g., inheritance, asset sale)?",
+    description: "Future windfalls may impact your investment horizon and risk tolerance.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "long-term-goal",
+    question: "Do you like to achieve your financial goal in more than 1 year?",
+    description: "Long-term goals often allow for different investment strategies.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "predictable-income",
+    question: "Do you have a job with predictable income?",
+    description: "Income stability affects how much risk you might be able to take on.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "high-risk-preference",
+    question: "Would you prefer a strategy that offers high returns despite the high risk?",
+    description: "Your preference for risk vs. return is a key factor in portfolio design.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "risky-investments",
+    question: "Have you ever invested some highly risky assets (e.g. hedge fund, private equity)?",
+    description: "Past investment experience can indicate comfort with certain types of risk.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "extreme-sports",
+    question: "Do you like extreme sports such as Bungee Jumping, Parachuting, Rock Climbing?",
+    description: "Comfort with physical risk often correlates with financial risk tolerance.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
   {
     id: "current-age",
     question: "What is your current age?",
@@ -579,14 +657,11 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
   // Handle quiz completion
   const handleCompleteQuiz = useCallback(() => {
     // Calculate results based on answers
-    console.log('Quiz answers before calculation:', state.answers);
     const baseResults = calculateResults(state.answers);
     
-    console.log('Base calculation results:', baseResults);
     
     // Calculate financial health score using the shared utility
     const financialHealthResult = calculateFinancialHealthScore(state.answers);
-    console.log('Financial health calculation result:', financialHealthResult);
     
     // Ensure proper number conversion for age values
     const currentAge = Number(state.answers['current-age']) || 30;
@@ -606,11 +681,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
       monthlyRetirementIncome
     };
     
-    console.log('Extended calculation results:', extendedResults);
 
     // Update state to show results
     setState((prev) => {
-      console.log('Setting calculation results:', extendedResults);
       return {
         ...prev,
         isComplete: true,

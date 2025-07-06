@@ -1,5 +1,67 @@
 import { Widget } from '../profile/types/dashboard-data.typings';
 import { v4 as uuidv4 } from 'uuid';
+import BasicLesson from "@data/basic-lessons.json"
+
+// Lesson data interface for tip card links
+export interface LessonLink {
+  lessonId: string;
+  title: string;
+  description: string;
+}
+
+// Available lessons for linking in tip cards
+export const availableLessons: LessonLink[] = [
+  {
+    lessonId: "invest-L1",
+    title: "Investing Fundamentals",
+    description: "Learn the fundamental differences between saving and investing, understand risk, and discover how financial markets work."
+  },
+  {
+    lessonId: "behavfin-L2",
+    title: "Behavioral Finance",
+    description: "Explore common psychological biases like loss aversion, confirmation bias, and overconfidence, and learn how they can impact investment decisions."
+  },
+  {
+    lessonId: "moneymarket-L3",
+    title: "Money Markets",
+    description: "Understand key short-term debt instruments like Treasury Bills, Repurchase Agreements, Commercial Paper, and Negotiable CDs, and their role in finance."
+  },
+  {
+    lessonId: "bondmarket-L4",
+    title: "Bond Markets",
+    description: "Learn about bonds, how credit ratings work, the difference between various bond types, and key market pricing concepts."
+  },
+  {
+    lessonId: "equitymarket-L5",
+    title: "Equity Markets",
+    description: "Learn about common and preferred equity (stocks), dividends, how companies go public (IPOs), order types, and stock market indexes."
+  },
+  {
+    lessonId: "derivatives-L6",
+    title: "Derivatives",
+    description: "Explore financial derivatives like futures, forwards, options, and swaps, and understand how their value is derived from underlying assets."
+  },
+  {
+    lessonId: "tvm-L7",
+    title: "Time Value of Money",
+    description: "Understand the core concepts of the time value of money, including interest rates, simple vs. compound interest, present and future value, annuities, and APR vs. EAR."
+  },
+  {
+    lessonId: "stats-L8",
+    title: "Statistics for Investing",
+    description: "Grasp essential statistical concepts for investing, including mean, variance, correlation, normal distribution, and common data interpretation biases."
+  },
+  {
+    lessonId: "econbasics-L9",
+    title: "Economic Fundamentals",
+    description: "Learn fundamental economic concepts like scarcity, opportunity cost, supply & demand, GDP, economic indicators, and inflation, and their relevance to investing."
+  },
+  {
+    lessonId: "finstatements-L10",
+    title: "Financial Statements",
+    description: "Learn about the double-entry accounting system, the main financial statements (Income Statement, Balance Sheet, Cash Flow), the accounting equation, EPS, inventory, and operating cash flow."
+  }
+];
 
 // Define the calculations result interface
 export interface CalculationResults {
@@ -9,6 +71,8 @@ export interface CalculationResults {
     onTrack: boolean;
     progressPercentage: number;
     retirementAge: number;
+    targetAmount: number;
+    currentSavings: number;
   };
   // Raw quiz answers are now passed directly to widgets for score calculation
   // financialHealthScore field removed as it's now calculated by the widget
@@ -27,6 +91,12 @@ export interface CalculationResults {
     conservative: number;
     balanced: number;
     aggressive: number;
+  };
+  // Portfolio allocation based on risk profile questions
+  portfolioAllocation: {
+    equityPercentage: number;
+    bondPercentage: number;
+    riskScore: number;
   };
   nextSteps: string[];
   // Store the original quiz answers for widget calculations
@@ -48,6 +118,9 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
   const annualContribution = answers['annual-contribution'];
   const currentAssets = answers['current-assets'];
   const targetRetirement = answers['target-retirement'];
+  
+  // Calculate portfolio allocation based on risk profile questions
+  const portfolioAllocation = calculatePortfolioAllocation(answers);
   const returnRate = answers['return-rate'] / 100; // Convert percentage to decimal
 
   const timePeriodsInYears = retirementAge - currentAge;
@@ -56,8 +129,13 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
   const futureValue = currentAssets * Math.pow(1 + returnRate, timePeriodsInYears) +
                       annualContribution * ((Math.pow(1 + returnRate, timePeriodsInYears) - 1) / returnRate);
 
-  // Calculate progress percentage
-  const progressPercentage = Math.min(100, Math.round((futureValue / targetRetirement) * 100));
+  // Calculate progress percentage - ensure it doesn't result in NaN or Infinity
+  let progressPercentage = 0;
+  if (targetRetirement && targetRetirement > 0) {
+    // Use current assets as the numerator for the progress bar
+    // since we want to show current progress, not future projection
+    progressPercentage = Math.min(100, Math.round((currentAssets / targetRetirement) * 100));
+  }
   const onTrack = futureValue >= targetRetirement;
 
   // Financial health score calculation has been moved to the widget
@@ -119,7 +197,9 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
       timePeriodsInYears,
       onTrack,
       progressPercentage,
-      retirementAge
+      retirementAge,
+      targetAmount: targetRetirement || 0,
+      currentSavings: currentAssets || 0
     },
     cashFlow: {
       monthlySavings,
@@ -133,8 +213,8 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     },
     investingGuidance,
     assetAllocation,
+    portfolioAllocation,
     nextSteps,
-    // Store the original quiz answers for widget calculations
     quizAnswers: answers
   };
 }
@@ -181,57 +261,15 @@ function determineNextSteps(answers: QuizAnswers, params: { debtFree: boolean, p
 export function generateDashboardWidgets(results: CalculationResults): Widget[] {
   const widgets: Widget[] = [];
 
-  // 1. Financial Health Scorecard Widget
-  widgets.push({
-    id: uuidv4(),
-    type: 'financialHealthScorecard',
-    title: 'Your Financial Health Score',
-    icon: 'fas fa-heartbeat',
-    column_span: 2,
-    row_span: 2,
-    data: {
-      // We no longer pass precomputed scores - the widget will calculate them from quizAnswers
-      quizAnswers: results.quizAnswers,
-      showIndividualScores: true
-    },
-  });
 
-  // 2. Retirement Readiness Widget
-  widgets.push({
-    id: uuidv4(),
-    type: 'retirementReadiness',
-    title: 'Retirement Outlook',
-    icon: 'fas fa-umbrella-beach',
-    column_span: 1,
-    data: {
-      // Pass the raw quiz answers for dynamic calculation in the widget
-      quizAnswers: results.quizAnswers,
-      scenarios: [
-        {
-          id: 'current-path',
-          scenarioName: 'Current Path',
-          score: results.portfolioProjection.onTrack ? 80 : 60,
-          // Add the required progressPercentage field
-          progressPercentage: results.portfolioProjection.progressPercentage,
-          status: results.portfolioProjection.onTrack ? 'On Track' : 'Needs Adjustment',
-          projectionAmount: Math.round(results.portfolioProjection.futureValue),
-          projectionDate: `At Age ${results.portfolioProjection.retirementAge}`,
-          explanation: `Based on your current strategy over ${results.portfolioProjection.timePeriodsInYears} years.`,
-          assumptions: 'Based on your provided savings and expected returns.',
-          displayOrder: 1
-        }
-      ],
-      currentScenarioId: 'current-path'
-    },
-  });
-
-  // 3. Progress Bar for Retirement Goal
+  // 1. Progress Bar for Retirement Goal
   widgets.push({
     id: uuidv4(),
     type: 'progressBarList',
     title: 'Retirement Goal Progress',
     icon: 'fas fa-bullseye',
-    column_span: 1,
+    column_span: 2,
+    row_span: 1,
     data: {
       items: [
         {
@@ -240,12 +278,60 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
           current: results.portfolioProjection.progressPercentage,
           max: 100,
           color: getProgressColor(results.portfolioProjection.progressPercentage),
-          displayOrder: 1
+          displayOrder: 1,
+          explanationText: `You're ${results.portfolioProjection.onTrack ? 'on track' : 'working'} to meet your retirement goal based on your current savings, timeline, and expected portfolio growth.`
         }
       ],
       showPercentages: true
     }
   });
+ 
+
+    // 2. Financial Health Scorecard Widget
+    widgets.push({
+      id: uuidv4(),
+      type: 'financialHealthScorecard',
+      title: 'Your Financial Health Score',
+      icon: 'fas fa-heartbeat',
+      column_span: 2,
+      row_span: 4,
+      data: {
+        // We no longer pass precomputed scores - the widget will calculate them from quizAnswers
+        quizAnswers: results.quizAnswers,
+        showIndividualScores: true
+      },
+    });
+
+ // 3. Retirement Readiness Widget
+ widgets.push({
+  id: uuidv4(),
+  type: 'retirementReadiness',
+  title: 'Retirement Outlook',
+  icon: 'fas fa-umbrella-beach',
+  column_span: 2,
+  row_span: 3,
+  data: {
+    // Pass the raw quiz answers for dynamic calculation in the widget
+    quizAnswers: results.quizAnswers,
+    scenarios: [
+      {
+        id: 'current-path',
+        scenarioName: 'Current Path',
+        score: results.portfolioProjection.onTrack ? 80 : 60,
+        // Add the required progressPercentage field
+        progressPercentage: results.portfolioProjection.progressPercentage,
+        status: results.portfolioProjection.onTrack ? 'On Track' : 'Needs Adjustment',
+        projectionAmount: Math.round(results.portfolioProjection.futureValue),
+        projectionDate: `At Age ${results.portfolioProjection.retirementAge}`,
+        explanation: `Based on your current strategy over ${results.portfolioProjection.timePeriodsInYears} years.`,
+        assumptions: 'Based on your provided savings and expected returns.',
+        displayOrder: 1
+      }
+    ],
+    currentScenarioId: 'current-path'
+  },
+});
+
 
   // 4. Cash Flow Summary Widget
   widgets.push({
@@ -254,6 +340,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     title: 'Monthly Cash Flow',
     icon: 'fas fa-exchange-alt',
     column_span: 2,
+    row_span:2,
     data: {
       inflows: [{ id: uuidv4(), title: 'Total Income', value: results.cashFlow.income, category: 'Income', frequency: 'monthly', displayOrder: 1 }],
       outflows: [{ id: uuidv4(), title: 'Total Expenses', value: results.cashFlow.expenses, category: 'Expenses', frequency: 'monthly', displayOrder: 1 }],
@@ -267,11 +354,11 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     type: 'nextBestAction',
     title: 'Recommended Actions',
     icon: 'fas fa-clipboard-check',
-    column_span: 1,
-    row_span: 2,
+    column_span: 2,
+    row_span: 4,
     data: results.nextSteps.map((step, index) => ({
       id: uuidv4(),
-      title: `Priority ${index + 1}`,
+      title: index===0?'High Priority':index===1?'Medium Priority':'Low Priority',
       message: step,
       priority: index === 0 ? 'high' : (index === 1 ? 'medium' : 'low'),
       category: 'Financial Improvement',
@@ -279,56 +366,175 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     }))
   });
 
-  // 6. Tips Card Widget
-  widgets.push({
-    id: uuidv4(),
-    type: 'tipCard',
-    title: 'Smart Investment Tips',
-    icon: 'fas fa-lightbulb',
-    column_span: 1,
-    data: {
-      tips: results.investingGuidance.map((tip, index) => ({
-        id: uuidv4(),
-        title: `Investment Strategy ${index + 1}`,
-        content: tip,
-        displayOrder: index + 1
-      })),
-      currentTipIndex: 0,
-      autoRotate: true
+    // 6. Metric Card for Savings Rate
+    widgets.push({
+      id: uuidv4(),
+      type: 'metricCard',
+      title: 'Key Financial Metrics',
+      icon: 'fas fa-chart-pie',
+      column_span: 2,
+      row_span: 2,
+      data: {
+        metrics: [
+          {
+            id: uuidv4(),
+            value: `${results.cashFlow.savingsRatePercent}%`,
+            currency: '',
+            trend: results.cashFlow.savingsRatePercent >= 15 ? 'up' : (results.cashFlow.savingsRatePercent >= 10 ? 'neutral' : 'down'),
+            description: 'Monthly Savings Rate',
+            progress: results.cashFlow.savingsRatePercent / 20, // Assumes 20% is the goal
+            goalLabel: '20% Target',
+            displayOrder: 1
+          },
+          {
+            id: uuidv4(),
+            value: results.cashFlow.monthlySavings.toFixed(2),
+            currency: '$',
+            description: 'Monthly Savings Amount',
+            displayOrder: 2
+          }
+        ]
+      }
+    });
+
+    // 7. Portfolio Allocation Pie Chart
+    widgets.push({
+      id: uuidv4(),
+      type: 'pieChart',
+      title: 'Suggested Portfolio Allocation',
+      icon: 'fas fa-chart-pie',
+      column_span: 2,
+      row_span: 4,
+      data: {
+        dataPoints: [
+          {
+            id: uuidv4(),
+            label: 'Stocks',
+            value: results.portfolioAllocation.equityPercentage,
+            color: 'rgba(161, 136, 255, 0.8)', // Purple color for stocks
+            displayOrder: 1
+          },
+          {
+            id: uuidv4(),
+            label: 'Bonds',
+            value: results.portfolioAllocation.bondPercentage,
+            color: 'rgba(49, 203, 158, 0.8)', // Green color for bonds
+            displayOrder: 2
+          }
+        ],
+        title: 'Asset Allocation',
+        showLegend: true
+      }
+    });
+
+  // 8. Tips Card Widget with lesson links
+  const investmentTips = [
+    {
+      title: "Diversify Your Portfolio",
+      content: "Diversification across asset classes helps reduce risk and improve long-term returns. Consider adding different investment types to your portfolio.",
+      lessonId: "invest-L1", // Investing fundamentals lesson
+    },
+    {
+      title: "Understand Market Psychology",
+      content: "Being aware of psychological biases can improve your investment decisions. Learn to recognize and overcome emotional reactions to market movements.",
+      lessonId: "behavfin-L2", // Behavioral finance lesson
+    },
+    {
+      title: "Consider Fixed Income",
+      content: "Bonds can provide stable income and reduce portfolio volatility. Explore different bond types and their role in your investment strategy.",
+      lessonId: "bondmarket-L4", // Bond market lesson
     }
+  ];
+
+  // Generate more personalized tips based on risk profile
+  if (results.quizAnswers['risk-profile'] === 'conservative') {
+    investmentTips.push({
+      title: "Safety in Money Markets",
+      content: "Money market instruments offer liquidity and security for conservative investors. Consider Treasury bills and CDs for your short-term investment needs.",
+      lessonId: "moneymarket-L3", // Money market lesson
+    });
+  } else if (results.quizAnswers['risk-profile'] === 'aggressive') {
+    investmentTips.push({
+      title: "Growth Through Equities",
+      content: "Stock investments offer high growth potential for long-term investors. Learn how to evaluate companies and understand different equity types.",
+      lessonId: "equitymarket-L5", // Equity market lesson
+    });
+  }
+
+  // Add financial statement tips if income is above threshold
+  const monthlyIncome = results.quizAnswers['monthly-income'] || 0;
+  if (monthlyIncome > 5000) {
+    investmentTips.push({
+      title: "Analyze Financial Statements",
+      content: "Understanding how to read financial statements can help you make better investment decisions. Learn to evaluate company performance using key metrics.",
+      lessonId: "finstatements-L10", // Financial statements lesson
+    });
+  }
+
+  // Add time value of money tip if saving for long-term goals
+  if (results.quizAnswers['long-term-goal'] === 'yes') {
+    investmentTips.push({
+      title: "Understand Compounding Returns",
+      content: "The power of compound interest can significantly boost your long-term savings. Learn how time value of money concepts affect your financial decisions.",
+      lessonId: "tvm-L7", // Time value of money lesson
+    });
+  }
+
+  // Add derivatives tip for more sophisticated investors
+  if (results.quizAnswers['invest-experience'] === 'experienced' || results.quizAnswers['risk-profile'] === 'aggressive') {
+    investmentTips.push({
+      title: "Consider Advanced Instruments",
+      content: "Derivatives can be used for hedging risk or enhancing returns in your portfolio. Learn about options, futures, and other sophisticated financial instruments.",
+      lessonId: "derivatives-L6", // Derivatives lesson
+    });
+  }
+
+  // Add statistical analysis tip for data-driven investors
+  if (results.quizAnswers['analytical-approach'] === 'yes') {
+    investmentTips.push({
+      title: "Apply Statistical Analysis",
+      content: "Understanding statistics can help you evaluate investment performance and risk. Learn how to use quantitative measures to make more informed decisions.",
+      lessonId: "stats-L8", // Statistics lesson
+    });
+  }
+
+  // Add economic fundamentals tip for macroeconomic awareness
+  investmentTips.push({
+    title: "Monitor Economic Indicators",
+    content: "Economic factors like inflation, interest rates, and GDP growth affect market performance. Learn how to interpret economic data and its impact on your investments.",
+    lessonId: "econbasics-L9", // Economic fundamentals lesson
   });
 
-  // 7. Metric Card for Savings Rate
-  widgets.push({
-    id: uuidv4(),
-    type: 'metricCard',
-    title: 'Key Financial Metrics',
-    icon: 'fas fa-chart-pie',
-    column_span: 1,
-    data: {
-      metrics: [
-        {
-          id: uuidv4(),
-          value: `${results.cashFlow.savingsRatePercent}%`,
-          currency: '',
-          trend: results.cashFlow.savingsRatePercent >= 15 ? 'up' : (results.cashFlow.savingsRatePercent >= 10 ? 'neutral' : 'down'),
-          description: 'Monthly Savings Rate',
-          progress: results.cashFlow.savingsRatePercent / 20, // Assumes 20% is the goal
-          goalLabel: '20% Target',
-          displayOrder: 1
-        },
-        {
-          id: uuidv4(),
-          value: results.cashFlow.monthlySavings.toFixed(2),
-          currency: '$',
-          description: 'Monthly Savings Amount',
-          displayOrder: 2
-        }
-      ]
-    }
-  });
+  // widgets.push({
+  //   id: uuidv4(),
+  //   type: 'tipCard',
+  //   title: 'Investment Advice for You',
+  //   icon: 'fas fa-lightbulb',
+  //   column_span: 1,
+  //   data: {
+  //     tips: investmentTips.map((tip, index) => {
+  //       // Find the lesson details
+  //       const lessonDetails = availableLessons.find(lesson => lesson.lessonId === tip.lessonId);
+  //       return {
+  //         id: uuidv4(),
+  //         title: tip.title,
+  //         content: tip.content,
+  //         link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/${tip.lessonId}`,
+  //         displayOrder: index + 1,
+  //         lessonDetails: lessonDetails || null
+  //       };
+  //     }),
+  //     currentTipIndex: 0,
+  //     autoRotate: true
+  //   }
+  // });
 
-  // 8. Debt Status Widget (if applicable)
+
+  
+  // Add Portfolio Allocation Pie Chart
+
+
+  // 8. Debt Status Widget (if applicable) with lesson links
   if (!results.debtStatus.debtFree) {
     widgets.push({
       id: uuidv4(),
@@ -336,10 +542,25 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       title: 'Debt Management',
       icon: 'fas fa-credit-card',
       column_span: 2,
+      row_span: 2,
       data: {
         tips: [
-          { id: uuidv4(), title: 'Debt Payoff Strategy', content: 'Consider using the Avalanche method (highest interest first) or Snowball method (smallest balances first).', displayOrder: 1 },
-          { id: uuidv4(), title: 'Consolidation Opportunity', content: 'You may benefit from consolidating high-interest debt into a lower-interest option if available.', displayOrder: 2 }
+          { 
+            id: uuidv4(), 
+            title: 'Debt Payoff Strategy', 
+            content: 'Consider using the Avalanche method (highest interest first) or Snowball method (smallest balances first) to eliminate debt efficiently.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/tvm-L7`,
+            displayOrder: 1,
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'tvm-L7') || null
+          },
+          { 
+            id: uuidv4(), 
+            title: 'Economic Impacts of Debt', 
+            content: 'Understanding how debt affects your overall financial health can help you make better decisions about borrowing and repayment.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/econbasics-L9`,
+            displayOrder: 2,
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'econbasics-L9') || null
+          }
         ],
         currentTipIndex: 0,
         autoRotate: true
@@ -367,4 +588,55 @@ function getProgressColor(percentage: number): string {
   if (percentage >= 80) return '#4CAF50'; // Green
   if (percentage >= 50) return '#FFC107'; // Yellow
   return '#F44336'; // Red
+}
+
+/**
+ * Calculate portfolio allocation based on risk profile questions
+ * Formula:
+ * 1. If yes count > no count, 60% Equity, 40% Bond
+ * 2. If yes count < no count, 40% Equity, 60% Bond
+ * 3. If yes count = no count, 50% Equity, 50% Bond
+ */
+function calculatePortfolioAllocation(answers: QuizAnswers) {
+  // Questions to consider for risk profile
+  const riskProfileQuestions = [
+    'paid-all-debt',
+    'expect-lump-sum',
+    'long-term-goal',
+    'predictable-income',
+    'high-risk-preference',
+    'risky-investments',
+    'extreme-sports'
+  ];
+  
+  // Count yes answers
+  let yesCount = 0;
+  let noCount = 0;
+  
+  for (const question of riskProfileQuestions) {
+    if (answers[question] === 'yes') {
+      yesCount++;
+    } else if (answers[question] === 'no') {
+      noCount++;
+    }
+  }
+  
+  let equityPercentage = 50; // Default balanced allocation
+  let bondPercentage = 50;
+  
+  // Apply allocation formula
+  if (yesCount > noCount) {
+    equityPercentage = 60;
+    bondPercentage = 40;
+  } else if (yesCount < noCount) {
+    equityPercentage = 40;
+    bondPercentage = 60;
+  }
+  // else keep 50/50 split
+  
+  return {
+    equityPercentage,
+    bondPercentage,
+    riskScore: yesCount, // Store the risk score (number of yes answers)
+  };
 }

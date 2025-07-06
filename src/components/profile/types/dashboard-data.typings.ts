@@ -6,7 +6,7 @@ export interface IBaseWidget {
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
   column_span: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
-  row_span?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
+  row_span?: 1 | 2 | 3 | 4;    // Layout hint: 1, 2, 3, or 4 rows height (Optional, defaults to 1 if not set)
   controls?: ReactNode; // Optional React components for widget controls in header
 }
 
@@ -43,14 +43,22 @@ export interface IProgressBarListItem {
   max: number; // (Mandatory) Maximum value (e.g., 20 for 15/20)
   color?: string; // (Optional) Custom color for the progress bar (e.g., '#4CAF50')
   displayOrder?: number; // (Optional) Numeric hint for display sorting
+  explanationText?: string; // (Optional) Explanation text to show beneath the progress bar
 }
 export interface IProgressBarListData {
   items: IProgressBarListItem[];
   showPercentages?: boolean;
   sortBy?: 'progress' | 'alphabetical' | 'custom';
+  explanationText?: string; // (Optional) Global explanation text for all progress bars
 }
 
 // Tip Card Widget
+export interface ILessonDetail {
+  lessonId: string;
+  title: string;
+  description: string;
+}
+
 export interface ITipCardListItem {
   id: string;
   title: string;
@@ -58,6 +66,7 @@ export interface ITipCardListItem {
   image?: string;
   link?: string;
   displayOrder: number;
+  lessonDetails?: ILessonDetail | null;
 }
 export interface ITipCardData {
   tips: ITipCardListItem[];

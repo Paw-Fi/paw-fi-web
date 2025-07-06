@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS dashboard_widgets (
   type VARCHAR(50) NOT NULL, -- Type of widget (metricCard, progressBarList, etc.)
   title VARCHAR(255) NOT NULL,
   icon VARCHAR(100) NOT NULL,
-  order INTEGER DEFAULT 0 NOT NULL,
-  column_span SMALLINT NOT NULL CHECK (column_span IN (1, 2)),
-  row_span SMALLINT DEFAULT 1 CHECK (row_span IN (1, 2)),
+  "order" INTEGER DEFAULT 0 NOT NULL,
+  column_span SMALLINT NOT NULL CHECK (column_span BETWEEN 1 AND 4),
+  row_span SMALLINT DEFAULT 1 CHECK (row_span BETWEEN 1 AND 4),
   data JSONB NOT NULL, -- Store all widget-specific data as JSON
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

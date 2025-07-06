@@ -1,22 +1,22 @@
-import { supabase } from '@/lib/supabase';
-import { Widget } from '@/components/profile/types/dashboard-data.typings';
-import { 
-  DashboardView, 
-  DashboardWidget, 
+import { supabase } from "@/lib/supabase";
+import { Widget } from "@/components/profile/types/dashboard-data.typings";
+import {
+  DashboardView,
+  DashboardWidget,
   CreateViewFromTemplateRequest,
   UpdateViewRequest,
   UpdateWidgetRequest,
   CreateWidgetRequest,
   ReorderWidgetsRequest,
-  UpdateDashboardViewWithWidgetsRequest
-} from '@/types/dashboard.types';
-import { 
+  UpdateDashboardViewWithWidgetsRequest,
+} from "@/types/dashboard.types";
+import {
   useMutation,
   useQuery,
   useQueryClient,
   UseMutationOptions,
-  UseQueryOptions 
-} from '@tanstack/react-query';
+  UseQueryOptions,
+} from "@tanstack/react-query";
 
 /**
  * API functions for dashboard views and widgets
@@ -26,25 +26,29 @@ import {
  * Query keys for TanStack Query
  */
 export const dashboardKeys = {
-  all: ['dashboard'] as const,
-  views: (userId: string) => [...dashboardKeys.all, 'views', userId] as const,
-  view: (userId: string, viewId: string) => [...dashboardKeys.views(userId), viewId] as const,
-  defaultView: (userId: string) => [...dashboardKeys.views(userId), 'default'] as const,
-  templates: ['dashboard', 'templates'] as const,
-  widgets: (userId: string, viewId: string) => [...dashboardKeys.view(userId, viewId), 'widgets'] as const,
-  widget: (userId: string, widgetId: string) => [...dashboardKeys.all, 'widgets', userId, widgetId] as const,
+  all: ["dashboard"] as const,
+  views: (userId: string) => [...dashboardKeys.all, "views", userId] as const,
+  view: (userId: string, viewId: string) =>
+    [...dashboardKeys.views(userId), viewId] as const,
+  defaultView: (userId: string) =>
+    [...dashboardKeys.views(userId), "default"] as const,
+  templates: ["dashboard", "templates"] as const,
+  widgets: (userId: string, viewId: string) =>
+    [...dashboardKeys.view(userId, viewId), "widgets"] as const,
+  widget: (userId: string, widgetId: string) =>
+    [...dashboardKeys.all, "widgets", userId, widgetId] as const,
 };
 
 /**
  * Get all dashboard views for a user
  */
 async function fetchAllDashboardViews(userId: string) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "POST",
     body: {
-      action: 'get-all',
-      userId
-    }
+      action: "get-all",
+      userId,
+    },
   });
 
   if (error) {
@@ -59,12 +63,15 @@ async function fetchAllDashboardViews(userId: string) {
  */
 export function useAllDashboardViews(
   userId: string,
-  options?: Omit<UseQueryOptions<DashboardView[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<DashboardView[], Error>,
+    "queryKey" | "queryFn"
+  >,
 ) {
   return useQuery({
     queryKey: dashboardKeys.views(userId),
     queryFn: () => fetchAllDashboardViews(userId),
-    ...options
+    ...options,
   });
 }
 
@@ -77,13 +84,13 @@ export async function getAllDashboardViews(userId: string) {
  * Get a specific dashboard view by ID
  */
 async function fetchDashboardViewById(userId: string, viewId: string) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "POST",
     body: {
-      action: 'get-by-id',
+      action: "get-by-id",
       userId,
-      viewId
-    }
+      viewId,
+    },
   });
 
   if (error) {
@@ -92,7 +99,7 @@ async function fetchDashboardViewById(userId: string, viewId: string) {
 
   return {
     view: data.view as DashboardView,
-    widgets: data.widgets as DashboardWidget[]
+    widgets: data.widgets as DashboardWidget[],
   };
 }
 
@@ -102,15 +109,15 @@ async function fetchDashboardViewById(userId: string, viewId: string) {
 export function useDashboardViewById(
   userId: string,
   viewId: string,
-  options?: Omit<UseQueryOptions<
-    { view: DashboardView; widgets: DashboardWidget[] },
-    Error
-  >, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<{ view: DashboardView; widgets: DashboardWidget[] }, Error>,
+    "queryKey" | "queryFn"
+  >,
 ) {
   return useQuery({
     queryKey: dashboardKeys.view(userId, viewId),
     queryFn: () => fetchDashboardViewById(userId, viewId),
-    ...options
+    ...options,
   });
 }
 
@@ -123,12 +130,12 @@ export async function getDashboardViewById(userId: string, viewId: string) {
  * Get the default dashboard view for a user
  */
 async function fetchDefaultDashboardView(userId: string) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "POST",
     body: {
-      action: 'get-default',
-      userId
-    }
+      action: "get-default",
+      userId,
+    },
   });
 
   if (error) {
@@ -137,7 +144,7 @@ async function fetchDefaultDashboardView(userId: string) {
 
   return {
     view: data.view as DashboardView,
-    widgets: data.widgets as DashboardWidget[]
+    widgets: data.widgets as DashboardWidget[],
   };
 }
 
@@ -151,15 +158,15 @@ export async function getDefaultDashboardView(userId: string) {
  */
 async function createViewFromTemplate(
   userId: string,
-  request: CreateViewFromTemplateRequest
+  request: CreateViewFromTemplateRequest,
 ) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "POST",
     body: {
-      action: 'create-from-template',
+      action: "create-from-template",
       userId,
-      ...request
-    }
+      ...request,
+    },
   });
 
   if (error) {
@@ -177,25 +184,30 @@ export function useCreateDashboardViewFromTemplate(
     any,
     Error,
     { userId: string; request: CreateViewFromTemplateRequest }
-  >
+  >,
 ) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ userId, request }: { userId: string; request: CreateViewFromTemplateRequest }) => 
-      createViewFromTemplate(userId, request),
+    mutationFn: ({
+      userId,
+      request,
+    }: {
+      userId: string;
+      request: CreateViewFromTemplateRequest;
+    }) => createViewFromTemplate(userId, request),
     onSuccess: (_, { userId }) => {
       // Invalidate views queries to refetch
       queryClient.invalidateQueries({ queryKey: dashboardKeys.views(userId) });
     },
-    ...options
+    ...options,
   });
 }
 
 // Keep the original function for backward compatibility
 export async function createDashboardViewFromTemplate(
   userId: string,
-  request: CreateViewFromTemplateRequest
+  request: CreateViewFromTemplateRequest,
 ) {
   return createViewFromTemplate(userId, request);
 }
@@ -206,19 +218,19 @@ export async function createDashboardViewFromTemplate(
 export async function updateDashboardView(
   userId: string,
   viewId: string,
-  request: UpdateViewRequest
+  request: UpdateViewRequest,
 ) {
   // Destructure viewId from request to avoid duplicate property in body
   const { viewId: _, ...requestData } = request;
-  
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'PUT',
+
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "PUT",
     body: {
-      action: 'update',
+      action: "update",
       userId,
       viewId,
-      ...requestData
-    }
+      ...requestData,
+    },
   });
 
   if (error) {
@@ -233,23 +245,25 @@ export async function updateDashboardView(
  */
 export async function updateDashboardViewWithWidgets(
   userId: string,
-  request: UpdateDashboardViewWithWidgetsRequest
+  request: UpdateDashboardViewWithWidgetsRequest,
 ) {
   // Destructure viewId from request to avoid duplicate property in body
   const { viewId, ...requestData } = request;
-  
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'PUT',
+
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "PUT",
     body: {
-      action: 'update-with-widgets',
+      action: "update-with-widgets",
       userId,
       viewId,
-      ...requestData
-    }
+      ...requestData,
+    },
   });
 
   if (error) {
-    throw new Error(`Failed to update dashboard with widgets: ${error.message}`);
+    throw new Error(
+      `Failed to update dashboard with widgets: ${error.message}`,
+    );
   }
 
   return data;
@@ -259,13 +273,13 @@ export async function updateDashboardViewWithWidgets(
  * Delete a dashboard view
  */
 export async function deleteDashboardView(userId: string, viewId: string) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'DELETE',
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "DELETE",
     body: {
-      action: 'delete',
+      action: "delete",
       userId,
-      viewId
-    }
+      viewId,
+    },
   });
 
   if (error) {
@@ -275,14 +289,16 @@ export async function deleteDashboardView(userId: string, viewId: string) {
   return data;
 }
 
-
 /**
  * Get all available dashboard templates
  */
 async function fetchAllDashboardTemplates() {
-  const { data, error } = await supabase.functions.invoke('dashboard-templates', {
-    method: 'GET'
-  });
+  const { data, error } = await supabase.functions.invoke(
+    "dashboard-templates",
+    {
+      method: "GET",
+    },
+  );
 
   if (error) {
     throw new Error(`Failed to fetch dashboard templates: ${error.message}`);
@@ -295,12 +311,12 @@ async function fetchAllDashboardTemplates() {
  * React hook for getting all dashboard templates
  */
 export function useAllDashboardTemplates(
-  options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<any, Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery({
     queryKey: dashboardKeys.templates,
     queryFn: fetchAllDashboardTemplates,
-    ...options
+    ...options,
   });
 }
 
@@ -312,7 +328,9 @@ export async function getAllDashboardTemplates() {
 /**
  * Convert backend DashboardWidget to frontend Widget
  */
-export function convertDashboardWidgetToWidget(widget: DashboardWidget): Widget {
+export function convertDashboardWidgetToWidget(
+  widget: DashboardWidget,
+): Widget {
   return {
     id: widget.id,
     title: widget.title,
@@ -327,15 +345,24 @@ export function convertDashboardWidgetToWidget(widget: DashboardWidget): Widget 
 /**
  * Convert frontend Widget to backend DashboardWidget
  */
-export function convertWidgetToDashboardWidget(widget: Widget, viewId: string): Omit<DashboardWidget, 'id' | 'created_at' | 'updated_at'> {
+export function convertWidgetToDashboardWidget(
+  widget: Widget,
+  viewId: string,
+): Omit<DashboardWidget, "id" | "created_at" | "updated_at"> {
+  // Ensure row_span is within valid range (1-4) with default of 1
+  let rowSpan: 1 | 2 | 3 | 4 = 1;
+  if (widget.row_span === 1 || widget.row_span === 2 || widget.row_span === 3 || widget.row_span === 4) {
+    rowSpan = widget.row_span;
+  }
+    
   return {
     view_id: viewId,
     type: widget.type,
     title: widget.title,
     icon: widget.icon,
     column_span: widget.column_span,
-    row_span: widget.row_span || 1,
-    data: widget.data
+    row_span: rowSpan,
+    data: widget.data,
   };
 }
 
@@ -352,17 +379,21 @@ export interface CreateViewWithWidgetsRequest {
 /**
  * Create a dashboard view directly with widgets (for quiz results, etc.)
  */
-export async function createDashboardWithWidgets(request: CreateViewWithWidgetsRequest) {
-  const { data, error } = await supabase.functions.invoke('dashboard-views', {
-    method: 'POST',
+export async function createDashboardWithWidgets(
+  request: CreateViewWithWidgetsRequest,
+) {
+  const { data, error } = await supabase.functions.invoke("dashboard-views", {
+    method: "POST",
     body: {
-      action: 'create-with-widgets',
-      ...request
-    }
+      action: "create-with-widgets",
+      ...request,
+    },
   });
 
   if (error) {
-    throw new Error(`Failed to create dashboard with widgets: ${error.message}`);
+    throw new Error(
+      `Failed to create dashboard with widgets: ${error.message}`,
+    );
   }
 
   return data;
@@ -372,20 +403,17 @@ export async function createDashboardWithWidgets(request: CreateViewWithWidgetsR
  * React hook for creating a dashboard view with widgets
  */
 export function useCreateDashboardWithWidgets(
-  options?: UseMutationOptions<
-    any,
-    Error,
-    CreateViewWithWidgetsRequest
-  >
+  options?: UseMutationOptions<any, Error, CreateViewWithWidgetsRequest>,
 ) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (request: CreateViewWithWidgetsRequest) => createDashboardWithWidgets(request),
+    mutationFn: (request: CreateViewWithWidgetsRequest) =>
+      createDashboardWithWidgets(request),
     onSuccess: (_, { userId }) => {
       // Invalidate views queries to refetch
       queryClient.invalidateQueries({ queryKey: dashboardKeys.views(userId) });
     },
-    ...options
+    ...options,
   });
 }

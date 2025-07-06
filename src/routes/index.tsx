@@ -34,7 +34,7 @@ import { seo } from "@/utils/seo";
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
-const DISCORD_URL = "https://discord.gg/RZdG7GpX";
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 import { MotionGlobalConfig } from 'framer-motion';
 
 export const Route = createFileRoute("/")({
@@ -272,7 +272,18 @@ export default function HomePage() {
   const [chatQuery, setChatQuery] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true); // Control suggestion visibility
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Finance-related suggestion prompts
+  const chatSuggestions = [
+    "Help me set up a budget",
+    "How do I start investing?",
+    "Tell me about retirement planning",
+    "What's an emergency fund?",
+    "Explain compound interest",
+    "Tips for saving money"
+  ];
 
   const {isMobile } = useDeviceType();
 
@@ -284,7 +295,15 @@ export default function HomePage() {
     if (e.key === "Enter" && chatQuery.trim()) {
       e.preventDefault();
       startTransitionAnimation();
+      setShowSuggestions(false); // Hide suggestions when submitting
     }
+  };
+  
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setChatQuery(suggestion);
+    inputRef.current?.focus();
+    setShowSuggestions(false); // Hide suggestions after selection
   };
 
   // Animation controls for more complex sequences
@@ -576,6 +595,39 @@ export default function HomePage() {
                 <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
               </motion.button>
             </motion.div>
+            
+            {/* Modern Chat Suggestion Pills - 2025 UX Style */}
+            {showSuggestions && (
+              <motion.div
+                className="mt-4 max-w-3xl mx-auto"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+              >
+                <div className="flex items-center gap-2 mb-2 px-2">
+                  <FontAwesomeIcon icon={faLightbulb} className="text-amber-500" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                    Popular questions to get started
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 px-1">
+                  {chatSuggestions.map((suggestion, index) => (
+                    <motion.button
+                      key={`suggestion-${index}`}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="px-3.5 py-1.5 text-sm bg-white/70 hover:bg-white/90 text-gray-700 rounded-full border border-purple-200 shadow-sm transition-all duration-200 backdrop-blur-sm hover:shadow-md hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                      disabled={isTransitioning}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+                      whileHover={{ y: -2, scale: 1.02 }}
+                    >
+                      {suggestion}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Video Cards with Seamless Integration */}
@@ -762,6 +814,7 @@ export default function HomePage() {
           <WaitlistForm />
         </motion.div>
       </section>
+      <WaitlistForm/>
 
       {/* Footer */}
       <footer className="relative overflow-hidden bg-gray-900/70 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">

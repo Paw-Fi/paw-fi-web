@@ -31,16 +31,13 @@ export function Widget({ widget, children, className = '', controls }: WidgetPro
       `}    
     >
       {/* Glass effect overlay */}
-      <div className="absolute inset-0 pointer-events-none"></div>
       
       {/* Widget header */}
-      <div className="pb-4 border-b border-purple-200/30 dark:border-slate-700/60 flex items-center flex-shrink-0">
+      <div className="pb-4 flex items-center flex-shrink-0">
         <div className="flex items-center space-x-3 min-w-0 flex-grow"> 
-          <div className="size-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex-shrink-0 flex items-center justify-center text-white shadow-md shadow-purple-500/40">
-            <FontAwesomeIcon icon={icon} className="size-3" />
-          </div>
-          <h3 className="font-semibold text-base text-purple-900 dark:text-purple-200 truncate group-hover:text-purple-700 dark:group-hover:text-purple-300" title={widget.title}>
-            {widget.title || 'Untitled Widget'}
+            {/* <FontAwesomeIcon icon={icon} className="size-3" /> */}
+          <h3 className="font-bold text-lg text-[#4d5562] truncate" title={widget.title}>
+            {widget.title || 'Financial Widget'}
           </h3>
         </div>
         

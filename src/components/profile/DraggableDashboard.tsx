@@ -132,10 +132,20 @@ export function DraggableDashboard({
 
     const updatedWidgets = currentWidgets.map((widget, index) => {
       if (index === widgetIndex) {
-        const currentrow_span = widget.row_span || 1; // Default to 1 if undefined
+        // Get current row span with default of 1
+        const currentRowSpan = widget.row_span || 1;
+        
+        // Cycle through 1, 2, 3, 4 and back to 1
+        let newRowSpan: 1 | 2 | 3 | 4;
+        
+        if (currentRowSpan === 1) newRowSpan = 2;
+        else if (currentRowSpan === 2) newRowSpan = 3;
+        else if (currentRowSpan === 3) newRowSpan = 4;
+        else newRowSpan = 1; // Reset to 1 if it's 4 or any unexpected value
+        
         return {
           ...widget,
-          row_span: (currentrow_span === 2 ? 1 : 2) as (1 | 2),
+          row_span: newRowSpan,
         };
       }
       return widget;
@@ -145,7 +155,6 @@ export function DraggableDashboard({
     if (onUpdateWidgets) {
       onUpdateWidgets(updatedWidgets);
     }
-    
   };
   
 
@@ -242,7 +251,7 @@ export function DraggableDashboard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[14rem]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" style={{ gridTemplateRows: '12rem 1fr 1fr 1fr' }}>
          { <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
             {currentWidgets.map((widget) => (
              (
@@ -287,11 +296,10 @@ export function DraggableDashboard({
         <DragOverlay dropAnimation={null}>
           {activeId && activeWidget && draggedNodeRect ? (
             <div 
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${activeWidget.row_span === 2 ? 'md:row-span-2' : 'md:row-span-1'}`}
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${`md:row-span-${activeWidget.row_span || 1}`}`}
               style={{
                 width: draggedNodeRect.width,
                 height: draggedNodeRect.height,
-                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', // Enhanced shadow
               }}
             >
               <WidgetFactory widget={activeWidget} />

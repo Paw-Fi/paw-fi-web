@@ -52,6 +52,7 @@ export function EditableWidget({
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : 1,
+    gridRow: `span ${widget.row_span || 1}`,
   };
 
   return (
@@ -59,10 +60,10 @@ export function EditableWidget({
       ref={setNodeRef}
       style={style}
       data-id={id}
-      className={`bg-white/80 ${widget.row_span === 2 ? "row-span-2" : "row-span-1"} // Use widget.row_span ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
+      className={`bg-white shadow-md rounded-xl row-span-${widget.row_span || 1} ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
         isEditMode
           ? "border-primary-500/70 dark:border-primary-400/70 rounded-xl border-2 border-dashed shadow-md "
-          : "rounded-xl border border-slate-300/70 shadow-lg group-hover:shadow-xl dark:border-slate-700/50 "
+          : ""
       } `}
     >
 
@@ -74,7 +75,7 @@ export function EditableWidget({
             isEditMode ? (
               <div className="ml-1 flex items-center gap-2.5">
                 {/* Edit widget button */}
-                <button
+                {/* <button
                   onClick={() => onEditWidget(id)}
                   aria-label="Edit widget"
                   title="Edit widget"
@@ -83,7 +84,7 @@ export function EditableWidget({
                     icon={faPencilAlt}
                     className="h-3 w-3 text-gray-600"
                   />
-                </button>
+                </button> */}
 
                 {/* Remove widget button */}
                 <FontAwesomeIcon
@@ -94,24 +95,17 @@ export function EditableWidget({
                     
                     />  
 
-                {/* Expand/collapse height button */}
+                {/* Row height control button */}
                 <button
                   onClick={() => onTogglerow_span(id)}
-                  aria-label={
-                    widget.row_span === 2
-                      ? "Compress to 1 row"
-                      : "Expand to 2 rows"
-                  }
-                  title={
-                    widget.row_span === 2
-                      ? "Compress to 1 row"
-                      : "Expand to 2 rows"
-                  }
+                  aria-label={`Change row height (currently ${widget.row_span || 1} row${(widget.row_span || 1) > 1 ? 's' : ''})`}
+                  title={`Change row height (currently ${widget.row_span || 1} row${(widget.row_span || 1) > 1 ? 's' : ''})`}
                 >
                   <FontAwesomeIcon
-                    icon={widget.row_span === 2 ? faCompress : faExpand}
+                    icon={(widget.row_span || 1) > 1 ? faCompress : faExpand}
                     className="h-3 w-3 text-gray-600 dark:text-gray-300"
                   />
+                  <span className="ml-1 text-xs">{widget.row_span || 1}</span>
                 </button>
 
                 {/* Toggle column span button */}

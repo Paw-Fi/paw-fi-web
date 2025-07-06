@@ -9,7 +9,8 @@ import {
   IProgressBarListWidget, 
   ICountdownCardWidget,
   ITipCardWidget,
-  ITipCardListItem, // Changed from ITipItem
+  ITipCardListItem, 
+  IProgressBarListItem
 } from '../types/dashboard-data.typings';
 import { Widget } from './Widget';
 
@@ -80,6 +81,28 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
     const progress = (currentNum / maxNum) * 100;
     return Math.min(100, Math.max(0, progress)); // Clamp between 0-100
   };
+
+  // Calculate status based on progress percentage
+  const getStatusText = (progress: number): string => {
+    if (progress >= 80) return "On Track";
+    if (progress >= 50) return "Making Progress";
+    return "Needs Attention";
+  };
+
+  // Generate explanation text based on progress
+  const generateExplanationText = (item: IProgressBarListItem, progress: number): string => {
+    // Use item's explanation text if provided
+    if (item.explanationText) return item.explanationText;
+
+    // Otherwise, generate text based on the progress
+    if (progress >= 80) {
+      return `You're on track to meet your ${item.label.toLowerCase()} goal based on your current savings, timeline, and expected portfolio growth.`;
+    } else if (progress >= 50) {
+      return `You're making progress toward your ${item.label.toLowerCase()} goal. Consider increasing your contributions to stay on track.`;
+    } else {
+      return `Your ${item.label.toLowerCase()} goal needs attention. Increase your contributions or adjust your timeline to meet your target.`;
+    }
+  };
   
   // Sort items based on widget settings
   const sortedItems = [...items].sort((a, b) => {
@@ -94,26 +117,24 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="space-y-4 p-1">
+      <div className="space-y-4 px-1">
         {sortedItems.map((item, index) => {
           const progress = getProgressPercentage(item.current, item.max);
           const progressText = `${Math.round(progress)}%`;
-          const valueText = `${item.current} / ${item.max}`;
+          const statusText = getStatusText(progress);
+          const explanationText = generateExplanationText(item, progress);
           
           return (
-            <div key={item.id || index} className="space-y-1">
+            <div key={item.id || index} className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
+                <span className="text-lg font-semibold text-[#4d5562]">{statusText}</span>
                 {showPercentages ? (
-                  <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
+                  <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">
                     {progressText}
                   </span>
-                ) : (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {valueText}
-                  </span>
-                )}
+                ) : null}
               </div>
+              
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                 <div 
                   className="h-2 rounded-full transition-all duration-500 ease-out"
@@ -123,6 +144,10 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
                   }}
                 />
               </div>
+              
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {explanationText}
+              </p>
             </div>
           );
         })}
