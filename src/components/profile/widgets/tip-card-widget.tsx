@@ -80,18 +80,18 @@ export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="h-full flex flex-col  overflow-hidden transition-all duration-300 ease-in-out">
+      <div className=" flex flex-col  overflow-hidden transition-all duration-300 ease-in-out">
       
         {/* Card content with animations */}
-        <div className="flex-grow flex flex-col relative flex-1">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentTip.id}
               variants={cardVariants}
               initial="hidden"
-              animate="visible"
+              animate="visible" 
               exit="exit"
-              className="flex flex-col flex-grow"
+              className="flex flex-col flex-grow bg-gray-50 rounded-xl px-6 py-4 cursor-pointer"
+              onClick={() =>window.open(currentTip.link || '#', '_blank')}
             >
               {/* Tip title */}
               <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
@@ -107,32 +107,26 @@ export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
               <div className="flex-grow"></div>
               
               {/* Lesson link if available */}
-              {hasLessonDetails && (
+           
                 <div className="mb-2 mt-2">
-                  <a
-                    href={currentTip.link || '#'}
-                    className="inline-flex items-center justify-between w-full p-3 text-sm font-medium text-left text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors duration-200 group"
+                  <div
+                   
+                    className="flex items-center"
                   >
-                    <div>
-                      <div className="font-medium">Learn more in:</div>
-                      <div className="text-gray-700 dark:text-gray-300">
-                        {currentTip.lessonDetails?.title}
-                      </div>
-                    </div>
+                     <p className="text-sm font-medium text-primary">Start Lessons</p>
                     <FontAwesomeIcon 
-                      icon={faExternalLinkAlt} 
-                      className="h-4 w-4 ml-2 transform transition-transform duration-200 group-hover:translate-x-0.5" 
+                      icon={faArrowRight} 
+                      className="h-4 w-4 text-primary ml-2" 
                     />
-                  </a>
+                  </div>
                 </div>
-              )}
+           
             </motion.div>
           </AnimatePresence>
-        </div>
 
         {/* Navigation controls */}
         {sortedTips.length > 1 && (
-          <div className="flex justify-center gap-2 items-center h-10 mt-4">
+          <div className="flex justify-center gap-2 items-center h-12 mt-4">
         
             
               {sortedTips.map((tip, index) => (

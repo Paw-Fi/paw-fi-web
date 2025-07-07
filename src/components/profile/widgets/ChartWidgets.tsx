@@ -368,8 +368,8 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
         </div>
         
         {stocksPercentage > 0 && bondsPercentage > 0 && (
-          <div className="text-center px-4 pb-4">
-            <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
+          <div className="text-center">
+            <p className="text-gray-700 dark:text-gray-300 text-sm">
               Based on your risk score and time horizon: <strong>{stocksPercentage}%</strong> stocks / <strong>{bondsPercentage}%</strong> bonds
             </p>
           </div>

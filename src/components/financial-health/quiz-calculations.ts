@@ -563,28 +563,28 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
           },
           { 
             id: uuidv4(), 
-            title: 'Interest Rate Fundamentals', 
-            content: 'Understanding how interest compounds on debt can help you prioritize which debts to pay off first.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/tvm-L3`,
+            title: 'Investment Fundamentals', 
+            content: 'Learning the basics of investing can help you grow your wealth and reduce the impact of debt on your financial future.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/invest-L1`,
             displayOrder: 3,
-            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'tvm-L3') || null
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'invest-L1') || null
           },
           { 
             id: uuidv4(), 
-            title: 'Credit Score Management', 
-            content: 'Learn how managing your debt responsibly can improve your credit score and lower your future borrowing costs.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/creditbasics-L2`,
+            title: 'Behavioral Finance Awareness', 
+            content: 'Understanding psychological biases can help you make more rational decisions about spending and debt management.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/behavfin-L2`,
             displayOrder: 4,
-            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'creditbasics-L2') || null
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'behavfin-L2') || null
           },
           { 
             id: uuidv4(), 
-            title: 'Debt-to-Income Ratio', 
-            content: 'Maintaining a healthy debt-to-income ratio is crucial for financial stability and future borrowing opportunities.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/budgeting-L4`,
+            title: 'Financial Statement Analysis', 
+            content: 'Creating a personal income statement and balance sheet can help you track your progress in reducing debt and building assets.',
+            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/finstatements-L10`,
             displayOrder: 5,
-            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'budgeting-L4') || null
-          }
+            lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'finstatements-L10') || null
+          },
         ],
         currentTipIndex: 0,
         autoRotate: true
