@@ -28,6 +28,7 @@ import {
   faLightbulb,
   faPaperPlane,
   faLock,
+  faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
@@ -136,41 +137,6 @@ export const Route = createFileRoute("/")({
   },
 });
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-  className = "",
-  animationDelay = 0,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-  className?: string;
-  animationDelay?: number;
-}) {
-  return (
-    <motion.div
-      className={`transform rounded-2xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg ${className}`}
-      variants={fadeInUp}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.1 }}
-      custom={animationDelay}
-    >
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100">
-        <FontAwesomeIcon
-          icon={icon}
-          size="lg"
-          className="text-purple-600"
-          aria-hidden="true"
-        />
-      </div>
-      <h3 className="mb-2 text-xl font-bold">{title}</h3>
-      <p className="text-gray-600">{description}</p>
-    </motion.div>
-  );
-}
 
 function BasicLessonCard({
   icon,
@@ -221,46 +187,221 @@ import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
 
-function WaitlistForm() {
+import { useNewsletterSubscription } from "@/hooks/use-newsletter-subscription";
+
+function SubscriptionForm() {
+  const [formData, setFormData] = useState({
+    email: "",
+    firstName: "",
+    lastName: "",
+    referralSource: "",
+    marketingConsent: true,
+    interests: [] as string[]
+  });
+  
+  const interestOptions = [
+    { id: "investing", label: "Investing" },
+    { id: "saving", label: "Saving" },
+    { id: "budgeting", label: "Budgeting" },
+    { id: "debt", label: "Debt Management" }
+  ];
+
+  const { subscribeToNewsletter, isLoading, error, success } = useNewsletterSubscription();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleInterestChange = (interest: string) => {
+    setFormData(prev => {
+      const newInterests = prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest];
+      return { ...prev, interests: newInterests };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open(DISCORD_URL, "_blank");
+    await subscribeToNewsletter(formData);
   };
 
   return (
     <motion.div
-      className="rounded-3xl border border-white/20 bg-white/50 p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
+      className="rounded-3xl border border-white/20 bg-white/50 p-8 md:p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
       variants={fadeInUp}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.1 }}
     >
-      <div className="flex flex-col items-center justify-center text-center">
+      <div className="flex flex-col">
         <motion.h3
-          className="mb-3 text-3xl font-bold text-slate-900 dark:text-white"
+          className="mb-3 text-2xl md:text-3xl font-bold text-slate-900 dark:text-white text-center"
           variants={fadeInUp}
           custom={0.1}
         >
-          Get Early Access to AI-Powered Learning
+          Stay Updated on Financial Education
         </motion.h3>
         <motion.p
-          className="mb-8 max-w-2xl text-lg text-slate-700 dark:text-slate-300"
+          className="mb-6 max-w-2xl text-base md:text-lg text-slate-700 dark:text-slate-300 text-center mx-auto"
           variants={fadeInUp}
           custom={0.2}
         >
-          Be among the first to experience personalized financial education with
-          Moneko. Join our community for updates and beta access.
+          Subscribe to receive personalized financial insights, early access to new features, and exclusive content
         </motion.p>
 
-        <motion.div variants={fadeInUp} custom={0.3}>
-          <button
-            onClick={handleSubmit}
-            className="group inline-flex items-center justify-center rounded-xl bg-purple-600 px-6 py-3 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:bg-purple-700 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900"
-          >
-            <FontAwesomeIcon icon={faDiscord} className="mr-2 h-5 w-5" />
-            Join Discord
-          </button>
-        </motion.div>
+        <motion.form
+          onSubmit={handleSubmit}
+          className="w-full max-w-3xl mx-auto"
+          variants={fadeInUp}
+          custom={0.3}
+        >
+          {/* Form status messages */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+              {success}
+            </div>
+          )}
+
+          {/* Email field */}
+          <div className="mb-4">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all duration-200"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          {/* Referral source */}
+          <div className="mb-4">
+            <label
+              htmlFor="referralSource"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
+              How did you hear about us?
+            </label>
+            <select
+              id="referralSource"
+              name="referralSource"
+              value={formData.referralSource}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all duration-200"
+            >
+              <option value="">Select an option</option>
+              <option value="search">Search Engine</option>
+              <option value="social">Social Media</option>
+              <option value="friend">Friend/Referral</option>
+              <option value="blog">Blog/Article</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          {/* Interests */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              What topics interest you most?
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {interestOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => handleInterestChange(option.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    formData.interests.includes(option.id)
+                      ? "bg-purple-600 text-white shadow-md"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Marketing consent */}
+          <div className="mb-6">
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="marketingConsent"
+                  name="marketingConsent"
+                  type="checkbox"
+                  checked={formData.marketingConsent}
+                  onChange={handleCheckboxChange}
+                  className="h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                />
+              </div>
+              <div className="ml-3">
+                <label
+                  htmlFor="marketingConsent"
+                  className="text-sm text-slate-600 dark:text-slate-400"
+                >
+                  I agree to receive newsletters and marketing communications from Moneko. You can unsubscribe at any time.
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit button */}
+          <div className="text-center">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <span className="animate-pulse mr-2">●</span>
+                  Subscribing...
+                </>
+              ) : (
+                <>
+                
+                  Subscribe Now
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Discord community button */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+              Join our vibrant community on Discord
+            </p>
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center text-sm font-medium text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+            >
+              <FontAwesomeIcon icon={faDiscord} className="mr-1.5 h-4 w-4" />
+              Connect on Discord
+            </a>
+          </div>
+        </motion.form>
       </div>
     </motion.div>
   );
@@ -796,9 +937,9 @@ export default function HomePage() {
       {/* FAQ Section */}
       <FaqSection faqData={faqData} />
 
-      {/* Waitlist Section */}
+      {/* Newsletter Subscription Section */}
       <section
-        id="waitlist"
+        id="newsletter"
         className="relative overflow-hidden px-6 py-20 md:px-12 lg:px-24"
       >
         {/* Subtle gradient overlay */}
@@ -811,10 +952,9 @@ export default function HomePage() {
           viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.5 }}
         >
-          <WaitlistForm />
+          <SubscriptionForm />
         </motion.div>
       </section>
-      <WaitlistForm/>
 
       {/* Footer */}
       <footer className="relative overflow-hidden bg-gray-900/70 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">

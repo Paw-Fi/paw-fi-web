@@ -35,6 +35,7 @@ import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButt
 import { ChatPopup } from "@/components/dashboard-chat/ChatPopup";
 import FinancialHealthFinetune from "@/components/financial-health/FinancialHealthFinetune"; // Import Finetune component
 import classNames from "classnames";
+import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -268,7 +269,7 @@ function Profile() {
   };
 
   return (
-    <>
+    <ProtectedRouteSubscription>
       {
         // Show loading spinner if user is not loaded yet
         !user ? (
@@ -715,7 +716,7 @@ function Profile() {
       </Modal>
 
       <FloatingChatButton />
-    </>
+    </ProtectedRouteSubscription>
   );
 }
 
