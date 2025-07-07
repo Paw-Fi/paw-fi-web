@@ -31,7 +31,8 @@ import {
   faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
-import { seo } from "@/utils/seo";
+import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
@@ -41,13 +42,14 @@ import { MotionGlobalConfig } from 'framer-motion';
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
+    // Use canonical helper for consistent URLs
+    const pageUrl = getCanonicalUrl('/');
     const title = "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
     const description =
       "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = "https://moneko.io/og-img.png";
-    const pageUrl = "https://moneko.io/";
 
     const meta = seo({
       title: title,

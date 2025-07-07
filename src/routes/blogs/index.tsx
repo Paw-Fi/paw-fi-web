@@ -10,6 +10,7 @@ import { BlogFilters } from "@/components/blogs/blog-filters";
 import { BlogMasonryGrid } from "@/components/blogs/blog-masonry-grid";
 import { FeaturedBlogCard } from "@/components/blogs/featured-blog-card";
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
 export const Route = createFileRoute("/blogs/")({
   component: BlogsPage,
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/blogs/")({
     const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from Moneko.";
     const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, Moneko blog";
     const imageUrl = "https://moneko.io/og-blog.png";
-    const pageUrl = "https://moneko.io/blogs";
+    const pageUrl = getCanonicalUrl("/blogs");
 
     const meta = seo({
       title,

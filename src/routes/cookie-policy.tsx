@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/cookie-policy')({
   component: CookiePolicy,
   head: () => {
-    const pageUrl = 'https://moneko.io/cookie-policy';
+    const pageUrl = getCanonicalUrl('/cookie-policy');
     const meta = seo({
       title: 'Cookie Policy | Moneko',
       description: 'Learn about how Moneko uses cookies and similar technologies on our website to enhance your browsing experience.',

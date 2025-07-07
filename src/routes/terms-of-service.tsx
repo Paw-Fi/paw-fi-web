@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/terms-of-service')({
   component: TermsOfService,
   head: () => {
-    const pageUrl = 'https://moneko.io/terms-of-service';
+    const pageUrl = getCanonicalUrl('/terms-of-service');
     const meta = seo({
       title: 'Terms of Service | Moneko',
       description: 'Read Moneko\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',

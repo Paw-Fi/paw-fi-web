@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/privacy-policy')({
   component: PrivacyPolicy,
   head: () => {
-    const pageUrl = 'https://moneko.io/privacy-policy';
+    const pageUrl = getCanonicalUrl('/privacy-policy');
     const meta = seo({
       title: 'Privacy Policy | Moneko',
       description: 'Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.',

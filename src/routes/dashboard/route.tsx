@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import React, { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -72,6 +73,28 @@ interface MenuItem {
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
+  head: () => {
+    // Add canonical URL for dashboard page
+    const pageUrl = getCanonicalUrl('/dashboard');
+    
+    return {
+      meta: [
+        {
+          title: 'Dashboard | Moneko',
+        },
+        {
+          name: 'description',
+          content: 'Your personalized financial education dashboard. Access learning materials, calculators, and tools.',
+        },
+      ],
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
+    };
+  },
 });
 
 export function Dashboard() {

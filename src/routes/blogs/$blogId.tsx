@@ -20,6 +20,7 @@ import { blogs } from "@/data/blogs/blogs";
 import { Blog } from "@/components/blogs/blogs.typing";
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 
 export const Route = createFileRoute("/blogs/$blogId")({
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
     const description = blog.seo?.metaDescription || blog.excerpt;
     const keywords = blog.seo?.keywords || blog.tags.map(tag => tag.name).join(", ");
     const imageUrl = blog.coverImage;
-    const pageUrl = `https://moneko.io/blogs/${blog.slug}`;
+    const pageUrl = getCanonicalUrl(`/blogs/${blog.slug}`);
     
     const meta = seo({
       title,
