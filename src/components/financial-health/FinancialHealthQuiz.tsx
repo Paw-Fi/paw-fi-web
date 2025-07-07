@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
+import RangeSlider from "@/components/ui/RangeSlider";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -790,16 +791,15 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     {question.max}%
                   </span>
                 </div>
-                <input
-                  type="range"
+                <RangeSlider
                   min={question.min}
                   max={question.max}
                   step={question.step || 1}
                   value={Number(state.answers[question.id]) || question.min}
-                  onChange={(e) =>
-                    handleAnswerChange(question.id, Number(e.target.value))
-                  }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary"
+                  onChange={(value) => handleAnswerChange(question.id, value as number)}
+                  className="w-full"
+                  label=""
+                  showValue={false}
                 />
               </div>
             )}
@@ -866,16 +866,15 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                       {question?.max}%
                     </span>
                   </div>
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={question.min}
                     max={question.max}
                     step={question.step || 1}
                     value={Number(state.answers[question.id]) || question.min}
-                    onChange={(e) =>
-                      handleAnswerChange(question.id, Number(e.target.value))
-                    }
-                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary"
+                    onChange={(value) => handleAnswerChange(question.id, value as number)}
+                    className="w-full"
+                    label=""
+                    showValue={false}
                   />
                 </div>
               )}

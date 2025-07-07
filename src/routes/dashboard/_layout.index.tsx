@@ -431,13 +431,13 @@ function Profile() {
                       </>
                     ) : (
                       <div className="flex items-center space-x-2">
-                         {/* <button
+                         <button
                       onClick={() => setShowFinetuneSection(!showFinetuneSection)}
                       className="flex items-center justify-center text-sm font-medium text-gray-700"
                       title="Finetune your financial data"
                     >
                       <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
-                    </button> */}
+                    </button>
                         <button
                           onClick={toggleEditMode}
                           className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"

@@ -155,7 +155,7 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Dashboard", icon: faGauge, path: "/dashboard"},
+    { id: "home", label: "Home", icon: faHome, path: "/dashboard"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",

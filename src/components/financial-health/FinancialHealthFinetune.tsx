@@ -4,6 +4,8 @@ import { QuizAnswers } from './quiz-calculations'; // Assuming this type is defi
 import { useDispatch, useSelector } from 'react-redux';
 import { updateWidgets } from '@/store/slices/dashboardSlice';
 import { RootState } from '@/store';
+import RangeSlider from '@/components/ui/RangeSlider';
+import SelectInput from '@/components/ui/SelectInput';
 
 // Define the finetunable parameters and their initial values
 interface FinetuneParameters {
@@ -142,142 +144,93 @@ const FinancialHealthFinetune: React.FC<FinancialHealthFinetuneProps> = ({ curre
     });
   }, [dispatch, onUpdateDashboard, dashboardData, currentDashboardWidgets]);
 
-  const sliderClassName = "flex-grow custom-slider";
+
 
   return (
     <div className="p-2">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        <div className="space-y-2">
-          <h3 className="text-md font-medium">Monthly Income</h3>
-          <div className="flex items-center space-x-2">
-            <input 
-              type="range" 
-              min="0" 
-              max="20000" 
-              step="100" 
-              value={finetuneParams['monthly-income']} 
-              onChange={(e) => handleSliderChange('monthly-income', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${(finetuneParams['monthly-income'] / 20000) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{formatCurrency(finetuneParams['monthly-income'])}</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Monthly Income"
+          min={0}
+          max={20000}
+          step={100}
+          value={finetuneParams['monthly-income']}
+          onChange={(value) => handleSliderChange('monthly-income', value as number)}
+          formatValue={(value) => formatCurrency(value as number)}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Monthly Expenses</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="0" 
-              max="20000" 
-              step="100" 
-              value={finetuneParams['monthly-expenses']} 
-              onChange={(e) => handleSliderChange('monthly-expenses', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${(finetuneParams['monthly-expenses'] / 20000) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{formatCurrency(finetuneParams['monthly-expenses'])}</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Monthly Expenses"
+          min={0}
+          max={20000}
+          step={100}
+          value={finetuneParams['monthly-expenses']}
+          onChange={(value) => handleSliderChange('monthly-expenses', value as number)}
+          formatValue={(value) => formatCurrency(value as number)}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Emergency Fund</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="0" 
-              max="12" 
-              step="1" 
-              value={finetuneParams['emergency-fund-months']} 
-              onChange={(e) => handleSliderChange('emergency-fund-months', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${(finetuneParams['emergency-fund-months'] / 12) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{finetuneParams['emergency-fund-months']} months</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Emergency Fund"
+          min={0}
+          max={12}
+          step={1}
+          value={finetuneParams['emergency-fund-months']}
+          onChange={(value) => handleSliderChange('emergency-fund-months', value as number)}
+          formatValue={(value) => `${value} months`}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Credit Card Debt</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="0" 
-              max="20000" 
-              step="500" 
-              value={finetuneParams['debt-amount-credit']} 
-              onChange={(e) => handleSliderChange('debt-amount-credit', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${(finetuneParams['debt-amount-credit'] / 20000) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{formatCurrency(finetuneParams['debt-amount-credit'])}</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Credit Card Debt"
+          min={0}
+          max={20000}
+          step={500}
+          value={finetuneParams['debt-amount-credit']}
+          onChange={(value) => handleSliderChange('debt-amount-credit', value as number)}
+          formatValue={(value) => formatCurrency(value as number)}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Health Checkup Frequency</h3>
-          <div className="flex items-center space-x-4">
-            <select value={finetuneParams['health-checkup-frequency']} onChange={(e) => handleSliderChange('health-checkup-frequency', e.target.value as any)} className="flex-grow p-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50">
-              <option value="never">Never</option>
-              <option value="asneeded">As needed</option>
-              <option value="yearly">Yearly</option>
-              <option value="biannual">Twice a year</option>
-            </select>
-          </div>
-        </div>
+        <SelectInput
+          label="Health Checkup Frequency"
+          value={finetuneParams['health-checkup-frequency']}
+          onChange={(value) => handleSliderChange('health-checkup-frequency', value)}
+          options={[
+            { value: 'never', label: 'Never' },
+            { value: 'asneeded', label: 'As needed' },
+            { value: 'yearly', label: 'Yearly' },
+            { value: 'biannual', label: 'Twice a year' }
+          ]}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Retirement Age</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="55" 
-              max="75" 
-              step="1" 
-              value={finetuneParams['retirement-age']} 
-              onChange={(e) => handleSliderChange('retirement-age', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${((finetuneParams['retirement-age'] - 55) / (75 - 55)) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">Age {finetuneParams['retirement-age']}</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Retirement Age"
+          min={55}
+          max={75}
+          step={1}
+          value={finetuneParams['retirement-age']}
+          onChange={(value) => handleSliderChange('retirement-age', value as number)}
+          formatValue={(value) => `Age ${value}`}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Annual Retirement Contribution</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="0" 
-              max="50000" 
-              step="500" 
-              value={finetuneParams['annual-contribution']} 
-              onChange={(e) => handleSliderChange('annual-contribution', parseInt(e.target.value, 10))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${(finetuneParams['annual-contribution'] / 50000) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{formatCurrency(finetuneParams['annual-contribution'])}</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Annual Retirement Contribution"
+          min={0}
+          max={50000}
+          step={500}
+          value={finetuneParams['annual-contribution']}
+          onChange={(value) => handleSliderChange('annual-contribution', value as number)}
+          formatValue={(value) => formatCurrency(value as number)}
+        />
         
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Expected Annual Return</h3>
-          <div className="flex items-center space-x-4">
-            <input 
-              type="range" 
-              min="1" 
-              max="12" 
-              step="0.5" 
-              value={finetuneParams['return-rate']} 
-              onChange={(e) => handleSliderChange('return-rate', parseFloat(e.target.value))} 
-              className={sliderClassName}
-              style={{ '--slider-progress': `${((finetuneParams['return-rate'] - 1) / (12 - 1)) * 100}%` } as React.CSSProperties}
-            />
-            <span className="w-24 font-medium">{finetuneParams['return-rate']}%</span>
-          </div>
-        </div>
+        <RangeSlider
+          label="Expected Annual Return"
+          min={1}
+          max={12}
+          step={0.5}
+          value={finetuneParams['return-rate']}
+          onChange={(value) => handleSliderChange('return-rate', value as number)}
+          formatValue={(value) => `${value}%`}
+        />
 
       </div>
     </div>

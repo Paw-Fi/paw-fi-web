@@ -4,11 +4,9 @@ import { faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import { ChatPopup } from "./ChatPopup";
 import { createPortal } from "react-dom";
 
-interface FloatingChatButtonProps {
-  onClick: () => void;
-}
 
-export const FloatingChatButton: React.FC<FloatingChatButtonProps> = () => {
+
+export const FloatingChatButton = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
