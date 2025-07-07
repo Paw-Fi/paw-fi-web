@@ -12,7 +12,7 @@ export const Route = createFileRoute("/dashboard/essentials/")({
       title: "Moneko: Essential Financial Lessons",
       description: "Master the essentials of personal finance with Moneko's curated lessons on budgeting, investing, and financial planning.",
       keywords: "financial essentials, basic finance lessons, Moneko, financial education, money basics, personal finance fundamentals",
-      image: "https://paw-fi.app/og-img.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
     

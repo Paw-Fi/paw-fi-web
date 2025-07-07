@@ -46,7 +46,7 @@ export const Route = createFileRoute("/")({
       "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
-    const imageUrl = "https://paw-fi.app/og-img.png";
+    const imageUrl = "https://moneko.io/og-img.png";
     const pageUrl = "https://moneko.io/";
 
     const meta = seo({

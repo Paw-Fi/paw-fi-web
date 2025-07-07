@@ -15,7 +15,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'Course Details'; // Default title
     let courseDescription = 'Learn more about this course on Moneko.'; // Default description
-    const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
+    const siteOgImage = 'https://moneko.io/og-img.png'; // Default site OG image
 
     try {
 

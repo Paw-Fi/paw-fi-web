@@ -35,7 +35,7 @@ export const Route = createFileRoute("/checkout")({
   loader: () => {
     return {
       meta: seo({
-        title: "Checkout | Paw-Fi",
+        title: "Checkout | Moneko",
         description: "Complete your subscription purchase.",
       })
     };

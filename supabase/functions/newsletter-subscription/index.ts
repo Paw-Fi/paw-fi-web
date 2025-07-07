@@ -66,7 +66,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string): Supabas
     },
     global: {
       headers: {
-        'X-Client-Info': 'paw-fi-newsletter-subscription-function'
+        'X-Client-Info': 'moneko-newsletter-subscription-function'
       }
     }
   });

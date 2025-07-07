@@ -28,7 +28,7 @@ export const Route = createFileRoute('/dashboard/calculators/retirement-calculat
       title: 'Retirement Savings Calculator | Moneko',
       description: "Plan for your retirement. Estimate how much you need to save and how long your savings will last with Moneko's retirement calculator.",
       keywords: 'retirement calculator, retirement planning, savings goal, 401k, IRA, pension, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     

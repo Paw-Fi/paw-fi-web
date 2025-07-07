@@ -8,7 +8,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/lesson/$le
     let lessonTitle = "Essential Lesson";
     let lessonDescription = "Explore this essential financial lesson on Moneko.";
     let courseTitle = "Financial Essentials";
-    const siteOgImage = "https://paw-fi.app/og-img.png"; // Default site OG image
+    const siteOgImage = "https://moneko.io/og-img.png"; // Default site OG image
 
     const pageUrl = `https://moneko.io/essentials/${params.courseId}/lesson/${params.lessonId}`;
     const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, Moneko`;

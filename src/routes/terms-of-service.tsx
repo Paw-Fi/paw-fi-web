@@ -9,7 +9,7 @@ export const Route = createFileRoute('/terms-of-service')({
       title: 'Terms of Service | Moneko',
       description: 'Read Moneko\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',
       keywords: 'terms of service, user agreement, legal terms, Moneko terms',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -123,7 +123,7 @@ function TermsOfService() {
             If you have any questions about these Terms of Service, please contact us at:
           </p>
           <p className="mt-2">
-            <strong>Email:</strong> legal@paw-fi.com
+            <strong>Email:</strong> legal@moneko.io
           </p>
         </div>
         

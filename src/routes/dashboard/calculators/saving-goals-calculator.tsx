@@ -13,7 +13,7 @@ export const Route = createFileRoute('/dashboard/calculators/saving-goals-calcul
       title: 'Savings Goal Calculator | Moneko',
       description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with Moneko.',
       keywords: 'savings goal calculator, financial goals, saving plan, regular savings, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     

@@ -12,7 +12,7 @@ export const Route = createFileRoute('/dashboard/calculators/investment-calculat
       title: 'Investment Growth Calculator | Moneko',
       description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
       keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     

@@ -13,7 +13,7 @@ export const Route = createFileRoute('/dashboard/calculators/mortgage-calculator
       title: 'Mortgage Calculator | Moneko',
       description: 'Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan with Moneko.',
       keywords: 'mortgage calculator, home loan calculator, PITI calculator, amortization schedule, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     

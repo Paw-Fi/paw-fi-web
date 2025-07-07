@@ -64,7 +64,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
     },
     global: {
       headers: {
-        'X-Client-Info': 'paw-fi-chat-messages-function'
+        'X-Client-Info': 'moneko-chat-messages-function'
       }
     }
   });

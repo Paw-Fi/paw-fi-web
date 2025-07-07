@@ -9,7 +9,7 @@ export const Route = createFileRoute('/cookie-policy')({
       title: 'Cookie Policy | Moneko',
       description: 'Learn about how Moneko uses cookies and similar technologies on our website to enhance your browsing experience.',
       keywords: 'cookie policy, cookies, tracking technologies, Moneko cookies',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -123,7 +123,7 @@ function CookiePolicy() {
             If you have any questions about our Cookie Policy, please contact us at:
           </p>
           <p className="mt-2">
-            <strong>Email:</strong> privacy@paw-fi.com
+            <strong>Email:</strong> privacy@moneko.io
           </p>
         </div>
         

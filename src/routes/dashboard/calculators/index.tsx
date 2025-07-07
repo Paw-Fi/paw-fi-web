@@ -22,7 +22,7 @@ export const Route = createFileRoute('/dashboard/calculators/')({
       title: 'Financial Calculators | Moneko',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
       keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization, moneko, moneko',
-      image: 'https://paw-fi.app/og-img.png', // Ensure this OG image is updated for the new design if needed
+      image: 'https://moneko.io/og-img.png', // Ensure this OG image is updated for the new design if needed
       url: pageUrl,
     });
     

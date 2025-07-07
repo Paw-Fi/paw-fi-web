@@ -33,7 +33,7 @@ export const Route = createFileRoute("/payment-status")({
   beforeLoad: () => {
     return {
       ...seo({
-        title: "Payment Status | Paw-Fi",
+        title: "Payment Status | Moneko",
         description: "Check the status of your subscription payment"
       })
     };

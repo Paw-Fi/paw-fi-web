@@ -39,7 +39,7 @@ export const Route = createFileRoute('/dashboard/calculators/auto-loan-calculato
       title: 'Auto Loan Calculator | Moneko',
       description: "Calculate your auto loan payments, interest, and total cost with Moneko's easy-to-use car loan calculator.",
       keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
 

@@ -35,7 +35,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
     let lessonTitle = "Lesson";
     let lessonDescription = "Explore this lesson on Moneko.";
     let courseTitle = "Financial Learning";
-    const siteOgImage = "https://paw-fi.app/og-img.png"; // Default site OG image
+    const siteOgImage = "https://moneko.io/og-img.png"; // Default site OG image
 
     try {
       const lesson = getLessonById(params.lessonId);

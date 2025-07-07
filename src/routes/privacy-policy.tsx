@@ -9,7 +9,7 @@ export const Route = createFileRoute('/privacy-policy')({
       title: 'Privacy Policy | Moneko',
       description: 'Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.',
       keywords: 'privacy policy, data protection, personal information, Moneko privacy',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -118,7 +118,7 @@ function PrivacyPolicy() {
             If you have questions about this Privacy Policy, please contact us at:
           </p>
           <p className="mt-2">
-            <strong>Email:</strong> privacy@paw-fi.com
+            <strong>Email:</strong> privacy@moneko.io
           </p>
         </div>
         
