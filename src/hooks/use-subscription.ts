@@ -153,19 +153,17 @@ export function useSubscription(userId: string | undefined) {
       billingInterval,
     });
   };
-
-  console.log('useSubscription hook data:', {
-    userId,
-    subscription: data?.subscription,
-    features: data?.features,
-    isLoading,
-    error
-  });
   
   // The subscription data is in the first element of the array
   const subscriptionData = Array.isArray(data?.subscription) ? data?.subscription[0] : data?.subscription;
+
+
+  // Check if user has an active subscription
+  const isActive = subscriptionData && subscriptionData.status === "active";
   
-  console.log('Processed subscription data:', subscriptionData);
+  // Check if user's subscription is expired
+  const isExpired = subscriptionData && subscriptionData.status === "canceled";
+  
   
   return {
     subscription: subscriptionData || null,
@@ -179,5 +177,7 @@ export function useSubscription(userId: string | undefined) {
     cancelImmediately,
     resumeSubscription,
     changePlan,
+    isActive,
+    isExpired,
   };
 }

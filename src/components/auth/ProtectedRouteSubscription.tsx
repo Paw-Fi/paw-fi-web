@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSignInAlt, faCreditCard, faArrowRight, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import logo from "@assets/images/icon.svg";
+import { SkeletonDashboard } from "../profile/SkeletonDashboard";
 
 interface ProtectedRouteSubscriptionProps {
   children: React.ReactNode;
@@ -13,7 +14,7 @@ interface ProtectedRouteSubscriptionProps {
 
 export function ProtectedRouteSubscription({ children }: ProtectedRouteSubscriptionProps) {
   const { user } = useAuth();
-  const { subscription, isLoading } = useSubscription(user?.id);
+  const { subscription, isLoading, isActive, isExpired } = useSubscription(user?.id);
 
   // If the user is not logged in, we'll let the parent handle this
   if (!user) {
@@ -23,27 +24,10 @@ export function ProtectedRouteSubscription({ children }: ProtectedRouteSubscript
   // While subscription data is loading, show a loading state
   if (isLoading) {
     return (
-      <motion.div
-        className="flex flex-col items-center justify-center px-4 py-12 text-center flex-1"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-300 to-purple-200 shadow-lg">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
-        </div>
-        <h2 className="mb-3 text-2xl font-bold text-gray-800">
-          Loading Subscription Info...
-        </h2>
-      </motion.div>
+    <SkeletonDashboard/>
     );
   }
 
-  // Check if user has an active subscription
-  const isActive = subscription && subscription.status === "active";
-  
-  // Check if user's subscription is expired
-  const isExpired = subscription && subscription.status === "canceled";
   
   // If subscription is active, render children
   if (isActive) {

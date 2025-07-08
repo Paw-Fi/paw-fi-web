@@ -131,6 +131,18 @@ function PaymentStatusPage() {
                 <p className="mt-4 text-gray-600 dark:text-gray-400">
                   Verifying payment status...
                 </p>
+                
+                <div className="mt-6 w-full rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700/50 p-3">
+                  <div className="flex items-center">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 text-yellow-500 mr-2" />
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                      Important: Please do not close this page
+                    </p>
+                  </div>
+                  <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    Closing this page while verifying your payment may affect your subscription activation.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -193,7 +205,7 @@ function PaymentStatusPage() {
                           Return to Pricing
                         </Button>
                         <Button 
-                          onClick={() => window.location.href = "mailto:support@pawfi.com?subject=Payment%20Issue"}
+                          onClick={() => window.location.href = "mailto:hello@moneko.io?subject=Payment%20Issue"}
                         >
                           Contact Support
                         </Button>
@@ -225,6 +237,17 @@ function PaymentStatusPage() {
                     <AlertDescription>
                       <p>Your payment is still being processed. This may take a few moments.</p>
                       <p className="mt-2">You'll receive an email confirmation once the payment is complete.</p>
+                      <div className="mt-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700/50 p-3">
+                        <div className="flex items-center">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 text-yellow-500 mr-2" />
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                            Important: Please do not close this page
+                          </p>
+                        </div>
+                        <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                          Closing this page while your payment is processing may affect your subscription activation.
+                        </p>
+                      </div>
                       <div className="flex flex-wrap gap-4 mt-4">
                         <Button 
                           onClick={() => window.location.reload()}
@@ -267,7 +290,7 @@ function PaymentStatusPage() {
                     If you're experiencing issues with your payment or subscription, our support team is here to help.
                   </p>
                   <Button 
-                    onClick={() => window.location.href = "mailto:support@pawfi.com?subject=Payment%20Support"}
+                    onClick={() => window.location.href = "mailto:hello@moneko.io"}
                     variant="outline"
                     size="sm"
                   >

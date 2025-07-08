@@ -30,7 +30,7 @@ export const Route = createFileRoute('/dashboard/calculators/mortgage-calculator
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Financial Education Tool"
     };

@@ -358,7 +358,7 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
   }
 
   return (
-    <Widget widget={widget} controls={widget.controls}>
+    <Widget widget={widget} controls={widget.controls} isBeta>
       <div className="h-full w-full flex flex-col items-center justify-center">
         <div className="w-full max-w-sm mb-4">
           <Pie 

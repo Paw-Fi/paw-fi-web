@@ -13,7 +13,6 @@ import { NotFound } from '@/components/NotFound'
 import appCss from '@/styles/main.css?url'
 import { seo } from '@/utils/seo'
 import { getCanonicalUrl } from '@/utils/canonical'
-import Header from '@/components/Header'
 // Import ToastContainer dynamically to avoid SSR issues
 import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
@@ -97,7 +96,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="h-screen">       
       <AuthProvider>
-        <Header />
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
           <Suspense fallback={null}>

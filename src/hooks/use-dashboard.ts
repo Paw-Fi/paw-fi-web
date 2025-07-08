@@ -17,8 +17,8 @@ import { useQuery } from '@tanstack/react-query';
 
 // Define localStorage keys as constants for reuse
 export const STORAGE_KEYS = {
-  DASHBOARD_DATA: 'pawfi-dashboard-data',
-  CURRENT_VIEW_ID: 'pawfi-dashboard-view-id'
+  DASHBOARD_DATA: 'moneko-dashboard-data',
+  CURRENT_VIEW_ID: 'moneko-dashboard-view-id'
 };
 
 /**

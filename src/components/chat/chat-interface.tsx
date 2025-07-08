@@ -30,6 +30,7 @@ import { sanitizeCourse } from "@/utils/sanitize-course";
 import logo from "@/assets/images/icon.svg";
 import { ChatInput } from './chat-input';
 import { VoiceConversationModal } from './voice-conversation-modal';
+import { BetaPill } from "../ui/beta-pill";
 
 const INITIAL_SUGGESTIONS = ["Start"];
 
@@ -972,6 +973,8 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           <div className="relative flex h-full flex-col">
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Moneko AI</h1>
           </div>
+          <BetaPill/>
+
         </div>
         {/* Add any header controls here if needed */}
       </div>

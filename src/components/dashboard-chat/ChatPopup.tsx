@@ -38,7 +38,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({ onClose }) => {
     <div className="fixed bottom-28 right-8 bg-white w-96 h-[600px] rounded-lg shadow-2xl flex flex-col">
       <div className="flex items-center justify-between p-4 bg-gray-100 rounded-t-lg">
         <div>
-          <h3 className="font-bold text-lg">PawFi Assistant</h3>
+          <h3 className="font-bold text-lg">Moneko Assistant</h3>
           <p className="text-xs text-gray-500">Conversation history is not saved</p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-800">

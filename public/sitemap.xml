@@ -36,6 +36,12 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+    <url>
+    <loc>https://moneko.io/team</loc>
+    <lastmod>2025-06-19</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.8</priority>
+  </url>
   <url>
     <loc>https://moneko.io/dashboard</loc>
     <lastmod>2025-06-21</lastmod>

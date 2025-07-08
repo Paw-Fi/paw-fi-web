@@ -5,19 +5,21 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Widget as WidgetType } from '../types/dashboard-data.typings';
 import { iconMap } from '../data/icon-map';
 import { faChartBar } from '@fortawesome/free-solid-svg-icons';
+import { BetaPill } from '@/components/ui/beta-pill';
 
 interface WidgetProps {
   widget: WidgetType;
   children: ReactNode;
   className?: string;
   controls?: ReactNode; // Added to support control buttons from EditableWidget
+  isBeta?: boolean;
 }
 
 
 // Sorted list of icon names for the dropdown
 export const iconOptions = Object.keys(iconMap).sort();
 
-export function Widget({ widget, children, className = '', controls }: WidgetProps) {
+export function Widget({ widget, children, className = '', controls,isBeta }: WidgetProps) {
 
   // Safely handle the icon - ensure it exists in our map or use default
   const icon = widget.icon && iconMap[widget.icon as keyof typeof iconMap] ? iconMap[widget.icon as keyof typeof iconMap] : faChartBar;
@@ -39,6 +41,7 @@ export function Widget({ widget, children, className = '', controls }: WidgetPro
           <h3 className="font-bold text-lg text-[#4d5562] truncate" title={widget.title}>
             {widget.title || 'Financial Widget'}
           </h3>
+          {isBeta && <BetaPill/>}
         </div>
         
         {/* Controls from EditableWidget will be inserted here */}

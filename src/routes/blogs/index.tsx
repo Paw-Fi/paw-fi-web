@@ -11,6 +11,8 @@ import { BlogMasonryGrid } from "@/components/blogs/blog-masonry-grid";
 import { FeaturedBlogCard } from "@/components/blogs/featured-blog-card";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
+import { HomeHeader } from "@/components/index/header";
 
 export const Route = createFileRoute("/blogs/")({
   component: BlogsPage,
@@ -18,7 +20,7 @@ export const Route = createFileRoute("/blogs/")({
     const title = "Financial Education Blog | Moneko";
     const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from Moneko.";
     const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, Moneko blog";
-    const imageUrl = "https://moneko.io/og-blog.png";
+    const imageUrl = "https://moneko.io/og-img.png";
     const pageUrl = getCanonicalUrl("/blogs");
 
     const meta = seo({
@@ -41,7 +43,7 @@ export const Route = createFileRoute("/blogs/")({
         "name": "Moneko",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://moneko.io/icon.svg"
+          "url": "https://moneko.io/favicon.ico"
         }
       },
       "mainEntity": {
@@ -126,6 +128,8 @@ function BlogsPage() {
   }));
 
   return (
+    <AmbientHaloLayout>
+      <HomeHeader/>
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -133,7 +137,8 @@ function BlogsPage() {
         transition={{ duration: 0.5 }}
         className="mb-12 text-center"
       >
-        <h1 className="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl">
+        <h1             className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
+        >
           Financial Education Blog
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-300">
@@ -166,5 +171,6 @@ function BlogsPage() {
       )}
    
     </div>
+    </AmbientHaloLayout>
   );
 }

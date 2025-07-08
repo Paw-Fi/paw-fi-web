@@ -36,7 +36,7 @@ import { getCanonicalUrl } from '@/utils/canonical';
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
-const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
+export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 import { MotionGlobalConfig } from 'framer-motion';
 
 export const Route = createFileRoute("/")({
@@ -190,6 +190,7 @@ import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
 
 import { useNewsletterSubscription } from "@/hooks/use-newsletter-subscription";
+import { HomeHeader } from "@/components/index/header";
 
 function SubscriptionForm() {
   const [formData, setFormData] = useState({
@@ -417,6 +418,7 @@ export default function HomePage() {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true); // Control suggestion visibility
   const inputRef = useRef<HTMLInputElement>(null);
+  const sendButtonRef = useRef<HTMLButtonElement>(null);
   
   // Finance-related suggestion prompts
   const chatSuggestions = [
@@ -434,19 +436,20 @@ export default function HomePage() {
     MotionGlobalConfig.skipAnimations = true;
   }
   // Handle Enter key press
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && chatQuery.trim()) {
-      e.preventDefault();
-      startTransitionAnimation();
-      setShowSuggestions(false); // Hide suggestions when submitting
+  const handleKeyDown = (event: React.KeyboardEvent, queryOverride?: string) => {
+    const query = queryOverride ?? chatQuery;
+    if (event.key === 'Enter' && query.trim() && !isTransitioning) {
+      event.preventDefault();
+      setShowSuggestions(false);
+      startTransitionAnimation(query);
     }
   };
   
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: string) => {
+    if (isTransitioning) return;
     setChatQuery(suggestion);
-    inputRef.current?.focus();
-    setShowSuggestions(false); // Hide suggestions after selection
+    handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent, suggestion);
   };
 
   // Animation controls for more complex sequences
@@ -459,8 +462,8 @@ export default function HomePage() {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Start the enhanced transition animation
-  const startTransitionAnimation = async () => {
-    if (!chatQuery.trim() || isTransitioning) return;
+  const startTransitionAnimation = async (query: string) => {
+    if (!query.trim() || isTransitioning) return;
 
     setIsTransitioning(true);
     setIsAnimating(true);
@@ -526,7 +529,7 @@ export default function HomePage() {
 
     // Navigate after animation completes with adjusted timing for smoother experience
     setTimeout(() => {
-      navigate({ to: "/dashboard/chat", search: { q: chatQuery } });
+      navigate({ to: "/dashboard/chat", search: { q: query } });
     }, 500);
   };
 
@@ -541,69 +544,7 @@ export default function HomePage() {
 
       {/* Navigation */}
       <nav className="sticky top-0 z-50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8">
-          <div className="flex items-center gap-x-8">
-            <Link to="/" className="flex items-center gap-2">
-              <img
-                src={catCoin}
-                alt="Moneko Logo"
-                className="size-10"               
-              />
-              <span className="text-xl font-semibold text-slate-800">
-                Moneko
-              </span>
-            </Link>
-            <div className="hidden items-center gap-x-6 md:flex">
-              <Link
-                to={'/dashboard/learning'}
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
-              >
-                Learning
-              </Link>
-              <Link
-                to={'/dashboard/calculators'}
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
-              >
-                Calculators
-              </Link>
-              <Link
-                to="/blogs"
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
-              >
-                Blogs
-              </Link>
-              <Link
-                to="/pricing"
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
-              >
-                Pricing
-              </Link>
-              <a
-                href={DISCORD_URL}
-                target="_blank"
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
-              >
-                Community
-              </a>
-            </div>
-          </div>
-          <div className="flex items-center gap-x-5">
-            <Link
-              to="/dashboard/essentials"
-              className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-purple-600 md:block"
-            >
-              Explore Courses
-            </Link>
-            <Link
-              to="/dashboard"
-              className="font-medium text-purple-600 hover:text-purple-800"
-            >
-              <Button className="bg-purple-600 hover:bg-purple-700">
-               Dashboard <FontAwesomeIcon icon={faArrowRight}  className="ml-2"/>
-              </Button>
-            </Link>
-          </div>
-        </div>
+      <HomeHeader/>
       </nav>
 
       {/* Portfolio Builder Section - Exact Match to Mockup */}
@@ -734,6 +675,7 @@ export default function HomePage() {
                 className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-400 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
                 aria-label="Send message"
                 animate={iconControls}
+                ref={sendButtonRef}
               >
                 <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
               </motion.button>
@@ -891,7 +833,7 @@ export default function HomePage() {
                 icon={lesson.icon}
                 title={lesson.title}
                 description={lesson.description}
-                linkTo={`/learning/${basicLessonsData.id}/lesson/${lesson.lesson_id}`}
+                linkTo={`/learning/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
                 animationDelay={0.1 * (index + 1)}
               />
             ))}
@@ -902,7 +844,7 @@ export default function HomePage() {
                   className="h-full rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30"
                 >
                   <Link
-                    to={`/learning/${basicLessonsData.id}`}
+                    to={`/learning/${basicLessonsData.course_id}`}
                     role="button"
                     className="group flex h-full w-full flex-col items-center justify-center text-center"
                   >
@@ -1113,7 +1055,7 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.8}>
                 <a
-                  href="mailto:hello@pawfi.com"
+                  href="mailto:hello@moneko.io"
                   className="text-gray-400 hover:text-white"
                 >
                   Contact Us

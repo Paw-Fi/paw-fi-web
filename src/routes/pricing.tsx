@@ -11,18 +11,19 @@ import { supabase } from "@/lib/supabase";
 import { FeatureItem, PricingTier, getPricingTiers } from "@/data/pricing-plans";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faRocket } from "@fortawesome/free-solid-svg-icons";
+import { HomeHeader } from "@/components/index/header";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => {
-    const pageUrl = "https://moneko.io/pricing"; // Assuming moneko.io from previous changes
+    const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
       title: "Pricing Plans | Moneko",
       description:
         "Choose the perfect Moneko plan to kickstart your financial journey. From free starter packs to premium investment tools, find what fits you.",
       keywords:
-        "pricing, plans, subscription, finance app, moneko, pawfi, financial education, investment tools, budgeting app",
-      image: "https://moneko.io/og-pricing.png", // Placeholder - ensure an appropriate OG image is created
+        "pricing, plans, subscription, finance app, moneko, financial education, investment tools, budgeting app",
+      image: "https://moneko.io/og-img.png", // Placeholder - ensure an appropriate OG image is created
       url: pageUrl,
     });
 
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/pricing")({
       name: "Moneko Subscription Plans",
       description:
         "Subscription plans for Moneko financial education and management application.",
-      image: "https://moneko.io/og-pricing.png",
+      image: "https://moneko.io/og-img.png",
       brand: {
         "@type": "Brand",
         name: "Moneko",
@@ -218,6 +219,7 @@ function PricingPage() {
 
   return (
     <AmbientHaloLayout>
+      <HomeHeader/>
       <motion.div
         initial={prefersReducedMotion ? undefined : "hidden"} // Use undefined for props if variants are undefined
         animate={prefersReducedMotion ? undefined : "visible"}
@@ -230,7 +232,7 @@ function PricingPage() {
           className="mb-12 text-center md:mb-16"
         >
           <motion.h1
-            className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl lg:text-6xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
+            className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
             variants={prefersReducedMotion ? undefined : cardVariants} // Re-use card variant for simple entrance
           >
             Choose Your Path to Financial Freedom
@@ -261,14 +263,14 @@ function PricingPage() {
         </motion.header>
 
         <motion.div
-          className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+          className="mt-8 flex flex-wrap gap-6 justify-center"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
           {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}
-              className={`relative flex flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`}
+              className={`relative flex w-[30rem] flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`}
             >
               {tier.badgeText && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-1.5 text-xs font-semibold text-white shadow-lg">
@@ -296,7 +298,7 @@ function PricingPage() {
                       ? "/year"
                       : tier.priceFrequencyText}
                   </span>
-                  {tier.priceYearly && (
+                  {tier.priceYearly&&tier.title!="Free Plan" && (
                     <p
                       className={`mt-1 text-xs font-semibold text-purple-600 transition-opacity duration-300 dark:text-purple-400 ${isAnnual ? "opacity-100" : "opacity-0"}`}
                     >
@@ -381,7 +383,7 @@ function PricingPage() {
             grow.
           </p>
           <a
-            href="/contact-support"
+            href="mailto:hello@moneko.io"
             className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-purple-600 transition-colors duration-200 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
           >
             Contact Us for a Recommendation{" "}

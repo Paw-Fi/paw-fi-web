@@ -765,16 +765,19 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     {question.unit}
                   </span>
                 )}
-                <input
-                  type="number"
-                  value={Number(state.answers[question.id]) || undefined}
-                  onChange={(e) => handleAnswerChange(question.id, Number(e.target.value))}
-                  min={question.min}
-                  max={question.max}
-                  step={question.step || 1}
-                  placeholder={question.placeholder}
-                  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
-                />
+              <input
+  type="number"
+  value={state.answers[question.id] === "" ? "" : Number(state.answers[question.id])}
+  onChange={(e) => {
+    const value = e.target.value;
+    handleAnswerChange(question.id, value === "" ? "" : Number(value));
+  }}
+  min={question.min}
+  max={question.max}
+  step={question.step || 1}
+  placeholder={question.placeholder}
+  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+/>
               </div>
             )}
 
@@ -832,24 +835,20 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                       {question.unit}
                     </span>
                   )}
-                  <input
-                    type="number"
-                    value={(() => {
-                      const val = state.answers[question.id];
-                      if (val === undefined || val === null) return '';
-                      if (typeof val === 'number') return val;
-                      if (typeof val === 'string' && !isNaN(Number(val))) return val;
-                      return '';
-                    })()}
-                    onChange={(e) =>
-                      handleAnswerChange(question.id, Number(e.target.value))
-                    }
-                    min={question.min}
-                    max={question.max}
-                    step={question.step || 1}
-                    placeholder={question.placeholder}
-                    className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
-                  />
+                 <input
+  type="number"
+  value={state.answers[question.id] ?? ""}
+  onChange={(e) => {
+    const value = e.target.value;
+    // Only update if it's a valid number, otherwise, set it as an empty string
+    handleAnswerChange(question.id, value === "" ? "" : Number(value));
+  }}
+  min={question.min}
+  max={question.max}
+  step={question.step || 1}
+  placeholder={question.placeholder}
+  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+/>
                 </div>
               )}
 
