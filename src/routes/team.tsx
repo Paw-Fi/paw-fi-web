@@ -4,6 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, Variants } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLinkedin, faTwitter } from "@fortawesome/free-brands-svg-icons";
+import Sabina from "@assets/images/team/sabina.jpeg"
+import Roe from "@assets/images/team/roe.jpg"
+import Yifan from "@assets/images/team/yifan.jpg"
+
 
 export const Route = createFileRoute("/team")({
   component: TeamPage,
@@ -21,34 +25,34 @@ export const Route = createFileRoute("/team")({
 
 const teamMembers = [
   {
-    name: "Whiskers von Cat",
-    role: "Chief Executive Officer",
-    imageUrl: "https://picsum.photos/400/400",
+    name: "Sabina Shao – CEO",
+    role: "Design Lead & Brand",
+    imageUrl: Sabina,
     social: {
-      linkedin: "#",
-      twitter: "#",
+      linkedin: "",
+      twitter: "",
     },
-    bio: "Whiskers von Cat is the Chief Executive Officer of Moneko. He has over 20 years of experience in the financial industry and is passionate about helping people improve their financial literacy.",
+    bio: "Product designer and founder with 8+ years building fintech and marketing tools. Led UX and design of consumer-first tools across fintech and marketing. Combines creative execution with business clarity to build products that resonate and scale.",
   },
   {
-    name: "Pounce de Leon",
-    role: "Chief Financial Officer",
-    imageUrl: "https://picsum.photos/401/401",
+    name: "Roe Luo – COO",
+    role: "Finance & Strategy",
+    imageUrl: Roe,
     social: {
-      linkedin: "#",
-      twitter: "#",
+      linkedin: "",
+      twitter: "",
     },
-    bio: "Pounce de Leon is the Chief Financial Officer of Moneko. She has over 20 years of experience in the financial industry and is passionate about helping people improve their financial literacy.",
+    bio: "CFA, MBA, and former equity research analyst with 10+ years in finance. Led financial modeling, investment analysis, and curriculum development for non-experts. Deeply focused on making investing more inclusive and understandable.",
   },
-  {
-    name: "Clawdia Monet",
-    role: "Chief Technology Officer",
-    imageUrl: "https://picsum.photos/402/402",
+  { 
+    name: "Yifan Lim –CTO",
+    role: "Full-stack Engineer",
+    imageUrl: Yifan,
     social: {
-      linkedin: "#",
-      twitter: "#",
+      linkedin: "",
+      twitter: "",
     },
-    bio: "Clawdia Monet is the Chief Technology Officer of Moneko. She has over 20 years of experience in the financial industry and is passionate about helping people improve their financial literacy.",
+    bio: "Full-stack engineer and startup builder. Co-founded multiple Web3 products including a DePin marketplace and NFT platform. Led ERP development at Intact and built scalable platforms across mobile, web, and blockchain.",
   },
 ];
 
@@ -108,7 +112,7 @@ function TeamPage() {
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+          className="mx-auto flex justify-center gap-6 flex-wrap max-w-5xl flex-col lg:flex-row"
           variants={pageVariants}
           initial="hidden"
           animate="visible"
@@ -117,25 +121,25 @@ function TeamPage() {
             <motion.div
               key={member.name}
               variants={cardVariants}
-              className="group overflow-hidden rounded-3xl border border-white/20 bg-white/50 shadow-xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/50"
+              className="group flex-1 overflow-hidden rounded-3xl border border-white/20 bg-white/50 shadow-xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/50"
             >
-              <div className="relative aspect-square overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden">
                 <img
                   src={member.imageUrl}
                   alt={`${member.name}, ${member.role} at Moneko`}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 to-transparent p-6 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <div className="flex space-x-4">
+                <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <div className="flex space-x-3">
                     {member.social.linkedin && (
                       <a
                         href={member.social.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-white/20 p-3 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
+                        className="rounded-full bg-white/20 p-2 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
                         aria-label={`${member.name}'s LinkedIn profile`}
                       >
-                        <FontAwesomeIcon icon={faLinkedin} className="text-xl text-white" />
+                        <FontAwesomeIcon icon={faLinkedin} className="text-lg text-white" />
                       </a>
                     )}
                     {member.social.twitter && (
@@ -143,23 +147,23 @@ function TeamPage() {
                         href={member.social.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-white/20 p-3 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
+                        className="rounded-full bg-white/20 p-2 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
                         aria-label={`${member.name}'s Twitter profile`}
                       >
-                        <FontAwesomeIcon icon={faTwitter} className="text-xl text-white" />
+                        <FontAwesomeIcon icon={faTwitter} className="text-lg text-white" />
                       </a>
                     )}
                   </div>
                 </div>
               </div>
-              <div className="p-6">
-                <h3 className="mb-1 text-xl font-bold transition-colors duration-300 group-hover:text-purple-600 dark:group-hover:text-purple-400">
+              <div className="p-4">
+                <h3 className="mb-1 text-lg font-bold transition-colors duration-300 group-hover:text-purple-600 dark:group-hover:text-purple-400">
                   {member.name}
                 </h3>
-                <p className="mb-4 text-sm font-medium text-purple-600 dark:text-purple-400">
+                <p className="mb-2 text-sm font-medium text-purple-600 dark:text-purple-400">
                   {member.role}
                 </p>
-                <p className="text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {member.bio}
                 </p>
               </div>

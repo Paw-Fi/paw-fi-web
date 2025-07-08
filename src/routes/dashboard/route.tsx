@@ -116,7 +116,7 @@ export function Dashboard() {
     user?.id ?? "",
     { enabled: !!user },
   );
-  const { subscription, isActive } = useSubscription(user?.id);
+  const { subscription, isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
 
 
   // Helper function to check if a route is active
@@ -552,7 +552,7 @@ export function Dashboard() {
 
           {/* User Profile Section */}
           <div className="border-t border-gray-100 p-4">
-            {isLoading ? (
+            {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
                 <div className="h-10 w-10 rounded-full bg-gray-200"></div>
                 <div className="flex-1">
@@ -730,7 +730,7 @@ export function Dashboard() {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
+     {isLoading||isSubscriptionLoading ? null : <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
         {/* Header - Always visible regardless of submenu state */}
         <motion.div
           className="transition-all duration-300"
@@ -865,7 +865,7 @@ export function Dashboard() {
               )}
            
         </motion.main>
-          </div>
+          </div>}
         </div>
       </div>
     </>
