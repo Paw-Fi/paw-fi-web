@@ -981,6 +981,11 @@ export default function HomePage() {
                   Chat with AI
                 </Link>
               </motion.li>
+              <motion.li variants={fadeInUp} custom={0.7}>
+                <Link to="/team" className="text-gray-400 hover:text-white">
+                  Meet the team
+                </Link>
+              </motion.li>
             </motion.ul>
           </motion.div>
 

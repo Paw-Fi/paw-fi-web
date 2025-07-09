@@ -23,7 +23,7 @@ import * as THREE from 'three'; // Import Three.js
                 highlightColor: 0xd4a7f0,
                 midtoneColor: 0x63c5b7,
                 lowlightColor: 0x568bfa,
-                blurFactor: 0.73,
+                blurFactor: 0.83,
                 speed: 2.10,
                 zoom: 0.50
             }));

@@ -11,9 +11,10 @@ export const HomeHeader=()=>{
     const location=useLocation()
 
     const routes=[
+        {to:"/dashboard/essentials",label:"Learning"},
         {to:"/blogs",label:"Blogs"},
         {to:"/pricing",label:"Pricing"},
-        {to:"/team",label:"Team"},
+
     ]
 
     return   <div className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8">
