@@ -11,6 +11,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import { unlockNextLesson } from "./unlock-next-lesson";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface UseLessonProps {
   lesson: Lesson | undefined;
@@ -21,6 +22,7 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
   const navigate = useNavigate();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -110,9 +112,12 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
       setEarnedXp(lesson?.xp || 0);
       // If all answers are correct, unlock the next lesson
       if (user?.id && lessonId) {
-        unlockNextLesson(lessonId, courseId, user.id)
+        // Pass queryClient to ensure query invalidation works
+        unlockNextLesson(lessonId, courseId, user.id, queryClient)
           .then((success) => {
             if (success) {
+              // Force an immediate refetch of user courses to update the UI
+              queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
               setIsComplete(true);
             } else {
               toast.error("Failed to unlock next lesson");

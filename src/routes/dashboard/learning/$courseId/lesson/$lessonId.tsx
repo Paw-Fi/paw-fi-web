@@ -4,7 +4,7 @@ import { ActionButtons } from "@/components/learning/action-buttons";
 import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import { useLesson } from "@/components/learning/hooks/use-lesson";
-import { unlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
+import { unlockNextLesson, useUnlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
 import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
@@ -12,6 +12,7 @@ import { QuestionHeader } from "@/components/learning/question-header";
 import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses, CourseDataSource } from "@/services/course-service";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Course, Lesson, Question, Tutorial } from "@/types/learning.types";
 import { seo } from "@/utils/seo";
 import basicCourse from "@/data/basic-lessons.json"; // Ensure this is imported
@@ -155,6 +156,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   const { courseId, lessonId } = useParams({ from: routePath });
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     data: courses = [],
@@ -296,11 +298,39 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
       // If we're on the last item, directly complete the lesson
       // This ensures the completion modal shows up immediately
       setEarnedXp(lesson?.xp || 0);
-      // Use lesson_id from the adapted lesson object
-      if (lesson) {
-        unlockNextLesson(lesson.lesson_id, courseId);
+      
+      // Handle lesson unlocking differently based on data source
+      if (dataSource === 'local') {
+        // For local data (essentials), just show completion modal immediately
+        console.log('Local lesson completed, showing completion modal');
+        setIsComplete(true);
+      } else if (dataSource === 'remote' && lesson && user?.id) {
+        // For remote data (learning), call the database unlock function
+        console.log(`Unlocking next lesson after ${lesson.lesson_id} for user ${user.id}`);
+        // Pass the queryClient to ensure query invalidation works
+        unlockNextLesson(lesson.lesson_id, courseId, user.id, queryClient)
+          .then(success => {
+            if (success) {
+              console.log('Successfully unlocked next lesson');
+              // Force an immediate refetch of user courses to update the UI
+              queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
+              setIsComplete(true);
+            } else {
+              console.warn('Failed to unlock next lesson');
+              // Still show completion modal even if unlock fails
+              setIsComplete(true);
+            }
+          })
+          .catch(error => {
+            console.error('Error unlocking next lesson:', error);
+            // Still show completion modal even if there's an error
+            setIsComplete(true);
+          });
+      } else {
+        // Fallback for any edge cases
+        console.warn('Cannot unlock next lesson: missing lesson or user data');
+        setIsComplete(true);
       }
-      setIsComplete(true);
     } else {
       // If not the last item, move to the next one
       resetQuestionStates();
