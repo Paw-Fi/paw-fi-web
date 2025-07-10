@@ -3,10 +3,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
 import React, { useState, useRef } from "react";
-import {
-  motion,
-  useAnimation,
-} from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
 import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
 import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
@@ -31,20 +28,21 @@ import {
   faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
-import { seo } from '@/utils/seo';
-import { getCanonicalUrl } from '@/utils/canonical';
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 import AmbientHalo from "../components/ui/ambient-halo";
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
-import { MotionGlobalConfig } from 'framer-motion';
+import { MotionGlobalConfig } from "framer-motion";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
     // Use canonical helper for consistent URLs
-    const pageUrl = getCanonicalUrl('/');
-    const title = "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
+    const pageUrl = getCanonicalUrl("/");
+    const title =
+      "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
     const description =
       "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
     const keywords =
@@ -139,7 +137,6 @@ export const Route = createFileRoute("/")({
   },
 });
 
-
 function BasicLessonCard({
   icon,
   title,
@@ -156,9 +153,7 @@ function BasicLessonCard({
   // Assuming fadeInUp and elasticScale variants are defined elsewhere in the file or imported
   return (
     <div>
-      <div
-        className="flex h-full flex-col rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30"
-              >
+      <div className="flex h-full flex-col rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30">
         <Link to={linkTo} className="group flex h-full flex-col">
           <div className="flex-grow">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40 transition-transform duration-200">
@@ -166,7 +161,7 @@ function BasicLessonCard({
                 {icon}
               </span>
             </div>
-            <h3 className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200  dark:text-white ">
+            <h3 className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200 dark:text-white">
               {title}
             </h3>
             <p className="mb-8 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
@@ -174,10 +169,10 @@ function BasicLessonCard({
             </p>
           </div>
           <div className="mt-auto text-purple-600">
-              Start Lesson
-              <span className="ml-2 transition-transform duration-200 ease-in-out ">
-                <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-              </span>
+            Start Lesson
+            <span className="ml-2 transition-transform duration-200 ease-in-out">
+              <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+            </span>
           </div>
         </Link>
       </div>
@@ -199,32 +194,35 @@ function SubscriptionForm() {
     lastName: "",
     referralSource: "",
     marketingConsent: true,
-    interests: [] as string[]
+    interests: [] as string[],
   });
-  
+
   const interestOptions = [
     { id: "investing", label: "Investing" },
     { id: "saving", label: "Saving" },
     { id: "budgeting", label: "Budgeting" },
-    { id: "debt", label: "Debt Management" }
+    { id: "debt", label: "Debt Management" },
   ];
 
-  const { subscribeToNewsletter, isLoading, error, success } = useNewsletterSubscription();
+  const { subscribeToNewsletter, isLoading, error, success } =
+    useNewsletterSubscription();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
+    setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
   const handleInterestChange = (interest: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newInterests = prev.interests.includes(interest)
-        ? prev.interests.filter(i => i !== interest)
+        ? prev.interests.filter((i) => i !== interest)
         : [...prev.interests, interest];
       return { ...prev, interests: newInterests };
     });
@@ -237,7 +235,7 @@ function SubscriptionForm() {
 
   return (
     <motion.div
-      className="rounded-3xl border border-white/20 bg-white/50 p-8 md:p-12 shadow-lg shadow-slate-900/10 backdrop-blur-2xl dark:border-slate-700/20 dark:bg-slate-900/30"
+      className="rounded-3xl border border-white/20 bg-white/50 p-8 shadow-lg shadow-slate-900/10 backdrop-blur-2xl md:p-12 dark:border-slate-700/20 dark:bg-slate-900/30"
       variants={fadeInUp}
       initial="hidden"
       whileInView="visible"
@@ -245,34 +243,35 @@ function SubscriptionForm() {
     >
       <div className="flex flex-col">
         <motion.h3
-          className="mb-3 text-2xl md:text-3xl font-bold text-slate-900 dark:text-white text-center"
+          className="mb-3 text-center text-2xl font-bold text-slate-900 md:text-3xl dark:text-white"
           variants={fadeInUp}
           custom={0.1}
         >
           Stay Updated on Financial Education
         </motion.h3>
         <motion.p
-          className="mb-6 max-w-2xl text-base md:text-lg text-slate-700 dark:text-slate-300 text-center mx-auto"
+          className="mx-auto mb-6 max-w-2xl text-center text-base text-slate-700 md:text-lg dark:text-slate-300"
           variants={fadeInUp}
           custom={0.2}
         >
-          Subscribe to receive personalized financial insights, early access to new features, and exclusive content
+          Subscribe to receive personalized financial insights, early access to
+          new features, and exclusive content
         </motion.p>
 
         <motion.form
           onSubmit={handleSubmit}
-          className="w-full max-w-3xl mx-auto"
+          className="mx-auto w-full max-w-3xl"
           variants={fadeInUp}
           custom={0.3}
         >
           {/* Form status messages */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-700">
               {success}
             </div>
           )}
@@ -281,7 +280,7 @@ function SubscriptionForm() {
           <div className="mb-4">
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Email Address <span className="text-red-500">*</span>
             </label>
@@ -292,7 +291,7 @@ function SubscriptionForm() {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all duration-200"
+              className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
               placeholder="you@example.com"
             />
           </div>
@@ -301,7 +300,7 @@ function SubscriptionForm() {
           <div className="mb-4">
             <label
               htmlFor="referralSource"
-              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               How did you hear about us?
             </label>
@@ -310,7 +309,7 @@ function SubscriptionForm() {
               name="referralSource"
               value={formData.referralSource}
               onChange={handleInputChange}
-              className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all duration-200"
+              className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
             >
               <option value="">Select an option</option>
               <option value="search">Search Engine</option>
@@ -323,7 +322,7 @@ function SubscriptionForm() {
 
           {/* Interests */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               What topics interest you most?
             </label>
             <div className="flex flex-wrap gap-3">
@@ -332,7 +331,7 @@ function SubscriptionForm() {
                   key={option.id}
                   type="button"
                   onClick={() => handleInterestChange(option.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
                     formData.interests.includes(option.id)
                       ? "bg-purple-600 text-white shadow-md"
                       : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
@@ -347,14 +346,14 @@ function SubscriptionForm() {
           {/* Marketing consent */}
           <div className="mb-6">
             <div className="flex items-start">
-              <div className="flex items-center h-5">
+              <div className="flex h-5 items-center">
                 <input
                   id="marketingConsent"
                   name="marketingConsent"
                   type="checkbox"
                   checked={formData.marketingConsent}
                   onChange={handleCheckboxChange}
-                  className="h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                  className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
                 />
               </div>
               <div className="ml-3">
@@ -362,7 +361,8 @@ function SubscriptionForm() {
                   htmlFor="marketingConsent"
                   className="text-sm text-slate-600 dark:text-slate-400"
                 >
-                  I agree to receive newsletters and marketing communications from Moneko. You can unsubscribe at any time.
+                  I agree to receive newsletters and marketing communications
+                  from Moneko. You can unsubscribe at any time.
                 </label>
               </div>
             </div>
@@ -373,32 +373,29 @@ function SubscriptionForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:focus-visible:ring-offset-slate-900"
             >
               {isLoading ? (
                 <>
-                  <span className="animate-pulse mr-2">●</span>
+                  <span className="mr-2 animate-pulse">●</span>
                   Subscribing...
                 </>
               ) : (
-                <>
-                
-                  Subscribe Now
-                </>
+                <>Subscribe Now</>
               )}
             </button>
           </div>
 
           {/* Discord community button */}
           <div className="mt-4 text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+            <p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
               Join our vibrant community on Discord
             </p>
             <a
               href={DISCORD_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center text-sm font-medium text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+              className="inline-flex items-center justify-center text-sm font-medium text-purple-600 transition-colors hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
             >
               <FontAwesomeIcon icon={faDiscord} className="mr-1.5 h-4 w-4" />
               Connect on Discord
@@ -419,7 +416,7 @@ export default function HomePage() {
   const [showSuggestions, setShowSuggestions] = useState(true); // Control suggestion visibility
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   // Finance-related suggestion prompts
   const chatSuggestions = [
     "Help me set up a budget",
@@ -427,29 +424,35 @@ export default function HomePage() {
     "Tell me about retirement planning",
     "What's an emergency fund?",
     "Explain compound interest",
-    "Tips for saving money"
+    "Tips for saving money",
   ];
 
-  const {isMobile } = useDeviceType();
+  const { isMobile } = useDeviceType();
 
   if (isMobile) {
     MotionGlobalConfig.skipAnimations = true;
   }
   // Handle Enter key press
-  const handleKeyDown = (event: React.KeyboardEvent, queryOverride?: string) => {
+  const handleKeyDown = (
+    event: React.KeyboardEvent,
+    queryOverride?: string,
+  ) => {
     const query = queryOverride ?? chatQuery;
-    if (event.key === 'Enter' && query.trim() && !isTransitioning) {
+    if (event.key === "Enter" && query.trim() && !isTransitioning) {
       event.preventDefault();
       setShowSuggestions(false);
       startTransitionAnimation(query);
     }
   };
-  
+
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: string) => {
     if (isTransitioning) return;
     setChatQuery(suggestion);
-    handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent, suggestion);
+    handleKeyDown(
+      { key: "Enter", preventDefault: () => {} } as React.KeyboardEvent,
+      suggestion,
+    );
   };
 
   // Animation controls for more complex sequences
@@ -533,18 +536,20 @@ export default function HomePage() {
     }, 500);
   };
 
-
   return (
     <div className="relative min-h-screen bg-[#f5f3ff]">
       {/* Enhanced ambient halo background with scroll animations */}
       <AmbientHalo />
-      
+
       {/* Hidden H1 for SEO */}
-      <h1 className="sr-only">Learn How to Save and Start Investing for Beginners with Moneko, Your AI Money Coach</h1>
+      <h1 className="sr-only">
+        Learn How to Save and Start Investing for Beginners with Moneko, Your AI
+        Money Coach
+      </h1>
 
       {/* Navigation */}
       <nav className="sticky top-0 z-50">
-      <HomeHeader/>
+        <HomeHeader />
       </nav>
 
       {/* Portfolio Builder Section - Exact Match to Mockup */}
@@ -554,7 +559,7 @@ export default function HomePage() {
           {/* Heading */}
           <div className="mb-12 text-center">
             <motion.h2
-              className="mb-3 text-4xl font-bold md:text-5xl mt-24"
+              className="mb-3 mt-24 text-4xl font-bold md:text-5xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -604,18 +609,16 @@ export default function HomePage() {
                 opacity: animationComplete ? 0 : 1,
                 WebkitBackdropFilter: "blur(12px)",
               }}
-            >             
+            >
               {/* Enhanced Input field with animation */}
-              <motion.div
-                className="relative z-10 flex-grow"
-              >
+              <motion.div className="relative z-10 flex-grow">
                 <input
                   type="text"
                   value={chatQuery}
                   onChange={(e) => setChatQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Moneko to create personalized financial journey for my..."
-                  className="w-full border-none bg-transparent px-6 py-3 text-gray-700 placeholder-gray-400 placeholder:pl-2 transition-all duration-300 ease-in-out focus:outline-none outline-none ring-0 focus:ring-0 focus:shadow-none"
+                  className="w-full border-none bg-transparent px-6 py-3 text-gray-700 placeholder-gray-400 outline-none ring-0 transition-all duration-300 ease-in-out placeholder:pl-2 focus:shadow-none focus:outline-none focus:ring-0"
                   aria-label="Ask a financial question"
                   ref={inputRef}
                   disabled={isTransitioning}
@@ -666,13 +669,15 @@ export default function HomePage() {
               </motion.div>
               {/* Send button with animation */}
               <motion.button
-              
                 onClick={() => {
                   if (chatQuery.trim() && !isTransitioning) {
-                    handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent);
+                    handleKeyDown({
+                      key: "Enter",
+                      preventDefault: () => {},
+                    } as React.KeyboardEvent);
                   }
                 }}
-                className="mr-1 size-10 flex cursor-pointer justify-center items-center flex-shrink-0 rounded-full bg-gradient-to-r from-purple-400 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
+                className="mr-1 flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-gradient-to-r from-purple-400 to-indigo-600 p-2 text-white shadow-md transition-all duration-200 hover:shadow-lg"
                 aria-label="Send message"
                 animate={iconControls}
                 ref={sendButtonRef}
@@ -680,17 +685,20 @@ export default function HomePage() {
                 <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
               </motion.button>
             </motion.div>
-            
+
             {/* Modern Chat Suggestion Pills - 2025 UX Style */}
             {showSuggestions && (
               <motion.div
-                className="mt-4 max-w-3xl mx-auto"
+                className="mx-auto mt-4 max-w-3xl"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
               >
-                <div className="flex items-center gap-2 mb-2 px-2">
-                  <FontAwesomeIcon icon={faLightbulb} className="text-amber-500" />
+                <div className="mb-2 flex items-center gap-2 px-2">
+                  <FontAwesomeIcon
+                    icon={faLightbulb}
+                    className="text-amber-500"
+                  />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                     Popular questions to get started
                   </span>
@@ -700,7 +708,7 @@ export default function HomePage() {
                     <motion.button
                       key={`suggestion-${index}`}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-3.5 py-1.5 text-sm bg-white/70 hover:bg-white/90 text-gray-700 rounded-full border border-purple-200 shadow-sm transition-all duration-200 backdrop-blur-sm hover:shadow-md hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                      className="rounded-full border border-purple-200 bg-white/70 px-3.5 py-1.5 text-sm text-gray-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-purple-300 hover:bg-white/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                       disabled={isTransitioning}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -716,7 +724,7 @@ export default function HomePage() {
           </motion.div>
 
           {/* Video Cards with Seamless Integration */}
-          <div className="grid gap-8 md:grid-cols-2 mt-24">
+          <div className="mt-24 grid gap-8 md:grid-cols-2">
             {/* AI Chat Animation Card */}
             <motion.div
               className="group relative overflow-hidden rounded-3xl"
@@ -742,7 +750,7 @@ export default function HomePage() {
                 {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
                   className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
-                  style={{ transform: 'translateY(0)' }}
+                  style={{ transform: "translateY(0)" }}
                 >
                   <h3 className="text-lg font-medium text-white">
                     AI-Powered Chat Assistant
@@ -779,7 +787,7 @@ export default function HomePage() {
                 {/* Caption overlay - now always visible and mobile-friendly */}
                 <div
                   className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
-                  style={{ transform: 'translateY(0)' }}
+                  style={{ transform: "translateY(0)" }}
                 >
                   <h3 className="text-lg font-medium text-white">
                     Achievement Badges
@@ -833,39 +841,31 @@ export default function HomePage() {
                 icon={lesson.icon}
                 title={lesson.title}
                 description={lesson.description}
-                linkTo={`/learning/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
+                linkTo={`/dashboard/essentials/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
                 animationDelay={0.1 * (index + 1)}
               />
             ))}
             {/* Explore More Card */}
             {basicLessonsData.lessons.length > 2 && (
               <div>
-                <div
-                  className="h-full rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30"
-                >
+                <div className="h-full rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30">
                   <Link
-                    to={`/learning/${basicLessonsData.course_id}`}
+                    to={`dashboard/essentials/${basicLessonsData.course_id}`}
                     role="button"
                     className="group flex h-full w-full flex-col items-center justify-center text-center"
                   >
                     <div className="flex flex-grow flex-col items-center justify-center">
-                      <div
-                        className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40"
-                      >
+                      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40">
                         <FontAwesomeIcon
                           icon={faPlus}
                           className="text-3xl text-white"
                           aria-hidden="true"
                         />
                       </div>
-                      <h3
-                        className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200  dark:text-white "
-                      >
+                      <h3 className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200 dark:text-white">
                         Explore All Lessons
                       </h3>
-                      <p
-                        className="text-sm text-slate-700 dark:text-slate-300"
-                      >
+                      <p className="text-sm text-slate-700 dark:text-slate-300">
                         View all {basicLessonsData.lessons.length} foundational
                         courses.
                       </p>
@@ -955,14 +955,16 @@ export default function HomePage() {
             </motion.h3>
             <motion.ul className="space-y-2" variants={staggerContainer}>
               <motion.li variants={fadeInUp} custom={0.4}>
-                <Link to="/dashboard/essentials" className="text-gray-400 hover:text-white">
+                <Link
+                  to="/dashboard/essentials"
+                  className="text-gray-400 hover:text-white"
+                >
                   AI Learning
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.5}>
                 <Link
-                  to="/dashboard/learning/$courseId"
-                  params={{ courseId: "your-2025-guide-to-investing" }}
+                  to={`dashboard/essentials/${basicLessonsData.course_id}`}
                   className="text-gray-400 hover:text-white"
                 >
                   Expert Courses
@@ -977,7 +979,10 @@ export default function HomePage() {
                 </Link>
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.7}>
-                <Link to="/dashboard/chat" className="text-gray-400 hover:text-white">
+                <Link
+                  to="/dashboard/chat"
+                  className="text-gray-400 hover:text-white"
+                >
                   Chat with AI
                 </Link>
               </motion.li>
