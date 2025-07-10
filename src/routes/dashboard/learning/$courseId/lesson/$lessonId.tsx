@@ -29,6 +29,7 @@ import { ContentDisplay } from "@/components/learning/lesson/content-display";
 import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
 import { faLightbulb, faArrowLeft, faCheckCircle, faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { toast } from "react-toastify";
 
 export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$lessonId")({
   component: () => <LessonPage dataSource="remote" />,
@@ -166,6 +167,8 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     enabled: !!user,
     source: dataSource 
   });
+  const course_uuid=courses.find((c: Course) => c.course_id === courseId)?.id;
+  const lesson_uuid=courses.find((c: Course) => c.course_id === courseId)?.lessons.find((l: Lesson) => l.lesson_id === lessonId)?.id;
 
   // Adapter function to ensure lesson data conforms to the Lesson interface
   const adaptLesson = (lessonData: any): Lesson => {
@@ -177,7 +180,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
 
   // Find the course and lesson (handle async loading)
   const course =
-    courseId === basicCourse.id
+    courseId === basicCourse.course_id
       ? basicCourse
       : courses?.find((c: Course) => c.course_id === courseId);
   const lessonData = course?.lessons.find((l) => l.lesson_id === lessonId);
@@ -190,9 +193,11 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
 
   // State to track current item index (content or question)
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  // State to track if we're unlocking the next lesson
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   // Always call the hook, even if lesson is undefined
-  const lessonHook = useLesson({ lesson, courseId });
+  const lessonHook = useLesson({ lesson,courseId:course_uuid });
 
   // Early returns for loading, error, not found
   if (isCoursesLoading) {
@@ -301,30 +306,26 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
       
       // Handle lesson unlocking differently based on data source
       if (dataSource === 'local') {
-        // For local data (essentials), just show completion modal immediately
-        console.log('Local lesson completed, showing completion modal');
         setIsComplete(true);
       } else if (dataSource === 'remote' && lesson && user?.id) {
-        // For remote data (learning), call the database unlock function
-        console.log(`Unlocking next lesson after ${lesson.lesson_id} for user ${user.id}`);
+        // Set loading state before API call
+        setIsUnlocking(true);
+        
         // Pass the queryClient to ensure query invalidation works
-        unlockNextLesson(lesson.lesson_id, courseId, user.id, queryClient)
+        unlockNextLesson(lesson_uuid??"",course_uuid??"", user.id, queryClient)
           .then(success => {
+            setIsUnlocking(false); // Reset loading state
             if (success) {
-              console.log('Successfully unlocked next lesson');
-              // Force an immediate refetch of user courses to update the UI
-              queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
               setIsComplete(true);
             } else {
-              console.warn('Failed to unlock next lesson');
-              // Still show completion modal even if unlock fails
-              setIsComplete(true);
+              toast.error('Failed to unlock next lesson');
             }
           })
           .catch(error => {
+            setIsUnlocking(false); // Reset loading state on error
             console.error('Error unlocking next lesson:', error);
-            // Still show completion modal even if there's an error
-            setIsComplete(true);
+            toast.error('Error unlocking next lesson')
+     
           });
       } else {
         // Fallback for any edge cases
@@ -453,6 +454,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   handleCheckAnswer={checkCurrentAnswer}
                   handleNext={handleNext}
                   isLastQuestion={currentItemIndex >= flashcardItems.length - 1}
+                  isLoading={isUnlocking}
                 />
               </div>
             </div>
@@ -468,7 +470,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
         isOpen={isComplete}
         onClose={handleBack}
         description="Great job! You've completed this lesson."
-        lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
+        lessonTitle={`Lesson: ${lesson?.title}`}
         lessonId={lesson?.lesson_id} // Pass the actual lesson.id, not the URL parameter
         courseId={courseId}
         reward={{

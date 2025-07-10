@@ -33,7 +33,6 @@ serve(async (req: Request) => {
       });
     }
 
-    console.log(`[unlock-next-lesson] Attempting to unlock next lesson after: ${lessonId} in course: ${courseId} for user: ${userId}`);
     
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -62,7 +61,6 @@ serve(async (req: Request) => {
       .from("user_lessons")
       .select("*")
       .eq("course_id", courseId)
-      .order("display_order", { ascending: true });
 
     if (lessonError) {
       console.error("[unlock-next-lesson] Error fetching lessons:", lessonError);

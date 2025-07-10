@@ -18,13 +18,11 @@ export function useUnlockNextLesson() {
         return false;
       }
       
-      console.log(`Attempting to unlock next lesson after: ${lessonId} in course: ${courseId} for user: ${userId}`);
       
       // Call the service to unlock the next lesson
       const result = await unlockNextLessonService(userId, courseId, lessonId);
       
       if (result.success) {
-        console.log(`Successfully unlocked next lesson: ${result.message}`);
         
         // Invalidate queries to force a refetch of user courses
         await queryClient.invalidateQueries({ queryKey: ['user-courses', userId] });
@@ -62,7 +60,11 @@ export async function unlockNextLesson(
       return false;
     }
     
-    console.log(`Attempting to unlock next lesson after: ${lessonId} in course: ${courseId} for user: ${userId}`);
+    if (!courseId) {
+      console.warn('No course ID provided, cannot unlock lesson');
+      return false;
+    }
+    
     
     // Call the service to unlock the next lesson
     const result = await unlockNextLessonService(userId, courseId, lessonId);

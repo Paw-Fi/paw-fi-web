@@ -423,27 +423,7 @@ export function CompletionDisplay({
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              // If this is a success completion and we have the lessonId, unlock next lesson
-              if (isSuccess && lessonId) {
-                console.log('Attempting to unlock next lesson with ID:', lessonId);
-                const unlocked = unlockNextLesson(lessonId, courseId || '');
-                if (unlocked) {
-                  console.log('Successfully unlocked next lesson');
-                } else {
-                  console.warn('Failed to unlock next lesson - no matching lesson found or already unlocked');
-                }
-              } else {
-                console.warn('Missing lessonId or not a success case - cannot unlock next lesson');
-              }
-              
-              // Use immediate navigation to avoid background help tips interference
-              if (actionText === "Continue Learning" && courseId) {
-                // Use the correct path based on dataSource
-                const basePath = dataSource === 'local' ? 'essentials' : 'learning';
-                window.location.href = `/dashboard/${basePath}/${courseId}`;
-              } else {
-                onClose();
-              }
+              onClose();
             }}
             className="w-full py-4 text-lg font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >

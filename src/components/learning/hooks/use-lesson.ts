@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 interface UseLessonProps {
   lesson: Lesson | undefined;
-  courseId: string;
+  courseId?: string;
 }
 
 export function useLesson({ lesson, courseId }: UseLessonProps) {
@@ -34,6 +34,7 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const questions = lesson?.questions || [];
   const lessonId = lesson?.lesson_id;
+  const lesson_uuid = lesson?.id;
 
   // Handle redirection if lesson is not unlocked
   useEffect(() => {
@@ -111,9 +112,9 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
       // We've reached the end of the lesson
       setEarnedXp(lesson?.xp || 0);
       // If all answers are correct, unlock the next lesson
-      if (user?.id && lessonId) {
+      if (user?.id && lessonId && courseId) {
         // Pass queryClient to ensure query invalidation works
-        unlockNextLesson(lessonId, courseId, user.id, queryClient)
+        unlockNextLesson(lesson_uuid??"", courseId, user.id, queryClient)
           .then((success) => {
             if (success) {
               // Force an immediate refetch of user courses to update the UI

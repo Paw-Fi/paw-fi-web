@@ -93,7 +93,7 @@ export default function CourseDetailPage({ dataSource = 'remote' }: CourseDetail
     enabled: !!user,
     source: dataSource 
   });
-  const course = courseId === basicCourse.id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
+  const course = courseId === basicCourse.course_id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
 
   // Define animation variants for container and lesson cards
   const containerVariants: Variants = {
