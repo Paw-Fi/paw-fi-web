@@ -23,6 +23,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.20.0";
 // Import CORS headers from shared utility
 import { corsHeaders } from "../shared/cors.ts";
 
+
+// Types
+interface StaticRoute {
+  path: string;
+  priority: number;
+  changefreq: string;
+  lastmod?: string;
+}
+
 // Create a Supabase client
 const getSupabaseClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -32,25 +41,39 @@ const getSupabaseClient = () => {
 };
 
 // Define static routes for the sitemap
-const staticRoutes = [
-  { path: '/', priority: 1.0, changefreq: 'weekly' },
+const staticRoutes: StaticRoute[] = [
+  { path: '/', priority: 1.0, changefreq: 'daily', lastmod: '2025-06-21' },
   { path: '/budgeting-app', priority: 0.9, changefreq: 'weekly' },
-  { path: '/download', priority: 0.8, changefreq: 'monthly' },
-  { path: '/pricing', priority: 0.8, changefreq: 'monthly' },
-  { path: '/calculators', priority: 0.8, changefreq: 'monthly' },
-  { path: '/calculators/mortgage-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/calculators/investment-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/calculators/retirement-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/calculators/auto-loan-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/calculators/saving-goals-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/calculators/compound-calculator', priority: 0.7, changefreq: 'monthly' },
-  { path: '/privacy-policy', priority: 0.3, changefreq: 'yearly' },
-  { path: '/terms-of-service', priority: 0.3, changefreq: 'yearly' },
-  { path: '/cookie-policy', priority: 0.3, changefreq: 'yearly' },
+  { path: '/pricing', priority: 0.8, changefreq: 'monthly', lastmod: '2025-06-19' },
+  { path: '/cookie-policy', priority: 0.3, changefreq: 'yearly', lastmod: '2025-06-19' },
+  { path: '/privacy-policy', priority: 0.3, changefreq: 'yearly', lastmod: '2025-06-19' },
+  { path: '/terms-of-service', priority: 0.3, changefreq: 'yearly', lastmod: '2025-06-19' },
+  { path: '/blogs', priority: 0.8, changefreq: 'weekly', lastmod: '2025-06-19' },
+  { path: '/team', priority: 0.8, changefreq: 'yearly', lastmod: '2025-06-19' },
+  { path: '/dashboard', priority: 0.9, changefreq: 'daily', lastmod: '2025-06-21' },
+  { path: '/dashboard/learning', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/invest-L1', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/behavfin-L2', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/moneymarket-L3', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/bondmarket-L4', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/equitymarket-L5', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/derivatives-L6', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/tvm-L7', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/stats-L8', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/econbasics-L9', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/finstatements-L10', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/auto-loan-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/compound-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/investment-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/mortgage-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/retirement-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/saving-goals-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
 ];
 
 // Generate the sitemap XML
-async function generateSitemap(req: Request, baseUrl: string) {
+async function generateSitemap(baseUrl: string) {
   try {
     const supabase = getSupabaseClient();
     
@@ -73,6 +96,12 @@ async function generateSitemap(req: Request, baseUrl: string) {
     for (const route of staticRoutes) {
       xml += '  <url>\n';
       xml += `    <loc>${baseUrl}${route.path}</loc>\n`;
+      
+      // Add lastmod if available
+      if (route.lastmod) {
+        xml += `    <lastmod>${route.lastmod}</lastmod>\n`;
+      }
+      
       xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
       xml += `    <priority>${route.priority}</priority>\n`;
       xml += '  </url>\n';
@@ -114,19 +143,13 @@ async function generateSitemap(req: Request, baseUrl: string) {
 }
 
 // Generate robots.txt content
-function generateRobotsTxt(baseUrl: string) {
+function generateRobotsTxt() {
   const robotsTxt = `# robots.txt for Moneko
 User-agent: *
 Allow: /
 
-# Disallow specific paths
-Disallow: /api/
-Disallow: /admin/
-Disallow: /dashboard/
-Disallow: /account/
-
 # Sitemap location
-Sitemap: ${baseUrl}/sitemap.xml
+Sitemap: https://pbopcsmrcykdzbilpilf.supabase.co/functions/v1/sitemap-generator/sitemap.xml
 `;
   
   return new Response(robotsTxt, { 
@@ -140,6 +163,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 
 // Main handler for all routes
 serve(async (req) => {
+  
   // Handle OPTIONS request for CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -148,21 +172,18 @@ serve(async (req) => {
   const url = new URL(req.url);
   const path = url.pathname;
   
-  // Extract base URL from request for use in sitemap
-  const host = req.headers.get('host') || 'moneko.io';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = 'https://moneko.io';
   
   // Route handling
   if (req.method === 'GET') {
     // Generate sitemap.xml
     if (path === '/sitemap-generator/sitemap.xml') {
-      return await generateSitemap(req, baseUrl);
+      return await generateSitemap(baseUrl);
     }
     
     // Generate robots.txt
     if (path === '/sitemap-generator/robots.txt') {
-      return generateRobotsTxt(baseUrl);
+      return generateRobotsTxt();
     }
   }
   
