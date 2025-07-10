@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "start": "node .output/server/index.mjs"
+    "build": "npm run pseo:prepare && vite build",
+    "start": "node .output/server/index.mjs",
+    "pseo:prepare": "npm run pseo:generate && npm run pseo:sitemap",
+    "pseo:generate": "npx tsx src/server/scripts/generate-seo-data.ts",
+    "pseo:sitemap": "npx tsx src/server/scripts/generate-sitemap.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

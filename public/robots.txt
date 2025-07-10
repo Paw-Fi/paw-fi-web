@@ -2,4 +2,4 @@
 User-agent: *
 Disallow:
 
-Sitemap: https://moneko.io/sitemap.xml
+Sitemap: https://pbopcsmrcykdzbilpilf.supabase.co/functions/v1/sitemap-generator/sitemap.xml
