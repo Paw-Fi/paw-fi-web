@@ -501,14 +501,14 @@ function BudgetingAppPage() {
             </p>
             
             <a 
-              href="/download" 
+              href="/dashboard" 
               className="inline-block w-full bg-white text-purple-600 font-bold py-3 px-6 rounded-xl text-center shadow-md hover:shadow-lg transition-all duration-300"
             >
-              Download Free
+              Start Free
             </a>
             
             <div className="mt-4 text-center">
-              <span className="text-xs opacity-80">Available for iOS & Android</span>
+              <span className="text-xs opacity-80">Available on all devices</span>
             </div>
           </motion.div>
           
