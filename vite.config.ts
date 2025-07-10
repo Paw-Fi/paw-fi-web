@@ -19,7 +19,7 @@ export default defineConfig({
       }),
       VitePluginRadar({
         analytics: {
-          id: 'G-KVHTSD1MF1',
+          id: 'G-KBNN5QXD4G',
         },
       }),
       tanstackStart(),
