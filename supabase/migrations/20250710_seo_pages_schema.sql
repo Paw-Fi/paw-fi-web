@@ -31,6 +31,7 @@ CREATE TABLE seo_pages_data (
   -- Structured content (JSON)
   benefits JSONB NOT NULL DEFAULT '[]'::JSONB,
   faqs JSONB NOT NULL DEFAULT '[]'::JSONB,
+  suggestions JSONB NOT NULL DEFAULT '[]'::JSONB,
   
   -- Related content
   related_article_slugs TEXT[],
@@ -68,7 +69,7 @@ COMMENT ON TABLE seo_pages_data IS 'Stores data for programmatic SEO pages with 
 INSERT INTO seo_pages_data (
   slug, target_group, financial_goal, region, title, meta_description, keywords,
   intro_content, feature_benefit_snippet, cta_snippet, secondary_content,
-  benefits, faqs, related_article_slugs
+  benefits, faqs, suggestions, related_article_slugs
 ) VALUES
 
 -- TARGET GROUP BUDGETING PAGES (matching index.tsx links)
@@ -89,6 +90,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should students budget for monthly expenses?", "answer": "Student budgets typically range from $800-2000/month depending on location and lifestyle. Moneko helps you create a realistic budget based on your actual income and necessary expenses."},
    {"question": "How can I save money as a student?", "answer": "Focus on textbook rentals, meal planning, student discounts, and tracking small daily expenses. Our AI identifies spending patterns and suggests specific areas for savings."}
  ]'::JSONB,
+ '[
+   "Help me create a budget for students",
+   "How to save money on a tight student budget?",
+   "Best budgeting strategies for college students",
+   "Student budgeting planning tips",
+   "Calculate my student financial goals",
+   "Show me student investment options"
+ ]'::JSONB,
  ARRAY['young-professionals-budgeting', 'parents-budgeting']),
 
 ('young-professionals-budgeting', 'young-professionals', 'budgeting', null,
@@ -107,6 +116,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How much should young professionals save?", "answer": "Aim for 20% savings rate: 10% for retirement, 5-10% for emergency fund/goals. Our AI helps optimize this based on your salary and expenses."},
    {"question": "How do I avoid lifestyle inflation?", "answer": "Set automatic savings increases with each raise, track discretionary spending, and use our AI to identify when lifestyle costs are growing faster than income."}
+ ]'::JSONB,
+ '[
+   "Help me create a budget for young professionals",
+   "How to achieve budgeting as a young professional?",
+   "Best saving strategies for young professionals", 
+   "Budgeting planning tips",
+   "Calculate my financial goals",
+   "Show me investment options"
  ]'::JSONB,
  ARRAY['students-budgeting', 'entrepreneurs-budgeting']),
 
@@ -127,6 +144,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should families budget for children?", "answer": "Families typically spend $12,000-15,000 annually per child. Our AI helps track these costs and find optimization opportunities while maintaining quality of life."},
    {"question": "How do I balance family expenses with retirement savings?", "answer": "Prioritize employer 401k matches, then balance children''s immediate needs with long-term savings. Our tools help optimize this balance based on your family''s situation."}
  ]'::JSONB,
+ '[
+   "Help me create a budget for parents",
+   "How to manage family expenses?",
+   "Best budgeting strategies for families",
+   "Family budgeting planning tips", 
+   "Calculate family financial goals",
+   "Show me family-friendly investment options"
+ ]'::JSONB,
  ARRAY['couples-budgeting', 'young-professionals-budgeting']),
 
 ('couples-budgeting', 'couples', 'budgeting', null,
@@ -145,6 +170,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How should couples split shared expenses?", "answer": "Common approaches include 50/50, proportional to income, or separate accounts for different categories. Our AI helps you find the method that works best for your situation."},
    {"question": "How do we budget for individual and shared goals?", "answer": "Allocate percentages for joint goals (home, vacation) and individual goals (hobbies, personal purchases). Our tools help balance these priorities effectively."}
+ ]'::JSONB,
+ '[
+   "Help me create a budget for couples",
+   "How to manage shared finances?",
+   "Best budgeting strategies for couples",
+   "Joint budgeting planning tips",
+   "Calculate our shared financial goals",
+   "Show me couple investment options"
  ]'::JSONB,
  ARRAY['parents-budgeting', 'young-professionals-budgeting']),
 
@@ -165,6 +198,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should freelancers save for taxes?", "answer": "Set aside 25-30% of gross income for taxes, depending on your tax bracket. Our AI tracks this automatically and reminds you about quarterly payments."},
    {"question": "How do I budget with irregular freelance income?", "answer": "Use a baseline budget based on your lowest monthly income, then allocate extra earnings to savings and goals. Our tools help smooth out income fluctuations."}
  ]'::JSONB,
+ '[
+   "Help me create a budget for freelancers",
+   "How to manage variable income?",
+   "Best budgeting strategies for freelancers",
+   "Freelancer tax planning tips",
+   "Calculate my freelance financial goals",
+   "Show me freelancer investment options"
+ ]'::JSONB,
  ARRAY['entrepreneurs-budgeting', 'young-professionals-budgeting']),
 
 ('entrepreneurs-budgeting', 'entrepreneurs', 'budgeting', null,
@@ -184,6 +225,14 @@ INSERT INTO seo_pages_data (
    {"question": "How do entrepreneurs separate business and personal budgets?", "answer": "Maintain separate accounts, pay yourself a consistent salary, and track business expenses separately. Our AI helps categorize and optimize both budgets."},
    {"question": "How much should entrepreneurs save personally vs. reinvest?", "answer": "Aim for personal emergency fund first, then balance between business growth opportunities and personal wealth building based on your risk tolerance and business stage."}
  ]'::JSONB,
+ '[
+   "Help me create a budget for entrepreneurs",
+   "How to separate business and personal finances?",
+   "Best budgeting strategies for entrepreneurs",
+   "Business budgeting planning tips",
+   "Calculate my business financial goals",
+   "Show me entrepreneur investment options"
+ ]'::JSONB,
  ARRAY['freelancers-budgeting', 'young-professionals-budgeting']),
 
 ('retirees-budgeting', 'retirees', 'budgeting', null,
@@ -202,6 +251,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How much can retirees safely withdraw from savings?", "answer": "The traditional 4% rule suggests withdrawing 4% annually, but this varies based on market conditions, health, and expenses. Our AI helps optimize withdrawal strategies."},
    {"question": "How should retirees budget for healthcare costs?", "answer": "Plan for 15-20% of retirement income going to healthcare. Our tools help track Medicare costs, supplements, and out-of-pocket expenses."}
+ ]'::JSONB,
+ '[
+   "Help me create a budget for retirees",
+   "How to manage fixed retirement income?",
+   "Best budgeting strategies for retirees",
+   "Retirement budgeting planning tips",
+   "Calculate my retirement financial goals",
+   "Show me retiree investment options"
  ]'::JSONB,
  ARRAY['parents-budgeting', 'young-professionals-retirement']),
 
@@ -223,6 +280,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should young professionals save monthly?", "answer": "Aim for 20% of income: 6 months expenses for emergency fund, then goal-specific savings. Our AI helps optimize this based on your income and expenses."},
    {"question": "What''s the best way to automate saving?", "answer": "Set up automatic transfers right after payday, use high-yield savings accounts, and increase savings rates with each raise. Our tools help optimize these systems."}
  ]'::JSONB,
+ '[
+   "Help me create a savings plan for young professionals",
+   "How to build an emergency fund?",
+   "Best saving strategies for young professionals",
+   "Automated saving planning tips",
+   "Calculate my saving financial goals",
+   "Show me high-yield saving options"
+ ]'::JSONB,
  ARRAY['young-professionals-budgeting', 'young-professionals-investing']),
 
 ('young-professionals-debt-repayment', 'young-professionals', 'debt-repayment', null,
@@ -241,6 +306,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "Should I pay off student loans or invest?", "answer": "Compare loan interest rates to investment returns. Generally, pay minimums on low-rate loans (<5%) and invest the difference, aggressively pay high-rate debt first."},
    {"question": "What''s the fastest way to pay off debt?", "answer": "Debt avalanche (highest interest first) saves most money, debt snowball (smallest balance first) provides psychological wins. Our AI recommends based on your personality and situation."}
+ ]'::JSONB,
+ '[
+   "Help me pay off debt as a young professional",
+   "How to eliminate student loans faster?",
+   "Best debt repayment strategies for young professionals",
+   "Debt elimination planning tips",
+   "Calculate my debt payoff goals",
+   "Show me debt consolidation options"
  ]'::JSONB,
  ARRAY['students-budgeting', 'young-professionals-budgeting']),
 
@@ -261,6 +334,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should young professionals invest?", "answer": "Start with employer 401k match, then aim for 15-20% total savings rate. Begin with broad market index funds and increase complexity as you learn."},
    {"question": "Should I use a robo-advisor or pick my own stocks?", "answer": "Most young professionals benefit from low-cost index funds or robo-advisors initially. Individual stock picking requires significant time and knowledge investment."}
  ]'::JSONB,
+ '[
+   "Help me start investing as a young professional",
+   "How to build an investment portfolio?",
+   "Best investing strategies for young professionals",
+   "401k optimization tips",
+   "Calculate my investment goals",
+   "Show me beginner investment options"
+ ]'::JSONB,
  ARRAY['young-professionals-retirement', 'young-professionals-saving']),
 
 ('young-professionals-retirement', 'young-professionals', 'retirement', null,
@@ -280,6 +361,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should young professionals save for retirement?", "answer": "Aim for 10-15% of income including employer match. Starting at 25, $200/month can grow to over $1M by retirement through compound interest."},
    {"question": "Roth 401k vs Traditional 401k for young professionals?", "answer": "Young professionals often benefit from Roth contributions since they''re likely in lower tax brackets now than in retirement. Our AI helps optimize this decision."}
  ]'::JSONB,
+ '[
+   "Help me plan retirement as a young professional",
+   "How to maximize my 401k?",
+   "Best retirement strategies for young professionals",
+   "Retirement planning tips",
+   "Calculate my retirement goals",
+   "Show me retirement investment options"
+ ]'::JSONB,
  ARRAY['young-professionals-investing', 'entrepreneurs-retirement']),
 
 ('young-professionals-home-buying', 'young-professionals', 'home-buying', null,
@@ -298,6 +387,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How much should young professionals save for a down payment?", "answer": "Aim for 20% to avoid PMI, but 10-15% can work with good credit. Factor in closing costs (2-3% of home price) and moving expenses."},
    {"question": "Should I buy or rent as a young professional?", "answer": "Consider job stability, local market conditions, and opportunity cost of down payment. Generally buy if staying 5+ years and renting costs exceed ownership costs."}
+ ]'::JSONB,
+ '[
+   "Help me buy a home as a young professional",
+   "How to save for a down payment?",
+   "Best home buying strategies for young professionals",
+   "Home affordability planning tips",
+   "Calculate my home buying goals",
+   "Show me mortgage options"
  ]'::JSONB,
  ARRAY['families-home-buying', 'young-professionals-saving']),
 
@@ -319,6 +416,14 @@ INSERT INTO seo_pages_data (
    {"question": "How much should students save for emergencies?", "answer": "Students should aim for $500-1000 initially, then build toward 3-6 months of expenses. Moneko helps you set realistic goals based on your income."},
    {"question": "How can I save money on a tight student budget?", "answer": "Our AI identifies small, consistent savings opportunities in your spending patterns without impacting your quality of life or studies."}
  ]'::JSONB,
+ '[
+   "Help me build an emergency fund as a student",
+   "How to save for emergencies on a student budget?",
+   "Best emergency fund strategies for students",
+   "Student emergency planning tips",
+   "Calculate my emergency fund goals",
+   "Show me student savings options"
+ ]'::JSONB,
  ARRAY['young-professionals-emergency-fund', 'students-budgeting']),
 
 ('families-home-buying', 'families', 'home-buying', null,
@@ -337,6 +442,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How much house can our family afford?", "answer": "Our AI analyzes your family''s complete financial picture, including childcare and education costs, to recommend a realistic home price range."},
    {"question": "What''s the best down payment strategy for families?", "answer": "We help you balance saving for a larger down payment with other family financial priorities, optimizing for your specific situation."}
+ ]'::JSONB,
+ '[
+   "Help me buy a home for my family",
+   "How to plan for family home purchase?",
+   "Best home buying strategies for families",
+   "Family home affordability tips",
+   "Calculate our family home goals",
+   "Show me family mortgage options"
  ]'::JSONB,
  ARRAY['young-professionals-home-buying', 'couples-budgeting']),
 
@@ -357,6 +470,14 @@ INSERT INTO seo_pages_data (
    {"question": "What retirement accounts can entrepreneurs use?", "answer": "SEP-IRAs, Solo 401ks, and SIMPLE IRAs offer higher contribution limits for self-employed individuals. Our AI helps choose the best option for your situation."},
    {"question": "How much should entrepreneurs save for retirement?", "answer": "Aim for 15-20% of income, taking advantage of higher contribution limits for self-employed accounts. Balance business reinvestment with retirement security."}
  ]'::JSONB,
+ '[
+   "Help me plan retirement as an entrepreneur",
+   "How to optimize self-employed retirement accounts?",
+   "Best retirement strategies for entrepreneurs",
+   "Entrepreneur retirement planning tips",
+   "Calculate my business retirement goals",
+   "Show me self-employed retirement options"
+ ]'::JSONB,
  ARRAY['young-professionals-retirement', 'entrepreneurs-budgeting']),
 
 ('remote-workers-investing', 'remote-workers', 'investing', null,
@@ -375,6 +496,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How do remote workers invest with irregular income?", "answer": "Use dollar-cost averaging during good months, maintain larger cash reserves, and focus on flexible investment strategies that adapt to income variability."},
    {"question": "What about taxes for remote workers investing internationally?", "answer": "US citizens must report worldwide income. Consider tax-efficient accounts and consult professionals for complex international situations."}
+ ]'::JSONB,
+ '[
+   "Help me invest as a remote worker",
+   "How to manage investments with variable income?",
+   "Best investing strategies for remote workers",
+   "Remote work investment tips",
+   "Calculate my remote work investment goals",
+   "Show me location-independent investment options"
  ]'::JSONB,
  ARRAY['freelancers-budgeting', 'entrepreneurs-investing']),
 
@@ -395,6 +524,14 @@ INSERT INTO seo_pages_data (
    {"question": "How do gig workers manage irregular income?", "answer": "Create baseline budgets using lowest monthly income, build larger emergency funds, and use percentage-based budgeting rather than fixed amounts."},
    {"question": "What financial education do gig workers need most?", "answer": "Tax planning, emergency fund strategies, retirement planning without employer benefits, and business expense tracking are crucial skills for gig workers."}
  ]'::JSONB,
+ '[
+   "Help me learn financial basics as a gig worker",
+   "How to manage gig work finances?",
+   "Best financial education for gig workers",
+   "Gig work financial planning tips",
+   "Calculate my gig work financial goals",
+   "Show me gig worker financial resources"
+ ]'::JSONB,
  ARRAY['freelancers-budgeting', 'entrepreneurs-budgeting']),
 
 ('beginners-debt-payoff', 'beginners', 'debt-payoff', null,
@@ -413,6 +550,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "What''s the best debt payoff strategy for beginners?", "answer": "Debt avalanche saves the most money, debt snowball provides psychological wins. Our AI recommends based on your debts, personality, and financial situation."},
    {"question": "How can beginners find money for debt payments?", "answer": "Track all expenses for a month, identify discretionary spending, and redirect money from subscriptions, dining out, and entertainment to debt payments."}
+ ]'::JSONB,
+ '[
+   "Help me pay off debt as a beginner",
+   "How to start debt elimination?",
+   "Best debt payoff strategies for beginners",
+   "Beginner debt planning tips",
+   "Calculate my debt payoff goals",
+   "Show me simple debt elimination options"
  ]'::JSONB,
  ARRAY['students-budgeting', 'young-professionals-debt-repayment']),
 
@@ -433,6 +578,14 @@ INSERT INTO seo_pages_data (
    {"question": "How often should intermediate investors rebalance?", "answer": "Our AI monitors continuously and suggests rebalancing when allocations drift significantly from targets or when market conditions warrant adjustment."},
    {"question": "What''s the best asset allocation for intermediate investors?", "answer": "Asset allocation depends on age, risk tolerance, and goals. Our AI creates personalized allocations and adjusts them as your situation changes."}
  ]'::JSONB,
+ '[
+   "Help me optimize my investment portfolio",
+   "How to improve my asset allocation?",
+   "Best portfolio strategies for intermediate investors",
+   "Portfolio rebalancing tips",
+   "Calculate my portfolio optimization goals",
+   "Show me advanced investment options"
+ ]'::JSONB,
  ARRAY['young-professionals-investing', 'advanced-traders-portfolio-optimization']),
 
 ('advanced-traders-market-analysis', 'advanced-traders', 'market-analysis', null,
@@ -451,6 +604,14 @@ INSERT INTO seo_pages_data (
  '[
    {"question": "How does AI improve market analysis for advanced traders?", "answer": "Our AI processes vast amounts of market data, identifies patterns humans might miss, and provides insights that can enhance your trading strategies."},
    {"question": "Can AI replace fundamental analysis?", "answer": "AI enhances but doesn''t replace fundamental analysis. It helps you process information faster and identify opportunities, but human judgment remains crucial."}
+ ]'::JSONB,
+ '[
+   "Help me analyze markets as an advanced trader",
+   "How to improve my trading analysis?",
+   "Best market analysis strategies for advanced traders",
+   "Advanced trading tips",
+   "Calculate my trading goals",
+   "Show me professional trading tools"
  ]'::JSONB,
  ARRAY['intermediate-investors-portfolio-optimization', 'entrepreneurs-investing']);
 

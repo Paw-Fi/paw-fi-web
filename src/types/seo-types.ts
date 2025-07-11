@@ -21,6 +21,7 @@ export interface SEOPageData {
   secondary_content: string;
   benefits: { title: string; description: string }[];
   faqs: FAQ[];
+  suggestions: string[];
   related_article_slugs: string[];
   created_at?: string;
   updated_at?: string;

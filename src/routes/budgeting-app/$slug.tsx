@@ -344,14 +344,17 @@ function BudgetingAppPage() {
 
   const calculators = getCalculators();
 
-  const customSuggestions = [
-    `Help me create a budget for ${displayTargetGroup.toLowerCase()}`,
-    `How to achieve ${displayFinancialGoal.toLowerCase()}?`,
-    `Best saving strategies for ${displayTargetGroup.toLowerCase()}`,
-    `${displayFinancialGoal} planning tips`,
-    "Calculate my financial goals",
-    "Show me investment options"
-  ];
+  // Use database suggestions or fallback to dynamic ones
+  const customSuggestions = pageData.suggestions?.length > 0 
+    ? pageData.suggestions 
+    : [
+        `Help me create a budget for ${displayTargetGroup.toLowerCase()}`,
+        `How to achieve ${displayFinancialGoal.toLowerCase()}?`,
+        `Best saving strategies for ${displayTargetGroup.toLowerCase()}`,
+        `${displayFinancialGoal} planning tips`,
+        "Calculate my financial goals",
+        "Show me investment options"
+      ];
 
   return (
     <AmbientHaloLayout>
