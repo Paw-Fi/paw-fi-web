@@ -233,7 +233,7 @@ async function handleSubscriptionUpdated(subscription) {
       const isNew = subscription.status === 'active' && 
                    subscription.created === subscription.start_date;
       
-      const name = user.full_name || 'Valued Member';
+      const name = user.full_name || '';
       
       if (isNew) {
         // Send welcome email for new subscriptions
@@ -322,7 +322,7 @@ async function handleSubscriptionDeleted(subscription) {
         }
         
         const planName = await getPlanNameFromProductId(planId);
-        const name = user.full_name || 'Valued Member';
+        const name = user.full_name || '';
         
         // Check if immediate cancellation or end of period
         const endDate = subscription.canceled_at === subscription.current_period_end
@@ -438,7 +438,7 @@ async function handleInvoicePaymentFailed(invoice) {
             }
           }
           
-          const name = userData.first_name || 'Valued Member';
+          const name = userData.first_name || '';
           const emailTemplate = paymentFailedTemplate({
             name,
             planName,
@@ -480,7 +480,7 @@ async function handleSubscriptionTrialEnding(subscription) {
     }).format(new Date(subscription.trial_end * 1000));
     
     // Send trial ending email
-    const name = user.full_name || 'Valued Member';
+    const name = user.full_name || '';
     const emailTemplate = trialEndingTemplate({
       name,
       planName,

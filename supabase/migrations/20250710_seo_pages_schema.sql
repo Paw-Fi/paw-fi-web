@@ -1,52 +1,41 @@
--- Migration for Moneko pSEO database schema
--- This file defines the table structure for storing programmatic SEO page data
+-- =========================================================================================
+-- MONEKO pSEO DATABASE SCRIPT (COMPLETE & CORRECTED)
+-- This script defines the schema and inserts a comprehensive dataset covering all
+-- 42 logical combinations of target groups and financial goals.
+-- Running this script from a clean state will resolve any "data not found" errors.
+-- =========================================================================================
 
--- Drop existing table if it exists to ensure clean schema
+-- Step 1: Drop existing objects to ensure a clean slate
 DROP TABLE IF EXISTS seo_pages_data;
 
--- Create the table with correct schema matching pseo-manager function
+-- Step 2: Create the table with the correct schema
 CREATE TABLE seo_pages_data (
-  -- Primary key
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
-  -- Core routing and identification (matches pseo-manager expectation)
   slug TEXT NOT NULL UNIQUE,
-  
-  -- Core content variables
   target_group TEXT NOT NULL,
   financial_goal TEXT NOT NULL,
   region TEXT,
-  
-  -- SEO metadata
   title TEXT NOT NULL,
   meta_description TEXT NOT NULL,
   keywords TEXT[],
-  
-  -- Content sections
   intro_content TEXT NOT NULL,
   feature_benefit_snippet TEXT NOT NULL,
   cta_snippet TEXT NOT NULL,
   secondary_content TEXT NOT NULL,
-  
-  -- Structured content (JSON)
   benefits JSONB NOT NULL DEFAULT '[]'::JSONB,
   faqs JSONB NOT NULL DEFAULT '[]'::JSONB,
   suggestions JSONB NOT NULL DEFAULT '[]'::JSONB,
-  
-  -- Related content
   related_article_slugs TEXT[],
-  
-  -- Tracking fields
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Create indexes for faster lookups
+-- Step 3: Create indexes for faster lookups
 CREATE INDEX IF NOT EXISTS seo_pages_data_slug_idx ON seo_pages_data (slug);
 CREATE INDEX IF NOT EXISTS seo_pages_data_target_group_idx ON seo_pages_data (target_group);
 CREATE INDEX IF NOT EXISTS seo_pages_data_financial_goal_idx ON seo_pages_data (financial_goal);
 
--- Create a function to automatically update the updated_at timestamp
+-- Step 4: Create a function and trigger to automatically update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -55,20 +44,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a trigger to automatically update the updated_at timestamp
-DROP TRIGGER IF EXISTS update_seo_pages_data_updated_at ON seo_pages_data;
 CREATE TRIGGER update_seo_pages_data_updated_at
 BEFORE UPDATE ON seo_pages_data
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
--- Add comment to the table for documentation
+-- Step 5: Add a comment to the table for documentation
 COMMENT ON TABLE seo_pages_data IS 'Stores data for programmatic SEO pages with dynamic content variables';
 
--- =========================================================================================
--- COMPREHENSIVE pSEO DATA INSERT
--- This section covers every reasonable combination of Target Groups and Financial Goals.
--- =========================================================================================
+-- Step 6: Insert the comprehensive pSEO data, covering all 42 primary combinations.
 INSERT INTO seo_pages_data (
   slug, target_group, financial_goal, region, title, meta_description, keywords,
   intro_content, feature_benefit_snippet, cta_snippet, secondary_content,
@@ -76,10 +60,9 @@ INSERT INTO seo_pages_data (
 ) VALUES
 
 -- ===================================
--- Target Group: STUDENTS (6 pages)
+-- Target Group: STUDENTS (6 of 6 pages)
 -- ===================================
 
--- Students - Budgeting
 ('students-budgeting', 'students', 'budgeting', null,
  'Student Budgeting: AI-Powered Financial Planning for College | Moneko',
  'Master student budgeting with Moneko''s AI tools. Track expenses, manage limited income, and build healthy financial habits during college.',
@@ -93,7 +76,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for students", "How to save money on a tight student budget?", "Best budgeting strategies for college students"]'::JSONB,
  ARRAY['students-saving', 'students-debt-repayment']),
 
--- Students - Saving
 ('students-saving', 'students', 'saving', null,
  'Saving for Students: Build Your First Emergency Fund & Savings Goals | Moneko',
  'Learn how to save money as a student with Moneko''s AI. Track savings goals, build an emergency fund, and create lifelong financial habits on a college budget.',
@@ -107,7 +89,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a savings plan as a student", "How can I build an emergency fund in college?", "Best saving strategies for students"]'::JSONB,
  ARRAY['students-budgeting', 'students-investing']),
 
--- Students - Debt Repayment
 ('students-debt-repayment', 'students', 'debt-repayment', null,
  'Student Debt Repayment: Tackle Student Loans & Build Credit | Moneko',
  'Get a head start on student loan repayment with Moneko. Understand your options, from in-school payments to post-graduation strategies, and build good credit.',
@@ -121,7 +102,6 @@ INSERT INTO seo_pages_data (
  '["Help me plan my student loan repayment", "How to pay off student loans faster?", "What is the debt avalanche method?"]'::JSONB,
  ARRAY['students-budgeting', 'young-professionals-debt-repayment']),
 
--- Students - Investing
 ('students-investing', 'students', 'investing', null,
  'Investing for Students: Start Building Wealth in College | Moneko',
  'Learn how to start investing as a student with Moneko. Even small amounts can grow significantly over time thanks to compound interest. Explore beginner-friendly options.',
@@ -135,7 +115,6 @@ INSERT INTO seo_pages_data (
  '["Help me start investing as a student", "How can I invest $100 as a college student?", "Best investment strategies for students"]'::JSONB,
  ARRAY['students-saving', 'young-professionals-investing']),
 
--- Students - Retirement
 ('students-retirement', 'students', 'retirement', null,
  'Retirement Planning for Students: The Power of an Early Start | Moneko',
  'It''s never too early to plan for retirement. Learn how students can leverage compound interest to build a massive head start on their retirement goals with Moneko.',
@@ -149,7 +128,6 @@ INSERT INTO seo_pages_data (
  '["How to start saving for retirement in college?", "Explain compound interest", "Help me open a Roth IRA as a student"]'::JSONB,
  ARRAY['students-investing', 'young-professionals-retirement']),
 
--- Students - Home Buying
 ('students-home-buying', 'students', 'home-buying', null,
  'Planning for a Home as a Student: The Long-Term Game | Moneko',
  'Dreaming of buying a home one day? Learn how students can start planning and saving for a future down payment with Moneko''s long-term goal tools.',
@@ -164,10 +142,9 @@ INSERT INTO seo_pages_data (
  ARRAY['students-saving', 'young-professionals-home-buying']),
 
 -- ===================================
--- Target Group: YOUNG PROFESSIONALS (6 pages)
+-- Target Group: YOUNG PROFESSIONALS (6 of 6 pages)
 -- ===================================
 
--- Young Professionals - Budgeting
 ('young-professionals-budgeting', 'young-professionals', 'budgeting', null,
  'Young Professional Budgeting: Smart Money Management for Career Growth | Moneko',
  'Build wealth as a young professional with Moneko''s AI budgeting tools. Balance career growth, lifestyle, and savings with intelligent financial planning.',
@@ -181,7 +158,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for young professionals", "How to achieve budgeting as a young professional?", "Best saving strategies for young professionals"]'::JSONB,
  ARRAY['young-professionals-saving', 'young-professionals-investing']),
 
--- Young Professionals - Saving
 ('young-professionals-saving', 'young-professionals', 'saving', null,
  'Smart Saving Strategies for Young Professionals | Moneko',
  'Build wealth through intelligent saving with Moneko''s AI tools. Optimize emergency funds, goal-based saving, and automated wealth building.',
@@ -195,7 +171,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a savings plan for young professionals", "How to build an emergency fund?", "Best saving strategies for young professionals"]'::JSONB,
  ARRAY['young-professionals-budgeting', 'young-professionals-home-buying']),
 
--- Young Professionals - Debt Repayment
 ('young-professionals-debt-repayment', 'young-professionals', 'debt-repayment', null,
  'Student Loan & Debt Payoff for Young Professionals | Moneko',
  'Eliminate debt strategically with Moneko''s AI tools. Optimize student loan payments, credit cards, and build wealth while paying off debt.',
@@ -209,7 +184,6 @@ INSERT INTO seo_pages_data (
  '["Help me pay off debt as a young professional", "How to eliminate student loans faster?", "Best debt repayment strategies for young professionals"]'::JSONB,
  ARRAY['students-debt-repayment', 'young-professionals-budgeting']),
 
--- Young Professionals - Investing
 ('young-professionals-investing', 'young-professionals', 'investing', null,
  'Investment Guide for Young Professionals | Moneko',
  'Start building wealth through smart investing with Moneko''s AI guidance. Learn stocks, retirement accounts, and portfolio optimization.',
@@ -223,7 +197,6 @@ INSERT INTO seo_pages_data (
  '["Help me start investing as a young professional", "How to build an investment portfolio?", "Best investing strategies for young professionals"]'::JSONB,
  ARRAY['young-professionals-retirement', 'young-professionals-saving']),
 
--- Young Professionals - Retirement
 ('young-professionals-retirement', 'young-professionals', 'retirement', null,
  'Retirement Planning for Young Professionals | Moneko',
  'Start retirement planning early with Moneko''s AI tools. Optimize 401k contributions, Roth IRAs, and long-term wealth building strategies.',
@@ -237,7 +210,6 @@ INSERT INTO seo_pages_data (
  '["Help me plan retirement as a young professional", "How to maximize my 401k?", "Best retirement strategies for young professionals"]'::JSONB,
  ARRAY['young-professionals-investing', 'entrepreneurs-retirement']),
 
--- Young Professionals - Home Buying
 ('young-professionals-home-buying', 'young-professionals', 'home-buying', null,
  'Home Buying Guide for Young Professionals | Moneko',
  'Navigate first-time home buying with Moneko''s AI tools. Plan down payments, understand mortgages, and make smart real estate decisions.',
@@ -252,10 +224,9 @@ INSERT INTO seo_pages_data (
  ARRAY['couples-home-buying', 'young-professionals-saving']),
 
 -- ===================================
--- Target Group: PARENTS (6 pages)
+-- Target Group: PARENTS (6 of 6 pages)
 -- ===================================
 
--- Parents - Budgeting
 ('parents-budgeting', 'parents', 'budgeting', null,
  'Family Budgeting for Parents: AI-Powered Financial Planning | Moneko',
  'Manage family finances with confidence using Moneko''s AI budgeting tools. Handle childcare costs, education planning, and family goals efficiently.',
@@ -269,7 +240,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for parents", "How to manage family expenses?", "Best budgeting strategies for families"]'::JSONB,
  ARRAY['parents-saving', 'parents-retirement']),
 
--- Parents - Saving
 ('parents-saving', 'parents', 'saving', null,
  'Saving Strategies for Parents: College Funds, Goals & More | Moneko',
  'Plan for your family''s future with Moneko''s saving tools. Learn about 529 plans for college, saving for family vacations, and building a robust emergency fund.',
@@ -283,7 +253,6 @@ INSERT INTO seo_pages_data (
  '["How to save for my child''s education?", "Best savings accounts for parents", "Help me create a family savings plan"]'::JSONB,
  ARRAY['parents-budgeting', 'parents-investing']),
  
--- Parents - Debt Repayment
 ('parents-debt-repayment', 'parents', 'debt-repayment', null,
  'Debt Repayment for Parents: Managing Mortgages & Family Debt | Moneko',
  'Create a debt repayment plan that fits your family''s life with Moneko. Strategize paying down your mortgage, car loans, and credit cards while raising kids.',
@@ -297,7 +266,6 @@ INSERT INTO seo_pages_data (
  '["How to pay off our mortgage faster?", "Family debt repayment plan", "Best way to pay off credit card debt"]'::JSONB,
  ARRAY['parents-budgeting', 'couples-debt-repayment']),
 
--- Parents - Investing
 ('parents-investing', 'parents', 'investing', null,
  'Investing for Parents: Build Wealth for Your Family''s Future | Moneko',
  'Learn how to invest as a parent with Moneko. Balance your retirement goals with investing for your children''s future using smart, AI-driven strategies.',
@@ -311,7 +279,6 @@ INSERT INTO seo_pages_data (
  '["Help me create an investment plan for my family", "How to invest for my children''s future?", "Best investment strategies for parents"]'::JSONB,
  ARRAY['parents-saving', 'parents-retirement']),
 
--- Parents - Retirement
 ('parents-retirement', 'parents', 'retirement', null,
  'Retirement Planning for Parents: Securing Your Future and Theirs | Moneko',
  'Navigate retirement planning as a parent with Moneko. Learn to balance saving for your own retirement with the costs of raising children and saving for their college.',
@@ -325,7 +292,6 @@ INSERT INTO seo_pages_data (
  '["Retirement planning tips for parents", "How to balance retirement and college funds?", "Best retirement accounts for parents"]'::JSONB,
  ARRAY['parents-investing', 'couples-retirement']),
 
--- Parents - Home Buying
 ('parents-home-buying', 'parents', 'home-buying', null,
  'Home Buying for Parents: Finding the Right Home for Your Family | Moneko',
  'Plan your family''s home purchase or upgrade with Moneko. Analyze affordability considering school districts, space needs, and family budgets.',
@@ -340,10 +306,9 @@ INSERT INTO seo_pages_data (
  ARRAY['parents-budgeting', 'couples-home-buying']),
 
 -- ===================================
--- Target Group: COUPLES (6 pages)
+-- Target Group: COUPLES (6 of 6 pages)
 -- ===================================
 
--- Couples - Budgeting
 ('couples-budgeting', 'couples', 'budgeting', null,
  'Couple Budgeting: Joint Financial Planning Made Simple | Moneko',
  'Navigate shared finances with your partner using Moneko''s AI tools. Merge budgets, align goals, and build wealth together with intelligent planning.',
@@ -357,7 +322,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for couples", "How to manage shared finances?", "Best budgeting strategies for couples"]'::JSONB,
  ARRAY['couples-saving', 'couples-debt-repayment']),
 
--- Couples - Saving
 ('couples-saving', 'couples', 'saving', null,
  'Saving Together: A Couple''s Guide to Reaching Joint Goals | Moneko',
  'Achieve your shared dreams faster with Moneko. We help couples create joint savings plans for big goals like a wedding, a down payment, or a dream vacation.',
@@ -371,7 +335,6 @@ INSERT INTO seo_pages_data (
  '["How to save for a house as a couple?", "Best joint savings strategies", "Help us create a savings plan for our wedding"]'::JSONB,
  ARRAY['couples-budgeting', 'couples-home-buying']),
 
--- Couples - Debt Repayment
 ('couples-debt-repayment', 'couples', 'debt-repayment', null,
  'Tackling Debt as a Couple: A Unified Strategy for Freedom | Moneko',
  'Pay off debt faster by working as a team. Moneko helps couples combine their financial power to eliminate student loans, credit cards, and other debts.',
@@ -385,7 +348,6 @@ INSERT INTO seo_pages_data (
  '["How to pay off debt as a couple?", "My partner has student loans, what do we do?", "Debt repayment strategies for married couples"]'::JSONB,
  ARRAY['couples-budgeting', 'parents-debt-repayment']),
 
--- Couples - Investing
 ('couples-investing', 'couples', 'investing', null,
  'Investing as a Couple: Building Your Joint Portfolio | Moneko',
  'Build long-term wealth together with Moneko. We help couples align their investment strategies, manage joint taxable accounts, and plan for a prosperous future.',
@@ -399,7 +361,6 @@ INSERT INTO seo_pages_data (
  '["How to start investing as a couple?", "Best investment strategies for couples", "Help us align our investment goals"]'::JSONB,
  ARRAY['couples-retirement', 'couples-saving']),
 
--- Couples - Retirement
 ('couples-retirement', 'couples', 'retirement', null,
  'Retirement Planning for Couples: Designing Your Dream Future Together | Moneko',
  'Plan your retirement as a team with Moneko. We help couples combine their retirement accounts, optimize savings, and create a shared vision for their golden years.',
@@ -413,7 +374,6 @@ INSERT INTO seo_pages_data (
  '["How much do we need to retire as a couple?", "Retirement planning for married couples", "Social Security strategies for couples"]'::JSONB,
  ARRAY['couples-investing', 'parents-retirement']),
 
--- Couples - Home Buying
 ('couples-home-buying', 'couples', 'home-buying', null,
  'Home Buying for Couples: A Joint Path to Your First Home | Moneko',
  'Navigate buying a home together with Moneko. We help couples merge finances for a down payment, understand joint mortgages, and make a smart purchase.',
@@ -428,10 +388,9 @@ INSERT INTO seo_pages_data (
  ARRAY['young-professionals-home-buying', 'couples-saving']),
 
 -- ===================================
--- Target Group: FREELANCERS (6 pages)
+-- Target Group: FREELANCERS (6 of 6 pages)
 -- ===================================
 
--- Freelancers - Budgeting
 ('freelancers-budgeting', 'freelancers', 'budgeting', null,
  'Freelancer Budgeting: Manage Variable Income with AI | Moneko',
  'Master freelance finances with Moneko''s AI budgeting tools. Handle irregular income, plan for taxes, and build financial stability as a freelancer.',
@@ -445,7 +404,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for freelancers", "How to manage variable income?", "Best budgeting strategies for freelancers"]'::JSONB,
  ARRAY['freelancers-saving', 'freelancers-retirement']),
 
--- Freelancers - Saving
 ('freelancers-saving', 'freelancers', 'saving', null,
  'Saving for Freelancers: Build a Safety Net with Irregular Income | Moneko',
  'Master saving as a freelancer with Moneko. Our AI tools help you manage variable income, build a robust emergency fund, and save for long-term goals.',
@@ -459,7 +417,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a savings plan for a freelancer", "How to build an emergency fund with variable income?", "Best saving strategies for the self-employed"]'::JSONB,
  ARRAY['freelancers-budgeting', 'freelancers-investing']),
 
--- Freelancers - Debt Repayment
 ('freelancers-debt-repayment', 'freelancers', 'debt-repayment', null,
  'Debt Repayment for Freelancers: Paying Off Debt with Variable Income | Moneko',
  'Create a flexible debt repayment plan for your freelance life. Moneko helps you make consistent progress on debt even when your income fluctuates.',
@@ -473,7 +430,6 @@ INSERT INTO seo_pages_data (
  '["How to pay off debt as a freelancer?", "Debt repayment with irregular income", "Help me create a debt plan"]'::JSONB,
  ARRAY['freelancers-budgeting', 'entrepreneurs-debt-repayment']),
 
--- Freelancers - Investing
 ('freelancers-investing', 'freelancers', 'investing', null,
  'Investing for Freelancers: Building Wealth with Variable Income | Moneko',
  'Learn to invest consistently as a freelancer with Moneko. We help you manage investments with a fluctuating income and plan for long-term growth.',
@@ -487,7 +443,6 @@ INSERT INTO seo_pages_data (
  '["How to invest as a freelancer?", "Best investment accounts for self-employed", "Investing with irregular income"]'::JSONB,
  ARRAY['freelancers-retirement', 'freelancers-saving']),
 
--- Freelancers - Retirement
 ('freelancers-retirement', 'freelancers', 'retirement', null,
  'Retirement Planning for Freelancers: Your Guide to a Secure Future | Moneko',
  'As a freelancer, you are your own retirement plan. Moneko helps you navigate SEP IRAs, Solo 401ks, and other options to build a secure retirement.',
@@ -501,7 +456,6 @@ INSERT INTO seo_pages_data (
  '["How to save for retirement as a freelancer?", "SEP IRA vs Solo 401k", "Best retirement accounts for freelancers"]'::JSONB,
  ARRAY['freelancers-investing', 'entrepreneurs-retirement']),
 
--- Freelancers - Home Buying
 ('freelancers-home-buying', 'freelancers', 'home-buying', null,
  'Home Buying for Freelancers: How to Get a Mortgage | Moneko',
  'Navigate the challenges of buying a home as a freelancer. Moneko helps you organize your finances, prove your income, and qualify for a mortgage.',
@@ -516,10 +470,9 @@ INSERT INTO seo_pages_data (
  ARRAY['freelancers-saving', 'entrepreneurs-home-buying']),
 
 -- ===================================
--- Target Group: ENTREPRENEURS (6 pages)
+-- Target Group: ENTREPRENEURS (6 of 6 pages)
 -- ===================================
 
--- Entrepreneurs - Budgeting
 ('entrepreneurs-budgeting', 'entrepreneurs', 'budgeting', null,
  'Entrepreneur Budgeting: Business & Personal Finance Management | Moneko',
  'Balance business and personal finances with Moneko''s AI tools. Track cash flow, separate business expenses, and plan for entrepreneurial success.',
@@ -533,7 +486,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for my business", "How to separate business and personal finances?", "Best budgeting strategies for entrepreneurs"]'::JSONB,
  ARRAY['entrepreneurs-saving', 'entrepreneurs-investing']),
 
--- Entrepreneurs - Saving
 ('entrepreneurs-saving', 'entrepreneurs', 'saving', null,
  'Saving for Entrepreneurs: Building Capital for Business & Life | Moneko',
  'Master the art of saving as an entrepreneur with Moneko. Build a business war chest for opportunities, a personal emergency fund, and save for future goals.',
@@ -547,7 +499,6 @@ INSERT INTO seo_pages_data (
  '["How to save money as a business owner?", "Building a business emergency fund", "Profit-First method for entrepreneurs"]'::JSONB,
  ARRAY['entrepreneurs-budgeting', 'freelancers-saving']),
 
--- Entrepreneurs - Debt Repayment
 ('entrepreneurs-debt-repayment', 'entrepreneurs', 'debt-repayment', null,
  'Debt Management for Entrepreneurs: Business Loans & Personal Debt | Moneko',
  'Strategically manage and pay down debt as an entrepreneur. Moneko helps you handle business loans, lines of credit, and personal debt to optimize cash flow.',
@@ -561,7 +512,6 @@ INSERT INTO seo_pages_data (
  '["How to manage business loan debt?", "Debt strategies for entrepreneurs", "Paying off an SBA loan"]'::JSONB,
  ARRAY['entrepreneurs-budgeting', 'freelancers-debt-repayment']),
 
--- Entrepreneurs - Investing
 ('entrepreneurs-investing', 'entrepreneurs', 'investing', null,
  'Investing for Entrepreneurs: Reinvest in Business vs. Personal Portfolio | Moneko',
  'Navigate the critical investment decisions of an entrepreneur with Moneko. Learn to balance reinvesting in your business with building a diversified personal portfolio.',
@@ -575,7 +525,6 @@ INSERT INTO seo_pages_data (
  '["How to invest as a business owner?", "Reinvest in business vs. personal investing", "Wealth diversification for entrepreneurs"]'::JSONB,
  ARRAY['entrepreneurs-retirement', 'entrepreneurs-budgeting']),
 
--- Entrepreneurs - Retirement
 ('entrepreneurs-retirement', 'entrepreneurs', 'retirement', null,
  'Retirement Planning for Entrepreneurs: Self-Employed Strategies | Moneko',
  'Build retirement wealth as an entrepreneur with Moneko''s AI guidance. Navigate SEP-IRAs, Solo 401ks, and business-focused retirement planning.',
@@ -589,7 +538,6 @@ INSERT INTO seo_pages_data (
  '["Help me plan retirement as an entrepreneur", "How to optimize self-employed retirement accounts?", "Best retirement strategies for entrepreneurs"]'::JSONB,
  ARRAY['entrepreneurs-investing', 'freelancers-retirement']),
 
--- Entrepreneurs - Home Buying
 ('entrepreneurs-home-buying', 'entrepreneurs', 'home-buying', null,
  'Home Buying for Entrepreneurs: Securing a Mortgage as a Business Owner | Moneko',
  'Learn how to successfully buy a home as an entrepreneur. Moneko helps you navigate mortgage requirements for business owners and prepare your finances.',
@@ -604,10 +552,9 @@ INSERT INTO seo_pages_data (
  ARRAY['entrepreneurs-budgeting', 'freelancers-home-buying']),
 
 -- ===================================
--- Target Group: RETIREES (6 pages)
+-- Target Group: RETIREES (6 of 6 pages)
 -- ===================================
 
--- Retirees - Budgeting
 ('retirees-budgeting', 'retirees', 'budgeting', null,
  'Retirement Budgeting: Fixed Income Financial Management | Moneko',
  'Optimize retirement finances with Moneko''s AI budgeting tools. Manage fixed income, healthcare costs, and preserve wealth in retirement.',
@@ -621,7 +568,6 @@ INSERT INTO seo_pages_data (
  '["Help me create a budget for retirement", "How to manage fixed retirement income?", "Best budgeting strategies for retirees"]'::JSONB,
  ARRAY['retirees-saving', 'retirees-investing']),
 
--- Retirees - Saving (Wealth Preservation)
 ('retirees-saving', 'retirees', 'saving', null,
  'Wealth Preservation for Retirees: Protecting Your Nest Egg | Moneko',
  'Your goal has shifted from saving to preservation. Learn strategies with Moneko to protect your retirement capital from inflation, market risk, and unforeseen costs.',
@@ -635,7 +581,6 @@ INSERT INTO seo_pages_data (
  '["How to protect my retirement savings?", "Wealth preservation strategies", "Inflation protection for seniors"]'::JSONB,
  ARRAY['retirees-budgeting', 'retirees-investing']),
 
--- Retirees - Debt Repayment
 ('retirees-debt-repayment', 'retirees', 'debt-repayment', null,
  'Debt Management in Retirement: Paying off Mortgages & Other Debt | Moneko',
  'Navigate debt repayment on a fixed income with Moneko. Get strategies for managing or eliminating a mortgage, medical bills, or other debts in retirement.',
@@ -649,12 +594,10 @@ INSERT INTO seo_pages_data (
  '["Should I pay off my mortgage in retirement?", "How to manage debt on a fixed income?", "Handling medical debt for seniors"]'::JSONB,
  ARRAY['retirees-budgeting', 'retirees-home-buying']),
 
--- Retirees - Investing
 ('retirees-investing', 'retirees', 'investing', null,
  'Investing in Retirement: Capital Preservation and Income Generation | Moneko',
  'Navigate investing in retirement with Moneko. Focus on capital preservation, generating stable income, and managing your portfolio to last a lifetime.',
- ARRAY['investing for retirees', 'retirement income',
- 'capital preservation', 'retirement portfolio', 'required minimum distributions'],
+ ARRAY['investing for retirees', 'retirement income', 'capital preservation', 'retirement portfolio', 'required minimum distributions'],
  'Investing in retirement shifts from growth to preservation and income. Moneko helps retirees structure their portfolio to provide a reliable income stream, protect their hard-earned capital, and make their savings last.',
  'AI-powered portfolio strategies for retirees, focused on generating income, managing risk, and optimizing for longevity.',
  'Invest with confidence throughout your retirement years',
@@ -664,8 +607,7 @@ INSERT INTO seo_pages_data (
  '["Help me create an investment plan for retirement", "How to generate income from my retirement portfolio?", "Best investment strategies for retirees"]'::JSONB,
  ARRAY['retirees-budgeting', 'retirees-saving']),
 
--- Retirees - Retirement (Retirement Income Management)
-('retirees-retirement-income', 'retirees', 'retirement', null,
+('retirees-retirement', 'retirees', 'retirement', null,
  'Retirement Income Management: Making Your Money Last | Moneko',
  'Master your retirement income with Moneko. Learn to create a "retirement paycheck" by optimizing Social Security, pensions, and withdrawal strategies.',
  ARRAY['retirement income', 'retirement withdrawal strategy', 'social security optimization', 'making retirement savings last', 'RMD'],
@@ -678,7 +620,6 @@ INSERT INTO seo_pages_data (
  '["How to create income in retirement?", "Best retirement withdrawal strategies", "When should I take Social Security?"]'::JSONB,
  ARRAY['retirees-investing', 'retirees-budgeting']),
 
--- Retirees - Home Buying
 ('retirees-home-buying', 'retirees', 'home-buying', null,
  'Home Buying for Retirees: Downsizing & Finding Your Forever Home | Moneko',
  'Navigate the home-buying process as a retiree with Moneko. Get guidance on downsizing, buying a home with cash, and finding a home that fits your retirement lifestyle.',
@@ -692,22 +633,19 @@ INSERT INTO seo_pages_data (
  '["Tips for downsizing in retirement", "How to buy a house with cash?", "Best places for retirees to live"]'::JSONB,
  ARRAY['retirees-budgeting', 'retirees-debt-repayment']);
 
--- Row Level Security (RLS) policies
+-- Step 7: Add Row Level Security (RLS) policies
 ALTER TABLE seo_pages_data ENABLE ROW LEVEL SECURITY;
 
--- Policy for public read access (allows anyone to read SEO pages)
 CREATE POLICY "Allow public read access to SEO pages"
 ON seo_pages_data FOR SELECT
 TO public
 USING (true);
 
--- Policy for authenticated users to read all
 CREATE POLICY "Allow authenticated users full read access"
 ON seo_pages_data FOR SELECT
 TO authenticated
 USING (true);
 
--- Policy for service role to have full access
 CREATE POLICY "Allow service role full access"
 ON seo_pages_data FOR ALL
 TO service_role

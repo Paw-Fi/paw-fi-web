@@ -238,6 +238,7 @@ function SubscriptionForm() {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.1 }}
+      id="waitlistform"
     >
       <div className="flex flex-col">
         <motion.h3

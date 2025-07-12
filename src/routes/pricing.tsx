@@ -169,7 +169,7 @@ function PricingPage() {
     try {
       if(plan === "premium")
       {
-        window.open(DISCORD_URL, "_blank");
+        window.open("https://moneko.io/#waitlistform", "_blank");
         return;
       }
       setIsLoading(true);
@@ -277,7 +277,7 @@ function PricingPage() {
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}
-              className={`relative flex w-[30rem] flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`}
+              className={classNames(`relative flex w-[30rem] flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`)}
             >
               {tier.badgeText && (
                 <div className={classNames("absolute -top-4 left-1/2 -translate-x-1/2 rounded-full  px-4 py-1.5 text-xs font-semibold text-white shadow-lg",

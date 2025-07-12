@@ -1,7 +1,7 @@
 // Email service using Resend
 // https://resend.com/docs/sdk/deno
 
-import { Resend } from 'https://esm.sh/@resend/node@0.0.5';
+import { Resend } from "https://esm.sh/resend@3.2.0";
 
 // Initialize Resend with API key
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
