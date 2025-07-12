@@ -95,11 +95,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
+        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
+      
       <body className="h-screen">       
       <AuthProvider>
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
-        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
           <Suspense fallback={null}>
             <ToastContainer
               position="top-right"
