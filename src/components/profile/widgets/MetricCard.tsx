@@ -46,54 +46,40 @@ export function MetricCard({ widget }: MetricCardProps) {
 
   // Assuming we display the first metric item for now.
   const metricItem = data.metrics[0];
-
-  // Calculate progress percentage (progress is 0.0 to 1.0)
-  const progressPercentage = metricItem?.progress ? metricItem.progress * 100 : 0;
-
+  
+  // Get the numeric value (remove any non-numeric characters except decimal point)
+  const numericValue = metricItem?.value ? parseFloat(metricItem.value.toString().replace(/[^0-9.]/g, '')) : 0;
+  
+  // Generate appropriate guidance text based on the value
+  // This logic can be customized based on specific metrics
+  const getGuidanceText = () => {
+    // Example for savings rate - check the description field
+    if (metricItem?.description?.toLowerCase().includes('savings')) {
+      if (numericValue >= 15 && numericValue <= 20) {
+        return "Aim for 15-20% savings rate for optimal wealth building.";
+      } else if (numericValue > 20) {
+        return "Excellent savings rate! You're on track for strong wealth building.";
+      } else {
+        return "Consider increasing your savings rate to 15-20% for optimal wealth building.";
+      }
+    }
+    
+    // Default text from the data if available
+    return metricItem?.description || '';
+  };
+  
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-5 flex flex-col h-full justify-between antialiased">
-        {/* Top section: Metric Value and Description/Trend */} 
-        <div>
-          <div className="flex items-baseline space-x-2">
-            <span className="text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              {metricItem?.currency}{metricItem?.value}
-            </span>
-          </div>
-
-          {metricItem?.trend && metricItem?.trendPercentage && (
-            <div className={`mt-2 flex items-center text-sm ${getTrendColor(metricItem.trend)}`}>
-              <TrendIcon trend={metricItem.trend} />
-              <span className="ml-1.5 font-medium">
-                {metricItem.trendPercentage} vs last period
-              </span>
-            </div>
-          )}
-          
-          {/* metricItem.description is used here as the primary textual content for the metric item itself */} 
-          {metricItem?.description && (
-             <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
-              {metricItem.description}
-            </p>
-          )}
-        </div>
-
-        {/* Bottom section: Progress Bar and Goal */} 
-        {metricItem?.progress && (
-          <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
-            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span>Progress</span> {/* Static label "Progress" */} 
-              {metricItem?.goalLabel && <span>Target: {metricItem.goalLabel}</span>}
-            </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-2.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }} // Use calculated progressPercentage
-              ></div>
-            </div>
-            {/* Removed data.progressText as it does not exist on IMetricCardItem */} 
-          </div>
-        )}
+      <div className="p-8 flex flex-col h-full">
+        {/* Metric Value - Large and Prominent */}
+        <h3 className="text-xl md:text-2xl font-bold text-slate-700 dark:text-slate-200 tracking-tight mb-4">
+          {metricItem?.value}
+        </h3>
+        
+        {/* Dynamic Guidance Text */}
+        <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+          {getGuidanceText()}
+        </p>
       </div>
     </Widget>
   );

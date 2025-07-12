@@ -19,7 +19,7 @@ export const Route = createFileRoute("/dashboard/learning/")({
         "Unlock your financial potential with Moneko. Our AI understands your needs to deliver personalized financial lessons, complemented by expert-written courses and powerful calculators.",
       keywords:
         "AI financial learning, personalized finance lessons, Moneko, financial education, AI finance coach, investment analysis, financial modeling, personal finance, money management, financial literacy tools",
-      image: "https://paw-fi.app/og-img.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
     

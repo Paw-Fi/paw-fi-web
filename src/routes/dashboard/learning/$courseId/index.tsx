@@ -15,7 +15,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'Course Details'; // Default title
     let courseDescription = 'Learn more about this course on Moneko.'; // Default description
-    const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
+    const siteOgImage = 'https://moneko.io/og-img.png'; // Default site OG image
 
     try {
 
@@ -93,7 +93,7 @@ export default function CourseDetailPage({ dataSource = 'remote' }: CourseDetail
     enabled: !!user,
     source: dataSource 
   });
-  const course = courseId === basicCourse.id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
+  const course = courseId === basicCourse.course_id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
 
   // Define animation variants for container and lesson cards
   const containerVariants: Variants = {

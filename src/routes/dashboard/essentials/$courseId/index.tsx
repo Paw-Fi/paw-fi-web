@@ -7,7 +7,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
   head: ({ params }: { params: { courseId: string } }) => {
     let courseTitle = 'Essential Financial Lessons'; // Default title
     let courseDescription = 'Master the fundamentals of personal finance with these essential lessons.'; // Default description
-    const siteOgImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
+    const siteOgImage = 'https://moneko.io/og-img.png'; // Default site OG image
 
     const pageUrl = `https://moneko.io/essentials/${params.courseId}`;
     const keywords = `${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}, financial education, Moneko, online course`;

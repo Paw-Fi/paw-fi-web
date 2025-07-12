@@ -147,7 +147,7 @@ export function MembershipDashboard() {
 
         {/* Quick Actions */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {subscription?.status === "active" && !subscription?.cancel_at_period_end && (
+          {/* {subscription?.status === "active" && !subscription?.cancel_at_period_end && (
             <button
               onClick={() => cancelSubscription()}
               disabled={isMutating}
@@ -163,7 +163,7 @@ export function MembershipDashboard() {
               )}
               Cancel Subscription
             </button>
-          )}
+          )} */}
 
           {subscription?.status === "active" && subscription?.cancel_at_period_end && (
             <button

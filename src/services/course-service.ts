@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Course, Tutorial, ContentBlockType } from '../types/learning.types';
 
@@ -29,6 +29,28 @@ export async function getRemoteUserCourses(userId: string): Promise<Course[]> {
   });
   if (error) throw error;
   return data.courses as Course[];
+}
+
+/**
+ * Unlock the next lesson after the current one
+ * @param userId - User ID
+ * @param courseId - Course ID
+ * @param lessonId - Current lesson ID
+ * @returns Promise with unlock result
+ */
+export async function unlockNextLesson(userId: string, courseId: string, lessonId: string): Promise<{ success: boolean; message: string; nextLessonId?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('unlock-next-lesson', {
+      method: 'POST',
+      body: { userId, courseId, lessonId },
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error unlocking next lesson:', error);
+    throw error;
+  }
 }
 
 /**

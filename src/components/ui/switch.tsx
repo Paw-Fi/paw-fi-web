@@ -58,7 +58,7 @@ export function Switch({
         aria-labelledby={`${switchId}-label-left ${switchId}-label-right`}
         onClick={handleToggle}
         className={`relative inline-flex items-center h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-opacity-75 dark:focus-visible:ring-purple-400
-          ${isToggled ? 'bg-purple-600 dark:bg-purple-500' : 'bg-gray-200 dark:bg-gray-600'}`}
+          ${isToggled ? 'bg-purple-600 dark:bg-purple-500' : 'bg-[#e1e0f6] dark:bg-gray-600'}`}
       >
         <span className="sr-only">{srText}</span>
         <motion.span

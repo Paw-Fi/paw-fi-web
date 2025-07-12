@@ -8,12 +8,12 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/dashboard/calculators/compound-calculator')({
   component: CompoundCalculatorPage,
   head: () => {
-    const pageUrl = 'https://pawfi.app/calculators/compound-calculator';
+    const pageUrl = 'https://moneko.io/calculators/compound-calculator';
     const meta = seo({
       title: 'Compound Interest Calculator | Moneko',
       description: 'Visualize the power of compound interest. Calculate how your investments can grow over time with our compound interest calculator.',
       keywords: 'compound interest calculator, investment growth, financial planning, compounding, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/dashboard/calculators/compound-calculator
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Financial Education Tool"
     };

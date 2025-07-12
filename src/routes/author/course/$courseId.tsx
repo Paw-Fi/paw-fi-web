@@ -15,7 +15,7 @@
 //   head: ({ params }: { params: { courseId: string } }) => {
 //     let courseTitle = 'New Course'; // Default title
 //     let courseDescription = 'Manage your course content on Moneko.'; // Default description
-//     let courseImage = 'https://paw-fi.app/og-img.png'; // Default site OG image
+//     let courseImage = 'https://moneko.io/og-img.png'; // Default site OG image
 
 //     try {
 

@@ -3,17 +3,20 @@ import { MortgageCalculatorSEOContent } from '@/components/calculators/mortgage/
 import { createFileRoute } from '@tanstack/react-router';
 
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 import { useNavigate } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/dashboard/calculators/mortgage-calculator')({
   component: MortgageCalculatorPage,
   head: () => {
-    const pageUrl = 'https://pawfi.app/calculators/mortgage-calculator';
+    // Use the canonical helper to ensure consistent URLs
+    const routePath = '/dashboard/calculators/mortgage-calculator';
+    const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
       title: 'Mortgage Calculator | Moneko',
       description: 'Estimate your monthly mortgage payments, including principal, interest, taxes, and insurance (PITI). Analyze your home loan with Moneko.',
       keywords: 'mortgage calculator, home loan calculator, PITI calculator, amortization schedule, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -27,7 +30,7 @@ export const Route = createFileRoute('/dashboard/calculators/mortgage-calculator
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Financial Education Tool"
     };

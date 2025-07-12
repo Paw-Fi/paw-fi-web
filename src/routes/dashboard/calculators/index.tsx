@@ -12,17 +12,18 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, Variants } from 'framer-motion';
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 
 export const Route = createFileRoute('/dashboard/calculators/')({
   component: CalculatorsPage,
   head: () => {
-    const pageUrl = 'https://moneko.io/calculators';
+    const pageUrl = getCanonicalUrl('/dashboard/calculators');
     const meta = seo({
       title: 'Financial Calculators | Moneko',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
       keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization, moneko, moneko',
-      image: 'https://paw-fi.app/og-img.png', // Ensure this OG image is updated for the new design if needed
+      image: 'https://moneko.io/og-img.png', // Ensure this OG image is updated for the new design if needed
       url: pageUrl,
     });
     
@@ -36,37 +37,37 @@ export const Route = createFileRoute('/dashboard/calculators/')({
           "@type": "ListItem",
           "position": 1,
           "name": "Compound Interest Calculator",
-          "url": "https://moneko.io/calculators/compound-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/compound-calculator')
         },
         {
           "@type": "ListItem",
           "position": 2,
           "name": "Mortgage Calculator",
-          "url": "https://moneko.io/calculators/mortgage-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/mortgage-calculator')
         },
         {
           "@type": "ListItem",
           "position": 3,
           "name": "Investment Calculator",
-          "url": "https://moneko.io/calculators/investment-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/investment-calculator')
         },
         {
           "@type": "ListItem",
           "position": 4,
           "name": "Auto Loan Calculator",
-          "url": "https://moneko.io/calculators/auto-loan-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/auto-loan-calculator')
         },
         {
           "@type": "ListItem",
           "position": 5,
           "name": "Retirement Calculator",
-          "url": "https://moneko.io/calculators/retirement-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/retirement-calculator')
         },
         {
           "@type": "ListItem",
           "position": 6,
           "name": "Savings Goal Calculator",
-          "url": "https://moneko.io/calculators/saving-goals-calculator"
+          "url": getCanonicalUrl('/dashboard/calculators/saving-goals-calculator')
         }
       ]
     };

@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState, useMemo,useEffect } from "react";
 import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,6 +12,7 @@ import {
   faPencilAlt,
   faPlus,
   faRefresh,
+  faSlidersH, // Added for finetune icon
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "@/components/financial-health/useQuizDashboard";
@@ -30,6 +31,11 @@ import { useCookie } from "@/utils/use-cookie";
 import { Modal } from "@/components/ui/modal";
 import { Widget } from "@/components/profile/types/dashboard-data.typings";
 import FinancialHealthQuiz from "@/components/financial-health/FinancialHealthQuiz";
+import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
+import { ChatPopup } from "@/components/dashboard-chat/ChatPopup";
+import FinancialHealthFinetune from "@/components/financial-health/FinancialHealthFinetune"; // Import Finetune component
+import classNames from "classnames";
+import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -56,6 +62,7 @@ function Profile() {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [showFinancialHealthQuiz, setShowFinancialHealthQuiz] = useState(false);
+  const [showFinetuneSection, setShowFinetuneSection] = useState(false); // New state for finetune section visibility
   const { getCookie, setCookie } = useCookie();
 
   // Use our custom dashboard hook
@@ -102,6 +109,12 @@ function Profile() {
      // setIsTemplateModalOpen(true);
     }
   }, [status, templatesStatus, dispatch]);
+
+  useEffect(() => {
+    if (isTemplateModalOpen) {
+      dispatch(fetchDashboardTemplates());
+    }
+  }, [isTemplateModalOpen]);
 
   // Show template modal automatically if there are no views
   // useEffect(() => {
@@ -256,7 +269,7 @@ function Profile() {
   };
 
   return (
-    <>
+    <ProtectedRouteSubscription>
       {
         // Show loading spinner if user is not loaded yet
         !user ? (
@@ -265,8 +278,8 @@ function Profile() {
           </div>
         ) : status === "no_views" ? (
           <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center max-w-md p-8 bg-white rounded-lg shadow-lg">
-              <FontAwesomeIcon icon={faHeartPulse} className="text-blue-500 text-4xl mb-4" />
+            <div className="text-center max-w-md ">
+              <FontAwesomeIcon icon={faHeartPulse} className="text-primary text-4xl mb-4" />
               <h2 className="mb-3 text-2xl font-semibold text-gray-800">
                 No Dashboard Views Yet
               </h2>
@@ -275,7 +288,7 @@ function Profile() {
               </p>
               <button
                 onClick={() => setShowFinancialHealthQuiz(true)}
-                className="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-md flex items-center justify-center w-full"
+                className="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-secondary transition-colors shadow-md flex items-center justify-center w-full"
               >
                 <FontAwesomeIcon icon={faLightbulb} className="mr-2" />
                 Take Financial Health Quiz
@@ -306,7 +319,7 @@ function Profile() {
                   <div className="flex items-center">
                     <h1 className="text-2xl font-bold text-gray-800">
                       Dashboard
-                    </h1>                   
+                    </h1>
                   
                     {/* View selector dropdown - always visible */}
                     <div className="relative ml-4">
@@ -352,7 +365,7 @@ function Profile() {
                                 No dashboard views yet
                               </div>
                             )}
-                            <button
+                            {/* <button
                               onClick={() => {
                                 setIsViewDropdownOpen(false);
                                 setIsTemplateModalOpen(true);
@@ -361,7 +374,7 @@ function Profile() {
                             >
                               <FontAwesomeIcon icon={faPlus} className="mr-2" />
                               Create New View
-                            </button>
+                            </button> */}
                           </div>
                         </div>
                       )}
@@ -417,7 +430,14 @@ function Profile() {
                         </button>
                       </>
                     ) : (
-                      <>
+                      <div className="flex items-center space-x-2">
+                         <button
+                      onClick={() => setShowFinetuneSection(!showFinetuneSection)}
+                      className="flex items-center justify-center text-sm font-medium text-gray-700"
+                      title="Finetune your financial data"
+                    >
+                      <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
+                    </button>
                         <button
                           onClick={toggleEditMode}
                           className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"
@@ -428,10 +448,18 @@ function Profile() {
                             className="h-5 w-5 text-gray-600"
                           />
                         </button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* Finetune Section */}
+              {showFinetuneSection && !isEditMode && data && (
+                <FinancialHealthFinetune
+                  currentDashboardWidgets={Array.isArray(data) ? data : []}
+                  onUpdateDashboard={handleUpdateWidgets}
+                />
               )}
 
               {/* Dashboard with loading state */}
@@ -490,7 +518,7 @@ function Profile() {
       onClose={() => setShowFinancialHealthQuiz(false)}
       >
       <FinancialHealthQuiz onDashboardCreated={handleHealthQuizCompleted}/>
-      </Modal>        
+      </Modal>               
       
 
       {/* Click outside handler for view dropdown */}
@@ -686,7 +714,9 @@ function Profile() {
           </div>
         </div>
       </Modal>
-    </>
+
+      <FloatingChatButton />
+    </ProtectedRouteSubscription>
   );
 }
 

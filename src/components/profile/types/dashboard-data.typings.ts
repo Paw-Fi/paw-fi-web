@@ -6,7 +6,7 @@ export interface IBaseWidget {
   title: string; // Title displayed for the widget (Mandatory)
   icon: string; // Font Awesome class string, e.g., "fas fa-wallet" (Mandatory)
   column_span: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
-  row_span?: 1 | 2;    // Layout hint: 1 for single row, 2 for double row height (Optional, defaults to 1 if not set)
+  row_span?: 1 | 2 | 3 | 4;    // Layout hint: 1, 2, 3, or 4 rows height (Optional, defaults to 1 if not set)
   controls?: ReactNode; // Optional React components for widget controls in header
 }
 
@@ -43,14 +43,22 @@ export interface IProgressBarListItem {
   max: number; // (Mandatory) Maximum value (e.g., 20 for 15/20)
   color?: string; // (Optional) Custom color for the progress bar (e.g., '#4CAF50')
   displayOrder?: number; // (Optional) Numeric hint for display sorting
+  explanationText?: string; // (Optional) Explanation text to show beneath the progress bar
 }
 export interface IProgressBarListData {
   items: IProgressBarListItem[];
   showPercentages?: boolean;
   sortBy?: 'progress' | 'alphabetical' | 'custom';
+  explanationText?: string; // (Optional) Global explanation text for all progress bars
 }
 
 // Tip Card Widget
+export interface ILessonDetail {
+  lessonId: string;
+  title: string;
+  description: string;
+}
+
 export interface ITipCardListItem {
   id: string;
   title: string;
@@ -58,6 +66,7 @@ export interface ITipCardListItem {
   image?: string;
   link?: string;
   displayOrder: number;
+  lessonDetails?: ILessonDetail | null;
 }
 export interface ITipCardData {
   tips: ITipCardListItem[];
@@ -138,10 +147,13 @@ export interface IFinancialHealthItem {
   displayOrder?: number; // (Optional) Numeric hint for display sorting
 }
 export interface IFinancialHealthScorecardData {
-  items: IFinancialHealthItem[]; // (Mandatory) Array of individual financial health assessments
-  overallScore?: number; // (Optional) Calculated overall score
-  overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // (Optional) Overall status
-  showIndividualScores?: boolean; // (Optional) Whether to show individual scores
+  items?: IFinancialHealthItem[]; // Array of individual financial health assessments
+  overallScore?: number; // Calculated overall score (will be computed if not provided)
+  overallStatus?: 'Excellent' | 'Good' | 'Fair' | 'Needs Attention'; // Overall status (will be computed if not provided)
+  showIndividualScores?: boolean; // Whether to show individual scores
+  quizAnswers?: {
+    [key: string]: any;
+  }; // Raw quiz answers for score calculation
 }
 
 // 8. NEXT BEST ACTION - Now supports multiple actions
@@ -193,7 +205,8 @@ export interface IDebtVisualizerData extends Array<IDebtItem> {}
 // 11. RETIREMENT READINESS - Now supports multiple scenarios
 export interface IRetirementScenario {
   id: string; // (Mandatory) Unique ID for the scenario
-  scenarioName: string; // (Mandatory) e.g., "Current Path"
+  scenarioName: string; // (Mandatory) Name of the scenario (e.g., "Default", "Aggressive Saving")
+  progressPercentage: number; // (Mandatory) Progress towards retirement goal (e.g., 55 for 55%)
   score: number; // (Mandatory) e.g., 65
   status: string; // (Mandatory) e.g., "Needs Significant Work"
   projectionAmount: number; // (Mandatory) Projected retirement savings amount
@@ -201,11 +214,23 @@ export interface IRetirementScenario {
   explanation: string; // (Mandatory) Explanation for this scenario's assessment
   assumptions: string; // (Mandatory) What this scenario assumes
   displayOrder: number; // (Mandatory) Numeric hint for display sorting
+  
+  // Dynamically calculated retirement data
+  projectedRetirementFund?: number; // Calculated from quiz answers if available
+  monthlyRetirementIncome?: number; // Calculated from quiz answers if available
 }
 
 export interface IRetirementReadinessData {
   scenarios: IRetirementScenario[]; // (Mandatory) Array of retirement scenarios
   currentScenarioId: string; // (Mandatory) ID of the currently active/selected scenario
+  quizAnswers?: {
+    [key: string]: any;
+  }; // Raw quiz answers for score calculation
+  retirementProjections?: {
+    projectedRetirementAge: number;
+    projectedRetirementFund: number;
+    monthlyRetirementIncome: number;
+  }; // Retirement projections based on quiz answers
 }
 
 // 12. ENHANCED SAVINGS GOALS - Already array-based, adding IDs

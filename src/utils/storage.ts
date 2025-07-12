@@ -2,7 +2,7 @@
  * Utility functions for interacting with browser localStorage
  */
 
-const STORAGE_PREFIX = 'pawfi_';
+const STORAGE_PREFIX = 'moneko_';
 
 /**
  * Save data to localStorage with the Moneko prefix

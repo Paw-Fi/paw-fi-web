@@ -75,7 +75,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
               icon={json.icon || ""}
               description={json.description || ""}
               lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: "/learning" })}
+              onClick={() => navigate({ to: "/dashboard/learning" })}
               isEmbedded={true}
             />
           </div>

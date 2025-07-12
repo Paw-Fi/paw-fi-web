@@ -20,3 +20,16 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  - variable: VITE_STRIPE_PUBLISHABLE_KEY
+    secret: stripePK_DEV  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: VITE_STRIPE_SECRET_KEY
+    secret: stripeSK_DEV  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
+      

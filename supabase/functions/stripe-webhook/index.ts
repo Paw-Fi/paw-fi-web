@@ -2,6 +2,14 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
+import { sendUserEmail } from '../shared/email-service.ts'
+import {
+  subscriptionCreatedTemplate,
+  subscriptionUpdatedTemplate,
+  subscriptionCanceledTemplate,
+  paymentFailedTemplate,
+  trialEndingTemplate
+} from '../shared/email-templates.ts'
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -16,6 +24,9 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Webhook endpoint secret for verifying events
 const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || ''
+
+// Dashboard URL for links in emails
+const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://moneko.io'
 
 serve(async (req) => {
   try {
@@ -70,6 +81,9 @@ serve(async (req) => {
         case 'customer.subscription.deleted':
           await handleSubscriptionDeleted(event.data.object)
           break
+        case 'customer.subscription.trial_will_end':
+          await handleSubscriptionTrialEnding(event.data.object)
+          break
         case 'invoice.payment_succeeded':
           await handleInvoicePaymentSucceeded(event.data.object)
           break
@@ -101,6 +115,36 @@ serve(async (req) => {
 })
 
 // Handler for subscription created or updated events
+// Helper function to get user by Stripe customer ID
+async function getUserByCustomerId(customerId) {
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id, email, full_name')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle()
+  
+  if (userError) {
+    console.error('Error finding user:', userError)
+    return null
+  }
+  
+  return userData
+}
+
+// Helper function to get plan name from product ID
+async function getPlanNameFromProductId(productId) {
+  if (!productId) return 'Premium'
+  
+  try {
+    // Try to get product name from Stripe
+    const product = await stripe.products.retrieve(productId)
+    return product.name || 'Premium'
+  } catch (error) {
+    console.error('Error getting product name:', error)
+    return 'Premium'
+  }
+}
+
 async function handleSubscriptionUpdated(subscription) {
   try {
     console.log('Processing subscription update:', subscription.id)
@@ -109,19 +153,14 @@ async function handleSubscriptionUpdated(subscription) {
     const customerId = subscription.customer
     
     // Find user with this Stripe customer ID
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('stripe_customer_id', customerId)
-      .maybeSingle()
+    const user = await getUserByCustomerId(customerId)
     
-    if (userError) {
-      console.error('Error finding user:', userError)
+    if (!user) {
+      console.error('No user found with customer ID:', customerId)
       return
     }
     
-    // If no user found with this customer ID, try to find by subscription ID
-    let userId = userData?.id
+    let userId = user.id
     if (!userId) {
       const { data: subData, error: subError } = await supabase
         .from('subscriptions')
@@ -176,6 +215,53 @@ async function handleSubscriptionUpdated(subscription) {
       console.error('Error updating subscription in database:', subscriptionError)
     } else {
       console.log('Subscription updated successfully for user:', userId)
+      
+      // Prepare email data
+      let planId = null;
+      if (subscription.items?.data?.length > 0) {
+        planId = subscription.items.data[0].price.product;
+      }
+      
+      const planName = await getPlanNameFromProductId(planId);
+      const endDate = new Intl.DateTimeFormat('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }).format(new Date(subscription.current_period_end * 1000));
+      
+      // Determine if this is a new subscription or an update
+      const isNew = subscription.status === 'active' && 
+                   subscription.created === subscription.start_date;
+      
+      const name = user.full_name || '';
+      
+      if (isNew) {
+        // Send welcome email for new subscriptions
+        const emailTemplate = subscriptionCreatedTemplate({
+          name,
+          planName,
+          endDate,
+          dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`
+        });
+        
+        await sendUserEmail(user.email, name, emailTemplate);
+        console.log(`Welcome email sent to ${user.email}`);
+      } else {
+        // Send update email for existing subscriptions
+        // Try to determine if this was an upgrade or downgrade
+        // Logic to determine upgrade/downgrade could be added here
+        
+        const emailTemplate = subscriptionUpdatedTemplate({
+          name,
+          planName,
+          endDate,
+          dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+          changeType: 'renewal'
+        });
+        
+        await sendUserEmail(user.email, name, emailTemplate);
+        console.log(`Subscription update email sent to ${user.email}`);
+      }
     }
   } catch (error) {
     console.error('Error in handleSubscriptionUpdated:', error)
@@ -186,6 +272,12 @@ async function handleSubscriptionUpdated(subscription) {
 async function handleSubscriptionDeleted(subscription) {
   try {
     console.log('Processing subscription deletion:', subscription.id)
+    
+    // Get customer ID
+    const customerId = subscription.customer;
+    
+    // Find user by customer ID
+    const user = await getUserByCustomerId(customerId);
     
     // Find the subscription in our database
     const { data: subData, error: subError } = await supabase
@@ -221,6 +313,37 @@ async function handleSubscriptionDeleted(subscription) {
       console.error('Error updating subscription status:', updateError)
     } else {
       console.log('Subscription marked as canceled for user:', userId)
+      
+      // Send cancellation email if we have user info
+      if (user) {
+        let planId = null;
+        if (subscription.items?.data?.length > 0) {
+          planId = subscription.items.data[0].price.product;
+        }
+        
+        const planName = await getPlanNameFromProductId(planId);
+        const name = user.full_name || '';
+        
+        // Check if immediate cancellation or end of period
+        const endDate = subscription.canceled_at === subscription.current_period_end
+          ? null // Immediate cancellation
+          : new Intl.DateTimeFormat('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }).format(new Date(subscription.current_period_end * 1000));
+        
+        const emailTemplate = subscriptionCanceledTemplate({
+          name,
+          planName,
+          endDate,
+          dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+          immediateCancel: !endDate
+        });
+        
+        await sendUserEmail(user.email, name, emailTemplate);
+        console.log(`Subscription cancellation email sent to ${user.email}`);
+      }
     }
   } catch (error) {
     console.error('Error in handleSubscriptionDeleted:', error)
@@ -294,8 +417,81 @@ async function handleInvoicePaymentFailed(invoice) {
         
         // TODO: Send email notification to user about failed payment
       }
+      
+      // Send payment failure email
+      if (userId) {
+        // Get user details
+        const { data: userData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single();
+          
+        if (userData) {
+          // Get plan details
+          let planName = 'Premium';
+          if (invoice.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+            if (subscription.items?.data?.length > 0) {
+              const productId = subscription.items.data[0].price.product;
+              planName = await getPlanNameFromProductId(productId);
+            }
+          }
+          
+          const name = userData.first_name || '';
+          const emailTemplate = paymentFailedTemplate({
+            name,
+            planName,
+            dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+            updatePaymentUrl: `${DASHBOARD_URL}/dashboard/membership?tab=payment`
+          });
+          
+          await sendUserEmail(userData.email, name, emailTemplate);
+          console.log(`Payment failure email sent to ${userData.email}`);
+        }
+      }
     }
   } catch (error) {
     console.error('Error in handleInvoicePaymentFailed:', error)
+  }
+}
+
+// Handler for trial ending notification
+async function handleSubscriptionTrialEnding(subscription) {
+  try {
+    console.log('Processing trial ending for subscription:', subscription.id);
+    
+    const customerId = subscription.customer;
+    const user = await getUserByCustomerId(customerId);
+    
+    if (!user) return;
+    
+    // Get plan details
+    let planId = null;
+    if (subscription.items?.data?.length > 0) {
+      planId = subscription.items.data[0].price.product;
+    }
+    
+    const planName = await getPlanNameFromProductId(planId);
+    const trialEndDate = new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }).format(new Date(subscription.trial_end * 1000));
+    
+    // Send trial ending email
+    const name = user.full_name || '';
+    const emailTemplate = trialEndingTemplate({
+      name,
+      planName,
+      trialEndDate,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`
+    });
+    
+    await sendUserEmail(user.email, name, emailTemplate);
+    console.log(`Trial ending email sent to ${user.email}`);
+    
+  } catch (error) {
+    console.error('Error in handleSubscriptionTrialEnding:', error);
   }
 }

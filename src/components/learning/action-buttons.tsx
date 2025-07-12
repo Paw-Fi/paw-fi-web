@@ -9,6 +9,7 @@ interface ActionButtonsProps {
   handleCheckAnswer: () => void;
   handleNext: () => void;
   isLastQuestion: boolean;
+  isLoading?: boolean;
 }
 
 export function ActionButtons({
@@ -18,6 +19,7 @@ export function ActionButtons({
   handleCheckAnswer,
   handleNext,
   isLastQuestion,
+  isLoading = false,
 }: ActionButtonsProps) {
   return (
     <div className="mt-8">
@@ -39,6 +41,7 @@ export function ActionButtons({
           variant="primary"
           size="lg"
           fullWidth
+          isLoading={isLoading}
         >
           {!isLastQuestion ? "Next Question" : "Complete Lesson"}
         </Button>

@@ -49,7 +49,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
     },
     global: {
       headers: {
-        'X-Client-Info': 'paw-fi-dashboard-templates-function'
+        'X-Client-Info': 'moneko-dashboard-templates-function'
       }
     }
   });

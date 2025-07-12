@@ -8,12 +8,12 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/dashboard/calculators/saving-goals-calculator')({
   component: SavingGoalsCalculatorPage,
   head: () => {
-    const pageUrl = 'https://pawfi.app/calculators/saving-goals-calculator';
+    const pageUrl = 'https://moneko.io/calculators/saving-goals-calculator';
     const meta = seo({
       title: 'Savings Goal Calculator | Moneko',
       description: 'Define your savings goals and determine how much you need to save regularly to achieve them. Plan for your future with Moneko.',
       keywords: 'savings goal calculator, financial goals, saving plan, regular savings, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/dashboard/calculators/saving-goals-calcul
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Financial Planning Tool"
     };

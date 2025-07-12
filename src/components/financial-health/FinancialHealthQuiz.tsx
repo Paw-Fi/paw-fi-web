@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
+import RangeSlider from "@/components/ui/RangeSlider";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,6 +9,7 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "./useQuizDashboard";
+import { calculateFinancialHealthScore } from "../profile/widgets/FinancialWidgets";
 import {
   calculateResults,
   generateDashboardWidgets,
@@ -110,6 +112,84 @@ const categories: CategoryInfo[] = [
 
 // Quiz questions array
 const quizQuestions: QuizQuestion[] = [
+  // Investment risk profile questions
+  {
+    id: "paid-all-debt",
+    question: "Have you currently paid all the debt (e.g., mortgage, credit cards, student loans)?",
+    description: "Your debt status affects recommended investment strategies.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "expect-lump-sum",
+    question: "Do you expect lump sum income in the future (e.g., inheritance, asset sale)?",
+    description: "Future windfalls may impact your investment horizon and risk tolerance.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "long-term-goal",
+    question: "Do you like to achieve your financial goal in more than 1 year?",
+    description: "Long-term goals often allow for different investment strategies.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "predictable-income",
+    question: "Do you have a job with predictable income?",
+    description: "Income stability affects how much risk you might be able to take on.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "high-risk-preference",
+    question: "Would you prefer a strategy that offers high returns despite the high risk?",
+    description: "Your preference for risk vs. return is a key factor in portfolio design.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "risky-investments",
+    question: "Have you ever invested some highly risky assets (e.g. hedge fund, private equity)?",
+    description: "Past investment experience can indicate comfort with certain types of risk.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "extreme-sports",
+    question: "Do you like extreme sports such as Bungee Jumping, Parachuting, Rock Climbing?",
+    description: "Comfort with physical risk often correlates with financial risk tolerance.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
   {
     id: "current-age",
     question: "What is your current age?",
@@ -117,6 +197,24 @@ const quizQuestions: QuizQuestion[] = [
     type: "number-input",
     min: 0,
     max: 100,
+    category: "current-situation",
+  },
+  {
+    id: "monthly-income",
+    question: "What is your monthly income?",
+    description: "Your gross monthly income before taxes and deductions.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "monthly-expenses",
+    question: "What are your approximate monthly expenses?",
+    description: "Include an estimate of all regular monthly expenditures such as housing, utilities, food, transportation, etc.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
     category: "current-situation",
   },
   {
@@ -129,14 +227,13 @@ const quizQuestions: QuizQuestion[] = [
     category: "time-horizon",
   },
   {
-    id: "debt-level",
-    question: "How much total debt do you have?",
-    description: "Add up all loans, credit cards, and other money you owe.",
+    id: "annual-contribution",
+    question: "How much can you contribute annually to investments?",
+    description: "Consider your regular savings for long-term goals.",
     type: "number-input",
     unit: "$",
     category: "current-situation",
   },
-
   {
     id: "current-assets",
     question: "What is the total value of your current investable assets?",
@@ -193,9 +290,9 @@ const quizQuestions: QuizQuestion[] = [
     category: "time-horizon",
   },
   {
-    id: "annual-contribution",
-    question: "How much can you contribute annually to investments?",
-    description: "Consider your regular savings for long-term goals.",
+    id: "debt-level",
+    question: "How much total debt do you have at the moment?",
+    description: "Add up all loans, credit cards, and other money you owe.",
     type: "number-input",
     unit: "$",
     category: "current-situation",
@@ -564,37 +661,39 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     // Simulate processing time (7 seconds)
     setTimeout(() => {
       handleCompleteQuiz();
-    }, 7000);
+    }, 8000);
   }, [isQuizComplete]);
 
   // Handle quiz completion
   const handleCompleteQuiz = useCallback(() => {
     // Calculate results based on answers
-    console.log('Quiz answers before calculation:', state.answers);
     const baseResults = calculateResults(state.answers);
     
-    console.log('Base calculation results:', baseResults);
     
-    // Map the base results to the extended results format
+    // Calculate financial health score using the shared utility
+    const financialHealthResult = calculateFinancialHealthScore(state.answers);
+    
     // Ensure proper number conversion for age values
     const currentAge = Number(state.answers['current-age']) || 30;
     const retirementAge = Number(state.answers['retirement-age']) || 65;
     
+    // Use retirement projections from the financial health utility
+    const projectedRetirementFund = financialHealthResult.projectedRetirementFund || 0;
+    const monthlyRetirementIncome = financialHealthResult.monthlyRetirementIncome || 0;
+    
     // Create extended results with additional properties
     const extendedResults: ExtendedCalculationResults = {
       ...baseResults,
-      healthScore: baseResults.financialHealthScore.overallScore,
-      healthAssessment: baseResults.financialHealthScore.status,
-      projectedRetirementFund: baseResults.portfolioProjection.futureValue,
+      healthScore: financialHealthResult.overallScore, 
+      healthAssessment: financialHealthResult.status,
+      projectedRetirementFund,
       yearsUntilRetirement: retirementAge - currentAge,
-      monthlyRetirementIncome: baseResults.portfolioProjection.futureValue / (25 * 12) // Simple estimation
+      monthlyRetirementIncome
     };
     
-    console.log('Extended calculation results:', extendedResults);
 
     // Update state to show results
     setState((prev) => {
-      console.log('Setting calculation results:', extendedResults);
       return {
         ...prev,
         isComplete: true,
@@ -650,28 +749,35 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
           <div key={question.id} className="w-full">
             <h3 className="mb-1 text-sm font-medium text-gray-800">
               {question.question}
+          {question.type === "slider" &&     <span className="text-md ml-2 font-bold text-green-500">
+              {state.answers[question.id] || question.min}%
+
+              </span>}
             </h3>
             {question.description && (
               <p className="mb-4 text-xs text-gray-600">{question.description}</p>
             )}
 
             {question.type === "number-input" && (
-              <div className="relative">
+              <div className="relative rounded-lg border border-transparent">
                 {question.unit && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                     {question.unit}
                   </span>
                 )}
-                <input
-                  type="number"
-                  value={Number(state.answers[question.id]) || 0}
-                  onChange={(e) => handleAnswerChange(question.id, Number(e.target.value))}
-                  min={question.min}
-                  max={question.max}
-                  step={question.step || 1}
-                  placeholder={question.placeholder}
-                  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
-                />
+              <input
+  type="number"
+  value={state.answers[question.id] === "" ? "" : Number(state.answers[question.id])}
+  onChange={(e) => {
+    const value = e.target.value;
+    handleAnswerChange(question.id, value === "" ? "" : Number(value));
+  }}
+  min={question.min}
+  max={question.max}
+  step={question.step || 1}
+  placeholder={question.placeholder}
+  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+/>
               </div>
             )}
 
@@ -682,22 +788,21 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     {question.min}%
                   </span>
                   <span className="text-xs font-medium">
-                    {state.answers[question.id] || question.min}%
+                  {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
                   </span>
                   <span className="text-xs text-gray-500">
                     {question.max}%
                   </span>
                 </div>
-                <input
-                  type="range"
+                <RangeSlider
                   min={question.min}
                   max={question.max}
                   step={question.step || 1}
                   value={Number(state.answers[question.id]) || question.min}
-                  onChange={(e) =>
-                    handleAnswerChange(question.id, Number(e.target.value))
-                  }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                  onChange={(value) => handleAnswerChange(question.id, value as number)}
+                  className="w-full"
+                  label=""
+                  showValue={false}
                 />
               </div>
             )}
@@ -712,6 +817,10 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             <div key={question.id}>
               <h3 className="mb-1 text-sm font-medium text-gray-800">
                 {question.question}
+               {question.type === "slider" &&  <span className="text-md ml-2 font-bold text-green-500">
+              {state.answers[question.id] || question.min}%
+
+              </span>}
               </h3>
               {question.description && (
                 <p className="mb-2 text-xs text-gray-600">
@@ -726,18 +835,20 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                       {question.unit}
                     </span>
                   )}
-                  <input
-                    type="number"
-                    value={state.answers[question.id] || ""}
-                    onChange={(e) =>
-                      handleAnswerChange(question.id, Number(e.target.value))
-                    }
-                    min={question.min}
-                    max={question.max}
-                    step={question.step || 1}
-                    placeholder={question.placeholder}
-                    className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${question.unit ? "pl-8" : ""}`}
-                  />
+                 <input
+  type="number"
+  value={state.answers[question.id] ?? ""}
+  onChange={(e) => {
+    const value = e.target.value;
+    // Only update if it's a valid number, otherwise, set it as an empty string
+    handleAnswerChange(question.id, value === "" ? "" : Number(value));
+  }}
+  min={question.min}
+  max={question.max}
+  step={question.step || 1}
+  placeholder={question.placeholder}
+  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+/>
                 </div>
               )}
 
@@ -745,25 +856,24 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      {question.min}%
+                      {question?.min}%
                     </span>
                     <span className="text-xs font-medium">
-                      {state.answers[question.id] || question.min}%
+                      {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
                     </span>
                     <span className="text-xs text-gray-500">
-                      {question.max}%
+                      {question?.max}%
                     </span>
                   </div>
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={question.min}
                     max={question.max}
                     step={question.step || 1}
                     value={Number(state.answers[question.id]) || question.min}
-                    onChange={(e) =>
-                      handleAnswerChange(question.id, Number(e.target.value))
-                    }
-                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500"
+                    onChange={(value) => handleAnswerChange(question.id, value as number)}
+                    className="w-full"
+                    label=""
+                    showValue={false}
                   />
                 </div>
               )}
@@ -786,7 +896,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-16 text-center"
           >
-            <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-blue-500"></div>
+            <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-primary"></div>
             <h3 className="mb-3 text-xl font-semibold text-gray-800">
               Analyzing Your Financial Profile
             </h3>
@@ -815,7 +925,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <div className="mb-8 space-y-6">
                 <div className="rounded-lg bg-blue-50 p-6">
                   <h3 className="mb-2 text-lg font-semibold text-blue-800">
-                    Financial Health Score: {state.calculationResults.healthScore.toFixed(1)}/10
+                    Financial Health Score: {state.calculationResults.healthScore.toFixed(0)}/100
                   </h3>
                   <p className="text-blue-700">
                     Your financial health is rated as{" "}
@@ -876,7 +986,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   id="dashboard-name"
                   value={state.dashboardName}
                   onChange={handleDashboardNameChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   placeholder="My Financial Health Dashboard"
                 />
               </div>
@@ -884,7 +994,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <button
                 onClick={handleCreateDashboard}
                 disabled={status === "creating"}
-                className="flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "creating"
                   ? "Creating Dashboard..."
@@ -917,7 +1027,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <motion.div
-                  className="h-full rounded-full bg-blue-500"
+                  className="h-full rounded-full bg-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress * 100}%` }}
                   transition={{ duration: 0.5 }}
@@ -990,7 +1100,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                                   {question.options.map((option) => (
                                     <button
                                       key={option.value}
-                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                                       onClick={() =>
                                         handleAnswerChange(
                                           question.id,
@@ -1021,7 +1131,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                                     return (
                                       <button
                                         key={option.value}
-                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                                         onClick={() =>
                                           handleMultipleChoiceChange(
                                             question.id,
@@ -1075,7 +1185,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               Object.keys(questionsByCategory).indexOf(state.activeCategory) <
                 Object.keys(questionsByCategory).length - 1 ? (
                 <button
-                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-blue-500 text-white hover:bg-blue-600" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
                   onClick={() => {
                     // Only proceed if category is complete
                     if (isCategoryComplete(state.activeCategory)) {

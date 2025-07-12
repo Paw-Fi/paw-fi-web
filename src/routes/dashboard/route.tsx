@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import React, { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -26,13 +27,29 @@ import {
   faIdBadge,
   faBars,
   faTimes,
+  faGauge,
+  faHeartbeat,
+  faMoneyBill,
+  faChartPie,
+  faClipboardList,
+  faLightbulb,
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@assets/images/icon.svg";
+import dashboardHomeImage from "@assets/images/dashboard/dashboard-home.png";
 import { toast } from "react-toastify";
 import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
+import { useSubscription } from "@/hooks/use-subscription";
+
+
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/dashboard/learning",
+  "/dashboard/user-settings",
+  "/dashboard/membership",
+];
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -63,6 +80,28 @@ interface MenuItem {
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
+  head: () => {
+    // Add canonical URL for dashboard page
+    const pageUrl = getCanonicalUrl('/dashboard');
+    
+    return {
+      meta: [
+        {
+          title: 'Dashboard | Moneko',
+        },
+        {
+          name: 'description',
+          content: 'Your personalized financial education dashboard. Access learning materials, calculators, and tools.',
+        },
+      ],
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
+    };
+  },
 });
 
 export function Dashboard() {
@@ -77,6 +116,8 @@ export function Dashboard() {
     user?.id ?? "",
     { enabled: !!user },
   );
+  const { subscription, isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+
 
   // Helper function to check if a route is active
   const isRouteActive = (path: string) => {
@@ -123,7 +164,7 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Profile", icon: faIdBadge, path: "/dashboard"},
+    { id: "home", label: "Home", icon: faHome, path: "/dashboard"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
@@ -236,16 +277,153 @@ export function Dashboard() {
     }
   };
 
-  const PROTECTED_ROUTES = [
-    "/dashboard",
-    "/dashboard/learning",
-    "/dashboard/user-settings",
-  ];
 
   // Toggle mobile menu
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // if(true)
+  // {
+  //   return   <div className="fixed w-screen h-screen z-20 flex items-center justify-center overflow-hidden">
+  //   {/* Background Image Carousel */}
+  //   <div className="absolute inset-0 w-full h-full overflow-hidden">
+  //     <motion.div 
+  //       className="flex w-[200%] h-full"
+  //       animate={{
+  //         x: ["0%", "-50%"]
+  //       }}
+  //       transition={{
+  //         x: {
+  //           duration: 40,
+  //           ease: "linear",
+  //           repeat: Infinity,
+  //           repeatType: "loop"
+  //         }
+  //       }}
+  //     >
+  //       <div 
+  //         className="w-1/2 h-full flex-shrink-0" 
+  //         style={{
+  //           backgroundImage: `url(${dashboardHomeImage})`,
+  //           backgroundSize: 'cover',
+  //           backgroundPosition: 'center',
+  //         }}
+  //       />
+  //       <div 
+  //         className="w-1/2 h-full flex-shrink-0" 
+  //         style={{
+  //           backgroundImage: `url(${dashboardHomeImage})`,
+  //           backgroundSize: 'cover',
+  //           backgroundPosition: 'center',
+  //         }}
+  //         aria-hidden="true"
+  //       />
+  //   </motion.div>
+  //     </div>
+                 
+
+    
+  //   {/* Animation is handled through inline styles */}                 
+    
+  //   {/* Modal Content */}
+  //   <motion.div
+  //     className="relative z-10 max-w-2xl w-full mx-4 p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 shadow-2xl"
+  //     initial={{ opacity: 0, y: 20, scale: 0.95 }}
+  //     animate={{ opacity: 1, y: 0, scale: 1 }}
+  //     transition={{ duration: 0.5 }}
+  //   >
+  //     {/* Logo and Glow Effect */}
+  //     <div className="relative flex justify-center mb-8">
+  //       <div className="absolute -top-4 opacity-70 w-24 h-24 bg-primary/30 rounded-full blur-xl" />
+  //       <motion.div
+  //         className="relative z-10 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-purple-500/30"
+  //         initial={{ rotateY: 0 }}
+  //         animate={{ rotateY: 360 }}
+  //         transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
+  //       >
+  //         <img src={logo} className="size-16" alt="Moneko Logo" />
+  //       </motion.div>
+  //     </div>
+
+  //     <motion.h2
+  //       className="mb-4 text-center bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
+  //       initial={{ opacity: 0 }}
+  //       animate={{ opacity: 1 }}
+  //       transition={{ delay: 0.2, duration: 0.5 }}
+  //     >
+  //       Unlock Your Financial Dashboard
+  //     </motion.h2>
+
+  //     <motion.p
+  //       className="mb-6 text-center text-lg text-gray-700 dark:text-gray-300"
+  //       initial={{ opacity: 0 }}
+  //       animate={{ opacity: 1 }}
+  //       transition={{ delay: 0.3, duration: 0.5 }}
+  //     >
+  //       Sign in to access your personalized financial command center
+  //     </motion.p>
+      
+  //     {/* Feature List */}
+  //     <motion.div
+  //       className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
+  //       initial={{ opacity: 0 }}
+  //       animate={{ opacity: 1 }}
+  //       transition={{ delay: 0.4, duration: 0.5 }}
+  //     >
+  //       {[
+  //         { icon: faChartLine, text: "Track your financial progress" },
+  //         { icon: faCalculator, text: "Access premium calculators" },
+  //         { icon: faBookOpen, text: "Save your learning progress" },
+  //         { icon: faUser, text: "Get personalized insights" }
+  //       ].map((feature, index) => (
+  //         <motion.div 
+  //           key={index}
+  //           className="flex items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/30"
+  //           initial={{ opacity: 0, x: -10 }}
+  //           animate={{ opacity: 1, x: 0 }}
+  //           transition={{ delay: 0.5 + (index * 0.1), duration: 0.4 }}
+  //         >
+  //           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/80 to-purple-500/80 text-white shadow-md">
+  //             <FontAwesomeIcon icon={feature.icon} className="h-5 w-5" />
+  //           </div>
+  //           <span className="ml-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
+  //             {feature.text}
+  //           </span>
+  //         </motion.div>
+  //       ))}
+  //     </motion.div>
+
+  //     <motion.div
+  //       className="flex justify-center"
+  //       initial={{ opacity: 0, y: 10 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       transition={{ delay: 0.8, duration: 0.5 }}
+  //     >
+  //       <Link to="/login" className="group w-full sm:w-auto">
+  //         <motion.div
+  //           className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
+  //           whileHover={{ scale: 1.03, y: -2 }}
+  //           whileTap={{ scale: 0.98 }}
+  //           transition={{
+  //             type: "spring",
+  //             stiffness: 400,
+  //             damping: 25,
+  //           }}
+  //         >
+  //           <FontAwesomeIcon
+  //             className="h-5 w-5"
+  //             icon={faSignInAlt}
+  //           />
+  //           <span className="text-lg font-medium">
+  //             Sign In to Continue
+  //           </span>
+  //         </motion.div>
+  //       </Link>
+  //     </motion.div>
+  //   </motion.div>
+  // </div>
+  // }
 
   return (
     <>
@@ -374,7 +552,7 @@ export function Dashboard() {
 
           {/* User Profile Section */}
           <div className="border-t border-gray-100 p-4">
-            {isLoading ? (
+            {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
                 <div className="h-10 w-10 rounded-full bg-gray-200"></div>
                 <div className="flex-1">
@@ -410,9 +588,7 @@ export function Dashboard() {
                     <p className="text-sm font-medium text-gray-900">
                       Sign In
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Access your account
-                    </p>
+                   
                   </div>
                 </motion.div>
               </Link>
@@ -554,7 +730,7 @@ export function Dashboard() {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
+     {isLoading||isSubscriptionLoading ? null : <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
         {/* Header - Always visible regardless of submenu state */}
         <motion.div
           className="transition-all duration-300"
@@ -567,78 +743,129 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 bg-white/80 backdrop-blur-md px-3 md:px-6 py-4 md:pt-6 shadow-md"
+          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 bg-white/80 backdrop-blur-md  shadow-md"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >            
-              {PROTECTED_ROUTES.includes(location.pathname) && !user ? (
-                <motion.div
-                  className="flex flex-col items-center justify-center px-4 py-12 text-center flex-1"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
+              {((PROTECTED_ROUTES.includes(location.pathname) && !user) || (!isActive)) ? (
+                <div className="relative w-full h-full z-20 flex items-center justify-center overflow-hidden">
+                  {/* Background Image Carousel */}
+                  <div className="absolute inset-0 w-full h-full overflow-hidden">                   
+                    <img src={dashboardHomeImage} alt="Dashboard Home" className="w-full h-full object-cover blur-sm" />                 
+                    </div>
+                    <div className="absolute inset-0 w-full h-full overflow-hidden bg-gray-300/30"/>
+                               
+     
+                  
+                  {/* Animation is handled through inline styles */}                 
+                  
+                  {/* Modal Content */}
                   <motion.div
-                    className="from-icon mb-8 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br to-purple-300 shadow-lg"
+                    className="relative z-10 max-w-2xl w-full mx-4 p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 shadow-2xl"
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.5 }}
                   >
-                    <img src={logo} className="size-16" />
-                  </motion.div>
-
-                  <motion.h2
-                    className="mb-3 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                  >
-                    Oops! VIP Area Ahead
-                  </motion.h2>
-
-                  <motion.p
-                    className="mb-8 max-w-md text-lg text-gray-600"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.5 }}
-                  >
-                    Looks like you've discovered some of our premium features!
-                    🎉 Sign in to unlock your personalized dashboard and all the
-                    cool stuff we've built for you.
-                  </motion.p>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                  >
-                    <Link to="/login" className="group">
+                    {/* Logo and Glow Effect */}
+                    <div className="relative flex justify-center mb-8">
+                      <div className="absolute -top-4 opacity-70 w-24 h-24 bg-primary/30 rounded-full blur-xl" />
                       <motion.div
-                        className="flex items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg transition-all duration-200"
-                        whileHover={{ scale: 1.05, y: -3 }}
-                        whileTap={{ scale: 0.98 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 25,
-                        }}
+                        className="relative z-10 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-purple-500/30"
+                        initial={{ rotateY: 0 }}
+                        animate={{ rotateY: 360 }}
+                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
                       >
-                        <FontAwesomeIcon
-                          className="h-5 w-5"
-                          icon={faSignInAlt}
-                        />
-                        <span className="text-lg font-medium">
-                          Jump Right In!
-                        </span>
+                        <img src={logo} className="size-16" alt="Moneko Logo" />
                       </motion.div>
-                    </Link>
+                    </div>
+
+                    <motion.h2
+                      className="mb-4 text-center bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2, duration: 0.5 }}
+                    >
+                      Unlock Your Financial Dashboard
+                    </motion.h2>
+
+                    <motion.p
+                      className="mb-6 text-center text-lg text-gray-700 dark:text-gray-300"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3, duration: 0.5 }}
+                    >
+                    {  user ? "Subscribe to unlock your financial dashboard" : "Sign in to access your personalized financial command center"}
+                    </motion.p>
+                    
+                    {/* Feature List */}
+                    <motion.div
+                      className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4, duration: 0.5 }}
+                    >
+                      {[
+                        { icon: faChartLine, text: "Retirement Goal Tracker" },
+                        { icon: faHeartbeat, text: "Financial Health Snapshot" },
+                        { icon: faMoneyBill, text: "Cash Flow Summary" },
+                        { icon: faChartPie, text: "Suggested Asset Allocation (Beta)" },
+                        { icon: faClipboardList, text: "Recommended Actions" },
+                        { icon: faLightbulb, text: "Smart Investment Tips" }
+                      ].map((feature, index) => (
+                        <motion.div 
+                          key={index}
+                          className="flex items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/30"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5 + (index * 0.1), duration: 0.4 }}
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/80 to-purple-500/80 text-white shadow-md">
+                            <FontAwesomeIcon icon={feature.icon} className="h-5 w-5" />
+                          </div>
+                          <span className="ml-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
+                            {feature.text}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+
+                    <motion.div
+                      className="flex justify-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8, duration: 0.5 }}
+                    >
+                      <Link to={!user ? "/login" : "/pricing"} className="group w-full sm:w-auto">
+                        <motion.div
+                          className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
+                          whileHover={{ scale: 1.03, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 25,
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            className="h-5 w-5"
+                            icon={faSignInAlt}
+                          />
+                          <span className="text-lg font-medium">
+                          
+                          {  user ? "View our plans" : "Sign In to Access Your Dashboard"}
+                          </span>
+                        </motion.div>
+                      </Link>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
+                </div>
               ) : (
                 <Outlet />
               )}
            
         </motion.main>
-          </div>
+          </div>}
         </div>
       </div>
     </>

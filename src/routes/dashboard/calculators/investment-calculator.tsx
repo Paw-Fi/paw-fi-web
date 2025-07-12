@@ -7,12 +7,12 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/dashboard/calculators/investment-calculator')({
   component: InvestmentCalculatorPage,
   head: () => {
-    const pageUrl = 'https://pawfi.app/calculators/investment-calculator';
+    const pageUrl = 'https://moneko.io/calculators/investment-calculator';
     const meta = seo({
       title: 'Investment Growth Calculator | Moneko',
       description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
       keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/dashboard/calculators/investment-calculat
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Investment"
     };

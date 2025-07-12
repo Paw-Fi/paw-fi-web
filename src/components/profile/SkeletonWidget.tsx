@@ -13,7 +13,7 @@ export function SkeletonWidget({ column_span = 1, isExpanded = false }: Skeleton
       className={`
         ${isExpanded ? 'row-span-2' : 'row-span-1'}
         ${column_span === 2 ? 'col-span-2' : 'col-span-1'}
-        bg-white rounded-xl shadow-lg overflow-hidden animate-pulse
+       overflow-hidden animate-pulse
       `}
     >
       {/* Header */}

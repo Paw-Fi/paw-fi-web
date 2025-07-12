@@ -23,12 +23,12 @@ import { useNavigate } from '@tanstack/react-router';
 export const Route = createFileRoute('/dashboard/calculators/retirement-calculator')({
   component: RetirementCalculatorPage,
   head: () => {
-    const pageUrl = 'https://pawfi.app/calculators/retirement-calculator';
+    const pageUrl = 'https://moneko.io/calculators/retirement-calculator';
     const meta = seo({
       title: 'Retirement Savings Calculator | Moneko',
       description: "Plan for your retirement. Estimate how much you need to save and how long your savings will last with Moneko's retirement calculator.",
       keywords: 'retirement calculator, retirement planning, savings goal, 401k, IRA, pension, Moneko',
-      image: 'https://paw-fi.app/og-img.png',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -42,7 +42,7 @@ export const Route = createFileRoute('/dashboard/calculators/retirement-calculat
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://pawfi.app/"
+        "url": "https://moneko.io/"
       },
       "category": "Retirement Planning"
     };

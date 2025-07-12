@@ -215,56 +215,6 @@ export const dashboardData: Widget[] =[
     }
   },
   {
-    "id": "overallHealthScore",
-    "type": "financialHealthScorecard",
-    "title": "Comprehensive Health Report",
-    "icon": "fas fa-heart-pulse",
-    "column_span": 1,
-    "data": {
-      "items": [
-        {
-          "id": "fhi-budget",
-          "category": "Budgeting",
-          "score": 85,
-          "status": "Excellent",
-          "explanation": "Consistent tracking and adherence to budget limits.",
-          "weight": 0.25,
-          "displayOrder": 1
-        },
-        {
-          "id": "fhi-savings",
-          "category": "Savings",
-          "score": 70,
-          "status": "Good",
-          "explanation": "Solid emergency fund, consistent savings for goals.",
-          "weight": 0.25,
-          "displayOrder": 2
-        },
-        {
-          "id": "fhi-debt",
-          "category": "Debt",
-          "score": 60,
-          "status": "Fair",
-          "explanation": "Some high-interest debt, but actively working on payoff.",
-          "weight": 0.25,
-          "displayOrder": 3
-        },
-        {
-          "id": "fhi-investments",
-          "category": "Investments",
-          "score": 78,
-          "status": "Good",
-          "explanation": "Diversified portfolio with steady growth.",
-          "weight": 0.25,
-          "displayOrder": 4
-        }
-      ],
-      "overallScore": 73,
-      "overallStatus": "Good",
-      "showIndividualScores": true
-    }
-  },
-  {
     "id": "actionableSteps",
     "type": "nextBestAction",
     "title": "Your Next Priority Actions",
@@ -371,34 +321,24 @@ export const dashboardData: Widget[] =[
     "icon": "fas fa-heartbeat",
     "column_span": 1,
     "data": {
-      "items": [
-        {
-          "id": "fhs-budget",
-          "category": "Budgeting",
-          "score": 85,
-          "status": "Excellent",
-          "explanation": "Spending is well-managed and within income.",
-          "displayOrder": 1
-        },
-        {
-          "id": "fhs-savings",
-          "category": "Savings",
-          "score": 70,
-          "status": "Good",
-          "explanation": "Consistent savings, but emergency fund could be larger.",
-          "displayOrder": 2
-        },
-        {
-          "id": "fhs-debt",
-          "category": "Debt",
-          "score": 60,
-          "status": "Fair",
-          "explanation": "Some high-interest debt impacting overall health.",
-          "displayOrder": 3
-        }
-      ],
-      "overallScore": 72,
-      "overallStatus": "Good"
+      "quizAnswers": {
+        "monthly-income": 5000,
+        "monthly-expenses": 4250,
+        "emergency-fund-months": 4,
+        "insurance-policies": ["health", "auto"],
+        "debt-amount-mortgage": 250000,
+        "debt-amount-credit": 2500,
+        "debt-amount-student": 15000,
+        "debt-amount-other": 0,
+        "health-checkup-frequency": "yearly",
+        "current-age": 35,
+        "retirement-age": 65,
+        "annual-contribution": 6000,
+        "current-investments": 75000,
+        "investing-frequency": "monthly",
+        "risk-tolerance": 6
+      },
+      "showIndividualScores": true
     }
   },
   {
@@ -489,11 +429,28 @@ export const dashboardData: Widget[] =[
     "icon": "fas fa-umbrella-beach",
     "column_span": 1,
     "data": {
+      "quizAnswers": {
+        "monthly-income": 5000,
+        "monthly-expenses": 4250,
+        "emergency-fund-months": 4,
+        "insurance-policies": ["health", "auto"],
+        "debt-amount-mortgage": 250000,
+        "debt-amount-credit": 2500,
+        "debt-amount-student": 15000,
+        "debt-amount-other": 0,
+        "health-checkup-frequency": "yearly",
+        "current-age": 35,
+        "retirement-age": 65,
+        "current-investments": 65000,
+        "investment-percentage": 15,
+        "risk-tolerance": "moderate"
+      },
       "scenarios": [
         {
           "id": "ret-scen-current",
           "scenarioName": "Current Path",
           "score": 65,
+          "progressPercentage": 35,
           "status": "Needs Significant Work",
           "projectionAmount": 850000,
           "projectionDate": "Age 67",
@@ -505,6 +462,7 @@ export const dashboardData: Widget[] =[
           "id": "ret-scen-optimized",
           "scenarioName": "Optimized Path",
           "score": 80,
+          "progressPercentage": 60,
           "status": "On Track",
           "projectionAmount": 1200000,
           "projectionDate": "Age 65",

@@ -4,7 +4,7 @@ import { ActionButtons } from "@/components/learning/action-buttons";
 import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import { useLesson } from "@/components/learning/hooks/use-lesson";
-import { unlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
+import { unlockNextLesson, useUnlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
 import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
@@ -12,6 +12,7 @@ import { QuestionHeader } from "@/components/learning/question-header";
 import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses, CourseDataSource } from "@/services/course-service";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Course, Lesson, Question, Tutorial } from "@/types/learning.types";
 import { seo } from "@/utils/seo";
 import basicCourse from "@/data/basic-lessons.json"; // Ensure this is imported
@@ -28,6 +29,7 @@ import { ContentDisplay } from "@/components/learning/lesson/content-display";
 import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
 import { faLightbulb, faArrowLeft, faCheckCircle, faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { toast } from "react-toastify";
 
 export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$lessonId")({
   component: () => <LessonPage dataSource="remote" />,
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
     let lessonTitle = "Lesson";
     let lessonDescription = "Explore this lesson on Moneko.";
     let courseTitle = "Financial Learning";
-    const siteOgImage = "https://paw-fi.app/og-img.png"; // Default site OG image
+    const siteOgImage = "https://moneko.io/og-img.png"; // Default site OG image
 
     try {
       const lesson = getLessonById(params.lessonId);
@@ -155,6 +157,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   const { courseId, lessonId } = useParams({ from: routePath });
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     data: courses = [],
@@ -164,6 +167,8 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     enabled: !!user,
     source: dataSource 
   });
+  const course_uuid=courses.find((c: Course) => c.course_id === courseId)?.id;
+  const lesson_uuid=courses.find((c: Course) => c.course_id === courseId)?.lessons.find((l: Lesson) => l.lesson_id === lessonId)?.id;
 
   // Adapter function to ensure lesson data conforms to the Lesson interface
   const adaptLesson = (lessonData: any): Lesson => {
@@ -175,7 +180,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
 
   // Find the course and lesson (handle async loading)
   const course =
-    courseId === basicCourse.id
+    courseId === basicCourse.course_id
       ? basicCourse
       : courses?.find((c: Course) => c.course_id === courseId);
   const lessonData = course?.lessons.find((l) => l.lesson_id === lessonId);
@@ -188,9 +193,11 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
 
   // State to track current item index (content or question)
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  // State to track if we're unlocking the next lesson
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   // Always call the hook, even if lesson is undefined
-  const lessonHook = useLesson({ lesson, courseId });
+  const lessonHook = useLesson({ lesson,courseId:course_uuid });
 
   // Early returns for loading, error, not found
   if (isCoursesLoading) {
@@ -296,11 +303,35 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
       // If we're on the last item, directly complete the lesson
       // This ensures the completion modal shows up immediately
       setEarnedXp(lesson?.xp || 0);
-      // Use lesson_id from the adapted lesson object
-      if (lesson) {
-        unlockNextLesson(lesson.lesson_id, courseId);
+      
+      // Handle lesson unlocking differently based on data source
+      if (dataSource === 'local') {
+        setIsComplete(true);
+      } else if (dataSource === 'remote' && lesson && user?.id) {
+        // Set loading state before API call
+        setIsUnlocking(true);
+        
+        // Pass the queryClient to ensure query invalidation works
+        unlockNextLesson(lesson_uuid??"",course_uuid??"", user.id, queryClient)
+          .then(success => {
+            setIsUnlocking(false); // Reset loading state
+            if (success) {
+              setIsComplete(true);
+            } else {
+              toast.error('Failed to unlock next lesson');
+            }
+          })
+          .catch(error => {
+            setIsUnlocking(false); // Reset loading state on error
+            console.error('Error unlocking next lesson:', error);
+            toast.error('Error unlocking next lesson')
+     
+          });
+      } else {
+        // Fallback for any edge cases
+        console.warn('Cannot unlock next lesson: missing lesson or user data');
+        setIsComplete(true);
       }
-      setIsComplete(true);
     } else {
       // If not the last item, move to the next one
       resetQuestionStates();
@@ -423,6 +454,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   handleCheckAnswer={checkCurrentAnswer}
                   handleNext={handleNext}
                   isLastQuestion={currentItemIndex >= flashcardItems.length - 1}
+                  isLoading={isUnlocking}
                 />
               </div>
             </div>
@@ -438,7 +470,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
         isOpen={isComplete}
         onClose={handleBack}
         description="Great job! You've completed this lesson."
-        lessonTitle={`Lesson ${lessonId}: ${lesson?.title}`}
+        lessonTitle={`Lesson: ${lesson?.title}`}
         lessonId={lesson?.lesson_id} // Pass the actual lesson.id, not the URL parameter
         courseId={courseId}
         reward={{

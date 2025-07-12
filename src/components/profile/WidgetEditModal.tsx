@@ -774,7 +774,7 @@ export default function WidgetEditModal({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label
                   htmlFor="widget-column_span"
@@ -820,7 +820,7 @@ export default function WidgetEditModal({
                   className="focus:ring-primary-500 focus:border-primary-500 border-gray-400/50 bg-white/20 placeholder:text-gray-400/70 dark:border-slate-600/50 dark:bg-slate-900/20 dark:placeholder:text-gray-500/70"
                 />
               </div>
-            </div>
+            </div> */}
           </div>
 
           {ActiveForm ? (

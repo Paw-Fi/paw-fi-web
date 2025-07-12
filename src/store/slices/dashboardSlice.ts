@@ -282,10 +282,8 @@ const dashboardSlice = createSlice({
     builder
       // Handle fetchDashboard
       .addCase(fetchDashboard.pending, (state) => {
-        // Only set loading status if it's the initial load
-        if (!state.hasInitialLoad) {
-          state.status = 'loading';
-        }
+        // Always set loading status when fetching dashboard data
+        state.status = 'loading';
         state.error = null;
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {

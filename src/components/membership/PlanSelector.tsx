@@ -6,6 +6,7 @@ import {
   faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { PlanOption, getPlanOptions } from "@/data/pricing-plans";
+import { toast } from "react-toastify";
 
 interface PlanSelectorProps {
   currentPlan: string;
@@ -27,13 +28,17 @@ export function PlanSelector({
   const plans: PlanOption[] = getPlanOptions();
 
   const handleSelectPlan = (planId: string) => {
-    setSelectedPlan(planId);
+    if(planId !== "premium")
+    {
+      setSelectedPlan(planId);
+    }
   };
 
   const handleChangePlan = () => {
-    if (selectedPlan) {
-      onChangePlan(selectedPlan, billingInterval);
-    }
+    toast.error("Please contact support to change your plan");
+    // if (selectedPlan) {
+    //   onChangePlan(selectedPlan, billingInterval);
+    // }
   };
 
   // Calculate savings percentage for yearly billing
@@ -71,7 +76,7 @@ export function PlanSelector({
           >
             Yearly
             <span className="ml-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-              Save {calculateSavings(plans[1].monthlyPrice, plans[1].yearlyPrice / 12)}%
+              Save 25 %
             </span>
           </button>
         </div>
@@ -85,7 +90,7 @@ export function PlanSelector({
           const price =
             billingInterval === "monthly"
               ? plan.monthlyPrice
-              : plan.yearlyPrice / 12;
+              : plan.yearlyPrice ;
 
           return (
             <div
@@ -96,11 +101,12 @@ export function PlanSelector({
                   : plan.popular
                   ? "border-purple-200 bg-slate-50/60 dark:bg-slate-900/60"
                   : "border-gray-200 bg-slate-50/60 dark:bg-slate-900/60"
+                 
               } ${
                 isCurrentPlan
                   ? "cursor-default"
                   : "cursor-pointer hover:border-primary hover:shadow-lg"
-              }`}
+              } ${plan.id === "premium" ? "opacity-70 !cursor-not-allowed" : ""}`}
               onClick={() => !isCurrentPlan && handleSelectPlan(plan.id)}
             >
               {plan.popular && (
@@ -150,15 +156,16 @@ export function PlanSelector({
                 </div>
               ) : (
                 <button
-                  onClick={(e) => {
+                  onClick={(e) => {                    
                     e.stopPropagation();
                     handleSelectPlan(plan.id);
                   }}
+                  disabled={plan.id === "premium"}
                   className={`w-full rounded-md px-4 py-2 text-center text-sm font-medium ${
                     isSelected
                       ? "bg-primary text-white"
                       : "bg-white text-gray-700 hover:bg-gray-50"
-                  } border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
+                  } border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${plan.id === "premium" ? "cursor-not-allowed opacity-70" : ""}`}
                 >
                   {isSelected ? "Selected" : "Select Plan"}
                 </button>

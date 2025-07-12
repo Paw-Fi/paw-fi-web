@@ -70,6 +70,3 @@ pnpm dev
 
 > [!WARNING]
 > You will need to update the `docs/config.json` file (in the project's repo) if you add a new doc page!
-
-Firebase grant access to secret manager
-`firebase apphosting:secrets:grantaccess --backend dev-pawfi-web supabaseAnonKeySecret`

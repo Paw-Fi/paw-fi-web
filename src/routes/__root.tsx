@@ -12,7 +12,7 @@ import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
 import appCss from '@/styles/main.css?url'
 import { seo } from '@/utils/seo'
-import Header from '@/components/Header'
+import { getCanonicalUrl } from '@/utils/canonical'
 // Import ToastContainer dynamically to avoid SSR issues
 import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
@@ -20,11 +20,16 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 })))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientOnly } from '@/components/client-only'
+import { GoogleTagManager } from '@/components/google-tag-manager'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
-  head: () => ({
+  head: () => {
+    // Default canonical URL for the root page
+    const pageUrl = getCanonicalUrl('/');
+    
+    return {
     meta: [
       {
         charSet: 'utf-8',
@@ -40,6 +45,8 @@ export const Route = createRootRouteWithContext<{
       }),
     ],
     links: [
+      // Add canonical link to prevent duplicate content issues
+      { rel: 'canonical', href: pageUrl },
       { rel: 'stylesheet', href: appCss },
       {
         rel: 'apple-touch-icon',
@@ -61,7 +68,8 @@ export const Route = createRootRouteWithContext<{
       { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
       { rel: 'icon', href: '/favicon.ico' },
     ],
-  }),
+  };
+  },
   errorComponent: (props) => {
     return (
       <RootDocument>
@@ -89,9 +97,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="h-screen">       
       <AuthProvider>
-        <Header />
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
+        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
           <Suspense fallback={null}>
             <ToastContainer
               position="top-right"

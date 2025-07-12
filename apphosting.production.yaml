@@ -21,3 +21,18 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  - variable: VITE_STRIPE_PUBLISHABLE_KEY
+    secret: stripePK_PROD  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: VITE_STRIPE_SECRET_KEY
+    secret: stripeSK_PROD  # Reference to a secret in Cloud Secret Manager
+    availability:
+      - BUILD
+      - RUNTIME
+
+# Note: Need to grant access to the secrets to the app engine service account by using:
+# firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
