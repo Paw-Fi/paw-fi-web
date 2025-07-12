@@ -195,6 +195,168 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
       }
     }
 
+    // Handle early access claims table events
+    if (webhook.table === 'early_access_claims' && webhook.type === 'INSERT') {
+      if (webhook.record?.email) {
+        console.log(`Sending early access welcome email to: ${webhook.record.email}`)
+        
+        const userName = webhook.record.first_name || 'Early Access Member'
+        
+        // Base template function for consistent email styling
+        const baseTemplate = (content: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moneko</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      max-width: 150px;
+      margin-bottom: 20px;
+    }
+    .content {
+      background-color: #f9f9f9;
+      padding: 30px;
+      border-radius: 8px;
+    }
+    .button {
+      display: inline-block;
+      background: linear-gradient(to right, #6d28d9, #4f46e5);
+      color: white !important;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      margin: 20px 0;
+    }
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+    h1 { color: #333; }
+    h2 { color: #333; }
+    h3 { color: #333; }
+    h4 { color: #333; }
+    p { color: #333; }
+    li { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="https://moneko.io/logo192.png" alt="Moneko Logo" class="logo" />
+  </div>
+  <div class="content">
+    ${content}
+  </div>
+  <div class="footer">
+    <p>Moneko Inc., 123 Financial St., San Francisco, CA 94103</p>
+    <p>This email was sent to you because you joined our early access program.</p>
+  </div>
+</body>
+</html>
+`
+        
+        // Send early access welcome email with promo code using consistent template
+        const content = `
+          <h1>🎉 Welcome to Moneko Early Access!</h1>
+          <p>Hi ${userName},</p>
+          <p>Congratulations! You've successfully claimed your spot in Moneko's exclusive early access program. You're now one of the first 100 users to experience the future of financial education.</p>
+          
+          <div style="background: #f3f4f6; border: 3px solid #6d28d9; padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0;">
+            <h3 style="color: #6d28d9; margin: 0 0 15px; font-size: 20px; font-weight: bold;">🎁 Your Exclusive Free Trial Code</h3>
+            <div style="background: transparent; border: 2px dashed #6d28d9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <code style="color: #6d28d9; font-size: 28px; font-weight: bold; letter-spacing: 3px;">MONEKO25</code>
+            </div>
+            <p style="color: #333333; margin: 10px 0 0; font-size: 16px;">
+              Use this code at checkout to get your <strong style="color: #6d28d9;">FREE premium trial</strong>
+            </p>
+          </div>
+          
+          <h3>What's Next?</h3>
+          <ul>
+            <li>Visit our <a href="https://moneko.io/pricing" style="color: #6d28d9; text-decoration: none; font-weight: bold;">pricing page</a> to start your free trial</li>
+            <li>Enter code <strong>MONEKO25</strong> at checkout for instant free access</li>
+            <li>Explore premium features before they're available to the public</li>
+            <li>Share feedback to help shape Moneko's future</li>
+          </ul>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; border-left: 4px solid #6d28d9; margin: 25px 0;">
+            <h4 style="margin: 0 0 10px; color: #6d28d9;">💎 Premium Features Included:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>AI-powered personal financial coach</li>
+              <li>Advanced analytics and insights</li>
+              <li>Exclusive financial courses</li>
+              <li>Priority customer support</li>
+              <li>Early access to new features</li>
+            </ul>
+          </div>
+          
+          <p style="text-align: center;">
+            <a href="https://moneko.io/pricing" style="display: inline-block; background: #6d28d9; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; border: none;">Start Your Free Trial Now →</a>
+          </p>
+          
+          <p>Questions? Reply to this email or reach out to us at <a href="mailto:hello@moneko.io" style="color: #6d28d9;">hello@moneko.io</a></p>
+          
+          <p><strong>Welcome to the future of financial education!</strong></p>
+          <p>The Moneko Team</p>
+        `
+
+        const template = {
+          subject: '🎉 Welcome to Moneko Early Access - Exclusive Free Trial Inside!',
+          html: baseTemplate(content),
+          text: `
+🎉 Welcome to Moneko Early Access!
+
+Hi ${userName}!
+
+Congratulations! You've successfully claimed your spot in Moneko's exclusive early access program. You're now one of the first 100 users to experience the future of financial education.
+
+🎁 Your Exclusive Free Trial Code: MONEKO25
+
+Use this code at checkout to get your FREE premium trial.
+
+What's Next?
+• Visit our pricing page (https://moneko.io/pricing) to start your free trial
+• Enter code MONEKO25 at checkout for instant free access
+• Explore premium features before they're available to the public
+• Share feedback to help shape Moneko's future
+
+💎 Premium Features Included:
+• AI-powered personal financial coach
+• Advanced analytics and insights
+• Exclusive financial courses
+• Priority customer support
+• Early access to new features
+
+Start Your Free Trial: https://moneko.io/pricing
+
+Questions? Reply to this email or reach out to us at hello@moneko.io
+
+Welcome to the future of financial education!
+The Moneko Team
+          `
+        }
+        
+        return await sendUserEmail(webhook.record.email, userName, template)
+      }
+    }
+
     // Handle subscriptions table events
     if (webhook.table === 'subscriptions') {
       if (webhook.type === 'INSERT') {

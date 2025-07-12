@@ -23,6 +23,8 @@ import {
   faPlus,
   faX,
   faEnvelope,
+  faStar,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
@@ -139,13 +141,11 @@ function BasicLessonCard({
   title,
   description,
   linkTo,
-  animationDelay = 0,
 }: {
   icon: string;
   title: string;
   description: string;
   linkTo: string;
-  animationDelay?: number;
 }) {
   // Assuming fadeInUp and elasticScale variants are defined elsewhere in the file or imported
   return (
@@ -180,10 +180,13 @@ function BasicLessonCard({
 import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
+import { useEffect } from "react";
 
 import { useNewsletterSubscription } from "@/hooks/use-newsletter-subscription";
 import { HomeHeader } from "@/components/index/header";
 import { AISearchInput } from "@/components/ui/ai-search-input";
+import { getRemainingSpots } from "@/lib/early-access";
+import { useCookie } from "@/utils/use-cookie";
 
 function SubscriptionForm() {
   const [formData, setFormData] = useState({
@@ -406,6 +409,163 @@ function SubscriptionForm() {
   );
 }
 
+// Free Trial Announcement Banner
+function FreeTrialBanner({ remainingSpots }: { remainingSpots: number }) {
+  const { getCookie, setCookie } = useCookie();
+  const navigate = useNavigate();
+  const [isVisible, setIsVisible] = useState(true);
+  const [timeLeft, setTimeLeft] = useState({ days: 6, hours: 23, minutes: 45, seconds: 12 });
+
+  // Check if banner was previously dismissed
+  useEffect(() => {
+    const dismissed = getCookie('trial-banner-dismissed');
+    if (dismissed) {
+      setIsVisible(false);
+    }
+  }, [getCookie]);
+
+  // Countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        } else if (prev.days > 0) {
+          return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    setCookie('trial-banner-dismissed', 'true', { days: 7 }); // Hide for 7 days
+  };
+
+  if (!isVisible || remainingSpots <= 0) return null;
+
+  return (
+    <motion.div
+      className="fixed top-0 z-50 w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 py-3 text-center text-white shadow-lg"
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", bounce: 0.3 }}
+    >
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col items-center justify-center space-y-2 md:flex-row md:space-x-4 md:space-y-0">
+          {/* Announcement Text */}
+          <div className="flex items-center space-x-2">
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              🎉
+            </motion.div>
+            <span className="font-bold text-yellow-300">FREE TRIAL GIVEAWAY!</span>
+            <span className="hidden lg:inline">Get premium access absolutely free</span>
+          </div>
+
+          {/* Countdown Timer */}
+          <div className="flex items-center space-x-1">
+            <FontAwesomeIcon icon={faClock} className="text-yellow-300" />
+            <span className="text-sm font-medium">Ends in:</span>
+            <div className="flex space-x-1">
+              <motion.span
+                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >
+                {timeLeft.days}d
+              </motion.span>
+              <motion.span
+                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+              >
+                {String(timeLeft.hours).padStart(2, '0')}h
+              </motion.span>
+              <motion.span
+                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+              >
+                {String(timeLeft.minutes).padStart(2, '0')}m
+              </motion.span>
+              <motion.span
+                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 1, repeat: Infinity, delay: 0.6 }}
+              >
+                {String(timeLeft.seconds).padStart(2, '0')}s
+              </motion.span>
+            </div>
+          </div>
+
+          {/* Spots remaining */}
+          <div className="flex items-center space-x-1 text-sm">
+            <FontAwesomeIcon icon={faStar} className="text-yellow-300" />
+            <span>Only <strong className="text-yellow-300">{remainingSpots}</strong> spots left!</span>
+          </div>
+
+          {/* Claim Now Button */}
+          <motion.button
+            onClick={() => navigate({ to: '/early-access' })}
+            className="rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-purple-800 shadow-lg transition-all duration-200 hover:bg-yellow-300 hover:shadow-xl"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            animate={{ 
+              boxShadow: [
+                "0 4px 14px 0 rgba(250, 204, 21, 0.4)",
+                "0 6px 20px 0 rgba(250, 204, 21, 0.6)",
+                "0 4px 14px 0 rgba(250, 204, 21, 0.4)"
+              ]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            Claim Now →
+          </motion.button>
+
+          {/* Close button */}
+          <button
+            onClick={handleDismiss}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 transition-colors hover:text-white md:relative md:right-auto md:top-auto md:translate-y-0"
+            aria-label="Dismiss announcement"
+          >
+            <FontAwesomeIcon icon={faX} className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function EarlyAccessSection() {
+  const [remainingSpots, setRemainingSpots] = useState<number>(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchRemainingSpots = async () => {
+      const spots = await getRemainingSpots();
+      setRemainingSpots(spots);
+    };
+    fetchRemainingSpots();
+  }, []);
+
+  return (
+    <>
+      {/* Free Trial Banner */}
+      <FreeTrialBanner remainingSpots={remainingSpots} />
+    </>
+  );
+}
+
 export default function HomePage() {
   // Finance-related suggestion prompts
   const chatSuggestions = [
@@ -593,14 +753,13 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, amount: 0.1 }}
           >
-            {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
+            {basicLessonsData.lessons.slice(0, 2).map((lesson) => (
               <BasicLessonCard
                 key={`preview-${lesson.lesson_id}`}
                 icon={lesson.icon}
                 title={lesson.title}
                 description={lesson.description}
                 linkTo={`/dashboard/essentials/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
-                animationDelay={0.1 * (index + 1)}
               />
             ))}
             {/* Explore More Card */}
@@ -638,6 +797,9 @@ export default function HomePage() {
 
       {/* FAQ Section */}
       <FaqSection faqData={faqData} />
+
+      {/* Early Access Section */}
+      <EarlyAccessSection />
 
       {/* Newsletter Subscription Section */}
       <section
