@@ -20,6 +20,7 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 })))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientOnly } from '@/components/client-only'
+import { GoogleTagManager } from '@/components/google-tag-manager'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -98,6 +99,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         {/* Use ClientOnly wrapper to prevent hydration mismatches */}
         <ClientOnly>
+        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
           <Suspense fallback={null}>
             <ToastContainer
               position="top-right"
