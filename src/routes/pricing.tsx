@@ -270,14 +270,14 @@ function PricingPage() {
         </motion.header>
 
         <motion.div
-          className="mt-8 flex flex-wrap gap-6 justify-center"
+          className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-center"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
           {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}
-              className={classNames(`relative flex w-[30rem] flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`)}
+              className={classNames(`relative flex flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`)}
             >
               {tier.badgeText && (
                 <div className={classNames("absolute -top-4 left-1/2 -translate-x-1/2 rounded-full  px-4 py-1.5 text-xs font-semibold text-white shadow-lg",

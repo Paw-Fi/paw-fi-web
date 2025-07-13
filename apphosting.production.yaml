@@ -2,14 +2,17 @@
 runConfig:
   minInstances: 1  # Keep at least one instance warm
   maxInstances: 2
-  cpu: 1
-  memoryMiB: 512
+  cpu: 2
+  memoryMiB: 1024
   concurrency: 80
 
 
 env:
   # Production Supabase configuration
   # Using secrets for secure environment variables
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=4096"
+
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecretProd  # Reference to a secret in Cloud Secret Manager
     availability:
@@ -34,5 +37,6 @@ env:
       - BUILD
       - RUNTIME
 
+runtime: nodejs20  # or nodejs20
 # Note: Need to grant access to the secrets to the app engine service account by using:
 # firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
