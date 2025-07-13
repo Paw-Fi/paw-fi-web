@@ -29,10 +29,10 @@ export default defineConfig({
         id: 'G-KBNN5QXD4G',
       },
     }),
-    react(),
     tanstackStart({
       customViteReactPlugin: true
-    })
+    }),
+    react(),
   ],
   resolve: {
     alias: {

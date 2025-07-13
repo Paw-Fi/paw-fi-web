@@ -5,7 +5,10 @@ CREATE TABLE IF NOT EXISTS early_access_claims (
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     referral_source VARCHAR(100),
-    interests TEXT[], -- Array of interests
+    experience_level VARCHAR(100),
+    financial_goals TEXT[], -- Array of financial goals
+    interested_features TEXT[], -- Array of interested features
+    interests TEXT[], -- Legacy field for backward compatibility
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,6 +47,9 @@ CREATE OR REPLACE FUNCTION claim_early_access_spot(
     p_first_name TEXT DEFAULT NULL,
     p_last_name TEXT DEFAULT NULL,
     p_referral_source TEXT DEFAULT NULL,
+    p_experience_level TEXT DEFAULT NULL,
+    p_financial_goals TEXT[] DEFAULT NULL,
+    p_interested_features TEXT[] DEFAULT NULL,
     p_interests TEXT[] DEFAULT NULL
 )
 RETURNS JSON AS $$
@@ -63,8 +69,8 @@ BEGIN
     END IF;
     
     -- Try to insert the claim
-    INSERT INTO early_access_claims (email, first_name, last_name, referral_source, interests)
-    VALUES (p_email, p_first_name, p_last_name, p_referral_source, p_interests);
+    INSERT INTO early_access_claims (email, first_name, last_name, referral_source, experience_level, financial_goals, interested_features, interests)
+    VALUES (p_email, p_first_name, p_last_name, p_referral_source, p_experience_level, p_financial_goals, p_interested_features, p_interests);
     
     -- Get updated remaining spots
     SELECT get_remaining_spots() INTO remaining_spots;
@@ -92,7 +98,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission to public
-GRANT EXECUTE ON FUNCTION claim_early_access_spot(TEXT, TEXT, TEXT, TEXT, TEXT[]) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION claim_early_access_spot(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT[], TEXT[]) TO anon, authenticated;
 
 -- Add trigger to update timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

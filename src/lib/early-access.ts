@@ -5,7 +5,10 @@ export interface EarlyAccessClaim {
   firstName?: string;
   lastName?: string;
   referralSource?: string;
-  interests?: string[];
+  experienceLevel?: string;
+  financialGoals?: string[];
+  interestedFeatures?: string[];
+  interests?: string[]; // Legacy field for backward compatibility
 }
 
 export interface EarlyAccessResponse {

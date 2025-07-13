@@ -3,8 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "@tanstack/react-router";
 import basicCourse from '@/data/basic-lessons.json';
 
-// Use the shared Lesson interface from @/types/learning.types
-import type { Lesson } from "@/types/learning.types";
 
 
 
@@ -32,7 +30,7 @@ export function LearningDropdown({ groups }: any) {
           <div className="flex flex-col gap-6 p-6">
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link
-                to="/learning/"
+                to="/dashboard/learning"
                 className="group/ai inline-flex w-full sm:flex-1 items-center justify-center gap-3 rounded-2xl border-4 border-white bg-gradient-to-tr from-[#7458FF] via-purple-500 to-fuchsia-500 px-6 py-4 text-lg font-bold tracking-wide text-white shadow-lg transition hover:scale-[1.03] focus:ring-2 focus:ring-purple-400 focus:outline-none active:scale-95"
                 tabIndex={0}
                 aria-label="Start AI-Powered Learning"

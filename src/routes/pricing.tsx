@@ -8,7 +8,11 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
-import { FeatureItem, PricingTier, getPricingTiers } from "@/data/pricing-plans";
+import {
+  FeatureItem,
+  PricingTier,
+  getPricingTiers,
+} from "@/data/pricing-plans";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faRocket } from "@fortawesome/free-solid-svg-icons";
 import { HomeHeader } from "@/components/index/header";
@@ -154,7 +158,7 @@ function PricingPage() {
   const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
 
@@ -164,69 +168,73 @@ function PricingPage() {
       toggled ? "Displaying annual pricing." : "Displaying monthly pricing.",
     );
   };
-  
+
   const handleSubscribe = async (plan: string) => {
     try {
-      if(plan === "premium")
-      {
+      if (plan === "premium") {
         window.open("https://moneko.io/#waitlistform", "_blank");
         return;
       }
       setIsLoading(true);
-      
+
       // Get the current user ID if logged in
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const userId = user?.id;
-      
+
       if (!userId) {
         toast.error("Please sign in to subscribe");
         navigate({ to: "/login" });
         setIsLoading(false);
         return;
       }
-      
+
       const billingInterval = isAnnual ? "yearly" : "monthly";
-      
+
       // Create success and cancel URLs for the checkout session
       const origin = window.location.origin;
       const successUrl = `${origin}/payment-status?status=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${origin}/payment-status?status=canceled`;
-      
+
       // Call the create-checkout-session function
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
-          plan, 
-          billingInterval, 
-          userId,
-          successUrl,
-          cancelUrl
+      const { data, error } = await supabase.functions.invoke(
+        "create-checkout-session",
+        {
+          body: {
+            plan,
+            billingInterval,
+            userId,
+            successUrl,
+            cancelUrl,
+          },
         },
-      });
-      
+      );
+
       if (error) {
-        console.error('Error creating checkout session:', error);
-        toast.error('Failed to create checkout session. Please try again.');
+        console.error("Error creating checkout session:", error);
+        toast.error("Failed to create checkout session. Please try again.");
         setIsLoading(false);
         return;
       }
-      
+
       // Redirect to checkout page with plan and billing interval
       navigate({
-        to: '/checkout',
+        to: "/checkout",
         search: { plan, billing: billingInterval },
       });
-      
+
       setIsLoading(false);
     } catch (err) {
-      console.error('Error handling subscription:', err);
-      toast.error('An error occurred. Please try again.');
+      console.error("Error handling subscription:", err);
+      toast.error("An error occurred. Please try again.");
       setIsLoading(false);
     }
   };
 
   return (
     <AmbientHaloLayout>
-      <HomeHeader/>
+      <HomeHeader />
       <motion.div
         initial={prefersReducedMotion ? undefined : "hidden"} // Use undefined for props if variants are undefined
         animate={prefersReducedMotion ? undefined : "visible"}
@@ -270,22 +278,28 @@ function PricingPage() {
         </motion.header>
 
         <motion.div
-          className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-center"
+          className="mt-8 grid grid-cols-1 justify-center gap-6 md:grid-cols-2 lg:grid-cols-3"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
           {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}
-              className={classNames(`relative flex flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`)}
+              className={classNames(
+                `relative flex flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`,
+              )}
             >
               {tier.badgeText && (
-                <div className={classNames("absolute -top-4 left-1/2 -translate-x-1/2 rounded-full  px-4 py-1.5 text-xs font-semibold text-white shadow-lg",
-                  {
-                    "bg-gradient-to-r from-pink-500 to-purple-600": tier.badgeText==="Most Popular",
-                    "bg-gray-500": tier.badgeText!="Most Popular",
-                  }
-                )}>
+                <div
+                  className={classNames(
+                    "absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-semibold text-white shadow-lg",
+                    {
+                      "bg-gradient-to-r from-pink-500 to-purple-600":
+                        tier.badgeText === "Most Popular",
+                      "bg-gray-500": tier.badgeText != "Most Popular",
+                    },
+                  )}
+                >
                   {tier.badgeText}
                 </div>
               )}
@@ -306,9 +320,9 @@ function PricingPage() {
                       : tier.priceMonthly}
                   </span>
                   <span className="text-base font-medium text-gray-500 dark:text-gray-400">
-                   /month
+                    /month
                   </span>
-                  {tier.priceYearly&&tier.title!="Free Plan" && (
+                  {tier.priceYearly && tier.title != "Free Plan" && (
                     <p
                       className={`mt-1 text-xs font-semibold text-purple-600 transition-opacity duration-300 dark:text-purple-400 ${isAnnual ? "opacity-100" : "opacity-0"}`}
                     >
@@ -324,8 +338,6 @@ function PricingPage() {
                     </p>
                   )}
                 </div>
-
-                
 
                 <ul role="list" className="mb-8 flex-grow space-y-3">
                   {tier.features.map((feature) => (
@@ -345,20 +357,25 @@ function PricingPage() {
                 </ul>
 
                 {tier.trialText && (
-                  <p className="mb-4 text-center text-lg bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400" style={{whiteSpace: 'pre-line'}}>
+                  <p
+                    className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-center text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
+                    style={{ whiteSpace: "pre-line" }}
+                  >
                     {tier.trialText}
                   </p>
                 )}
 
                 <div
-                 onClick={() => {
-                   if (tier.title.toLowerCase().includes("free")) {
-                     toast.info("Free plan is available after signup");
-                     return;
-                   }
-                   const planParam = tier.title.toLowerCase().includes("plus") ? "plus" : "premium";
-                   handleSubscribe(planParam);
-                 }}
+                  onClick={() => {
+                    if (tier.title.toLowerCase().includes("free")) {
+                      toast.info("Free plan is available after signup");
+                      return;
+                    }
+                    const planParam = tier.title.toLowerCase().includes("plus")
+                      ? "plus"
+                      : "premium";
+                    handleSubscribe(planParam);
+                  }}
                   className={`mt-auto block w-full cursor-pointer rounded-lg px-6 py-3 text-center text-base font-medium shadow-md transition-transform duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                     tier.highlight
                       ? "transform bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 focus-visible:ring-purple-500 group-hover:scale-105"
@@ -399,9 +416,11 @@ function PricingPage() {
           </a>
         </motion.div>
       </motion.div>
-     {isLoading&& <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 ">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
-    </div>}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-white"></div>
+        </div>
+      )}
     </AmbientHaloLayout>
   );
 }
