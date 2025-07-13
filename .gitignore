@@ -31,3 +31,7 @@ package-lock.json
 .tanstack/
 
 src/routeTree.gen.ts
+
+public/sitemap.xml
+
+public/sitemap.xml.backup
