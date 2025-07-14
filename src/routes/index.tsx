@@ -225,14 +225,11 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      {/* Portfolio Builder Section - Exact Match to Mockup */}
-      <section className="relative overflow-hidden bg-transparent py-20">
-        {/* Content */}
-        <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12">
+      <section className="relative overflow-hidden min-h-screen pt-24">
           {/* Heading */}
           <div className="mb-12 text-center">
             <motion.h2
-              className="mb-3 mt-24 text-4xl font-bold md:text-5xl"
+              className="mb-3 mt-24 text-5xl font-bold md:text-6xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -241,7 +238,7 @@ export default function HomePage() {
               Build Your First Portfolio
             </motion.h2>
             <motion.h3
-              className="mb-4 text-3xl font-bold md:text-4xl"
+              className="mb-4 text-4xl font-bold md:text-5xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -264,8 +261,15 @@ export default function HomePage() {
           <AISearchInput 
             placeholder="Ask Moneko to create personalized financial journey for my..."
             suggestions={chatSuggestions}
-            className="mb-12"
+     
           />
+</section>
+      <EarlyAccessSection/>
+
+      {/* Portfolio Builder Section - Exact Match to Mockup */}
+      <section className="relative overflow-hidden py-20 ">
+        {/* Content */}
+        <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12">
 
           {/* Video Cards with Seamless Integration */}
           <div className="mt-24 grid gap-8 md:grid-cols-2">
@@ -345,7 +349,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <EarlyAccessSection/>
 
 
 

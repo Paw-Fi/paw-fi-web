@@ -13,6 +13,7 @@ import {
   faUsers,
   faCheckCircle,
   faWandSparkles,
+  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRemainingSpots } from "@/hooks/use-early-access";
 import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
@@ -231,52 +232,37 @@ export default function EarlyAccessPage() {
       {/* Main Content */}
       <main className="relative z-10">
         {/* Hero Section */}
-        <section className="px-6 py-20 text-center">
+        <section className="px-6 min-h-screen text-center pt-24">
           <div className="mx-auto max-w-4xl">
             <motion.div
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
             >
-              {false ? (
+             
                 <motion.div
-                  className="mb-6 inline-flex items-center rounded-full border border-green-400/50 bg-green-500/20 px-4 py-2 text-green-300 backdrop-blur-sm"
-                  variants={fadeInDown}
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-                  ✅ Spot Claimed Successfully - Check Your Email for MONEKO25!
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="mb-6 inline-flex items-center rounded-full border border-amber-400/50 bg-amber-500/20 px-4 py-2 text-amber-300 backdrop-blur-sm"
+                  className="mb-6 inline-flex items-center rounded-full bg-gradient-to-r from-[#ec4899] to-[#9333ea] px-4 py-2 text-white"
                   variants={fadeInDown}
                 >
-                  <FontAwesomeIcon icon={faStar} className="mr-2" />
+                  <FontAwesomeIcon icon={faRocket} className="mr-2" />
                   Limited Time Offer - Only {remainingSpots} Spots Left!
                 </motion.div>
-              )}
+              
 
               <motion.h1
-                className="mb-6 text-5xl font-bold text-white md:text-7xl"
+                className="mb-6 text-4xl font-bold text-white md:text-6xl"
                 variants={fadeInUp}
                 custom={0.1}
               >
-                Get{" "}
-                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Early Access
-                </span>
+                Free Trial Giveaway
               </motion.h1>
 
               <motion.p
-                className="mb-8 text-xl text-purple-100 md:text-2xl"
+                className="mb-8 text-lg text-purple-100 md:text-xl"
                 variants={fadeInUp}
                 custom={0.2}
               >
-                Join the exclusive group of{" "}
-                <span className="font-bold text-white">{SPOTS} pioneers</span>{" "}
-                shaping the future of financial education
+               Be among the first 100 pioneers to experience the future of investing for beginners. Your journey to building your first portfolio starts here.
               </motion.p>
 
               <motion.div
@@ -301,7 +287,7 @@ export default function EarlyAccessPage() {
                 variants={fadeInUp}
                 custom={0.5}
               >
-                <FreeTrialGiveawayForm showHeader={false} />
+                <FreeTrialGiveawayForm />
               </motion.div>
             </motion.div>
           </div>

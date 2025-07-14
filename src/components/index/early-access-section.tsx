@@ -98,13 +98,9 @@ export const EarlyAccessSection = () => {
   return (
     <section
       aria-labelledby="early-access-heading"
-      className="relative overflow-hidden px-4 py-24 sm:px-6 md:px-12 lg:px-24"
+      className="relative overflow-hidden px-4 sm:px-6 md:px-12 lg:px-24"
     >
-      {/* Ambient background elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -right-[20%] -top-[30%] h-[70%] w-[70%] rounded-full bg-gradient-to-r from-purple-200/30 to-purple-400/30 blur-3xl" />
-        <div className="absolute -bottom-[30%] -left-[20%] h-[70%] w-[70%] rounded-full bg-gradient-to-r from-blue-200/30 to-purple-300/30 blur-3xl" />
-      </div>
+   
 
       {/* Header Section */}
       <motion.div

@@ -69,7 +69,7 @@ export function MultiSelectDropdown({
         <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
           {label}
           {helperText && (
-            <span className="text-sm text-gray-500"> {helperText}</span>
+            <span className="text-sm text-slate-700 dark:text-slate-300"> {helperText}</span>
           )}
         </label>
       )}
