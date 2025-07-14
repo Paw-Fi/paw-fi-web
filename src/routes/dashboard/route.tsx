@@ -567,9 +567,9 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
-                    {user.user_metadata?.name || "User"}
+                    {user.user_metadata?.full_name || "User"}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}ssssssss</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </div>
               </div>
             ) : (
@@ -836,7 +836,7 @@ export function Dashboard() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.8, duration: 0.5 }}
                     >
-                      <Link to={!user ? "/login" : "/pricing"} className="group w-full sm:w-auto">
+                      <Link to={!user ? "/login?redirect=%2Fdashboard" : "/pricing"} className="group w-full sm:w-auto">
                         <motion.div
                           className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
                           whileHover={{ scale: 1.03, y: -2 }}

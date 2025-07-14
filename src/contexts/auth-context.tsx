@@ -14,7 +14,7 @@ type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signUp: (email: string, password: string, userData: { full_name: string }) => Promise<{ success: boolean; data: any }>;
+  signUp: (email: string, password: string, userData: { full_name: string }, redirectUrl?: string) => Promise<{ success: boolean; data: any }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; data: any }>;
   signOut: () => Promise<{ success: boolean }>;
 };
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, userData: { full_name: string }) => {
+  const signUp = async (email: string, password: string, userData: { full_name: string }, redirectUrl?: string) => {
     setIsLoading(true);
     
     try {
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}${redirectUrl || '/dashboard'}`,
           data: userData
         },
       });

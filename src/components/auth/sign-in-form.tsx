@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@tanstack/react-router';
 
-export function SignInForm() {
+interface SignInFormProps {
+  redirectUrl?: string;
+}
+
+export function SignInForm({ redirectUrl }: SignInFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +24,7 @@ export function SignInForm() {
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        navigate({ to: '/dashboard' });
+        navigate({ to: redirectUrl || '/dashboard' });
       }
     } catch (error: any) {
       setError(error.message || 'Invalid email or password');

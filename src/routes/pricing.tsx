@@ -357,12 +357,11 @@ function PricingPage() {
                 </ul>
 
                 {tier.trialText && (
-                  <p
-                    className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-center text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
-                    style={{ whiteSpace: "pre-line" }}
+                  <span
+                    className="mb-4 bg-gradient-to-r whitespace-pre-line from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-center text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
                   >
                     {tier.trialText}
-                  </p>
+                  </span>
                 )}
 
                 <div
