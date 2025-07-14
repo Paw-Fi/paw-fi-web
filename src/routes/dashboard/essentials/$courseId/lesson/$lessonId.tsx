@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import LessonPage from "../../../learning/$courseId/lesson/$lessonId";
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
 export const Route = createFileRoute("/dashboard/essentials/$courseId/lesson/$lessonId")({
   component: EssentialsLessonPage,
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/lesson/$le
     let courseTitle = "Financial Essentials";
     const siteOgImage = "https://moneko.io/og-img.png"; // Default site OG image
 
-    const pageUrl = `https://moneko.io/essentials/${params.courseId}/lesson/${params.lessonId}`;
+    const pageUrl = getCanonicalUrl(`/dashboard/essentials/${params.courseId}/lesson/${params.lessonId}`);
     const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, Moneko`;
 
     const meta = seo({

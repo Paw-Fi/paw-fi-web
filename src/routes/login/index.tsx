@@ -1,8 +1,29 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { SignInForm } from '@/components/auth/sign-in-form';
+import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/login/')({  
   component: Login,
+  head: () => {
+    const pageUrl = getCanonicalUrl('/login');
+    const meta = seo({
+      title: 'Sign In | Moneko',
+      description: 'Sign in to your Moneko account to access personalized financial education, calculators, and AI chat.',
+      keywords: 'sign in, login, Moneko, financial education, user account',
+      url: pageUrl,
+    });
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
+    };
+  },
 });
 
 export function Login() {
