@@ -25,6 +25,7 @@ import {
   faEnvelope,
   faStar,
   faClock,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
@@ -225,11 +226,12 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      <section className="relative overflow-hidden min-h-screen pt-24">
+      <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
+        <div className="mx-auto max-w-4xl">
           {/* Heading */}
-          <div className="mb-12 text-center">
+          <div className="mb-8 sm:mb-12 text-center">
             <motion.h2
-              className="mb-3 mt-24 text-5xl font-bold md:text-6xl"
+              className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -238,7 +240,7 @@ export default function HomePage() {
               Build Your First Portfolio
             </motion.h2>
             <motion.h3
-              className="mb-4 text-4xl font-bold md:text-5xl"
+              className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -247,7 +249,7 @@ export default function HomePage() {
               from 0 to 1
             </motion.h3>
             <motion.p
-              className="text-lg text-gray-600"
+              className="text-base sm:text-lg md:text-xl text-gray-600 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -258,11 +260,46 @@ export default function HomePage() {
           </div>
 
           {/* AI Search Input */}
-          <AISearchInput 
-            placeholder="Ask Moneko to create personalized financial journey for my..."
-            suggestions={chatSuggestions}
-     
-          />
+          <div className="mb-8 sm:mb-12">
+            <AISearchInput 
+              placeholder="Ask Moneko to create personalized financial journey for my..."
+              suggestions={chatSuggestions}
+            />
+          </div>
+        </div>
+
+        {/* Animated Scroll Arrow */}
+        <motion.div
+          className="absolute bottom-8 sm:bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-10"
+          initial={{ opacity: 0, y: 0, x: "-50%" }}
+          animate={{ 
+            opacity: [0.5, 1, 0.5],
+            y: [0, 8, 0]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <motion.button
+            onClick={() => {
+              const nextSection = document.querySelector('section:nth-of-type(2)');
+              if (nextSection) {
+                nextSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="flex flex-col items-center justify-center p-2 sm:p-4 text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 hidden sm:block">Scroll to explore</span>
+            <FontAwesomeIcon 
+              icon={faChevronDown} 
+              className="text-lg sm:text-xl md:text-2xl"
+            />
+          </motion.button>
+        </motion.div>
 </section>
       <EarlyAccessSection/>
 
