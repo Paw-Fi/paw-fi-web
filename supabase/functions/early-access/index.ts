@@ -16,6 +16,7 @@ interface EarlyAccessClaim {
   financialGoals?: string[];
   interestedFeatures?: string[];
   interests?: string[]; // Legacy field for backward compatibility
+  userId?: string; // User ID for authenticated users
 }
 
 interface EarlyAccessResponse {
@@ -99,7 +100,8 @@ serve(async (req) => {
         p_experience_level: body.experienceLevel || null,
         p_financial_goals: body.financialGoals || null,
         p_interested_features: body.interestedFeatures || null,
-        p_interests: body.interests || null
+        p_interests: body.interests || null,
+        p_user_id: body.userId || null
       });
 
       if (error) {

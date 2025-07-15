@@ -13,11 +13,15 @@ import { useRemainingSpots, useClaimEarlyAccess } from "@/hooks/use-early-access
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { useCookie } from "@/utils/use-cookie";
+import { useAuth } from "@/contexts/auth-context";
+import { useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 
 
 export function FreeTrialGiveawayForm() {
   const { getCookie, setCookie } = useCookie();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [hasClaimed, setHasClaimed] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -75,12 +79,33 @@ export function FreeTrialGiveawayForm() {
   ];
 
   useEffect(() => {
-    // Check if user has already claimed
-    const claimed = getCookie("early-access-claimed");
-    if (claimed) {
-      setHasClaimed(true);
+    // Check if user has already claimed - use user ID instead of cookie if authenticated
+    if (isAuthenticated && user) {
+      const claimed = getCookie(`early-access-claimed-${user.id}`);
+      if (claimed) {
+        setHasClaimed(true);
+      }
+      
+      // Auto-fill form with user data
+      const fullName = user.user_metadata?.full_name || '';
+      const nameParts = fullName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        firstName: firstName,
+        lastName: lastName,
+      }));
+    } else {
+      // Fallback to email-based cookie for backward compatibility
+      const claimed = getCookie("early-access-claimed");
+      if (claimed) {
+        setHasClaimed(true);
+      }
     }
-  }, [getCookie]);
+  }, [getCookie, isAuthenticated, user]);
 
 
   const handleInputChange = (
@@ -115,6 +140,15 @@ export function FreeTrialGiveawayForm() {
     e.preventDefault();
     setResult({});
 
+    // Require authentication before claiming
+    if (!isAuthenticated || !user) {
+      setResult({
+        success: false,
+        error: 'Please sign in to claim your early access spot.'
+      });
+      return;
+    }
+
     const claim: EarlyAccessClaim = {
       email: formData.email,
       firstName: formData.firstName || undefined,
@@ -123,6 +157,7 @@ export function FreeTrialGiveawayForm() {
       experienceLevel: formData.experienceLevel || undefined,
       financialGoals: formData.financialGoals.length > 0 ? formData.financialGoals : undefined,
       interestedFeatures: formData.interestedFeatures.length > 0 ? formData.interestedFeatures : undefined,
+      userId: user.id, // Add user ID to the claim
       // For backward compatibility, combine all interests
       interests: [
         formData.experienceLevel,
@@ -139,8 +174,8 @@ export function FreeTrialGiveawayForm() {
             message: "🎉 Congratulations! Your free trial membership has been claimed successfully. Check your email for next steps!"
           });
           
-          // Save to cookie that user has claimed
-          setCookie('early-access-claimed', 'true');
+          // Save to user-specific cookie that user has claimed
+          setCookie(`early-access-claimed-${user.id}`, 'true');
           setHasClaimed(true);
           
           // Clear form data
@@ -166,6 +201,44 @@ export function FreeTrialGiveawayForm() {
     });
   };
 
+
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="rounded-3xl border border-white/20 bg-white/50 p-8 shadow-lg shadow-slate-900/10 backdrop-blur-2xl md:p-12 dark:border-slate-700/20 dark:bg-slate-900/30">
+        <div className="text-center">
+          <div className="mb-4">
+            <FontAwesomeIcon icon={faEnvelope} className="text-4xl text-purple-600 mb-4" />
+          </div>
+          <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
+            Sign In Required
+          </h3>
+          <p className="text-slate-600 dark:text-slate-300 mb-6">
+            Please sign in to claim your early access spot and join our exclusive community.
+          </p>
+          <div className="space-y-3">
+            <motion.button
+              onClick={() => navigate({ to: "/login", search: { redirect: "/early-access" } })}
+              className="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3.5 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Sign In
+              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+            </motion.button>
+            <motion.button
+              onClick={() => navigate({ to: "/register", search: { redirect: "/early-access" } })}
+              className="w-full inline-flex items-center justify-center rounded-xl border border-purple-600 bg-transparent px-8 py-3.5 text-base font-medium text-purple-600 transition-all duration-200 ease-in-out hover:bg-purple-50 dark:hover:bg-purple-900/20"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Create Account
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
 
@@ -202,8 +275,13 @@ export function FreeTrialGiveawayForm() {
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
-                    className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
-                    placeholder="your full name"
+                    disabled={isAuthenticated}
+                    className={`w-full rounded-lg border border-slate-300 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 ${
+                      isAuthenticated 
+                        ? 'bg-slate-100/70 text-slate-600 cursor-not-allowed dark:bg-slate-700/70 dark:text-slate-400' 
+                        : 'bg-white/70 dark:bg-slate-800/70'
+                    }`}
+                    placeholder={isAuthenticated ? "" : "your full name"}
                   />
                 </div>
                 <div>
@@ -220,8 +298,13 @@ export function FreeTrialGiveawayForm() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
-                    placeholder="you@example.com"
+                    disabled={isAuthenticated}
+                    className={`w-full rounded-lg border border-slate-300 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 ${
+                      isAuthenticated 
+                        ? 'bg-slate-100/70 text-slate-600 cursor-not-allowed dark:bg-slate-700/70 dark:text-slate-400' 
+                        : 'bg-white/70 dark:bg-slate-800/70'
+                    }`}
+                    placeholder={isAuthenticated ? "" : "you@example.com"}
                   />
                 </div>
               </div>

@@ -28,6 +28,7 @@ import { getCanonicalUrl } from "@/utils/canonical";
 import icon from "@/assets/images/pawfi-icon.png"
 
 const SPOTS = 100;
+const CAMPAIGN_END_DATE = new Date('2025-07-31T23:59:59.999Z');
 
 export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
@@ -86,61 +87,69 @@ const features = [
   },
 ];
 
-const benefits = [
-  "Free premium features for life",
-  "Direct input on new features",
-  "Exclusive community access",
-  "Personal finance consultation",
-  "Early access to all future tools",
-  "No setup fees or hidden costs",
-];
-
 function CountdownTimer({ targetCount = SPOTS }: { targetCount?: number }) {
   const [timeLeft, setTimeLeft] = useState({
-    days: 7,
-    hours: 23,
-    minutes: 45,
-    seconds: 12,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
 
+  const calculateTimeLeft = () => {
+    const now = new Date().getTime();
+    const endTime = CAMPAIGN_END_DATE.getTime();
+    const difference = endTime - now;
+
+    if (difference > 0) {
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000),
+      };
+    } else {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    }
+  };
+
   useEffect(() => {
+    // Set initial time
+    setTimeLeft(calculateTimeLeft());
+
+    // Update every second
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else if (prev.days > 0) {
-          return {
-            ...prev,
-            days: prev.days - 1,
-            hours: 23,
-            minutes: 59,
-            seconds: 59,
-          };
-        }
-        return prev;
-      });
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
 
+  const isExpired = timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0;
+
+  if (isExpired) {
+    return (
+      <div className="text-center">
+        <div className="rounded-2xl border border-red-300 bg-red-100/20 p-6 backdrop-blur-xl">
+          <div className="text-2xl font-bold text-red-200 mb-2">Campaign Ended</div>
+          <div className="text-red-300">The early access period has concluded.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex justify-center gap-4">
+    <div className="flex justify-center gap-2 sm:gap-4">
       {Object.entries(timeLeft).filter(([unit]) => unit !== "seconds").map(([unit, value]) => (
         <motion.div
           key={unit}
-          className="flex flex-col items-center rounded-2xl border border-white/30 bg-white/20 p-4 backdrop-blur-xl"
+          className="flex flex-col items-center rounded-2xl border border-white/30 bg-white/20 p-3 sm:p-4 backdrop-blur-xl min-w-[60px] sm:min-w-[80px]"
           variants={elasticScale}
           initial="hidden"
           animate="visible"
           custom={Math.random() * 0.5}
         >
-          <div className="text-3xl font-bold text-white">{value}</div>
-          <div className="text-sm text-purple-100 capitalize">{unit}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-white">{String(value).padStart(2, '0')}</div>
+          <div className="text-xs sm:text-sm text-purple-100 capitalize">{unit}</div>
         </motion.div>
       ))}
     </div>

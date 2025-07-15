@@ -9,6 +9,7 @@ export interface EarlyAccessClaim {
   financialGoals?: string[];
   interestedFeatures?: string[];
   interests?: string[]; // Legacy field for backward compatibility
+  userId?: string; // User ID for authenticated users
 }
 
 export interface EarlyAccessResponse {
