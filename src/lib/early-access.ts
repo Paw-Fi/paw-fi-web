@@ -5,7 +5,11 @@ export interface EarlyAccessClaim {
   firstName?: string;
   lastName?: string;
   referralSource?: string;
-  interests?: string[];
+  experienceLevel?: string;
+  financialGoals?: string[];
+  interestedFeatures?: string[];
+  interests?: string[]; // Legacy field for backward compatibility
+  userId?: string; // User ID for authenticated users
 }
 
 export interface EarlyAccessResponse {
@@ -55,5 +59,23 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
       success: false,
       error: 'An unexpected error occurred. Please try again.'
     };
+  }
+}
+
+export async function checkUserHasClaimed(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('check-user-claim', {
+      method: 'GET'
+    });
+    
+    if (error) {
+      console.error('Error checking claim status:', error);
+      return false;
+    }
+    
+    return data?.hasClaimed === true;
+  } catch (error) {
+    console.error('Error checking claim status:', error);
+    return false;
   }
 }

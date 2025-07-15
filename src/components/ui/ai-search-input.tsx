@@ -240,7 +240,7 @@ export function AISearchInput({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
         >
-          <div className="mb-2 flex items-center gap-2 px-2">
+          <div className="mb-2 flex items-center gap-2 px-3 py-2">
             <FontAwesomeIcon
               icon={faLightbulb}
               className="text-amber-500"
@@ -249,7 +249,7 @@ export function AISearchInput({
               Popular questions to get started
             </span>
           </div>
-          <div className="flex flex-wrap gap-2 px-1">
+          <div className="flex flex-wrap gap-2 px-3">
             {suggestions.map((suggestion, index) => (
               <motion.button
                 key={`suggestion-${index}`}

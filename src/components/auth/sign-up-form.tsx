@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from '@tanstack/react-router';
 
-export function SignUpForm() {
+interface SignUpFormProps {
+  redirectUrl?: string;
+}
+
+export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -20,7 +24,7 @@ export function SignUpForm() {
     setError(null);
     
     try {
-      const result = await signUp(email, password, { full_name: fullName });
+      const result = await signUp(email, password, { full_name: fullName }, redirectUrl);
       console.log(result);
       if (result.success) {
         // Check if email confirmation is required
@@ -28,8 +32,8 @@ export function SignUpForm() {
         if (result.data?.user?.confirmation_sent_at) {
           setVerificationSent(true);
         } else {
-          // If no confirmation needed, navigate to chat
-          navigate({ to: '/dashboard/chat' });
+          // If no confirmation needed, navigate to redirect URL or chat
+          navigate({ to: redirectUrl || '/dashboard/chat' });
         }
       }
     } catch (error: any) {
@@ -129,7 +133,7 @@ export function SignUpForm() {
      {!verificationSent && <div className="mt-6 text-center">
         <p className="text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to="/login" search={{ redirect: redirectUrl }} className="text-primary font-medium hover:underline">
             Sign in
           </Link>
         </p>

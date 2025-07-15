@@ -1,13 +1,14 @@
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { LearningPage } from "../learning";
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 import basicLessonsData from "@/data/basic-lessons.json";
 
 
 export const Route = createFileRoute("/dashboard/essentials/")({
   component: Essentials,
   head: () => {
-    const pageUrl = "https://moneko.io/essentials/";
+    const pageUrl = getCanonicalUrl('/dashboard/essentials');
     const meta = seo({
       title: "Moneko: Essential Financial Lessons",
       description: "Master the essentials of personal finance with Moneko's curated lessons on budgeting, investing, and financial planning.",

@@ -43,7 +43,7 @@ const getSupabaseClient = () => {
 // Define static routes for the sitemap
 const staticRoutes: StaticRoute[] = [
   { path: '/', priority: 1.0, changefreq: 'daily', lastmod: '2025-06-21' },
-  { path: '/budgeting-app', priority: 0.9, changefreq: 'weekly' },
+  { path: '/early-access', priority: 0.9, changefreq: 'monthly' },
   { path: '/pricing', priority: 0.8, changefreq: 'monthly', lastmod: '2025-06-19' },
   { path: '/cookie-policy', priority: 0.3, changefreq: 'yearly', lastmod: '2025-06-19' },
   { path: '/privacy-policy', priority: 0.3, changefreq: 'yearly', lastmod: '2025-06-19' },

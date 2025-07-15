@@ -60,14 +60,14 @@ export const HomeHeader=()=>{
         to="/dashboard/essentials"
         className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-purple-600 md:block"
       >
-        Explore Courses
+        Explore Tools
       </Link>
       <Link
         to="/dashboard"
         className="font-medium text-primary hover:secondary"
       >
         <Button className="bg-primary hover:bg-secondary">
-         Dashboard <FontAwesomeIcon icon={faArrowRight}  className="ml-2"/>
+         Build Portfolio <FontAwesomeIcon icon={faArrowRight}  className="ml-2"/>
         </Button>
       </Link>
     </div>

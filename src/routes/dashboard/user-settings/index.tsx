@@ -4,9 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/dashboard/user-settings/')({  
   component: UserSettings,
+  head: () => {
+    const pageUrl = getCanonicalUrl('/dashboard/user-settings');
+    const meta = seo({
+      title: 'User Settings | Moneko',
+      description: 'Manage your account settings, update your profile, and configure your Moneko experience.',
+      keywords: 'user settings, account settings, profile, Moneko',
+      url: pageUrl,
+    });
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
+    };
+  },
 });
 
 export function UserSettings() {

@@ -25,6 +25,7 @@ import {
   faEnvelope,
   faStar,
   faClock,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
@@ -187,384 +188,10 @@ import { HomeHeader } from "@/components/index/header";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 import { getRemainingSpots } from "@/lib/early-access";
 import { useCookie } from "@/utils/use-cookie";
+import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
+import { EarlyAccessSection } from "@/components/index/early-access-section";
 
-function SubscriptionForm() {
-  const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    referralSource: "",
-    marketingConsent: true,
-    interests: [] as string[],
-  });
 
-  const interestOptions = [
-    { id: "investing", label: "Investing" },
-    { id: "saving", label: "Saving" },
-    { id: "budgeting", label: "Budgeting" },
-    { id: "debt", label: "Debt Management" },
-  ];
-
-  const { subscribeToNewsletter, isLoading, error, success } =
-    useNewsletterSubscription();
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: checked }));
-  };
-
-  const handleInterestChange = (interest: string) => {
-    setFormData((prev) => {
-      const newInterests = prev.interests.includes(interest)
-        ? prev.interests.filter((i) => i !== interest)
-        : [...prev.interests, interest];
-      return { ...prev, interests: newInterests };
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await subscribeToNewsletter(formData);
-  };
-
-  return (
-    <motion.div
-      className="rounded-3xl border border-white/20 bg-white/50 p-8 shadow-lg shadow-slate-900/10 backdrop-blur-2xl md:p-12 dark:border-slate-700/20 dark:bg-slate-900/30"
-      variants={fadeInUp}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.1 }}
-      id="waitlistform"
-    >
-      <div className="flex flex-col">
-        <motion.h3
-          className="mb-3 text-center text-2xl font-bold text-slate-900 md:text-3xl dark:text-white"
-          variants={fadeInUp}
-          custom={0.1}
-        >
-          Stay Updated on Financial Education
-        </motion.h3>
-        <motion.p
-          className="mx-auto mb-6 max-w-2xl text-center text-base text-slate-700 md:text-lg dark:text-slate-300"
-          variants={fadeInUp}
-          custom={0.2}
-        >
-          Subscribe to receive personalized financial insights, early access to
-          new features, and exclusive content
-        </motion.p>
-
-        <motion.form
-          onSubmit={handleSubmit}
-          className="mx-auto w-full max-w-3xl"
-          variants={fadeInUp}
-          custom={0.3}
-        >
-          {/* Form status messages */}
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-700">
-              {success}
-            </div>
-          )}
-
-          {/* Email field */}
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              Email Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          {/* Referral source */}
-          <div className="mb-4">
-            <label
-              htmlFor="referralSource"
-              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              How did you hear about us?
-            </label>
-            <select
-              id="referralSource"
-              name="referralSource"
-              value={formData.referralSource}
-              onChange={handleInputChange}
-              className="w-full rounded-lg border border-slate-300 bg-white/70 p-3 outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70"
-            >
-              <option value="">Select an option</option>
-              <option value="search">Search Engine</option>
-              <option value="social">Social Media</option>
-              <option value="friend">Friend/Referral</option>
-              <option value="blog">Blog/Article</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          {/* Interests */}
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              What topics interest you most?
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {interestOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => handleInterestChange(option.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    formData.interests.includes(option.id)
-                      ? "bg-purple-600 text-white shadow-md"
-                      : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Marketing consent */}
-          <div className="mb-6">
-            <div className="flex items-start">
-              <div className="flex h-5 items-center">
-                <input
-                  id="marketingConsent"
-                  name="marketingConsent"
-                  type="checkbox"
-                  checked={formData.marketingConsent}
-                  onChange={handleCheckboxChange}
-                  className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                />
-              </div>
-              <div className="ml-3">
-                <label
-                  htmlFor="marketingConsent"
-                  className="text-sm text-slate-600 dark:text-slate-400"
-                >
-                  I agree to receive newsletters and marketing communications
-                  from Moneko. You can unsubscribe at any time.
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Submit button */}
-          <div className="text-center">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:shadow-lg focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:focus-visible:ring-offset-slate-900"
-            >
-              {isLoading ? (
-                <>
-                  <span className="mr-2 animate-pulse">●</span>
-                  Subscribing...
-                </>
-              ) : (
-                <>Subscribe Now</>
-              )}
-            </button>
-          </div>
-
-          {/* Discord community button */}
-          <div className="mt-4 text-center">
-            <p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
-              Join our vibrant community on Discord
-            </p>
-            <a
-              href={DISCORD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center text-sm font-medium text-purple-600 transition-colors hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-            >
-              <FontAwesomeIcon icon={faDiscord} className="mr-1.5 h-4 w-4" />
-              Connect on Discord
-            </a>
-          </div>
-        </motion.form>
-      </div>
-    </motion.div>
-  );
-}
-
-// Free Trial Announcement Banner
-function FreeTrialBanner({ remainingSpots }: { remainingSpots: number }) {
-  const { getCookie, setCookie } = useCookie();
-  const navigate = useNavigate();
-  const [isVisible, setIsVisible] = useState(true);
-  const [timeLeft, setTimeLeft] = useState({ days: 6, hours: 23, minutes: 45, seconds: 12 });
-
-  // Check if banner was previously dismissed
-  useEffect(() => {
-    const dismissed = getCookie('trial-banner-dismissed');
-    if (dismissed) {
-      setIsVisible(false);
-    }
-  }, [getCookie]);
-
-  // Countdown timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else if (prev.days > 0) {
-          return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    setCookie('trial-banner-dismissed', 'true', { days: 7 }); // Hide for 7 days
-  };
-
-  if (!isVisible || remainingSpots <= 0) return null;
-
-  return (
-    <motion.div
-      className="fixed top-0 z-50 w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 py-3 text-center text-white shadow-lg"
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", bounce: 0.3 }}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col items-center justify-center space-y-2 md:flex-row md:space-x-4 md:space-y-0">
-          {/* Announcement Text */}
-          <div className="flex items-center space-x-2">
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              🎉
-            </motion.div>
-            <span className="font-bold text-yellow-300">FREE TRIAL GIVEAWAY!</span>
-            <span className="hidden lg:inline">Get premium access absolutely free</span>
-          </div>
-
-          {/* Countdown Timer */}
-          <div className="flex items-center space-x-1">
-            <FontAwesomeIcon icon={faClock} className="text-yellow-300" />
-            <span className="text-sm font-medium">Ends in:</span>
-            <div className="flex space-x-1">
-              <motion.span
-                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                {timeLeft.days}d
-              </motion.span>
-              <motion.span
-                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
-              >
-                {String(timeLeft.hours).padStart(2, '0')}h
-              </motion.span>
-              <motion.span
-                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
-              >
-                {String(timeLeft.minutes).padStart(2, '0')}m
-              </motion.span>
-              <motion.span
-                className="rounded bg-white/20 px-2 py-1 text-xs font-bold backdrop-blur-sm"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 1, repeat: Infinity, delay: 0.6 }}
-              >
-                {String(timeLeft.seconds).padStart(2, '0')}s
-              </motion.span>
-            </div>
-          </div>
-
-          {/* Spots remaining */}
-          <div className="flex items-center space-x-1 text-sm">
-            <FontAwesomeIcon icon={faStar} className="text-yellow-300" />
-            <span>Only <strong className="text-yellow-300">{remainingSpots}</strong> spots left!</span>
-          </div>
-
-          {/* Claim Now Button */}
-          <motion.button
-            onClick={() => navigate({ to: '/early-access' })}
-            className="rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-purple-800 shadow-lg transition-all duration-200 hover:bg-yellow-300 hover:shadow-xl"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            animate={{ 
-              boxShadow: [
-                "0 4px 14px 0 rgba(250, 204, 21, 0.4)",
-                "0 6px 20px 0 rgba(250, 204, 21, 0.6)",
-                "0 4px 14px 0 rgba(250, 204, 21, 0.4)"
-              ]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Claim Now →
-          </motion.button>
-
-          {/* Close button */}
-          <button
-            onClick={handleDismiss}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 transition-colors hover:text-white md:relative md:right-auto md:top-auto md:translate-y-0"
-            aria-label="Dismiss announcement"
-          >
-            <FontAwesomeIcon icon={faX} className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function EarlyAccessSection() {
-  const [remainingSpots, setRemainingSpots] = useState<number>(0);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchRemainingSpots = async () => {
-      const spots = await getRemainingSpots();
-      setRemainingSpots(spots);
-    };
-    fetchRemainingSpots();
-  }, []);
-
-  return (
-    <>
-      {/* Free Trial Banner */}
-      <FreeTrialBanner remainingSpots={remainingSpots} />
-    </>
-  );
-}
 
 export default function HomePage() {
   // Finance-related suggestion prompts
@@ -599,14 +226,12 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      {/* Portfolio Builder Section - Exact Match to Mockup */}
-      <section className="relative overflow-hidden bg-transparent py-20">
-        {/* Content */}
-        <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12">
+      <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
+        <div className="mx-auto max-w-4xl">
           {/* Heading */}
-          <div className="mb-12 text-center">
+          <div className="mb-8 sm:mb-12 text-center">
             <motion.h2
-              className="mb-3 mt-24 text-4xl font-bold md:text-5xl"
+              className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -615,7 +240,7 @@ export default function HomePage() {
               Build Your First Portfolio
             </motion.h2>
             <motion.h3
-              className="mb-4 text-3xl font-bold md:text-4xl"
+              className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -624,7 +249,7 @@ export default function HomePage() {
               from 0 to 1
             </motion.h3>
             <motion.p
-              className="text-lg text-gray-600"
+              className="text-base sm:text-lg md:text-xl text-gray-600 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -635,11 +260,53 @@ export default function HomePage() {
           </div>
 
           {/* AI Search Input */}
-          <AISearchInput 
-            placeholder="Ask Moneko to create personalized financial journey for my..."
-            suggestions={chatSuggestions}
-            className="mb-12"
-          />
+          <div className="mb-8 sm:mb-12">
+            <AISearchInput 
+              placeholder="Ask Moneko to create personalized financial journey for my..."
+              suggestions={chatSuggestions}
+            />
+          </div>
+        </div>
+
+        {/* Animated Scroll Arrow */}
+        <motion.div
+          className="absolute bottom-8 sm:bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-10"
+          initial={{ opacity: 0, y: 0, x: "-50%" }}
+          animate={{ 
+            opacity: [0.5, 1, 0.5],
+            y: [0, 8, 0]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <motion.button
+            onClick={() => {
+              const nextSection = document.querySelector('section:nth-of-type(2)');
+              if (nextSection) {
+                nextSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="flex flex-col items-center justify-center p-2 sm:p-4 text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 hidden sm:block">Scroll to explore</span>
+            <FontAwesomeIcon 
+              icon={faChevronDown} 
+              className="text-lg sm:text-xl md:text-2xl"
+            />
+          </motion.button>
+        </motion.div>
+</section>
+      <EarlyAccessSection/>
+
+      {/* Portfolio Builder Section - Exact Match to Mockup */}
+      <section className="relative overflow-hidden py-20 ">
+        {/* Content */}
+        <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12">
 
           {/* Video Cards with Seamless Integration */}
           <div className="mt-24 grid gap-8 md:grid-cols-2">
@@ -720,6 +387,8 @@ export default function HomePage() {
         </div>
       </section>
 
+
+
       {/* Expert-Led Basic Lessons Section */}
       <section className="relative overflow-hidden px-6 py-20 md:px-12 lg:px-24">
         {/* Subtle gradient overlay */}
@@ -798,27 +467,6 @@ export default function HomePage() {
       {/* FAQ Section */}
       <FaqSection faqData={faqData} />
 
-      {/* Early Access Section */}
-      <EarlyAccessSection />
-
-      {/* Newsletter Subscription Section */}
-      <section
-        id="newsletter"
-        className="relative overflow-hidden px-6 py-20 md:px-12 lg:px-24"
-      >
-        {/* Subtle gradient overlay */}
-
-        <motion.div
-          className="relative z-10 mx-auto max-w-4xl"
-          variants={fadeIn}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <SubscriptionForm />
-        </motion.div>
-      </section>
 
       {/* Footer */}
       <footer className="relative overflow-hidden bg-gray-900/70 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">

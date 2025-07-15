@@ -179,7 +179,7 @@ function CalculatorsPage() {
 
   return (
     <motion.div 
-      className="container mx-auto px-4"
+      className="container mx-auto px-4 py-6"
       variants={pageVariants}
       initial="hidden"
       animate="visible"

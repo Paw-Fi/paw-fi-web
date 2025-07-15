@@ -26,7 +26,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || ''
 
 // Dashboard URL for links in emails
-const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://moneko.io'
+const DASHBOARD_URL = 'https://moneko.io'
 
 serve(async (req) => {
   try {

@@ -821,4 +821,3 @@ function BudgetingAppPage() {
   );
 }
 
-export default BudgetingAppPage;

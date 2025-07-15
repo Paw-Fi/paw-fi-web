@@ -194,7 +194,7 @@ function Profile() {
         if (viewId) {
           result = { view: { id: viewId } };
         } else {
-          throw new Error("Failed to create empty dashboard");
+          throw new Error("Failed to create empty portfolio");
         }
       } else {
         // Create dashboard from template
@@ -219,7 +219,7 @@ function Profile() {
 
       // After successful creation, the dashboard will be loaded automatically
     } catch (error) {
-      console.error("Error creating dashboard view:", error);
+      console.error("Error creating portfolio view:", error);
     } finally {
       setIsCreatingView(false);
     }
@@ -281,10 +281,10 @@ function Profile() {
             <div className="text-center max-w-md ">
               <FontAwesomeIcon icon={faHeartPulse} className="text-primary text-4xl mb-4" />
               <h2 className="mb-3 text-2xl font-semibold text-gray-800">
-                No Dashboard Views Yet
+                No Portfolio Views Yet
               </h2>
               <p className="mb-6 text-gray-600">
-                Get a personalized financial dashboard by answering a few questions about your financial situation and goals.
+                Get a personalized financial portfolio by answering a few questions about your financial situation and goals.
               </p>
               <button
                 onClick={() => setShowFinancialHealthQuiz(true)}
@@ -298,7 +298,7 @@ function Profile() {
         ) : status === "failed" ? (
           <div className="flex h-screen flex-col items-center justify-center">
             <div className="mb-4 text-xl text-red-500">
-              Failed to load dashboard
+              Failed to load portfolio
             </div>
             <div className="text-gray-600">{error}</div>
             <button
@@ -309,7 +309,7 @@ function Profile() {
             </button>
           </div>
         ) : (
-          <div className="flex">
+          <div className="flex px-4 py-6">
             <main className="mx-auto flex w-full flex-col gap-6">
               {/* Header with user info and controls */}
               {status === "loading" ? (
@@ -318,7 +318,7 @@ function Profile() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <h1 className="text-2xl font-bold text-gray-800">
-                      Dashboard
+                      Portfolio
                     </h1>
                   
                     {/* View selector dropdown - always visible */}
@@ -336,7 +336,7 @@ function Profile() {
                               "Select View"
                             : views.length === 1
                               ? views[0].name
-                              : "Dashboard Views"}
+                              : "Portfolio Views"}
                         </span>
                         <FontAwesomeIcon
                           icon={faChevronDown}
@@ -362,7 +362,7 @@ function Profile() {
                               </>
                             ) : (
                               <div className="px-4 py-2 text-sm italic text-gray-500">
-                                No dashboard views yet
+                                No portfolio views yet
                               </div>
                             )}
                             {/* <button
@@ -385,7 +385,7 @@ function Profile() {
                   <div className="flex items-center space-x-2">
                     {saveSuccess && (
                       <span className="mr-2 rounded-full bg-green-50 px-3 py-1 text-sm text-green-600">
-                        Dashboard saved!
+                        Portfolio saved!
                       </span>
                     )}
 
@@ -411,7 +411,7 @@ function Profile() {
                           onClick={saveDashboard}
                           disabled={isSaving}
                           className="hover:bg-primary-dark flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-white transition-colors"
-                          title="Save dashboard"
+                          title="Save portfolio"
                         >
                           {isSaving ? (
                             <>
@@ -441,7 +441,7 @@ function Profile() {
                         <button
                           onClick={toggleEditMode}
                           className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"
-                          title="Edit dashboard"
+                          title="Edit portfolio"
                         >
                           <FontAwesomeIcon
                             icon={faPencilAlt}
@@ -475,7 +475,7 @@ function Profile() {
                   return (
                     <div className="mt-4 rounded-lg bg-red-50 p-6 text-center">
                       <p className="mb-2 text-red-600">
-                        {error || "Failed to load dashboard"}
+                        {error || "Failed to load portfolio"}
                       </p>
                       <button
                         onClick={loadDashboard}
@@ -505,7 +505,7 @@ function Profile() {
         onClose={closeConfirmModal}
         onConfirm={cancelEditing}
         title="Discard Changes?"
-        message="You have unsaved changes to your dashboard. If you cancel now, all changes will be lost. Are you sure you want to discard your changes?"
+        message="You have unsaved changes to your portfolio. If you cancel now, all changes will be lost. Are you sure you want to discard your changes?"
         confirmText="Discard Changes"
         cancelText="Continue Editing"
       />
@@ -535,8 +535,8 @@ function Profile() {
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         title={views.length === 0
-          ? "Create Your First Dashboard"
-          : "Create New Dashboard View"}
+          ? "Create Your First Portfolio"
+          : "Create New Portfolio View"}
         footer={() => (
           <div className=" flex gap-4">
             <button
@@ -557,7 +557,7 @@ function Profile() {
                   Creating...
                 </>
               ) : (
-                "Create Dashboard"
+                "Create Portfolio"
               )}
             </button>
             {views.length > 0 && (
@@ -682,10 +682,10 @@ function Profile() {
                                 className="h-5 w-5"
                               />
                             </div>
-                            <h4 className="font-medium">Empty Dashboard</h4>
+                            <h4 className="font-medium">Empty Portfolio</h4>
                           </div>
                           <p className="text-sm text-gray-600">
-                            Start with a blank dashboard and add widgets later
+                            Start with a blank portfolio and add widgets later
                           </p>
                         </div>
                       </div>
@@ -695,7 +695,7 @@ function Profile() {
                           htmlFor="viewName"
                           className="mb-1 block text-sm font-medium text-gray-700"
                         >
-                          Dashboard Name <span className="text-red-500">*</span>
+                          Portfolio Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -703,7 +703,7 @@ function Profile() {
                           className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           value={newViewName}
                           onChange={(e) => setNewViewName(e.target.value)}
-                          placeholder="My Financial Dashboard"
+                          placeholder="My Financial Portfolio"
                         />
                       </div>
                     </>

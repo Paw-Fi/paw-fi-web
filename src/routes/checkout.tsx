@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 type CheckoutSearchParams = {
   plan?: string;
   billing?: string;
+  promo?: string; // Promo code
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
 };
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
-  const { plan = "plus", billing = "yearly", status, session_id } = useSearch({ strict: false });
+  const { plan = "plus", billing = "yearly", promo, status, session_id } = useSearch({ strict: false });
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
@@ -152,6 +153,7 @@ function CheckoutPage() {
           body: {
             plan,
             billingInterval: billing,
+            promoCode: promo,
             // Add the success and cancel URLs with status parameters
             successUrl: `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
@@ -175,9 +177,9 @@ function CheckoutPage() {
 
         console.log("Response from server:", data);
 
-        // If we have a checkout URL but no client secret, redirect to Stripe hosted checkout
-        if (!data.clientSecret && data.checkoutUrl) {
-          console.log("No client secret, redirecting to Stripe hosted checkout");
+        // For discount functionality, redirect to Stripe hosted checkout
+        if (data.checkoutUrl) {
+          console.log("Redirecting to Stripe hosted checkout");
           // Redirect to Stripe hosted checkout (only in browser)
           if (typeof window !== 'undefined') {
             window.location.href = data.checkoutUrl;
@@ -185,43 +187,50 @@ function CheckoutPage() {
           return;
         }
 
+        // If no checkout URL, try to use client secret for Express Checkout
         if (!data.clientSecret) {
-          console.error("No client secret in response");
+          console.error("No client secret or checkout URL in response");
           setPaymentStatus("failed");
           throw new Error("Invalid payment session. Please try again.");
         }
 
-        const { clientSecret } = data;
-
-        // Configure Stripe Elements
-        const options = {
-          clientSecret: data.clientSecret,
-          appearance: {
-            theme: "stripe" as const,
-            variables: {
-              colorPrimary: "#10b981",
-              colorBackground: "#ffffff",
-              colorText: "#1f2937",
-              colorDanger: "#ef4444",
-              fontFamily: "Inter, system-ui, sans-serif",
-              spacingUnit: "4px",
-              borderRadius: "8px",
+        // Only use Express Checkout if no promo code (to avoid client secret issues)
+        if (!promo) {
+          // Configure Stripe Elements
+          const options = {
+            clientSecret: data.clientSecret,
+            appearance: {
+              theme: "stripe" as const,
+              variables: {
+                colorPrimary: "#10b981",
+                colorBackground: "#ffffff",
+                colorText: "#1f2937",
+                colorDanger: "#ef4444",
+                fontFamily: "Inter, system-ui, sans-serif",
+                spacingUnit: "4px",
+                borderRadius: "8px",
+              },
             },
-          },
-          expressCheckout: {
-            buttonType: "pay",
-          },
-          onComplete: () => {
-            setPaymentStatus("success");
-            toast.success("Payment successful!");
-          },
-        };
-        console.log("Stripe options:", options);
+            expressCheckout: {
+              buttonType: "pay",
+            },
+            onComplete: () => {
+              setPaymentStatus("success");
+              toast.success("Payment successful!");
+            },
+          };
+          console.log("Stripe options:", options);
 
-        // Create and mount Express Checkout Element
-        const elements = stripe.elements(options);
-        const expressCheckoutElement = elements.create("expressCheckout");
-        expressCheckoutElement.mount("#express-checkout-element");
+          // Create and mount Express Checkout Element
+          const elements = stripe.elements(options);
+          const expressCheckoutElement = elements.create("expressCheckout");
+          expressCheckoutElement.mount("#express-checkout-element");
+        } else {
+          // If promo code is present but no checkout URL, show error
+          console.error("Promo code present but no checkout URL provided");
+          setPaymentStatus("failed");
+          throw new Error("Promo code checkout not properly configured. Please try again.");
+        }
 
         setIsLoading(false);
       } catch (err: unknown) {
@@ -320,6 +329,11 @@ function CheckoutPage() {
             <p className="text-gray-600 dark:text-gray-400">
               You're subscribing to the {plan.charAt(0).toUpperCase() + plan.slice(1)} plan
             </p>
+            {promo && (
+              <div className="mt-4 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                ✓ Promo code "{promo}" applied
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-white/30 bg-slate-50/60 p-8 shadow-2xl backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/60">

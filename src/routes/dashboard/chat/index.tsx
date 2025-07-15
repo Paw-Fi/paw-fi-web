@@ -2,6 +2,7 @@
 
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 import { motion } from "framer-motion";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { ChatInterface } from "@/components/chat/chat-interface";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/dashboard/chat/")({
     const description = "Chat with Moneko's AI assistant for financial guidance, answers to your money questions, and help with navigating your finances.";
     const keywords = "AI chat, financial assistant, Moneko, money questions, financial help, chatbot";
     const imageUrl = 'https://moneko.io/og-img.png';
-    const pageUrl = 'https://moneko.io/chat';
+    const pageUrl = getCanonicalUrl('/dashboard/chat');
 
     const meta = seo({
       title: title,
@@ -23,7 +24,13 @@ export const Route = createFileRoute("/dashboard/chat/")({
       url: pageUrl,
     });    
     return {      
-      meta
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
     };
   },
 });

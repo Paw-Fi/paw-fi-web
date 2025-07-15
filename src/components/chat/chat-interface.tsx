@@ -644,12 +644,9 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           behavior: "smooth",
           block: "end",
         });
-        // Refresh conversation data
-      } else {
-        throw new Error("Failed to create conversation or get new ID.");
       }
-      }
-      },[isLoading])
+    }
+  }, [isLoading, messages])
   
 
   const handleSendMessage = async (content: string) => {
@@ -1067,10 +1064,17 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                    {iconContainer("size-6")}
                   </div>
                   <div className="bg-white/80 dark:bg-slate-700 rounded-2xl p-4">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
+                      {loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
+                        <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
+                          {loadingMessage}
+                        </div>
+                      ):  <div className="flex items-center space-x-2">
                       <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.3s]"></div>
                       <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.15s]"></div>
                       <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400"></div>
+                    </div>}
+                    
                     </div>
                   </div>
                 </div>
@@ -1122,7 +1126,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           </div>
         </div>
       </Modal>
-      <VoiceConversationModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} />
+      {/* <VoiceConversationModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} /> */}
     </div>
   );
 }

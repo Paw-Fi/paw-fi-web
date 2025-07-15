@@ -3,9 +3,16 @@ import { SignUpForm } from '@/components/auth/sign-up-form';
 
 export const Route = createFileRoute('/register/')({  
   component: Register,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      redirect: (search.redirect as string) || undefined,
+    };
+  },
 });
 
 export function Register() {
+  const { redirect } = Route.useSearch();
+  
   return (
     <div className="flex flex-col items-center justify-center px-4">
       <div className="mb-8 text-center">
@@ -13,7 +20,7 @@ export function Register() {
         <p className="text-gray-600">Create an account to start your financial learning journey</p>
       </div>
       
-      <SignUpForm />      
+      <SignUpForm redirectUrl={redirect} />      
       
     </div>
   );
