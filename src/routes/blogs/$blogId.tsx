@@ -198,7 +198,7 @@ function BlogDetailPage() {
             alt={`Cover image for ${blog.title}`}
             className="h-full w-full object-cover"
           />
-          <a href={blog.coverImage} target="_blank" className="absolute bottom-2 right-2 rounded-sm bg-black bg-opacity-50 px-1 py-0.5 text-xs text-white">
+          <a href={blog.coverImage} target="_blank" rel="noopener noreferrer" className="absolute bottom-2 right-2 rounded-sm bg-black bg-opacity-50 px-1 py-0.5 text-xs text-white">
             Image from Unsplash
           </a>
         </div>

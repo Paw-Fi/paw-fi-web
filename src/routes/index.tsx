@@ -228,9 +228,9 @@ export default function HomePage() {
 
       <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto max-w-4xl">
-          {/* Heading */}
+           {/* Heading */}
           <div className="mb-8 sm:mb-12 text-center">
-            <motion.h2
+           <motion.h2
               className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}

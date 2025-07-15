@@ -12,7 +12,7 @@ import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
 import appCss from '@/styles/main.css?url'
 import { seo } from '@/utils/seo'
-import { getCanonicalUrl } from '@/utils/canonical'
+import { getCanonicalUrl, getCanonicalPath, getRedirectMap } from '@/utils/canonical'
 // Import ToastContainer dynamically to avoid SSR issues
 import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
@@ -21,6 +21,8 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientOnly } from '@/components/client-only'
 import { GoogleTagManager } from '@/components/google-tag-manager'
+import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
+import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -40,8 +42,8 @@ export const Route = createRootRouteWithContext<{
       },
       ...seo({
         title:
-          'TanStack Start | Type-Safe, Client-First, Full-Stack React Framework',
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+          'Moneko | Personal Finance Education & Budgeting Tools',
+        description: `Learn personal finance with Moneko's comprehensive budgeting tools, calculators, and educational resources. Master money management with our expert-designed financial planning platform.`,
       }),
     ],
     links: [
@@ -51,22 +53,35 @@ export const Route = createRootRouteWithContext<{
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',
-        href: '/apple-touch-icon.png',
+        href: '/logo192.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '192x192',
+        href: '/logo192.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '512x512',
+        href: '/logo512.png',
       },
       {
         rel: 'icon',
         type: 'image/png',
         sizes: '32x32',
-        href: '/favicon-32x32.png',
+        href: '/logo192.png',
       },
       {
         rel: 'icon',
         type: 'image/png',
         sizes: '16x16',
-        href: '/favicon-16x16.png',
+        href: '/logo192.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
+      { rel: 'manifest', href: '/manifest.json' },
       { rel: 'icon', href: '/favicon.ico' },
+      { rel: 'shortcut icon', href: '/favicon.ico' },
     ],
   };
   },
@@ -93,7 +108,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>
+        <PerformanceHints />
+        <MonekoCriticalResources />
         <HeadContent />
+        <MonekoOrganizationData />
+        <MonekoWebsiteData />
       </head>
         <GoogleTagManager gtmId="G-KBNN5QXD4G" />
       

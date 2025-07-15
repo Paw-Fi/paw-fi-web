@@ -50,6 +50,7 @@ export const HomeHeader=()=>{
         <a
           href={DISCORD_URL}
           target="_blank"
+          rel="noopener noreferrer"
           className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
         >
           Community
