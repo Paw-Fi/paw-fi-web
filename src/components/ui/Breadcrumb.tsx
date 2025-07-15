@@ -112,9 +112,9 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
                   aria-current="page" 
                   className="font-medium text-primary truncate max-w-[200px] md:max-w-xs"
                   itemProp="name"
-                  title={item.label}
+                  title={item.label==="Dashboard" ? "Portfolio" : item.label}
                 >
-                  {item.label}
+                  {item.label==="Dashboard" ? "Portfolio" : item.label}
                 </span>
               ) : (
                 <>
@@ -122,9 +122,9 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
                     to={item.href} 
                     className="hover:text-primary transition-colors hover:underline truncate max-w-[120px] md:max-w-[160px]"
                     itemProp="item"
-                    title={item.label}
+                    title={item.label==="Dashboard" ? "Portfolio" : item.label}
                   >
-                    <span itemProp="name">{item.label}</span>
+                    <span itemProp="name">{item.label==="Dashboard" ? "Portfolio" : item.label}</span>
                   </Link>
                   <FontAwesomeIcon 
                     icon={faChevronRight} 

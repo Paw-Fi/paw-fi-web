@@ -88,11 +88,11 @@ export const Route = createFileRoute("/dashboard")({
     return {
       meta: [
         {
-          title: 'Dashboard | Moneko',
+          title: 'Portfolio | Moneko',
         },
         {
           name: 'description',
-          content: 'Your personalized financial education dashboard. Access learning materials, calculators, and tools.',
+          content: 'Your personalized financial education portfolio. Access learning materials, calculators, and tools.',
         },
       ],
       link: [
@@ -763,7 +763,7 @@ export function Dashboard() {
                 <div className="relative w-full h-full z-20 flex items-center justify-center overflow-hidden">
                   {/* Background Image Carousel */}
                   <div className="absolute inset-0 w-full h-full overflow-hidden">                   
-                    <img src={dashboardHomeImage} alt="Dashboard Home" className="w-full h-full object-cover blur-sm" />                 
+                    <img src={dashboardHomeImage} alt="Portfolio Home" className="w-full h-full object-cover blur-sm" />                 
                     </div>
                     <div className="absolute inset-0 w-full h-full overflow-hidden bg-gray-300/30"/>
                                
@@ -797,7 +797,7 @@ export function Dashboard() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.2, duration: 0.5 }}
                     >
-                      Unlock Your Financial Dashboard
+                      Unlock Your Financial Portfolio
                     </motion.h2>
 
                     <motion.p
@@ -806,7 +806,7 @@ export function Dashboard() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
-                    {  user ? "Subscribe to unlock your financial dashboard" : "Sign in to access your personalized financial command center"}
+                    {  user ? "Subscribe to unlock your financial portfolio" : "Sign in to access your personalized financial command center"}
                     </motion.p>
                     
                     {/* Feature List */}
@@ -864,7 +864,7 @@ export function Dashboard() {
                           />
                           <span className="text-lg font-medium">
                           
-                          {  user ? "View our plans" : "Sign In to Access Your Dashboard"}
+                          {  user ? "View our plans" : "Sign In to Access Your Portfolio"}
                           </span>
                         </motion.div>
                       </Link>
