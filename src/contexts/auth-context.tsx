@@ -17,6 +17,8 @@ type AuthContextType = {
   signUp: (email: string, password: string, userData: { full_name: string }, redirectUrl?: string) => Promise<{ success: boolean; data: any }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; data: any }>;
   signOut: () => Promise<{ success: boolean }>;
+  resetPassword: (email: string, redirectUrl?: string) => Promise<{ success: boolean; data?: any }>;
+  deleteAccount: () => Promise<{ success: boolean }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,10 +126,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string, redirectUrl?: string) => {
+    try {
+      const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}${redirectUrl || '/reset-password'}`,
+      });
+
+      if (error) throw error;
+      
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!user) {
+      throw new Error('No user is currently logged in');
+    }
+    
+    try {
+      // Delete the auth user
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      
+      if (authError) throw authError;
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  };
+
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, isAuthenticated, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, isAuthenticated, signUp, signIn, signOut, resetPassword, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );
