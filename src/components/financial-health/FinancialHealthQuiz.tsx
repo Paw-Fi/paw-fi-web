@@ -997,8 +997,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "creating"
-                  ? "Creating Dashboard..."
-                  : "Create Dashboard"}
+                  ? "Creating Portfolio..."
+                  : "Create Portfolio"}
               </button>
 
               {error && (
