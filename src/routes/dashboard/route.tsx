@@ -430,7 +430,7 @@ export function Dashboard() {
     <>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
-      <div className="h-screen overflow-hidden bg-gradient-to-br from-background to-purple-300/30 p-2 sm:p-4 font-sans">
+      <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background to-purple-300/30 p-2 sm:p-4 font-sans">
         <div className="flex flex-col md:flex-row h-full gap-3 overflow-hidden">
       {/* Mobile Menu Toggle Button - Only visible on mobile */}
       <div className="flex items-center justify-between md:hidden mb-3">
@@ -486,7 +486,11 @@ export function Dashboard() {
             <nav className="flex-1 space-y-2 px-4">
               {menuItems.map((item) => (
                 <div key={item.id}>
-                  <Link to={item.path} className="group">
+                  <Link 
+                    to={item.path} 
+                    className="group"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     <motion.div
                       className={`flex w-full items-center justify-between px-4 py-3 transition-all duration-200 ${
                         isRouteActive(item.path)
@@ -660,7 +664,7 @@ export function Dashboard() {
             
             {/* Mobile/Tablet Version - Horizontal Scroll */}
             <motion.div 
-              className="lg:hidden w-full mb-3 overflow-visible sticky top-0 z-10"
+              className="lg:hidden w-full mb-3 overflow-visible fixed top-0 left-0 right-0 z-50"
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
@@ -701,7 +705,11 @@ export function Dashboard() {
                         transition={{ delay: index * 0.05 }}
                         className="flex-shrink-0"
                       >
-                        <Link to={subItem.path} className="group">
+                        <Link 
+                          to={subItem.path} 
+                          className="group"
+                          onClick={() => setExpandedMenu(null)}
+                        >
                           <motion.div
                             className={classNames(
                               "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
@@ -724,14 +732,16 @@ export function Dashboard() {
                   </div>
                 </div>
               </div>
-              <Outlet />
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
       {/* Main Content Area */}
-     {isLoading||isSubscriptionLoading ? null : <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto">
+     {isLoading||isSubscriptionLoading ? null : <div className={classNames(
+       "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
+       expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-20 lg:pt-0" : ""
+     )}>
         {/* Header - Always visible regardless of submenu state */}
         <motion.div
           className="transition-all duration-300"
