@@ -61,6 +61,7 @@ serve(async (req: Request) => {
       .from("user_lessons")
       .select("*")
       .eq("course_id", courseId)
+      .order("position", { ascending: true });
 
     if (lessonError) {
       console.error("[unlock-next-lesson] Error fetching lessons:", lessonError);

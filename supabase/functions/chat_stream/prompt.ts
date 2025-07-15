@@ -422,7 +422,7 @@ Don't Example: A lesson with only 2 questions.
 
 Question Generation - Variety of Question Types
 
-Core Requirement: Use varied question formats (types listed: 'mcq', 'scq', 'sort-order', 'sort-categories', 'match', 'matrix-rating', 'text-input', 'image-choice').
+Core Requirement: Use varied question formats (types listed: 'mcq', 'scq', 'sort-order', 'sort-categories', 'match', 'text-input', 'image-choice').
 
 Do: Mix different question types within a lesson and across the course to keep the user engaged.
 
@@ -448,7 +448,7 @@ Question Object - Common Field: type
 
 Core Requirement: Each question object must have a type string, which MUST be one of the allowed values.
 
-Do: Specify the question type accurately from the list: 'mcq', 'scq', 'sort-order', 'sort-categories', 'match', 'matrix-rating', 'text-input', 'image-choice'.
+Do: Specify the question type accurately from the list: 'mcq', 'scq', 'sort-order', 'sort-categories', 'match', 'text-input', 'image-choice'.
 
 Do Example: "type": "scq"
 
@@ -600,27 +600,6 @@ IGNORE_WHEN_COPYING_END
 Don't: Use if multiple items map to the same option (use sort-categories instead). Don't leave options unused or map an item to multiple options.
 
 Don't Example (violates one-to-one): "correct_answers": { "item1": "optA", "item2": "optA" } (optA used twice).
-
-Question Type-Specific: matrix-rating - rows, columns Arrays
-
-Core Requirement: rows array (items to be rated, objects with id, content). columns array (rating options, objects with id, content, optional color).
-
-Do: Define items to be rated (rows) and the scale for rating (columns).
-
-Do Example:
-
-"rows": [ { "id": "r1", "content": "Saving money is..." } ],
-"columns": [ { "id": "c1", "content": "Easy" }, { "id": "c2", "content": "Hard" } ]
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
-
-Don't: Confuse rows and columns. This type does not typically have a single "correctAnswer" in the JSON, as it's often for opinions/ratings.
-
-Don't Example: Trying to add a correct_answers field unless specifically designed for a quiz-like matrix.
 
 Question Type-Specific: text-input - validation Object (Optional)
 

@@ -8,7 +8,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-console.log("AI_PROMPT", AI_PROMPT.substring(0, 100));
 if (!GEMINI_API_KEY) {
   console.error(
     "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
@@ -105,7 +104,7 @@ serve(async (req: Request): Promise<Response> => {
       },
     ];
     // Log the final contents sent to Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 4000,
