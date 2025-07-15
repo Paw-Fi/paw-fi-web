@@ -33,6 +33,7 @@ import {
   faChartPie,
   faClipboardList,
   faLightbulb,
+  faHandHoldingDollar,
 } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -164,7 +165,7 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "home", label: "Home", icon: faHome, path: "/dashboard"},
+    { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",

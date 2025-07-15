@@ -58,7 +58,7 @@ export function MembershipDashboard() {
 
   if (error) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
+      <div className="flex h-full w-full items-center justify-center px-4 py-6">
         <div className="text-center">
           <FontAwesomeIcon
             icon={faExclamationCircle}
@@ -76,7 +76,7 @@ export function MembershipDashboard() {
   }
 
   return (
-    <div className="flex flex-col space-y-6">
+    <div className="flex flex-col space-y-6 px-4 py-6">
       <div className="flex flex-col space-y-2">
         <h1 className="text-2xl font-bold text-gray-900">Membership</h1>
         <p className="text-gray-600">
