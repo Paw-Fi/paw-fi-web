@@ -9,7 +9,7 @@ import {
   faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import { type EarlyAccessClaim } from "@/lib/early-access";
-import { useRemainingSpots, useClaimEarlyAccess } from "@/hooks/use-early-access";
+import { useRemainingSpots, useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { useCookie } from "@/utils/use-cookie";
@@ -40,6 +40,7 @@ export function FreeTrialGiveawayForm() {
 
   // Use TanStack Query hooks
   const { data: remainingSpots = 98, isLoading: spotsLoading } = useRemainingSpots();
+  const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
   const claimMutation = useClaimEarlyAccess();
 
   const experienceOptions = [
@@ -79,14 +80,8 @@ export function FreeTrialGiveawayForm() {
   ];
 
   useEffect(() => {
-    // Check if user has already claimed - use user ID instead of cookie if authenticated
+    // Auto-fill form with user data when authenticated
     if (isAuthenticated && user) {
-      const claimed = getCookie(`early-access-claimed-${user.id}`);
-      if (claimed) {
-        setHasClaimed(true);
-      }
-      
-      // Auto-fill form with user data
       const fullName = user.user_metadata?.full_name || '';
       const nameParts = fullName.split(' ');
       const firstName = nameParts[0] || '';
@@ -98,14 +93,22 @@ export function FreeTrialGiveawayForm() {
         firstName: firstName,
         lastName: lastName,
       }));
-    } else {
-      // Fallback to email-based cookie for backward compatibility
-      const claimed = getCookie("early-access-claimed");
-      if (claimed) {
-        setHasClaimed(true);
-      }
     }
-  }, [getCookie, isAuthenticated, user]);
+  }, [isAuthenticated, user]);
+
+  // Separate useEffect for claim status checking
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Use database check as primary source of truth
+      if (!claimStatusLoading) {
+        setHasClaimed(userHasClaimedFromDB);
+      }
+    } else {
+      // Fallback to email-based cookie for non-authenticated users
+      const claimed = getCookie("early-access-claimed");
+      setHasClaimed(!!claimed);
+    }
+  }, [isAuthenticated, user, userHasClaimedFromDB, claimStatusLoading, getCookie]);
 
 
   const handleInputChange = (
@@ -174,8 +177,8 @@ export function FreeTrialGiveawayForm() {
             message: "🎉 Congratulations! Your free trial membership has been claimed successfully. Check your email for next steps!"
           });
           
-          // Save to user-specific cookie that user has claimed
-          setCookie(`early-access-claimed-${user.id}`, 'true');
+          // No need to set cookie anymore - database check will handle this
+          // The hook will automatically update when the mutation succeeds
           setHasClaimed(true);
           
           // Clear form data
@@ -201,6 +204,25 @@ export function FreeTrialGiveawayForm() {
     });
   };
 
+
+  // Show loading state while checking claim status for authenticated users
+  if (isAuthenticated && claimStatusLoading) {
+    return (
+      <div className="rounded-3xl border border-white/20 bg-white/50 p-8 shadow-lg shadow-slate-900/10 backdrop-blur-2xl md:p-12 dark:border-slate-700/20 dark:bg-slate-900/30">
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          </div>
+          <h3 className="text-xl font-medium text-slate-800 dark:text-white mb-2">
+            Checking your status...
+          </h3>
+          <p className="text-slate-600 dark:text-slate-300">
+            Please wait while we verify your claim status.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show sign-in prompt if not authenticated
   if (!isAuthenticated) {

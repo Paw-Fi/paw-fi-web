@@ -61,3 +61,21 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
     };
   }
 }
+
+export async function checkUserHasClaimed(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('check-user-claim', {
+      method: 'GET'
+    });
+    
+    if (error) {
+      console.error('Error checking claim status:', error);
+      return false;
+    }
+    
+    return data?.hasClaimed === true;
+  } catch (error) {
+    console.error('Error checking claim status:', error);
+    return false;
+  }
+}
