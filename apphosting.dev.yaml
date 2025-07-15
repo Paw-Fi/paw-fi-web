@@ -7,6 +7,11 @@ runConfig:
   concurrency: 80
 
 env:
+  # Production Supabase configuration
+  # Using secrets for secure environment variables
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=4096"
+
   # Development Supabase configuration
   # Using secrets for secure environment variables
   - variable: VITE_SUPABASE_URL
@@ -33,3 +38,6 @@ env:
       - BUILD
       - RUNTIME
       
+runtime: nodejs20  # or nodejs20
+# Note: Need to grant access to the secrets to the app engine service account by using:
+# firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
