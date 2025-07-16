@@ -3,8 +3,6 @@ import {
   Outlet,
   createFileRoute,
   Link,
-  useMatchRoute,
-  useNavigate,
   useLocation,
 } from "@tanstack/react-router";
 import React, { useState, useMemo, useEffect } from "react";
@@ -15,32 +13,19 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBookOpen,
   faCalculator,
-  faChartLine,
   faChessKnight,
   faCog,
   faComments,
-  faHome,
-  faChevronRight,
   faUser,
   faSignInAlt,
   faSignOut,
-  faIdBadge,
   faBars,
   faTimes,
-  faGauge,
-  faHeartbeat,
-  faMoneyBill,
-  faChartPie,
-  faClipboardList,
   faLightbulb,
   faHandHoldingDollar,
 } from "@fortawesome/free-solid-svg-icons";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
-import dashboardHomeImage from "@assets/images/dashboard/dashboard-home.png";
-import dashboardLearningImage from "@assets/images/dashboard/dashboard-learning.png";
-import dashboardEssentialsImage from "@assets/images/dashboard/dashboard-essentials.png";
-import dashboardCalculatorsImage from "@assets/images/dashboard/dashboard-calculators.png";
 
 import { toast } from "react-toastify";
 import basicLessonsData from "@/data/basic-lessons.json";
@@ -50,6 +35,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWindow";
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
+import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
 
 
 const NON_PROTECTED_ROUTES = [
@@ -111,17 +97,15 @@ export const Route = createFileRoute("/dashboard")({
 
 export function Dashboard() {
   // Use route matching instead of local state for active menu
-  const matchRoute = useMatchRoute();
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const { data: courses = [], isLoading: isCoursesLoading } = useUserCourses(
+  const { data: courses = [] } = useUserCourses(
     user?.id ?? "",
     { enabled: !!user },
   );
-  const { subscription, isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const isGuideHidden = getCookie('paw-fi-guide-hidden') === 'true';
@@ -442,7 +426,6 @@ export function Dashboard() {
 
   const showBlockModal=(!NON_PROTECTED_ROUTES.includes(location.pathname) && !user) || (!NON_PROTECTED_ROUTES.includes(location.pathname)&&!isActive)
 
-  const currentBackgroundImage=location.pathname==="/dashboard" ? dashboardHomeImage : location.pathname==="/dashboard/learning" ? dashboardLearningImage : location.pathname==="/dashboard/essentials/your-2025-guide-to-investing" ? dashboardEssentialsImage : location.pathname==="/dashboard/calculators" ? dashboardCalculatorsImage : dashboardHomeImage;
 
   return (
     <>
@@ -633,7 +616,7 @@ export function Dashboard() {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="group">
+              <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
                   className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-gray-50"
                   whileHover={{ x: 3 }}
@@ -682,117 +665,7 @@ export function Dashboard() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >            
               {showBlockModal ? (
-                <div className="relative w-full h-full z-20 flex items-center justify-center overflow-hidden">
-                  {/* Background Image Carousel */}
-                  <div className="absolute inset-0 w-full h-full overflow-hidden">                   
-                    <img src={currentBackgroundImage} alt="Portfolio Home" className="w-full h-full object-cover blur-sm" />                 
-                    </div>
-                    <div className="absolute inset-0 w-full h-full overflow-hidden bg-gray-300/30"/>
-                               
-     
-                  
-                  {/* Animation is handled through inline styles */}                 
-                  
-                  {/* Modal Content */}
-                  <motion.div
-                    className="relative z-10 max-w-2xl w-full mx-4 p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 shadow-2xl"
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {/* Logo and Glow Effect */}
-                    <div className="relative flex justify-center mb-8">
-                      <div className="absolute -top-4 opacity-70 w-24 h-24 bg-primary/30 rounded-full blur-xl" />
-                      <motion.div
-                        className="relative z-10 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-purple-500/30"
-                        initial={{ rotateY: 0 }}
-                        animate={{ rotateY: 360 }}
-                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
-                      >
-                        <img src={logo} className="size-16" alt="Moneko Logo" />
-                      </motion.div>
-                    </div>
-
-                    <motion.h2
-                      className="mb-4 text-center bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2, duration: 0.5 }}
-                    >
-                      Unlock Your Financial Portfolio
-                    </motion.h2>
-
-                    <motion.p
-                      className="mb-6 text-center text-lg text-gray-700 dark:text-gray-300"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3, duration: 0.5 }}
-                    >
-                    {  user ? "Subscribe to unlock your financial portfolio" : "Sign in to access your personalized financial command center"}
-                    </motion.p>
-                    
-                    {/* Feature List */}
-                    <motion.div
-                      className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4, duration: 0.5 }}
-                    >
-                      {[
-                        { icon: faChartLine, text: "Retirement Goal Tracker" },
-                        { icon: faHeartbeat, text: "Financial Health Snapshot" },
-                        { icon: faMoneyBill, text: "Cash Flow Summary" },
-                        { icon: faChartPie, text: "Suggested Asset Allocation (Beta)" },
-                        { icon: faClipboardList, text: "Recommended Actions" },
-                        { icon: faLightbulb, text: "Smart Investment Tips" }
-                      ].map((feature, index) => (
-                        <motion.div 
-                          key={index}
-                          className="flex items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/30"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.5 + (index * 0.1), duration: 0.4 }}
-                        >
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/80 to-purple-500/80 text-white shadow-md">
-                            <FontAwesomeIcon icon={feature.icon} className="h-5 w-5" />
-                          </div>
-                          <span className="ml-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
-                            {feature.text}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-
-                    <motion.div
-                      className="flex justify-center"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8, duration: 0.5 }}
-                    >
-                      <Link to={!user ? "/login?redirect=%2Fdashboard" : "/pricing"} className="group w-full sm:w-auto">
-                        <motion.div
-                          className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
-                          whileHover={{ scale: 1.03, y: -2 }}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 25,
-                          }}
-                        >
-                          <FontAwesomeIcon
-                            className="h-5 w-5"
-                            icon={faSignInAlt}
-                          />
-                          <span className="text-lg font-medium">
-                          
-                          {  user ? "View our plans" : "Sign In to Access Your Portfolio"}
-                          </span>
-                        </motion.div>
-                      </Link>
-                    </motion.div>
-                  </motion.div>
-                </div>
+                <DashboardBlockModal />
               ) : (
                 <Outlet />
               )}
