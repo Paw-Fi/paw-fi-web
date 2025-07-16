@@ -715,7 +715,7 @@ function Profile() {
         </div>
       </Modal>
 
-      <FloatingChatButton />
+      {/* <FloatingChatButton /> */}
     </ProtectedRouteSubscription>
   );
 }

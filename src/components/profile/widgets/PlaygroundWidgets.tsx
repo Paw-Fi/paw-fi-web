@@ -23,12 +23,12 @@ import RangeSlider from "@/components/ui/RangeSlider";
 
 // Daily Habit Future Value Calculator
 export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) {
-  const [weeklySpend, setWeeklySpend] = useState(20);
+  const [dailySpend, setDailySpend] = useState(5);
   const [timeframe, setTimeframe] = useState(20);
   
   // Calculate future value assuming 6% annual return
   const calculateFutureValue = () => {
-    const monthlyInvestment = (weeklySpend * 52) / 12;
+    const monthlyInvestment = (dailySpend * 365) / 12;
     const monthlyRate = 0.06 / 12;
     const totalMonths = timeframe * 12;
     
@@ -45,24 +45,24 @@ export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) 
         {/* Header */}
         <div className="text-center">
           <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
-            What's a small weekly habit you have?
+            What's a small daily habit you have?
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             See how much your small expenses could grow if invested instead
           </p>
         </div>
 
-        {/* Weekly Spend Slider */}
+        {/* Daily Spend Slider */}
         <div className="space-y-4">
           <div className="flex items-center space-x-4">
             <FontAwesomeIcon icon={faCoffee} className="text-amber-600 text-lg" />
             <div className="flex-1">
               <RangeSlider
-                label="Weekly Spend"
-                value={weeklySpend}
-                onChange={(value) => setWeeklySpend(Number(value))}
-                min={5}
-                max={50}
+                label="Daily Spend"
+                value={dailySpend}
+                onChange={(value) => setDailySpend(Number(value))}
+                min={1}
+                max={20}
                 step={1}
                 unit="$"
                 className="mb-4"
@@ -78,7 +78,7 @@ export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) 
                 label="Timeframe"
                 value={timeframe}
                 onChange={(value) => setTimeframe(Number(value))}
-                min={5}
+                min={1}
                 max={30}
                 step={1}
                 formatValue={(value) => `${value} years`}
@@ -94,7 +94,7 @@ export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) 
             ${futureValue.toLocaleString()}
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Your ${weeklySpend} weekly spend on coffee or lunches, if invested, could be worth{" "}
+            Your ${dailySpend} daily spend on coffee or lunches, if invested, could be worth{" "}
             <span className="font-semibold text-green-600 dark:text-green-400">
               ${futureValue.toLocaleString()}
             </span>{" "}

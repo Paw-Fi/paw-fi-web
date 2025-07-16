@@ -38,18 +38,22 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@assets/images/icon.svg";
 import dashboardHomeImage from "@assets/images/dashboard/dashboard-home.png";
+import dashboardLearningImage from "@assets/images/dashboard/dashboard-learning.png";
+import dashboardEssentialsImage from "@assets/images/dashboard/dashboard-essentials.png";
+import dashboardCalculatorsImage from "@assets/images/dashboard/dashboard-calculators.png";
+
 import { toast } from "react-toastify";
 import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
 import { useSubscription } from "@/hooks/use-subscription";
+import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWindow";
+import { useLocalProgress } from "@/hooks/use-local-progress";
+import { useCookie } from "@/utils/use-cookie";
 
 
-const PROTECTED_ROUTES = [
-  "/dashboard",
-  "/dashboard/learning",
-  "/dashboard/user-settings",
-  "/dashboard/membership",
+const NON_PROTECTED_ROUTES = [
+  "/dashboard/chat",
 ];
 
 // Custom CSS for hiding scrollbars while maintaining functionality
@@ -118,6 +122,13 @@ export function Dashboard() {
     { enabled: !!user },
   );
   const { subscription, isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
+  const { getCookie, setCookie } = useCookie();
+  const isGuideHidden = getCookie('paw-fi-guide-hidden') === 'true';
+
+  const showGuide = () => {
+    setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
+  };
 
 
   // Helper function to check if a route is active
@@ -223,18 +234,21 @@ export function Dashboard() {
         },
       ],
     },
-    {
-      id: "membership",
-      label: "Membership",
-      icon: faUser,
-      path: "/dashboard/membership",
-    },
-    {
-      id: "user-settings",
-      label: "Settings",
-      icon: faCog,
-      path: "/dashboard/user-settings",
-    },
+    // Only show membership and settings if user is logged in
+    ...(user ? [
+      {
+        id: "membership",
+        label: "Membership",
+        icon: faUser,
+        path: "/dashboard/membership",
+      },
+      {
+        id: "user-settings",
+        label: "Settings",
+        icon: faCog,
+        path: "/dashboard/user-settings",
+      },
+    ] : []),
   ];
 
   // Effect to handle menu expansion based on current route
@@ -426,6 +440,10 @@ export function Dashboard() {
   // </div>
   // }
 
+  const showBlockModal=(!NON_PROTECTED_ROUTES.includes(location.pathname) && !user) || (!NON_PROTECTED_ROUTES.includes(location.pathname)&&!isActive)
+
+  const currentBackgroundImage=location.pathname==="/dashboard" ? dashboardHomeImage : location.pathname==="/dashboard/learning" ? dashboardLearningImage : location.pathname==="/dashboard/essentials/your-2025-guide-to-investing" ? dashboardEssentialsImage : location.pathname==="/dashboard/calculators" ? dashboardCalculatorsImage : dashboardHomeImage;
+
   return (
     <>
       {/* Add style tag for custom scrollbar hiding */}
@@ -489,7 +507,15 @@ export function Dashboard() {
                   <Link 
                     to={item.path} 
                     className="group"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      // Track visits for essentials and calculators
+                      if (item.id === 'essentials') {
+                        markEssentialsVisited();
+                      } else if (item.id === 'calculators') {
+                        markCalculatorsVisited();
+                      }
+                    }}
                   >
                     <motion.div
                       className={`flex w-full items-center justify-between px-4 py-3 transition-all duration-200 ${
@@ -529,28 +555,57 @@ export function Dashboard() {
                   </Link>
                 </div>
               ))}
-              {user && (
-                <motion.div
-                  className={
-                    "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 transition-all duration-200 hover:bg-gray-50/70 hover:text-gray-900"
-                  }
-                  onClick={() => handleSignOut()}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200`}
+
+               {/* Show Guide Button - Only visible when guide is hidden */}
+               {isGuideHidden && (
+                    <motion.div
+                      className={
+                        "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 transition-all duration-200 hover:bg-gray-50/70 hover:text-gray-900"
+                      }
+                      onClick={showGuide}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
-                      <FontAwesomeIcon
-                        className={`size-5 text-red-600`}
-                        icon={faSignOut}
-                      />
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200`}
+                        >
+                          <FontAwesomeIcon
+                            className={`size-5 text-yellow-500`}
+                            icon={faLightbulb}
+                          />
+                        </div>
+                        <span className="text-md font-medium text-gray-600">
+                          Show Guide
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+              {user && (
+                <>
+                 
+                  
+                  <motion.div
+                    className={
+                      "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 transition-all duration-200 hover:bg-gray-50/70 hover:text-gray-900"
+                    }
+                    onClick={() => handleSignOut()}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200`}
+                      >
+                        <FontAwesomeIcon
+                          className={`size-5 text-red-600`}
+                          icon={faSignOut}
+                        />
+                      </div>
+                      <span className="text-md font-medium text-red-600">
+                        Logout
+                      </span>
                     </div>
-                    <span className="text-md font-medium text-red-600">
-                      Logout
-                    </span>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </>
               )}
             </nav>
           </div>
@@ -603,140 +658,7 @@ export function Dashboard() {
       </motion.div>
 
       {/* Secondary Sidebar - Desktop Card Style or Mobile/Tablet Horizontal Scroll */}
-      <AnimatePresence>
-        {expandedMenu?.submenu && expandedMenu?.submenu.length > 0 && (
-          <>
-            {/* Desktop Version - Vertical Sidebar */}
-            <motion.div
-              className={classNames(
-                "hidden lg:block w-56",
-                "transition-all duration-300 ease-in-out"
-              )}
-              initial={{ x: -64, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -64, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              <div className="h-full rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
-                <div className="p-6">
-                  <div className="mb-6 flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
-                      <FontAwesomeIcon
-                        className="h-4 w-4 text-primary"
-                        icon={expandedMenu?.icon || faHome}
-                      />
-                    </div>
-                    <h3 className="text-sm font-bold capitalize text-gray-900">
-                      {expandedMenu.label}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    {expandedMenu?.submenu?.map((subItem, index) => (
-                      <motion.div
-                        key={subItem.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <Link to={subItem.path} className="group">
-                          <motion.div
-                            className={`block w-full rounded-lg px-4 py-3 text-left text-sm transition-all duration-200 ${
-                              isRouteActive(subItem.path)
-                                ? "border-l-3 border-primary bg-purple-50/50 font-medium text-primary"
-                                : "border-l-3 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
-                            }`}
-                            transition={{
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 25,
-                            }}
-                          >
-                            <p className="line-clamp-2">{subItem.label}</p>
-                          </motion.div>
-                        </Link>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-            
-            {/* Mobile/Tablet Version - Horizontal Scroll */}
-            <motion.div 
-              className="lg:hidden w-full mb-3 overflow-visible fixed top-0 left-0 right-0 z-50"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="rounded-xl border border-gray-100 bg-white/90 backdrop-blur-md shadow-md p-3">
-                <div className="flex items-center justify-between mb-2 px-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
-                      <FontAwesomeIcon
-                        className="h-3 w-3 text-primary"
-                        icon={expandedMenu?.icon || faHome}
-                      />
-                    </div>
-                    <h3 className="text-xs font-bold capitalize text-gray-900">
-                      {expandedMenu.label}
-                    </h3>
-                  </div>
-                  
-                  {/* Close submenu button on mobile */}
-                  <motion.button
-                    onClick={() => setExpandedMenu(null)}
-                    className="rounded-full bg-gray-100/70 p-1 text-gray-500"
-                    whileHover={{ scale: 1.1, backgroundColor: "#f3f4f6" }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                  </motion.button>
-                </div>
-                
-                <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
-                  <div className="flex space-x-3 py-1">
-                    {expandedMenu?.submenu?.map((subItem, index) => (
-                      <motion.div
-                        key={subItem.id}
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex-shrink-0"
-                      >
-                        <Link 
-                          to={subItem.path} 
-                          className="group"
-                          onClick={() => setExpandedMenu(null)}
-                        >
-                          <motion.div
-                            className={classNames(
-                              "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
-                              isRouteActive(subItem.path) 
-                                ? "bg-gradient-to-r from-primary/10 to-purple-400/10 border-b-2 border-primary font-medium text-primary" 
-                                : "border-b-2 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
-                            )}
-                            whileHover={{ y: -2 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 25,
-                            }}
-                          >
-                            {subItem.label}
-                          </motion.div>
-                        </Link>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
+   
       {/* Main Content Area */}
      {isLoading||isSubscriptionLoading ? null : <div className={classNames(
        "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
@@ -759,11 +681,11 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >            
-              {((PROTECTED_ROUTES.includes(location.pathname) && !user) || (!isActive)) ? (
+              {showBlockModal ? (
                 <div className="relative w-full h-full z-20 flex items-center justify-center overflow-hidden">
                   {/* Background Image Carousel */}
                   <div className="absolute inset-0 w-full h-full overflow-hidden">                   
-                    <img src={dashboardHomeImage} alt="Portfolio Home" className="w-full h-full object-cover blur-sm" />                 
+                    <img src={currentBackgroundImage} alt="Portfolio Home" className="w-full h-full object-cover blur-sm" />                 
                     </div>
                     <div className="absolute inset-0 w-full h-full overflow-hidden bg-gray-300/30"/>
                                
@@ -879,6 +801,7 @@ export function Dashboard() {
           </div>}
         </div>
       </div>
+      {!isGuideHidden && <FloatingGuideWindow />}
     </>
   );
 }

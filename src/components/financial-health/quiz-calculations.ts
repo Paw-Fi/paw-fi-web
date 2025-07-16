@@ -907,7 +907,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     widgets.push({
       id: uuidv4(),
       type: 'dailyHabitCalculator',
-      title: 'Daily Habit Future Value Calculator',
+      title: 'Could Your Habit Make You Rich?',
       icon: 'fas fa-coffee',
       column_span: 2,
       row_span: 4,
