@@ -36,6 +36,10 @@ import {
   faChartLine,
   faShieldAlt,
   faQuestionCircle,
+  faUmbrellaBeach,
+  faCalculator,
+  faArrowTrendUp,
+  faArrowTrendDown,
 } from "@fortawesome/free-solid-svg-icons"; // Added more icons
 
 // Helper to get styles based on financial status
@@ -1488,30 +1492,66 @@ export function RetirementReadinessWidget({
     return scenario;
   }, [retirementData.scenarios, selectedScenarioId, calculatedProjections]);
 
-  // Dynamically calculate retirement status from raw data
-  const getRetirementStatus = useMemo(() => {
+  // Get dynamic styles based on retirement status
+  const getRetirementStatusStyles = useMemo(() => {
     if (!currentScenario)
       return {
         text: "Not Available",
-        color: "text-gray-500 dark:text-gray-400",
+        textColor: "text-gray-600 dark:text-gray-400",
+        bgColor: "bg-gray-50 dark:bg-gray-800",
+        borderColor: "border-gray-200 dark:border-gray-700",
+        progressColor: "#6b7280",
+        iconColor: "text-gray-500 dark:text-gray-400",
+        icon: faInfoCircle,
+        trend: null,
       };
 
     const percentage = currentScenario.progressPercentage || 0;
 
     if (percentage >= 90)
-      return { text: "On Target", color: "text-green-500 dark:text-green-400" };
+      return {
+        text: "Excellent",
+        textColor: "text-green-700 dark:text-green-400",
+        bgColor: "bg-green-50 dark:bg-green-900/20",
+        borderColor: "border-green-200 dark:border-green-800",
+        progressColor: "#10b981",
+        iconColor: "text-green-600 dark:text-green-400",
+        icon: faArrowTrendUp,
+        trend: "exceeding",
+      };
     if (percentage >= 75)
-      return { text: "On Track", color: "text-blue-500 dark:text-blue-400" };
+      return {
+        text: "On Track",
+        textColor: "text-blue-700 dark:text-blue-400",
+        bgColor: "bg-blue-50 dark:bg-blue-900/20",
+        borderColor: "border-blue-200 dark:border-blue-800",
+        progressColor: "#3b82f6",
+        iconColor: "text-blue-600 dark:text-blue-400",
+        icon: faArrowTrendUp,
+        trend: "meeting",
+      };
     if (percentage >= 50)
-      return { text: "Behind", color: "text-yellow-500 dark:text-yellow-400" };
-    return { text: "At Risk", color: "text-red-500 dark:text-red-400" };
+      return {
+        text: "Behind",
+        textColor: "text-yellow-700 dark:text-yellow-400",
+        bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
+        borderColor: "border-yellow-200 dark:border-yellow-800",
+        progressColor: "#f59e0b",
+        iconColor: "text-yellow-600 dark:text-yellow-400",
+        icon: faCalculator,
+        trend: "adjusting",
+      };
+    return {
+      text: "At Risk",
+      textColor: "text-red-700 dark:text-red-400",
+      bgColor: "bg-red-50 dark:bg-red-900/20",
+      borderColor: "border-red-200 dark:border-red-800",
+      progressColor: "#ef4444",
+      iconColor: "text-red-600 dark:text-red-400",
+      icon: faArrowTrendDown,
+      trend: "urgent",
+    };
   }, [currentScenario]);
-
-  // Calculate SVG attributes for progress circle
-  const circleSize = 150;
-  const strokeWidth = 12;
-  const radius = (circleSize - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
 
   if (
     !retirementData ||
@@ -1537,23 +1577,23 @@ export function RetirementReadinessWidget({
     );
   }
 
-  // Calculate current savings based on raw data - using futureValue from portfolio projection
-  // This ensures consistency with the calculation results
+  // Calculate financial figures
   const projectionAmount = currentScenario.projectionAmount || 
     (calculatedProjections?.projectedRetirementFund || 0);
-    
-  const currentSavings = projectionAmount
-    ? `$${(projectionAmount / 1000).toFixed(0)}k`
-    : "$0";
-  const currentSavingsPerYear =
-    retirementData.quizAnswers?.["annual-contribution"] || 3000;
+  const targetAmount = retirementData.quizAnswers?.["target-retirement"] || 1500000;
+  const gap = targetAmount - projectionAmount;
+  const retirementAge = retirementData.quizAnswers?.['retirement-age'] || 65;
+  const currentAge = retirementData.quizAnswers?.['current-age'] || 30;
+  const yearsToRetirement = retirementAge - currentAge;
+  const currentSavingsPerYear = retirementData.quizAnswers?.["annual-contribution"] || 3000;
   const returnRate = retirementData.quizAnswers?.["return-rate"] || 6.8;
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-4">
+      <div className="p-5 space-y-5">
+        {/* Scenario Selector */}
         {retirementData.scenarios.length > 1 && (
-          <div className="mb-4 border-b border-slate-200 pb-2 dark:border-slate-700">
+          <div className="border-b border-slate-200 pb-4 dark:border-slate-700">
             <label htmlFor={`${widget.id}-scenario-select`} className="sr-only">
               Select Scenario
             </label>
@@ -1561,7 +1601,7 @@ export function RetirementReadinessWidget({
               id={`${widget.id}-scenario-select`}
               value={selectedScenarioId}
               onChange={(e) => setSelectedScenarioId(e.target.value)}
-              className="focus:ring-primary-500 focus:border-primary-500 w-full rounded-md border border-slate-300 bg-slate-50 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
             >
               {retirementData.scenarios.map((scenario) => (
                 <option key={scenario.id} value={scenario.id}>
@@ -1572,69 +1612,127 @@ export function RetirementReadinessWidget({
           </div>
         )}
 
-        {/* Circle Progress and Status */}
-        <div className="mb-4 flex items-center">
-          {/* Progress Circle */}
-          <div className="relative mr-4 flex-shrink-0">
-            <svg width="110" height="110" viewBox="0 0 110 110">
-              {/* Background circle */}
-              <circle
-                cx="55"
-                cy="55"
-                r="45"
-                fill="none"
-                strokeWidth="10"
-                className="text-slate-200 dark:text-slate-800"
-                stroke="currentColor"
-              />
-              {/* Foreground progress circle */}
-              <circle
-                cx="55"
-                cy="55"
-                r="45"
-                fill="none"
-                strokeWidth="10"
-                stroke="#ff3b30"
-                strokeDasharray={`${2 * Math.PI * 45}`}
-                strokeDashoffset={`${2 * Math.PI * 45 * (1 - currentScenario.progressPercentage / 100)}`}
-                strokeLinecap="round"
-                transform="rotate(-90 55 55)"
-              />
-              {/* Score text */}
-              <text
-                x="55"
-                y="55"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="fill-slate-800 text-3xl font-bold dark:fill-slate-100"
-              >
-                {currentScenario.progressPercentage}
-              </text>
-            </svg>
-          </div>
-
-          {/* Status Information */}
-          <div>
-            <h4 className="text-2xl font-bold text-red-500">
-              {getRetirementStatus.text}
-            </h4>
-            <p className="text-slate-600 dark:text-slate-400">
-              Projected:{" "}
-              <span className="font-semibold">
-                ${(projectionAmount || 0).toLocaleString()}
-              </span>{" "}
-              by Age {currentScenario.projectionDate || retirementData.quizAnswers?.['retirement-age'] || 65}
-            </p>
+        {/* Status Header */}
+        <div className={`rounded-lg border p-4 ${getRetirementStatusStyles.bgColor} ${getRetirementStatusStyles.borderColor}`}>
+          <div className="flex items-center gap-3">
+            <FontAwesomeIcon 
+              icon={getRetirementStatusStyles.icon} 
+              className={`text-xl ${getRetirementStatusStyles.iconColor}`} 
+            />
+            <div>
+              <h3 className={`text-lg font-semibold ${getRetirementStatusStyles.textColor}`}>
+                {getRetirementStatusStyles.text}
+              </h3>
+              <p className={`text-sm ${getRetirementStatusStyles.textColor}`}>
+                {getRetirementStatusStyles.trend === "exceeding" && "You're exceeding your retirement goals"}
+                {getRetirementStatusStyles.trend === "meeting" && "You're on track to meet your retirement goals"}
+                {getRetirementStatusStyles.trend === "adjusting" && "Some adjustments may help reach your goals"}
+                {getRetirementStatusStyles.trend === "urgent" && "Consider increasing your retirement contributions"}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Additional Context */}
-        <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-          <p>Assumes {returnRate}% return annually</p>
-          <p>
-            Based on your current savings: $
-            {currentSavingsPerYear.toLocaleString()}/yr
-          </p>
+        {/* Progress Visualization */}
+        <div className="flex items-center gap-6">
+          {/* Progress Circle */}
+          <div className="relative flex-shrink-0">
+            <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
+              {/* Background circle */}
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                strokeWidth="12"
+                className="text-slate-200 dark:text-slate-700"
+                stroke="currentColor"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                strokeWidth="12"
+                stroke={getRetirementStatusStyles.progressColor}
+                strokeDasharray={`${2 * Math.PI * 50}`}
+                strokeDashoffset={`${2 * Math.PI * 50 * (1 - (currentScenario.progressPercentage || 0) / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            {/* Center content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-2xl font-bold ${getRetirementStatusStyles.textColor}`}>
+                {currentScenario.progressPercentage || 0}%
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                of goal
+              </span>
+            </div>
+          </div>
+
+          {/* Key Metrics */}
+          <div className="flex-1 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">Your Goal</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                ${targetAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">Projected</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                ${projectionAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">
+                {gap > 0 ? "Gap" : "Surplus"}
+              </span>
+              <span className={`font-semibold ${gap > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {gap > 0 ? '-' : '+'}${Math.abs(gap).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Gap Analysis */}
+        {gap > 0 && (
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <FontAwesomeIcon icon={faCalculator} className="text-slate-500" />
+              Close the Gap
+            </h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-slate-600 dark:text-slate-400">Extra needed per month:</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  ${Math.round(gap / (yearsToRetirement * 12)).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-slate-600 dark:text-slate-400">Years to retirement:</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  {yearsToRetirement} years
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assumptions */}
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+            <FontAwesomeIcon icon={faInfoCircle} className="text-slate-500" />
+            Assumptions
+          </h4>
+          <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+            <p>• Annual return: {returnRate}%</p>
+            <p>• Current annual savings: ${currentSavingsPerYear.toLocaleString()}</p>
+            <p>• Retirement age: {retirementAge}</p>
+          </div>
         </div>
       </div>
     </Widget>

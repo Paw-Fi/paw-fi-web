@@ -387,6 +387,19 @@ export interface IChecklistWidget extends IBaseWidget {
 }
 // Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
 
+// Interactive Calculator Widgets (no data needed - self-contained)
+export interface IDailyHabitCalculatorWidget extends IBaseWidget {
+  type: 'dailyHabitCalculator';
+}
+
+export interface IPensionHeadStartWidget extends IBaseWidget {
+  type: 'pensionHeadStart';
+}
+
+export interface IMortgageDepositTimelineWidget extends IBaseWidget {
+  type: 'mortgageDepositTimeline';
+}
+
 // Discriminated Union for all possible widget types
 export interface IPieChartWidget extends IBaseWidget {
   type: 'pieChart';
@@ -409,4 +422,7 @@ export type Widget =
   | IRetirementReadinessWidget
   | IEnhancedSavingsGoalsWidget
   | IInsuranceCoverageWidget
-  | IChecklistWidget;
+  | IChecklistWidget
+  | IDailyHabitCalculatorWidget
+  | IPensionHeadStartWidget
+  | IMortgageDepositTimelineWidget;

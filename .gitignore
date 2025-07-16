@@ -33,3 +33,5 @@ package-lock.json
 src/routeTree.gen.ts
 
 public/sitemap.xml.backup
+
+public/sitemap.xml

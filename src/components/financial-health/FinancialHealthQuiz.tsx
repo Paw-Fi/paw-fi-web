@@ -9,11 +9,11 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "./useQuizDashboard";
-import { calculateFinancialHealthScore } from "../profile/widgets/FinancialWidgets";
 import {
   calculateResults,
   generateDashboardWidgets,
   CalculationResults,
+  calculateFinancialHealthScore,
 } from "./quiz-calculations";
 
 // Types
@@ -24,11 +24,13 @@ type QuestionCategory =
   | "time-horizon"
   | "financial-goals";
 
+
 type QuestionType =
   | "single-choice"
   | "multiple-choice"
   | "number-input"
-  | "slider";
+  | "slider"
+  | "debt-repeater";
 
 interface QuestionOption {
   value: string;
@@ -58,7 +60,7 @@ interface CategoryInfo {
 }
 
 interface QuizState {
-  answers: Record<string, string | string[] | number | boolean>;
+  answers: Record<string, string | string[] | number | boolean | DebtDetail[]>;
   activeCategory: QuestionCategory;
   showResults: boolean;
   calculationResults: ExtendedCalculationResults | null;
@@ -80,20 +82,20 @@ interface ExtendedCalculationResults extends CalculationResults {
 const categories: CategoryInfo[] = [
   {
     id: "current-situation",
-    title: "Current Financial Situation",
-    description: "Tell us about your current financial status",
+    title: "The Snapshot (You Today)",
+    description: "Core facts about your current finances",
     color: "bg-blue-100 text-blue-600",
   },
   {
-    id: "liquidity-needs",
-    title: "Liquidity Needs",
-    description: "How quickly might you need access to your money?",
-    color: "bg-green-100 text-green-600",
+    id: "financial-goals",
+    title: "The Destination (Your Goals)",
+    description: "What you want your money to achieve",
+    color: "bg-indigo-100 text-indigo-600",
   },
   {
     id: "risk-assessment",
-    title: "Risk Assessment",
-    description: "How comfortable are you with investment risk?",
+    title: "The Journey (Your Risk Profile)",
+    description: "How you handle the ups and downs",
     color: "bg-purple-100 text-purple-600",
   },
   {
@@ -103,144 +105,178 @@ const categories: CategoryInfo[] = [
     color: "bg-amber-100 text-amber-600",
   },
   {
-    id: "financial-goals",
-    title: "Financial Goals",
-    description: "What are you saving and investing for?",
-    color: "bg-indigo-100 text-indigo-600",
+    id: "liquidity-needs",
+    title: "Liquidity Needs",
+    description: "How quickly might you need access to your money?",
+    color: "bg-green-100 text-green-600",
   },
 ];
 
-// Quiz questions array
+// Define debt detail interface
+interface DebtDetail {
+  id: string;
+  type: string;
+  amount: number;
+  interestRate: number;
+}
+
+// Quiz questions array - Restructured based on expert recommendations
 const quizQuestions: QuizQuestion[] = [
-  // Investment risk profile questions
-  {
-    id: "paid-all-debt",
-    question: "Have you currently paid all the debt (e.g., mortgage, credit cards, student loans)?",
-    description: "Your debt status affects recommended investment strategies.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "expect-lump-sum",
-    question: "Do you expect lump sum income in the future (e.g., inheritance, asset sale)?",
-    description: "Future windfalls may impact your investment horizon and risk tolerance.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "long-term-goal",
-    question: "Do you like to achieve your financial goal in more than 1 year?",
-    description: "Long-term goals often allow for different investment strategies.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "predictable-income",
-    question: "Do you have a job with predictable income?",
-    description: "Income stability affects how much risk you might be able to take on.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "high-risk-preference",
-    question: "Would you prefer a strategy that offers high returns despite the high risk?",
-    description: "Your preference for risk vs. return is a key factor in portfolio design.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "risky-investments",
-    question: "Have you ever invested some highly risky assets (e.g. hedge fund, private equity)?",
-    description: "Past investment experience can indicate comfort with certain types of risk.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
-  {
-    id: "extreme-sports",
-    question: "Do you like extreme sports such as Bungee Jumping, Parachuting, Rock Climbing?",
-    description: "Comfort with physical risk often correlates with financial risk tolerance.",
-    type: "single-choice",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" }
-    ],
-    category: "risk-assessment",
-  },
+  // === THE SNAPSHOT (You Today) ===
   {
     id: "current-age",
     question: "What is your current age?",
     description: "This helps us calculate your retirement timeline.",
     type: "number-input",
-    min: 0,
+    min: 18,
     max: 100,
     category: "current-situation",
   },
   {
-    id: "monthly-income",
-    question: "What is your monthly income?",
-    description: "Your gross monthly income before taxes and deductions.",
+    id: "gross-monthly-income",
+    question: "What is your gross monthly income before taxes?",
+    description: "Your total monthly income before any deductions.",
     type: "number-input",
     min: 0,
     unit: "$",
     category: "current-situation",
   },
   {
-    id: "monthly-expenses",
-    question: "What are your approximate monthly expenses?",
-    description: "Include an estimate of all regular monthly expenditures such as housing, utilities, food, transportation, etc.",
+    id: "net-monthly-income",
+    question: "What is your net monthly take-home pay?",
+    description: "Your monthly income after taxes and deductions.",
     type: "number-input",
     min: 0,
     unit: "$",
     category: "current-situation",
   },
+  {
+    id: "total-monthly-expenses",
+    question: "What are your total average monthly expenses?",
+    description: "Estimate your total monthly spending, including rent/mortgage, bills, groceries, and entertainment.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+    placeholder: "e.g., 3500"
+  },
+  {
+    id: "cash-savings",
+    question: "How much do you have in cash savings?",
+    description: "Bank accounts, savings accounts, money market accounts.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "pension-value",
+    question: "What is the current value of all your pension/retirement accounts?",
+    description: "401(k), IRA, pension plans, and other retirement accounts.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "monthly-pension-contribution",
+    question: "How much do you contribute monthly to pension/retirement accounts?",
+    description: "Your regular monthly contributions to 401(k), IRA, etc.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "other-investments",
+    question: "What is the value of your other investments?",
+    description: "Stocks, bonds, mutual funds, real estate investments (excluding your home).",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+  },
+  {
+    id: "number-of-dependents",
+    question: "How many dependents do you have?",
+    description: "Children, elderly parents, or others who depend on you financially.",
+    type: "number-input",
+    min: 0,
+    max: 20,
+    category: "current-situation",
+  },
+  {
+    id: "housing-situation",
+    question: "What is your current housing situation?",
+    description: "This helps us understand your housing expenses and assets.",
+    type: "single-choice",
+    options: [
+      { value: "rent", label: "Renting" },
+      { value: "own-mortgage", label: "Own with mortgage" },
+      { value: "own-paid", label: "Own outright (no mortgage)" },
+      { value: "other", label: "Other arrangement" },
+    ],
+    category: "current-situation",
+  },
+  {
+    id: "total-debt-amount",
+    question: "Roughly how much non-mortgage debt do you have?",
+    description: "Include credit cards, car loans, student loans, personal loans, etc. Exclude your mortgage.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "current-situation",
+    placeholder: "e.g., 15000"
+  },
+  {
+    id: "average-debt-interest",
+    question: "What's the approximate average interest rate on your debt?",
+    description: "If you have multiple debts, estimate the average rate across all of them.",
+    type: "single-choice",
+    options: [
+      { value: "none", label: "I don't have any debt" },
+      { value: "low", label: "Low (under 7%)" },
+      { value: "medium", label: "Medium (8-15%)" },
+      { value: "high", label: "High (16%+)" },
+    ],
+    category: "current-situation",
+  },
+  {
+    id: "emergency-fund",
+    question: "How much do you have set aside for emergencies?",
+    description: "This is your safety net for unexpected expenses like job loss or medical bills. Separate from your regular savings.",
+    type: "number-input",
+    min: 0,
+    unit: "$",
+    category: "liquidity-needs",
+    placeholder: "e.g., 5000"
+  },
+  {
+    id: "insurance-coverage",
+    question: "Which types of insurance coverage do you currently have?",
+    description: "Select all that apply to your current situation.",
+    type: "multiple-choice",
+    options: [
+      { value: "health", label: "Health insurance" },
+      { value: "life", label: "Life insurance" },
+      { value: "disability", label: "Disability insurance" },
+      { value: "auto", label: "Auto insurance" },
+      { value: "home", label: "Home/renters insurance" },
+      { value: "umbrella", label: "Umbrella policy" },
+    ],
+    optionsPerRow: 3,
+    category: "current-situation",
+  },
+
+  // === THE DESTINATION (Your Goals) ===
   {
     id: "retirement-age",
     question: "At what age do you plan to retire?",
     description: "This helps us calculate your investment horizon.",
     type: "number-input",
-    min: 0,
+    min: 50,
     max: 100,
-    category: "time-horizon",
-  },
-  {
-    id: "annual-contribution",
-    question: "How much can you contribute annually to investments?",
-    description: "Consider your regular savings for long-term goals.",
-    type: "number-input",
-    unit: "$",
-    category: "current-situation",
-  },
-  {
-    id: "current-assets",
-    question: "What is the total value of your current investable assets?",
-    description: "Include savings, investments, and other liquid assets.",
-    type: "number-input",
-    unit: "$",
-    category: "current-situation",
+    category: "financial-goals",
   },
   {
     id: "target-retirement",
@@ -251,15 +287,22 @@ const quizQuestions: QuizQuestion[] = [
     category: "financial-goals",
   },
   {
-    id: "emergency-fund",
-    question:
-      "How many months of expenses can your emergency fund cover?",
-    description:
-      "Experts recommend 3-6 months of basic living expenses.",
-    type: "number-input",
-    min: 0,
-    max: 36,
-    category: "liquidity-needs",
+    id: "financial-priorities",
+    question: "What are your top financial priorities right now?",
+    description: "Select that are most important to you.",
+    type: "multiple-choice",
+    options: [
+      { value: "debt-reduction", label: "Reducing debt" },
+      { value: "emergency-fund", label: "Building emergency fund" },
+      { value: "retirement", label: "Retirement savings" },
+      { value: "home", label: "Buying a home" },
+      { value: "education", label: "Education savings" },
+      { value: "income", label: "Increasing income" },
+      { value: "tax-efficiency", label: "Tax efficiency" },
+      { value: "estate-planning", label: "Estate planning" },
+    ],
+    optionsPerRow: 3,
+    category: "financial-goals",
   },
   {
     id: "investment-goals",
@@ -290,56 +333,58 @@ const quizQuestions: QuizQuestion[] = [
     category: "time-horizon",
   },
   {
-    id: "debt-level",
-    question: "How much total debt do you have at the moment?",
-    description: "Add up all loans, credit cards, and other money you owe.",
-    type: "number-input",
-    unit: "$",
-    category: "current-situation",
-  },
-  {
-    id: "debt-type",
-    question: "What types of debt do you currently have?",
-    description: "Select all that apply to your situation.",
-    type: "multiple-choice",
-    options: [
-      { value: "mortgage", label: "Mortgage" },
-      { value: "student", label: "Student loans" },
-      { value: "auto", label: "Auto loans" },
-      { value: "credit-card", label: "Credit card debt" },
-      { value: "personal-loan", label: "Personal loan" },
-      { value: "medical-debt", label: "Medical debt" },
-    ],
-    optionsPerRow: 3,
-    category: "current-situation",
-  },
-  {
-    id: "liquidity-importance",
-    question: "How important is liquidity (quick access to your money) to you?",
-    description: "This helps determine suitable investment types.",
+    id: "expect-lump-sum",
+    question: "Do you expect to receive a significant sum of money ($10,000+) in the future?",
+    description: "Future windfalls may impact your investment horizon and risk tolerance.",
     type: "single-choice",
     options: [
-      {
-        value: "very-important",
-        label: "Very important - Need frequent access",
-      },
-      { value: "important", label: "Important - May need occasional access" },
-      {
-        value: "somewhat-important",
-        label: "Somewhat important - Rarely need access",
-      },
-      {
-        value: "not-important",
-        label: "Not important - Can lock up funds long-term",
-      },
+      { value: "no", label: "No" },
+      { value: "within-2-years", label: "Yes, within 2 years" },
+      { value: "2-10-years", label: "Yes, in 2-10 years" },
+      { value: "10-plus-years", label: "Yes, in 10+ years" },
     ],
-    category: "liquidity-needs",
+    optionsPerRow: 2,
+    category: "financial-goals",
+  },
+
+  // === THE JOURNEY (Your Risk Profile) ===
+  {
+    id: "predictable-income",
+    question: "Do you have a job with predictable income?",
+    description: "Income stability affects how much risk you might be able to take on.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "high-risk-preference",
+    question: "Would you prefer a strategy that offers high returns despite the high risk?",
+    description: "Your preference for risk vs. return is a key factor in portfolio design.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
+  },
+  {
+    id: "risky-investments",
+    question: "Have you ever invested in highly risky assets (e.g. individual stocks, cryptocurrency, private equity)?",
+    description: "Past investment experience can indicate comfort with certain types of risk.",
+    type: "single-choice",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" }
+    ],
+    category: "risk-assessment",
   },
   {
     id: "market-downturn",
     question: "How would you react to a 20% market downturn?",
-    description:
-      "This helps assess your emotional response to market volatility.",
+    description: "This helps assess your emotional response to market volatility.",
     type: "single-choice",
     options: [
       { value: "sell", label: "Sell to prevent further losses" },
@@ -357,125 +402,147 @@ const quizQuestions: QuizQuestion[] = [
     options: [
       { value: "beginner", label: "Beginner - Limited knowledge" },
       { value: "intermediate", label: "Intermediate - Understand basics" },
-      {
-        value: "advanced",
-        label: "Advanced - Comfortable with complex investments",
-      },
+      { value: "advanced", label: "Advanced - Comfortable with complex investments" },
       { value: "expert", label: "Expert - Professional knowledge" },
     ],
     category: "risk-assessment",
   },
   {
-    id: "housing-situation",
-    question: "What is your current housing situation?",
-    description: "This helps us understand your housing expenses and assets.",
+    id: "liquidity-importance",
+    question: "How important is liquidity (quick access to your money) to you?",
+    description: "This helps determine suitable investment types.",
     type: "single-choice",
     options: [
-      { value: "rent", label: "Renting" },
-      { value: "own-mortgage", label: "Own with mortgage" },
-      { value: "own-paid", label: "Own outright (no mortgage)" },
-      { value: "other", label: "Other arrangement" },
+      { value: "very-important", label: "Very important - Need frequent access" },
+      { value: "important", label: "Important - May need occasional access" },
+      { value: "somewhat-important", label: "Somewhat important - Rarely need access" },
+      { value: "not-important", label: "Not important - Can lock up funds long-term" },
     ],
-    category: "current-situation",
-  },
-  {
-    id: "expected-return",
-    question: "What annual return do you expect from your investments?",
-    description: "Typical market averages range from 6-8% before inflation.",
-    type: "slider",
-    min: 0,
-    max: 12,
-    step: 0.1,
-    unit: "%",
-    category: "financial-goals",
-  },
-  {
-    id: "inflation-rate",
-    question: "What inflation rate do you expect over your investment horizon?",
-    description: "Historical average is around 2-3% in the US.",
-    type: "slider",
-    min: 0,
-    max: 10,
-    step: 0.1,
-    unit: "%",
-    category: "risk-assessment",
-  },
-  {
-    id: "education-timeframe",
-    question: "If saving for education, when will funds be needed?",
-    description: "This helps determine appropriate education savings vehicles.",
-    type: "single-choice",
-    options: [
-      { value: "0-2", label: "0-2 years" },
-      { value: "3-5", label: "3-5 years" },
-      { value: "6-10", label: "6-10 years" },
-      { value: "10+", label: "10+ years" },
-    ],
-    optionsPerRow: 4,
-    category: "time-horizon",
-  },
-  {
-    id: "insurance-coverage",
-    question: "Which types of insurance coverage do you currently have?",
-    description: "Select all that apply to your current situation.",
-    type: "multiple-choice",
-    options: [
-      { value: "health", label: "Health insurance" },
-      { value: "life", label: "Life insurance" },
-      { value: "disability", label: "Disability insurance" },
-      { value: "auto", label: "Auto insurance" },
-      { value: "home", label: "Home/renters insurance" },
-      { value: "umbrella", label: "Umbrella policy" },
-      { value: "ltc", label: "Long-term care insurance" },
-    ],
-    optionsPerRow: 3,
-    category: "risk-assessment",
-  },
-  {
-    id: "financial-priorities",
-    question: "What are your top financial priorities right now?",
-    description: "Select up to 3 that are most important to you.",
-    type: "multiple-choice",
-    options: [
-      { value: "debt-reduction", label: "Reducing debt" },
-      { value: "emergency-fund", label: "Building emergency fund" },
-      { value: "retirement", label: "Retirement savings" },
-      { value: "home", label: "Buying a home" },
-      { value: "education", label: "Education savings" },
-      { value: "income", label: "Increasing income" },
-      { value: "tax-efficiency", label: "Tax efficiency" },
-      { value: "estate-planning", label: "Estate planning" },
-    ],
-    optionsPerRow: 3,
-    category: "financial-goals",
-  },
-  {
-    id: "health-status",
-    question: "How would you describe your overall health?",
-    description: "Health status can impact financial planning needs.",
-    type: "single-choice",
-    options: [
-      { value: "excellent", label: "Excellent - No health concerns" },
-      { value: "good", label: "Good - Minor health concerns" },
-      { value: "fair", label: "Fair - Some health issues" },
-      { value: "poor", label: "Poor - Significant health concerns" },
-    ],
-    category: "risk-assessment",
+    category: "liquidity-needs",
   },
 ];
 
-// Helper function to check if an answer is selected in multiple choice questions
-const isAnswerSelected = (
-  answers: Record<string, string | string[] | number | boolean>,
-  questionId: string,
-  value: string,
-): boolean => {
-  if (!answers[questionId]) return false;
-  if (Array.isArray(answers[questionId])) {
-    return (answers[questionId] as string[]).includes(value);
-  }
-  return answers[questionId] === value;
+
+// Debt Repeater Component
+const DebtRepeater: React.FC<{
+  debts: DebtDetail[];
+  onChange: (debts: DebtDetail[]) => void;
+}> = ({ debts, onChange }) => {
+  const addDebt = () => {
+    const newDebt: DebtDetail = {
+      id: Date.now().toString(),
+      type: '',
+      amount: 0,
+      interestRate: 0,
+    };
+    onChange([...debts, newDebt]);
+  };
+
+  const removeDebt = (id: string) => {
+    onChange(debts.filter(debt => debt.id !== id));
+  };
+
+  const updateDebt = (id: string, field: keyof DebtDetail, value: string | number) => {
+    onChange(debts.map(debt => 
+      debt.id === id ? { ...debt, [field]: value } : debt
+    ));
+  };
+
+  const debtTypes = [
+    { value: 'credit-card', label: 'Credit Card' },
+    { value: 'student-loan', label: 'Student Loan' },
+    { value: 'personal-loan', label: 'Personal Loan' },
+    { value: 'auto-loan', label: 'Auto Loan' },
+    { value: 'mortgage', label: 'Mortgage' },
+    { value: 'medical-debt', label: 'Medical Debt' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {debts.map((debt, index) => (
+        <div key={debt.id} className="border rounded-lg p-4 bg-gray-50">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="font-medium text-gray-800">Debt #{index + 1}</h4>
+            <button
+              onClick={() => removeDebt(debt.id)}
+              className="text-red-500 hover:text-red-700 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Debt Type
+              </label>
+              <select
+                value={debt.type}
+                onChange={(e) => updateDebt(debt.id, 'type', e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select type</option>
+                {debtTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Total Amount Owed
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={debt.amount === 0 ? "" : debt.amount}
+                  onChange={(e) => updateDebt(debt.id, 'amount', e.target.value === "" ? 0 : Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Interest Rate (APR %)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={debt.interestRate === 0 ? "" : debt.interestRate}
+                  onChange={(e) => updateDebt(debt.id, 'interestRate', e.target.value === "" ? 0 : Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  placeholder="0"
+                  step="0.01"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+      
+      <button
+        onClick={addDebt}
+        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+      >
+        + Add Debt
+      </button>
+      
+      {debts.length === 0 && (
+        <div className="text-center py-4">
+          <p className="text-gray-500">No debts added yet. Click "Add Debt" to get started.</p>
+        </div>
+      )}
+    </div>
+  );
 };
+
 
 // Animation variants
 const containerVariants = {
@@ -505,7 +572,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
   
   // Initial quiz state
   const [state, setState] = useState<QuizState>({
-    answers: {},
+    answers: {
+      'debt-details': [], // Initialize debt details as empty array
+    },
     activeCategory: "current-situation",
     showResults: false,
     calculationResults: null,
@@ -540,8 +609,10 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     const currentCategoryIndex = categories.findIndex(
       (category) => category.id === state.activeCategory
     );
+    
+    // Progress is based on which step you're on (0-based to 1-based)
     return (currentCategoryIndex + 1) / totalCategories;
-  }, [state.activeCategory]);
+  }, [state.activeCategory, categories]);
   
   // Investment tips to show during processing
   const investmentTips = [
@@ -586,6 +657,15 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             (state.answers[question.id] as string[]).length > 0
           );
         }
+        if (question.type === "debt-repeater") {
+          // Debt repeater is considered complete if it exists (even if empty array)
+          return Array.isArray(state.answers[question.id]);
+        }
+        if (question.type === "number-input") {
+          // Number inputs are complete if they have a value (not empty string or undefined)
+          const answer = state.answers[question.id];
+          return answer !== undefined && answer !== "";
+        }
         return state.answers[question.id] !== undefined;
       });
     },
@@ -598,7 +678,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
   }, [categories, isCategoryComplete]);
 
   // Handle answer changes for single-choice and number inputs
-  const handleAnswerChange = (questionId: string, value: string | number | boolean | string[]) => {
+  const handleAnswerChange = (questionId: string, value: string | number | boolean | string[] | DebtDetail[]) => {
     setState((prev) => ({
       ...prev,
       answers: {
@@ -648,6 +728,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     []
   );
 
+
   // Handle quiz submission
   const handleSubmitQuiz = useCallback(() => {
     if (!isQuizComplete()) {
@@ -666,26 +747,45 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
 
   // Handle quiz completion
   const handleCompleteQuiz = useCallback(() => {
+    // Debug: Log the answers to see what we're working with
+    console.log('Quiz answers:', state.answers);
+    
     // Calculate results based on answers
     const baseResults = calculateResults(state.answers);
     
+    // Debug: Log the base results
+    console.log('Base results:', baseResults);
+    console.log('Portfolio projection:', baseResults.portfolioProjection);
     
-    // Calculate financial health score using the shared utility
-    const financialHealthResult = calculateFinancialHealthScore(state.answers);
+    // Calculate financial health score using our quiz calculations
+    const healthScore = calculateFinancialHealthScore(state.answers);
     
     // Ensure proper number conversion for age values
     const currentAge = Number(state.answers['current-age']) || 30;
     const retirementAge = Number(state.answers['retirement-age']) || 65;
     
-    // Use retirement projections from the financial health utility
-    const projectedRetirementFund = financialHealthResult.projectedRetirementFund || 0;
-    const monthlyRetirementIncome = financialHealthResult.monthlyRetirementIncome || 0;
+    // Use retirement projections from the new calculation system
+    const projectedRetirementFund = baseResults.portfolioProjection.futureValue || 0;
+    
+    // Debug: Log the projected retirement fund
+    console.log('Projected retirement fund:', projectedRetirementFund);
+    
+    // Calculate monthly retirement income (4% withdrawal rule)
+    const monthlyRetirementIncome = (projectedRetirementFund * 0.04) / 12;
+    
+    // Determine health assessment based on score
+    const getHealthAssessment = (score: number): string => {
+      if (score >= 80) return 'Excellent';
+      if (score >= 60) return 'Good';
+      if (score >= 40) return 'Fair';
+      return 'Needs Improvement';
+    };
     
     // Create extended results with additional properties
     const extendedResults: ExtendedCalculationResults = {
       ...baseResults,
-      healthScore: financialHealthResult.overallScore, 
-      healthAssessment: financialHealthResult.status,
+      healthScore: healthScore,
+      healthAssessment: getHealthAssessment(healthScore),
       projectedRetirementFund,
       yearsUntilRetirement: retirementAge - currentAge,
       monthlyRetirementIncome
@@ -727,8 +827,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
       // Navigate to the dashboard
       navigate({ to: '/dashboard' });
     } catch (err) {
-      console.error('Error creating dashboard:', err);
-      setError('Failed to create dashboard. Please try again.');
+      console.error('Error creating portfolio:', err);
+      setError('Failed to create portfolio. Please try again.');
       setStatus('idle');
     }
   }, [state.calculationResults, state.dashboardName, createDashboardFromQuiz, navigate, onDashboardCreated]);
@@ -750,7 +850,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             <h3 className="mb-1 text-sm font-medium text-gray-800">
               {question.question}
           {question.type === "slider" &&     <span className="text-md ml-2 font-bold text-green-500">
-              {state.answers[question.id] || question.min}%
+              {(state.answers[question.id] as number) || (question.min || 0)}%
 
               </span>}
             </h3>
@@ -767,7 +867,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 )}
               <input
   type="number"
-  value={state.answers[question.id] === "" ? "" : Number(state.answers[question.id])}
+  value={typeof state.answers[question.id] === "number" ? state.answers[question.id] as number : ""}
   onChange={(e) => {
     const value = e.target.value;
     handleAnswerChange(question.id, value === "" ? "" : Number(value));
@@ -785,10 +885,10 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    {question.min}%
+                    {question.min || 0}%
                   </span>
                   <span className="text-xs font-medium">
-                  {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
+                  {(((question?.max||0) - (question?.min||0)) / 2).toFixed(0)}%
                   </span>
                   <span className="text-xs text-gray-500">
                     {question.max}%
@@ -798,7 +898,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   min={question.min}
                   max={question.max}
                   step={question.step || 1}
-                  value={Number(state.answers[question.id]) || question.min}
+                  value={Number(state.answers[question.id]) || (question.min || 0)}
                   onChange={(value) => handleAnswerChange(question.id, value as number)}
                   className="w-full"
                   label=""
@@ -818,7 +918,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               <h3 className="mb-1 text-sm font-medium text-gray-800">
                 {question.question}
                {question.type === "slider" &&  <span className="text-md ml-2 font-bold text-green-500">
-              {state.answers[question.id] || question.min}%
+              {(state.answers[question.id] as number) || (question.min || 0)}%
 
               </span>}
               </h3>
@@ -837,7 +937,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   )}
                  <input
   type="number"
-  value={state.answers[question.id] ?? ""}
+  value={typeof state.answers[question.id] === "number" ? state.answers[question.id] as number : ""}
   onChange={(e) => {
     const value = e.target.value;
     // Only update if it's a valid number, otherwise, set it as an empty string
@@ -856,10 +956,10 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      {question?.min}%
+                      {question?.min || 0}%
                     </span>
                     <span className="text-xs font-medium">
-                      {((question?.max||0 - question?.min||0) / 2).toFixed(0)}%
+                      {(((question?.max||0) - (question?.min||0)) / 2).toFixed(0)}%
                     </span>
                     <span className="text-xs text-gray-500">
                       {question?.max}%
@@ -869,7 +969,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     min={question.min}
                     max={question.max}
                     step={question.step || 1}
-                    value={Number(state.answers[question.id]) || question.min}
+                    value={Number(state.answers[question.id]) || (question.min || 0)}
                     onChange={(value) => handleAnswerChange(question.id, value as number)}
                     className="w-full"
                     label=""
@@ -901,7 +1001,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               Analyzing Your Financial Profile
             </h3>
             <p className="mb-8 max-w-md text-gray-600">
-              We're creating your personalized financial dashboard based on your answers...
+              We're creating your personalized financial portfolio based on your answers...
             </p>
             <div className="max-w-md rounded-lg border border-blue-100 bg-blue-50 p-6">
               <h4 className="mb-3 font-medium text-blue-800">Financial Tip</h4>
@@ -935,13 +1035,28 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="rounded-lg bg-gray-50 p-4">
                     <h4 className="mb-1 text-sm font-medium text-gray-700">
                       Projected Retirement Fund
                     </h4>
                     <p className="text-lg font-semibold text-gray-900">
                       ${state.calculationResults.projectedRetirementFund.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      At age {state.calculationResults.portfolioProjection.retirementAge}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Monthly Retirement Income
+                    </h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ${state.calculationResults.monthlyRetirementIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}/month
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Using 4% withdrawal rule
                     </p>
                   </div>
 
@@ -952,14 +1067,47 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                     <p className="text-lg font-semibold text-gray-900">
                       {state.calculationResults.yearsUntilRetirement} years
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Time to build wealth
+                    </p>
                   </div>
 
                   <div className="rounded-lg bg-gray-50 p-4">
                     <h4 className="mb-1 text-sm font-medium text-gray-700">
-                      Estimated Monthly Income in Retirement
+                      Current Savings Rate
                     </h4>
                     <p className="text-lg font-semibold text-gray-900">
-                      ${state.calculationResults.monthlyRetirementIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}/month
+                      {state.calculationResults.cashFlow.savingsRatePercent}%
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      ${state.calculationResults.cashFlow.monthlySavings.toLocaleString()}/month
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Risk Profile
+                    </h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {state.calculationResults.portfolioAllocation.riskScore >= 80 ? 'Aggressive' : 
+                       state.calculationResults.portfolioAllocation.riskScore >= 60 ? 'Growth' :
+                       state.calculationResults.portfolioAllocation.riskScore >= 40 ? 'Balanced' :
+                       state.calculationResults.portfolioAllocation.riskScore >= 20 ? 'Cautious' : 'Conservative'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {state.calculationResults.portfolioAllocation.equityPercentage}% stocks, {state.calculationResults.portfolioAllocation.bondPercentage}% bonds
+                    </p>
+                  </div>
+
+                  <div className={`rounded-lg p-4 ${state.calculationResults.portfolioProjection.onTrack ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                      Retirement Goal Status
+                    </h4>
+                    <p className={`text-lg font-semibold ${state.calculationResults.portfolioProjection.onTrack ? 'text-green-900' : 'text-red-900'}`}>
+                      {state.calculationResults.portfolioProjection.onTrack ? 'On Track' : 'Behind Goal'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {state.calculationResults.portfolioProjection.progressPercentage}% of target (${state.calculationResults.portfolioProjection.targetAmount.toLocaleString()})
                     </p>
                   </div>
                 </div>
@@ -968,18 +1116,18 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
 
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h3 className="mb-4 text-lg font-semibold text-gray-800">
-                Create Your Financial Dashboard
+                Create Your Financial Portfolio
               </h3>
               <p className="mb-4 text-gray-600">
-                We'll create a personalized dashboard based on your assessment results.
+                We'll create a personalized portfolio based on your assessment results.
               </p>
               
               <div className="mb-4">
                 <label
-                  htmlFor="dashboard-name"
+                  htmlFor="portfolio-name"
                   className="mb-1 block text-sm font-medium text-gray-700"
                 >
-                  Dashboard Name
+                  Portfolio Name
                 </label>
                 <input
                   type="text"
@@ -987,7 +1135,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                   value={state.dashboardName}
                   onChange={handleDashboardNameChange}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
-                  placeholder="My Financial Health Dashboard"
+                  placeholder="My Financial Health Portfolio"
                 />
               </div>
 
@@ -1019,7 +1167,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
             <div className=" my-4">
               <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">
-                  Step { Object.keys(questionsByCategory).indexOf(state.activeCategory) +1 } of {categories.length}
+                  Step { categories.findIndex(cat => cat.id === state.activeCategory) + 1 } of {categories.length}
                 </span>
                 <span className="text-sm font-medium text-gray-500">
                   {categories.find((category)=> category.id === state.activeCategory)?.title}
@@ -1073,6 +1221,28 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                       {/* Render input fields (number-input, slider) with responsive layout */}
                       {renderInputFields(state.activeCategory)}
 
+                      {/* Render debt repeater */}
+                      {questionsByCategory[state.activeCategory]
+                        ?.filter((q) => q.type === "debt-repeater")
+                        .map((question) => (
+                          <div key={question.id} className="">
+                            <h3 className="mb-1 text-sm font-medium text-gray-800">
+                              {question.question}
+                            </h3>
+                            {question.description && (
+                              <p className="mb-4 text-xs text-gray-600">
+                                {question.description}
+                              </p>
+                            )}
+                            <DebtRepeater
+                              debts={(state.answers[question.id] as DebtDetail[]) || []}
+                              onChange={(debts) => {
+                                handleAnswerChange(question.id, debts);
+                              }}
+                            />
+                          </div>
+                        ))}
+
                       {/* Render choice questions (single-choice, multiple-choice) */}
                       {questionsByCategory[state.activeCategory]
                         ?.filter(
@@ -1086,7 +1256,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                               {question.question}
                             </h3>
                             {question.description && (
-                              <p className="mb-2 mb-4 text-xs text-gray-600">
+                              <p className="mb-4 text-xs text-gray-600">
                                 {question.description}
                               </p>
                             )}
@@ -1159,21 +1329,14 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
                 className="flex items-center rounded-lg border border-gray-200 px-4 py-2.5 font-medium text-gray-600 transition-all hover:bg-gray-100"
                 onClick={() => {
                   // Find previous category
-                  const categoryList = Object.keys(
-                    questionsByCategory,
-                  ) as QuestionCategory[];
-                  const currentIndex = state.activeCategory
-                    ? categoryList.indexOf(state.activeCategory)
-                    : -1;
+                  const currentIndex = categories.findIndex(cat => cat.id === state.activeCategory);
                   if (currentIndex > 0) {
-                    handleCategoryChange(categoryList[currentIndex - 1]);
+                    handleCategoryChange(categories[currentIndex - 1].id);
                   }
                 }}
                 disabled={
                   state.activeCategory
-                    ? Object.keys(questionsByCategory).indexOf(
-                        state.activeCategory,
-                      ) <= 0
+                    ? categories.findIndex(cat => cat.id === state.activeCategory) <= 0
                     : true
                 }
               >
@@ -1182,22 +1345,17 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
               </button>
 
               {state.activeCategory &&
-              Object.keys(questionsByCategory).indexOf(state.activeCategory) <
-                Object.keys(questionsByCategory).length - 1 ? (
+              categories.findIndex(cat => cat.id === state.activeCategory) <
+                categories.length - 1 ? (
                 <button
                   className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
                   onClick={() => {
                     // Only proceed if category is complete
                     if (isCategoryComplete(state.activeCategory)) {
                       // Find next category
-                      const categoryList = Object.keys(
-                        questionsByCategory,
-                      ) as QuestionCategory[];
-                      const currentIndex = state.activeCategory
-                        ? categoryList.indexOf(state.activeCategory)
-                        : -1;
-                      if (currentIndex < categoryList.length - 1) {
-                        handleCategoryChange(categoryList[currentIndex + 1]);
+                      const currentIndex = categories.findIndex(cat => cat.id === state.activeCategory);
+                      if (currentIndex < categories.length - 1) {
+                        handleCategoryChange(categories[currentIndex + 1].id);
                       }
                     }
                   }}
