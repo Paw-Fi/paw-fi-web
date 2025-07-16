@@ -24,7 +24,7 @@ import {
   faLightbulb,
   faHandHoldingDollar,
 } from "@fortawesome/free-solid-svg-icons";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
 
 import { toast } from "react-toastify";
@@ -641,6 +641,139 @@ export function Dashboard() {
       </motion.div>
 
       {/* Secondary Sidebar - Desktop Card Style or Mobile/Tablet Horizontal Scroll */}
+      <AnimatePresence>
+        {expandedMenu?.submenu && expandedMenu?.submenu.length > 0 && (
+          <>
+            {/* Desktop Version - Vertical Sidebar */}
+            <motion.div
+              className={classNames(
+                "hidden lg:block w-56",
+                "transition-all duration-300 ease-in-out"
+              )}
+              initial={{ x: -64, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -64, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <div className="h-full rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
+                <div className="p-6">
+                  <div className="mb-6 flex items-center space-x-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                      <FontAwesomeIcon
+                        className="h-4 w-4 text-primary"
+                        icon={expandedMenu?.icon || faHome}
+                      />
+                    </div>
+                    <h3 className="text-sm font-bold capitalize text-gray-900">
+                      {expandedMenu.label}
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    {expandedMenu?.submenu?.map((subItem, index) => (
+                      <motion.div
+                        key={subItem.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Link to={subItem.path} className="group">
+                          <motion.div
+                            className={`block w-full rounded-lg px-4 py-3 text-left text-sm transition-all duration-200 ${
+                              isRouteActive(subItem.path)
+                                ? "border-l-3 border-primary bg-purple-50/50 font-medium text-primary"
+                                : "border-l-3 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
+                            }`}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25,
+                            }}
+                          >
+                            <p className="line-clamp-2">{subItem.label}</p>
+                          </motion.div>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Mobile/Tablet Version - Horizontal Scroll */}
+            <motion.div 
+              className="lg:hidden w-full mb-3 overflow-visible fixed top-0 left-0 right-0 z-50"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="rounded-xl border border-gray-100 bg-white/90 backdrop-blur-md shadow-md p-3">
+                <div className="flex items-center justify-between mb-2 px-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
+                      <FontAwesomeIcon
+                        className="h-3 w-3 text-primary"
+                        icon={expandedMenu?.icon || faHome}
+                      />
+                    </div>
+                    <h3 className="text-xs font-bold capitalize text-gray-900">
+                      {expandedMenu.label}
+                    </h3>
+                  </div>
+                  
+                  {/* Close submenu button on mobile */}
+                  <motion.button
+                    onClick={() => setExpandedMenu(null)}
+                    className="rounded-full bg-gray-100/70 p-1 text-gray-500"
+                    whileHover={{ scale: 1.1, backgroundColor: "#f3f4f6" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                  </motion.button>
+                </div>
+                
+                <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
+                  <div className="flex space-x-3 py-1">
+                    {expandedMenu?.submenu?.map((subItem, index) => (
+                      <motion.div
+                        key={subItem.id}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex-shrink-0"
+                      >
+                        <Link 
+                          to={subItem.path} 
+                          className="group"
+                          onClick={() => setExpandedMenu(null)}
+                        >
+                          <motion.div
+                            className={classNames(
+                              "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
+                              isRouteActive(subItem.path) 
+                                ? "bg-gradient-to-r from-primary/10 to-purple-400/10 border-b-2 border-primary font-medium text-primary" 
+                                : "border-b-2 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
+                            )}
+                            whileHover={{ y: -2 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25,
+                            }}
+                          >
+                            {subItem.label}
+                          </motion.div>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
    
       {/* Main Content Area */}
      {isLoading||isSubscriptionLoading ? null : <div className={classNames(
