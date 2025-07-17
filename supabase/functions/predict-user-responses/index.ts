@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.11.0";
 import { corsHeaders } from "../shared/cors.ts";
-import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { CHAT_SUGGESTION_PROMPT_INSTRUCTIONS } from "./prompt.ts";
 
 // We'll define the AI_PROMPT directly in this file for clarity
@@ -56,6 +55,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     const { message, history } = requestData;
+    console.log("requestData", requestData)
 
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
@@ -120,11 +120,41 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     // --- Core Logic for Chat Suggestions ---
-    let finalResponsePayload=JSON.parse(result.response.text())||[
-      "How can I grow my money?",
-      "What are some ways to earn passive income?",
-      "How can I learn about investing?"
-  ];
+    let responseText = result.response.text();
+    let finalResponsePayload: string[];
+    
+    try {
+      // First try to parse as direct JSON
+      finalResponsePayload = JSON.parse(responseText);
+    } catch (directParseError) {
+      try {
+        // If that fails, try to extract JSON from markdown code blocks
+        const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
+        const match = responseText.match(jsonBlockRegex);
+        
+        if (match && match[1]) {
+          finalResponsePayload = JSON.parse(match[1].trim());
+        } else {
+          // If no markdown block found, try to find raw JSON array in the text
+          const arrayRegex = /\[([\s\S]*?)\]/;
+          const arrayMatch = responseText.match(arrayRegex);
+          
+          if (arrayMatch) {
+            finalResponsePayload = JSON.parse(arrayMatch[0]);
+          } else {
+            throw new Error("No valid JSON found in response");
+          }
+        }
+      } catch (extractError) {
+        console.warn("Failed to parse AI response as JSON:", responseText);
+        // Use fallback suggestions
+        finalResponsePayload = [
+          "How can I grow my money?",
+          "What are some ways to earn passive income?",
+          "How can I learn about investing?"
+        ];
+      }
+    }
     // --- End Core Logic ---
 
     // Return the final AI-generated (or fallback) JSON response

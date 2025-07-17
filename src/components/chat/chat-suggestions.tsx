@@ -19,13 +19,6 @@ export function ChatSuggestions({
   if (suggestions.length === 0) return null;
 
   return (
-    <div className="mb-3">
-      <div className="flex items-center gap-2 mb-2">
-        <FontAwesomeIcon icon={faLightbulb} className="text-amber-500" />
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-          Suggested Responses For You
-        </span>
-      </div>
       <div className="flex flex-wrap gap-2">
         {suggestions.map((suggestion, index) => (
           <button
@@ -37,7 +30,6 @@ export function ChatSuggestions({
             {suggestion}
           </button>
         ))}
-      </div>
     </div>
   );
 }

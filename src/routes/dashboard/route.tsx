@@ -606,7 +606,7 @@ export function Dashboard() {
             ) : user ? (
               <div className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden">
                 <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
-                  {user.email?.charAt(0).toUpperCase() || "U"}
+                  {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">

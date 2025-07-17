@@ -594,7 +594,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         }
       ],
       showPercentages: true
-    }
+    },
+    order:0
   });
  
 
@@ -611,6 +612,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         quizAnswers: results.quizAnswers,
         showIndividualScores: true
       },
+      order:1
     });
 
  // 3. Retirement Readiness Widget
@@ -641,6 +643,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     ],
     currentScenarioId: 'current-path'
   },
+  order:2
 });
 
 
@@ -656,7 +659,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       inflows: [{ id: uuidv4(), title: 'Total Income', value: results.cashFlow.income, category: 'Income', frequency: 'monthly', displayOrder: 1 }],
       outflows: [{ id: uuidv4(), title: 'Total Expenses', value: results.cashFlow.expenses, category: 'Expenses', frequency: 'monthly', displayOrder: 1 }],
       projectedPeriod: 'Monthly'
-    }
+    },
+    order:3
   });
 
   // 5. Next Best Action Widget
@@ -674,7 +678,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       priority: index === 0 ? 'high' : (index === 1 ? 'medium' : 'low'),
       category: 'Financial Improvement',
       displayOrder: index + 1
-    }))
+    })),
+    order:4
   });
 
     // 6. Metric Card for Savings Rate
@@ -705,7 +710,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             displayOrder: 2
           }
         ]
-      }
+      },
+      order:5
     });
 
     // 7. Portfolio Allocation Pie Chart
@@ -735,7 +741,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         ],
         title: 'Asset Allocation',
         showLegend: true
-      }
+      },
+      order:6
     });
 
   // 8. Tips Card Widget with lesson links
@@ -899,7 +906,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         ],
         currentTipIndex: 0,
         autoRotate: true
-      }
+      },
+      order:7
     });
   }
 
@@ -911,7 +919,19 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       icon: 'fas fa-coffee',
       column_span: 2,
       row_span: 4,
-      data:{}
+      data:{},
+      order:8
+    });
+
+    widgets.push({
+      id: uuidv4(),
+      type: 'salarySlicer',
+      title: 'Salary Slicer',
+      icon: 'fas fa-dollar-sign',
+      column_span: 2,
+      row_span: 4,
+      data:{},
+      order:9
     });
   
     // // 2. 401(k) Head Start Visualizer

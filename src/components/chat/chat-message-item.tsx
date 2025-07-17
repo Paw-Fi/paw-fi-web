@@ -4,8 +4,12 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { iconContainer } from "./chat-interface";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
+import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
+import { useEffect } from "react";
 
 interface Message {
   content: string;
@@ -20,6 +24,7 @@ interface ChatMessageItemProps {
   formatTime: (timestamp: number) => string;
   extractFirstJson: (text: string) => { json: any; start: number; end: number } | null;
   navigate: (opts: { to: string }) => void;
+  onOpenQuizModal?: () => void;
 }
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
@@ -27,10 +32,25 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   formatTime,
   extractFirstJson,
   navigate,
+  onOpenQuizModal,
 }) => {
   const isUser = message.role === "user";
+  const { user } = useAuth();
+  
+  // Check if user has completed the financial assessment
+  const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
   const found = extractFirstJson(message.content);
+  
+  // Watch for quiz completion messages and refetch profile
+  useEffect(() => {
+    if (isUser && message.content.toLowerCase().includes("completed the questionnaire") && user?.id) {
+      // Add a small delay then refetch profile to ensure it's been created
+      setTimeout(() => {
+        refetchProfile();
+      }, 1000);
+    }
+  }, [message.content, isUser, user?.id, refetchProfile]);
 
   const Avatar = () => (
     <div
@@ -62,6 +82,9 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   );
 
   const renderMessageContent = () => {
+    // Check if message contains QUESTIONNAIRE keyword
+    const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
+    
     if (found) {
       const { json, start, end } = found;
       const intro = message.content.slice(0, start).trim();
@@ -82,6 +105,32 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         </div>
       );
     }
+    
+    if (hasQuestionnaireKeyword && !isUser) {
+      // Replace the QUESTIONNAIRE keyword with a button for assistant messages
+      const messageText = message.content.replace(/``QUESTIONNAIRE``/g, '').replace("{{username}}", user?.user_metadata?.full_name|| "");
+      
+      return (
+        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+          <ReactMarkdown>{messageText.trim()}</ReactMarkdown>
+          <div className="mt-3">
+            <Button
+              onClick={() => !hasProfile && onOpenQuizModal?.()}
+              disabled={hasProfile}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                hasProfile
+                  ? "bg-green-500 text-white cursor-default"
+                  : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
+              }`}
+            >
+              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
+              {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
         <ReactMarkdown>{message.content.trim()}</ReactMarkdown>

@@ -9,12 +9,16 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "./useQuizDashboard";
+import { supabase } from "@/lib/supabase";
 import {
   calculateResults,
   generateDashboardWidgets,
   CalculationResults,
   calculateFinancialHealthScore,
 } from "./quiz-calculations";
+import { toast } from "react-toastify";
+import { User } from "@/contexts/auth-context";
+import { FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 
 // Types
 type QuestionCategory =
@@ -561,10 +565,11 @@ const resultVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
-  const {onDashboardCreated} = props;
+export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => void, user: User}) {
+  const {onDashboardCreated, user} = props;
   const navigate = useNavigate();
   const { createDashboardFromQuiz } = useQuizDashboard();
+  const [financialProfile, setFinancialProfile] = useState<Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null>(null);
 
   // State for error handling
   const [error, setError] = useState<string | null>(null);
@@ -638,7 +643,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
           ...prev,
           currentTip: (prev.currentTip + 1) % investmentTips.length
         }));
-      }, 3000); // Change tip every 3 seconds
+      }, 4000); // Change tip every 4 seconds
     }
     
     return () => {
@@ -730,7 +735,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
 
 
   // Handle quiz submission
-  const handleSubmitQuiz = useCallback(() => {
+  const handleSubmitQuiz = useCallback(async () => {
     if (!isQuizComplete()) {
       setError("Please complete all questions before submitting.");
       return;
@@ -739,19 +744,57 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
     // Start processing state with loading indicator
     setState(prev => ({ ...prev, isProcessing: true }));
     
-    // Simulate processing time (7 seconds)
-    setTimeout(() => {
-      handleCompleteQuiz();
-    }, 8000);
-  }, [isQuizComplete]);
+    try {
+      // Call the financial-health-profile edge function
+      console.log('Calling financial-health-profile edge function...');
+      console.log('Quiz answers:', state.answers);
+      
+      const { data, error } = await supabase.functions.invoke('financial-health-profile', {
+        body: { 
+          quizAnswers: state.answers,
+          userId: user.id,
+        }
+      });
+      
+      if (error) {
+        console.error('Error calling financial-health-profile:', error);
+        throw error;
+      }
+      
+      if (data?.success) {
+        console.log('✅ AI-generated financial profile:');
+        console.log(data.profileDescription);
+        console.log('📋 Profile data sent to AI:', data.profileData);
+        setFinancialProfile({
+          profile_description: data.profileDescription,
+          profile_data: data.profileData,
+        });
+        // Continue with client-side calculation since edge function only generates profile
+        handleCompleteQuiz();
+      } else {
+        console.error('Edge function returned unsuccessful response:', data);
+        throw new Error(data?.error || 'Failed to generate financial profile');
+      }
+    } catch (error) {
+      console.error('Error generating financial profile:', error);
+      toast.error('Something went wrong, please try again later');
+      
+      // Reset processing state and go back to previous screen
+      setState(prev => ({ 
+        ...prev, 
+        isProcessing: false,
+        showResults: false 
+      }));
+    }
+  }, [isQuizComplete, state.answers]);
 
   // Handle quiz completion
-  const handleCompleteQuiz = useCallback(() => {
+  const handleCompleteQuiz = useCallback((precomputedResults?: CalculationResults) => {
     // Debug: Log the answers to see what we're working with
     console.log('Quiz answers:', state.answers);
     
-    // Calculate results based on answers
-    const baseResults = calculateResults(state.answers);
+    // Use precomputed results from edge function if available, otherwise calculate client-side
+    const baseResults = precomputedResults || calculateResults(state.answers);
     
     // Debug: Log the base results
     console.log('Base results:', baseResults);
@@ -822,10 +865,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: () => void}) {
       );
       
       setStatus('complete');
-      onDashboardCreated();
-      
-      // Navigate to the dashboard
-      navigate({ to: '/dashboard' });
+      onDashboardCreated(financialProfile);
+    
     } catch (err) {
       console.error('Error creating portfolio:', err);
       setError('Failed to create portfolio. Please try again.');

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import type { FormEvent } from "react"; // For verbatimModuleSyntax
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,6 +20,7 @@ import {
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
 import { AnimatePresence, motion } from "framer-motion";
+import { useFinancialHealthProfile, formatProfileForAI, FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 
 import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
@@ -31,6 +31,7 @@ import logo from "@/assets/images/icon.svg";
 import { ChatInput } from './chat-input';
 import { VoiceConversationModal } from './voice-conversation-modal';
 import { BetaPill } from "../ui/beta-pill";
+import { FinancialHealthQuiz } from "@/components/financial-health/FinancialHealthQuiz";
 
 const INITIAL_SUGGESTIONS = ["Start"];
 
@@ -42,7 +43,7 @@ interface Message {
   userId?: string;
   metadata?: Record<string, any>;
 }
-const MAX_TIME_TO_SHOW_LOADING = 8;
+const MAX_TIME_TO_SHOW_LOADING = 9;
 
 interface ChatInterfaceProps {
   initialQuestion?: string;
@@ -63,6 +64,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [hasProcessedInitialQuestion, setHasProcessedInitialQuestion] = useState(false);
   const { getCookie, setCookie } = useCookie();
   const [isVoiceModalOpen, setVoiceModalOpen] = useState(false);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
   // --- Guest Conversation Utilities ---
   // State for client values with consistent initial SSR values
@@ -169,6 +171,10 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
   const { user } = useAuth();
   const isAuthenticated = !!user;
+  
+  // Load financial health profile for authenticated users
+  const { profile, isLoading: isProfileLoading, error: profileError, hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
+  
   // Track merge state to avoid duplicate merges
   const [hasMergedGuest, setHasMergedGuest] = useState(false);
   // Track if a guest-to-auth merge is in progress
@@ -373,11 +379,13 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
       // Fetch AI response
       setLoadingMessage("Moneko is thinking...");
+      const profileContext = profile ? formatProfileForAI(profile) : undefined;
       const aiResponse = await getAIResponseFromEdge(
         supabase,
         firstMessageContent,
         [{ role: userMessage.role, content: userMessage.content }],
-        userIdParam
+        userIdParam,
+        profileContext
       );
 
       // Add AI response to conversation
@@ -649,7 +657,18 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   }, [isLoading, messages])
   
 
-  const handleSendMessage = async (content: string) => {
+  const handleQuizComplete = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+    // Close the modal first
+    setIsQuizModalOpen(false);
+    
+    handleSendMessage("I've completed the questionnaire",profile);
+  };
+
+  const handleOpenQuizModal = () => {
+    setIsQuizModalOpen(true);
+  };
+
+  const handleSendMessage = async (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
     setIsSendingMessage(true);
     if (!content.trim()) return;
     if (!isAuthenticated || !user?.id) {
@@ -684,10 +703,13 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           role: msg.role,
           content: msg.content,
         }));
+     
         const response = await getAIResponseFromEdge(
           supabase,
           content,
-          contextMessages,     
+          contextMessages,
+          undefined,
+          ""
         );
         const assistantMessage: Message = {
           content:
@@ -736,7 +758,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     // --- Authenticated Flow ---
     if (!content.trim()) return;
     if (!isAuthenticated || !user?.id) {
-      console.log("User not authenticated. Cannot send message.");
+      console.error("User not authenticated. Cannot send message.");
       return;
     }
 
@@ -793,12 +815,14 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           content: msg.content,
         }));
 
-        // Call the AI service
+        const current_profile=manual_profile || profile||undefined;
+        const profileContext = formatProfileForAI(current_profile);
         const response = await getAIResponseFromEdge(
           supabase,
           content,
           contextMessages,
           user.id,
+          profileContext
         );
 
         // Add the assistant response to the messages (optimistic update)
@@ -902,13 +926,16 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     () =>
       !!(isMergingGuestToAuth ||
         isConversationsLoading ||
-        (currentConversationId && isConversationLoading)) &&
+        (currentConversationId && isConversationLoading) ||
+        (isAuthenticated && isProfileLoading)) &&
       messages.length === 0,
     [
       isMergingGuestToAuth,
       isConversationsLoading,
       currentConversationId,
       isConversationLoading,
+      isAuthenticated,
+      isProfileLoading,
       messages,
     ],
   );
@@ -1047,6 +1074,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                 formatTime={formatTime} 
                 extractFirstJson={extractFirstJson}
                 navigate={navigate}
+                onOpenQuizModal={handleOpenQuizModal}
               />
             </motion.div>
           )}
@@ -1085,15 +1113,20 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-white/20 bg-white/30 backdrop-blur-lg p-2 sm:p-4">
-        <ChatSuggestions
-          suggestions={suggestedResponses}
-          onSuggestionClick={handleSuggestionClick}
-          isLoading={isLoading}
-          isSendingMessage={isSendingMessage}
+        {/* Hide suggestions and disable input if last message contains QUESTIONNAIRE keyword AND user doesn't have profile */}
+        {(!messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') || hasProfile) && (
+          <ChatSuggestions
+            suggestions={suggestedResponses}
+            onSuggestionClick={handleSuggestionClick}
+            isLoading={isLoading}
+            isSendingMessage={isSendingMessage}
+          />
+        )}
+        <ChatInput 
+          onSendMessage={handleSendMessage} 
+          isLoading={isLoading || shouldPromptRegister || (messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') && !hasProfile)} 
+          onOpenVoiceModal={() => setVoiceModalOpen(true)} 
         />
-        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading || shouldPromptRegister} onOpenVoiceModal={() => setVoiceModalOpen(true)} />
-      </div>
       {/* Registration Modal - Unchanged but kept for functionality */}
       <Modal
         isOpen={shouldPromptRegister}
@@ -1118,7 +1151,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
             </ul>
           </div>
           <div className="w-full flex flex-col gap-2">
-            <Link to="/register" className="w-full">
+            <Link to="/register" search={{redirect: "/dashboard/chat"}} className="w-full">
               <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
                 Register for Free
               </Button>
@@ -1127,6 +1160,24 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         </div>
       </Modal>
       {/* <VoiceConversationModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} /> */}
+      
+      {/* Financial Health Quiz Modal */}
+      <Modal
+        isOpen={isQuizModalOpen}
+        onClose={() => setIsQuizModalOpen(false)}
+        title="Financial Health Assessment"
+        description="Complete this assessment to get personalized financial advice"
+        width="wide"
+        fullHeight={true}
+        disableOverlayClick
+      >
+        {user && (
+          <FinancialHealthQuiz
+            user={user}
+            onDashboardCreated={handleQuizComplete}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import quizCardImage from "@/assets/images/lessons/jury-voting.png";
 import { LessonCardTitle } from "./lesson-card-title";
+import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 
 export // Content display component for flashcard-style content
 function ContentDisplay({
@@ -92,7 +93,9 @@ function ContentDisplay({
             {/* Content blocks */}
             <div className="space-y-4">
               {!isQuizTransition &&
-                content.content&&<ReactMarkdown>{content.content}</ReactMarkdown>
+                content.content&&        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} >{content.content}</ReactMarkdown>
+              </article>
               }
             </div>
 

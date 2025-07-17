@@ -257,13 +257,14 @@ export async function getAIResponseFromEdge(
   supabase: SupabaseClient,
   prompt: string,
   history: any[],
-  userId?: string
+  userId?: string,
+  userProfile: string
 ): Promise<AIResponse> {
   try {
-    console.log('Sending request to chat_stream function with body:', { message: prompt, history , userId });
+    console.log('Sending request to chat_stream function with body:', { message: prompt, history , userId, userProfile: userProfile ? 'Profile provided' : 'No profile' });
     const { data, error } = await supabase.functions.invoke('chat_stream', {
       method: 'POST',
-      body: { message: prompt, history, userId }
+      body: { message: prompt, history, userId, userProfile }
       // Supabase will handle JSON serialization and headers automatically
     });
     if (error) throw error;
@@ -304,6 +305,7 @@ export async function getPredictedResponses(
   history: any[]
 ): Promise<string[]> {
   try {
+    console.log(message)
     const { data, error } = await supabase.functions.invoke('predict-user-responses', {
       method: 'POST',
       body: { message, history }

@@ -5,24 +5,37 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCoffee,
   faCalendarDays,
-  faChartLine,
   faHome,
-  faEuroSign,
   faCalculator,
-  faClock,
   faArrowRight,
-  faGraduationCap,
   faUser,
-  faChartBar,
   faInfoCircle,
   faCoins,
+  faDollarSign,
+  faUtensils,
+  faGamepad,
+  faPiggyBank,
+  faMagic,
+  faLightbulb,
+  faPercent,
 } from "@fortawesome/free-solid-svg-icons";
 import { Widget } from "./Widget";
-import { IBaseWidget } from "../types/dashboard-data.typings";
+import { IDailyHabitCalculatorWidget, IPensionHeadStartWidget, IMortgageDepositTimelineWidget, ISalarySlicerWidget } from "../types/dashboard-data.typings";
 import RangeSlider from "@/components/ui/RangeSlider";
+import { 
+  Chart as ChartJS, 
+  ArcElement, 
+  Tooltip, 
+  Legend,
+  ChartOptions 
+} from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+// Register ChartJS components for pie chart
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 // Daily Habit Future Value Calculator
-export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) {
+export function DailyHabitCalculatorWidget({ widget }: { widget: IDailyHabitCalculatorWidget }) {
   const [dailySpend, setDailySpend] = useState(5);
   const [timeframe, setTimeframe] = useState(20);
   
@@ -111,7 +124,7 @@ export function DailyHabitCalculatorWidget({ widget }: { widget: IBaseWidget }) 
 }
 
 // 401(k) Head Start Visualizer
-export function PensionHeadStartWidget({ widget }: { widget: IBaseWidget }) {
+export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWidget }) {
   const [startAge, setStartAge] = useState(25);
   const [annualSalary, setAnnualSalary] = useState(60000);
   const [includeMatch, setIncludeMatch] = useState(true);
@@ -287,7 +300,7 @@ export function PensionHeadStartWidget({ widget }: { widget: IBaseWidget }) {
 }
 
 // Mortgage Down Payment Timeline
-export function MortgageDepositTimelineWidget({ widget }: { widget: IBaseWidget }) {
+export function MortgageDepositTimelineWidget({ widget }: { widget: IMortgageDepositTimelineWidget }) {
   const [homePrice, setHomePrice] = useState(350000);
   const [monthlySavings, setMonthlySavings] = useState(800);
   const [downPaymentPercentage, setDownPaymentPercentage] = useState(10);
@@ -459,6 +472,222 @@ export function MortgageDepositTimelineWidget({ widget }: { widget: IBaseWidget 
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             Based on US mortgage requirements
           </p>
+        </div>
+      </div>
+    </Widget>
+  );
+}
+
+// Salary Slicer - Interactive Budget Allocation Widget
+export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) {
+  const [monthlyIncome, setMonthlyIncome] = useState(4000);
+  const [showInsight, setShowInsight] = useState(false);
+  
+  // Budget categories with default percentages
+  const [budget, setBudget] = useState({
+    housing: 30,
+    food: 15,
+    transportation: 10,
+    fun: 20,
+    savings: 15,
+    other: 10
+  });
+
+  const categories = [
+    { key: 'housing', label: 'Housing', icon: faHome, color: 'rgba(59, 130, 246, 0.8)' },
+    { key: 'food', label: 'Food', icon: faUtensils, color: 'rgba(16, 185, 129, 0.8)' },
+    { key: 'transportation', label: 'Transportation', icon: faCalculator, color: 'rgba(245, 158, 11, 0.8)' },
+    { key: 'fun', label: 'Fun & Entertainment', icon: faGamepad, color: 'rgba(239, 68, 68, 0.8)' },
+    { key: 'savings', label: 'Savings', icon: faPiggyBank, color: 'rgba(139, 92, 246, 0.8)' },
+    { key: 'other', label: 'Other', icon: faCoins, color: 'rgba(156, 163, 175, 0.8)' }
+  ];
+
+  // Calculate dollar amounts
+  const getDollarAmount = (percentage: number) => {
+    return Math.round((percentage / 100) * monthlyIncome);
+  };
+
+  // Handle slider changes while maintaining 100% constraint
+  const handleSliderChange = (category: string, newValue: number) => {
+    const currentTotal = Object.values(budget).reduce((sum, val) => sum + val, 0);
+    const currentValue = budget[category as keyof typeof budget];
+    const difference = newValue - currentValue;
+    
+    // If increasing this category, decrease others proportionally
+    if (difference > 0) {
+      const otherCategories = Object.keys(budget).filter(key => key !== category);
+      const otherTotal = currentTotal - currentValue;
+      
+      if (otherTotal > 0) {
+        const newBudget = { ...budget };
+        newBudget[category as keyof typeof budget] = newValue;
+        
+        // Distribute the reduction proportionally among other categories
+        const reductionFactor = (100 - newValue) / otherTotal;
+        
+        otherCategories.forEach(key => {
+          newBudget[key as keyof typeof budget] = Math.max(0, Math.round(budget[key as keyof typeof budget] * reductionFactor));
+        });
+        
+        // Ensure total equals 100%
+        const newTotal = Object.values(newBudget).reduce((sum, val) => sum + val, 0);
+        if (newTotal !== 100) {
+          newBudget.other = Math.max(0, newBudget.other + (100 - newTotal));
+        }
+        
+        setBudget(newBudget);
+      }
+    } else {
+      // If decreasing this category, distribute the increase to others
+      const newBudget = { ...budget };
+      newBudget[category as keyof typeof budget] = newValue;
+      
+      const increase = Math.abs(difference);
+      const otherCategories = Object.keys(budget).filter(key => key !== category);
+      const increasePerCategory = Math.floor(increase / otherCategories.length);
+      const remainder = increase % otherCategories.length;
+      
+      otherCategories.forEach((key, index) => {
+        newBudget[key as keyof typeof budget] += increasePerCategory + (index < remainder ? 1 : 0);
+      });
+      
+      setBudget(newBudget);
+    }
+  };
+
+  // Generate insight based on budget allocation
+  const generateInsight = () => {
+    const savingsAmount = getDollarAmount(budget.savings);
+    
+    if (budget.fun > 15) {
+      // Calculate the exact dollar amount if shifting 2% from Fun to Savings
+      const twoPercentOfIncome = getDollarAmount(2); // 2% of monthly income
+      const annualSavingsIncrease = twoPercentOfIncome * 12;
+      return (
+        <span>
+          By shifting just <span className="text-primary font-bold">2%</span> from 'Fun' to 'Savings,' you'd add an extra{' '}
+          <span className="text-primary font-bold">${Math.round(annualSavingsIncrease)}</span> to your annual savings!
+        </span>
+      );
+    } else if (budget.savings < 20) {
+      // Calculate the exact increase to get to 20% savings
+      const targetSavingsAmount = getDollarAmount(20);
+      const annualIncrease = (targetSavingsAmount - savingsAmount) * 12;
+      return (
+        <span>
+          Increasing your savings rate to <span className="text-primary font-bold">20%</span> would add{' '}
+          <span className="text-primary font-bold">${Math.round(annualIncrease)}</span> to your annual savings!
+        </span>
+      );
+    } else {
+      // Congratulate them on their good savings rate
+      const annualSavings = savingsAmount * 12;
+      return (
+        <span>
+          Great job! You're saving <span className="text-primary font-bold">{budget.savings}%</span> of your income - that's{' '}
+          <span className="text-primary font-bold">${Math.round(annualSavings)}</span> annually!
+        </span>
+      );
+    }
+  };
+
+  // Prepare chart data
+  const chartData = {
+    labels: categories.map(cat => cat.label),
+    datasets: [{
+      data: categories.map(cat => budget[cat.key as keyof typeof budget]),
+      backgroundColor: categories.map(cat => cat.color),
+      borderColor: categories.map(cat => cat.color.replace('0.8', '1')),
+      borderWidth: 2,
+    }]
+  };
+
+  const chartOptions: ChartOptions<'pie'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const percentage = context.parsed;
+            const amount = getDollarAmount(percentage);
+            return `${context.label}: ${percentage}% ($${amount.toLocaleString()})`;
+          }
+        }
+      }
+    }
+  };
+
+  return (
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="">       
+        {/* Monthly Income Input */}
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <RangeSlider
+                label="Monthly Take-Home Pay"
+                value={monthlyIncome}
+                onChange={(value) => setMonthlyIncome(Number(value))}
+                min={500}
+                max={20000}
+                step={100}
+                formatValue={(value) => `$${Number(value).toLocaleString()}`}
+                className="mb-4"
+              />
+            </div>
+          </div>        
+        </div>
+
+       
+
+        {/* Pie Chart */}
+        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+          <div className="h-32 w-full flex items-center justify-center">
+            <Pie data={chartData} options={chartOptions} />
+          </div>
+        </div>
+
+        {/* Budget Sliders */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium mt-2 text-center">
+          {generateInsight()}
+          </h4>
+          <div className="grid grid-cols-2 gap-4">
+            {categories.map((category) => (
+              <div key={category.key} className="space-y-2">             
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                   <div className="flex items-center space-x-2">
+                    <FontAwesomeIcon icon={category.icon} className="text-slate-600 dark:text-slate-400" />
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      {category.label} {budget[category.key as keyof typeof budget]}%
+                    </span>
+                  </div>  
+                  </span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                    ${getDollarAmount(budget[category.key as keyof typeof budget]).toLocaleString()}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max="60"
+                    value={budget[category.key as keyof typeof budget]}
+                    onChange={(e) => handleSliderChange(category.key, Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${budget[category.key as keyof typeof budget] * 100/60}%, #e2e8f0 ${budget[category.key as keyof typeof budget] * 100/60}%, #e2e8f0 100%)`
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </Widget>

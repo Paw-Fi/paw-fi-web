@@ -26,7 +26,8 @@ import { TipCardWidget } from "./tip-card-widget";
 import { 
   DailyHabitCalculatorWidget, 
   PensionHeadStartWidget, 
-  MortgageDepositTimelineWidget 
+  MortgageDepositTimelineWidget, 
+  SalarySlicerWidget
 } from "./PlaygroundWidgets";
 
 interface WidgetFactoryProps {
@@ -82,6 +83,8 @@ export function WidgetFactory({ widget, controls }: WidgetFactoryProps) {
       return renderWidget(ChecklistWidget);
     case 'dailyHabitCalculator':
       return renderWidget(DailyHabitCalculatorWidget);
+    case 'salarySlicer':
+      return renderWidget(SalarySlicerWidget);
     case 'pensionHeadStart':
       return renderWidget(PensionHeadStartWidget);
     case 'mortgageDepositTimeline':

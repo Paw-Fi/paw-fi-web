@@ -53,11 +53,24 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
-    const { message, history } = requestData;
+    const { message, history, userProfile, userId } = requestData;
     console.log("requestData", requestData)
+    if (userProfile) {
+      console.log("User profile provided for personalized response");
+    }
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if user is authenticated but has no profile
+    if (userId && !userProfile) {
+      console.log("User is authenticated but has no financial profile - prompting to complete questionnaire");
+      const profilePromptMessage = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+      
+      return new Response(JSON.stringify({ response: profilePromptMessage }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -120,11 +133,17 @@ serve(async (req: Request): Promise<Response> => {
       return jsonEnd !== -1;
     }
 
+    // Construct system instruction with user profile if available
+    let systemInstruction = AI_PROMPT;
+    if (userProfile) {
+      systemInstruction = `${AI_PROMPT}\n\n${userProfile}`;
+    }
+
     // Initial generation
     let result = await model.generateContent(
       {
         contents,
-        systemInstruction: AI_PROMPT,
+        systemInstruction: systemInstruction,
       },
       generationConfig,
     );
@@ -159,7 +178,7 @@ serve(async (req: Request): Promise<Response> => {
       const continuationResult = await model.generateContent(
         {
           contents: continuationContents,
-          systemInstruction: AI_PROMPT,
+          systemInstruction: systemInstruction,
         },
         generationConfig,
       );

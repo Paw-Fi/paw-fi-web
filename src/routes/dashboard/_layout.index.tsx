@@ -7,7 +7,6 @@ import {
   faCheck,
   faChevronDown,
   faExclamationTriangle,
-  faHeartPulse,
   faLightbulb,
   faPencilAlt,
   faPlus,
@@ -30,12 +29,10 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { useCookie } from "@/utils/use-cookie";
 import { Modal } from "@/components/ui/modal";
 import { Widget } from "@/components/profile/types/dashboard-data.typings";
-import FinancialHealthQuiz from "@/components/financial-health/FinancialHealthQuiz";
-import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
-import { ChatPopup } from "@/components/dashboard-chat/ChatPopup";
 import FinancialHealthFinetune from "@/components/financial-health/FinancialHealthFinetune"; // Import Finetune component
 import classNames from "classnames";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
+import { EmptyStatePrompt } from "@/components/ui/empty-state-prompt";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: Profile,
@@ -277,22 +274,9 @@ function Profile() {
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
           </div>
         ) : status === "no_views" ? (
-          <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center max-w-md ">
-              <FontAwesomeIcon icon={faHeartPulse} className="text-primary text-4xl mb-4" />
-              <h2 className="mb-3 text-2xl font-semibold text-gray-800">
-                No Portfolio Views Yet
-              </h2>
-              <p className="mb-6 text-gray-600">
-                Get a personalized financial portfolio by answering a few questions about your financial situation and goals.
-              </p>
-              <button
-                onClick={() => setShowFinancialHealthQuiz(true)}
-                className="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-secondary transition-colors shadow-md flex items-center justify-center w-full"
-              >
-                <FontAwesomeIcon icon={faLightbulb} className="mr-2" />
-                Take Financial Health Quiz
-              </button>
+          <div className="flex h-full w-full items-center justify-center px-4 py-12">
+            <div className="w-full max-w-4xl">
+              <EmptyStatePrompt type="portfolio" />
             </div>
           </div>
         ) : status === "failed" ? (
@@ -509,17 +493,7 @@ function Profile() {
         confirmText="Discard Changes"
         cancelText="Continue Editing"
       />
-
-      {/* Financial Health Quiz Modal */}
-      <Modal
-      isOpen={showFinancialHealthQuiz}
-      width="wide"
-      disableOverlayClick
-      onClose={() => setShowFinancialHealthQuiz(false)}
-      >
-      <FinancialHealthQuiz onDashboardCreated={handleHealthQuizCompleted}/>
-      </Modal>               
-      
+    
 
       {/* Click outside handler for view dropdown */}
       {isViewDropdownOpen && (
