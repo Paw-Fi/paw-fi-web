@@ -757,6 +757,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         });
       } finally {
         setIsLoading(false);
+        setIsSendingMessage(false);
         setLoadingMessage("Moneko is thinking...");
         setLoadingDuration(0);
         if (loadingTimerRef.current) {
@@ -855,10 +856,11 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         setTimeout(() => scrollToBottom(), 100);
         // Save assistant message to database (do not refetch after)
         await addMessageMutation.mutateAsync(assistantMessage);
-        setIsSendingMessage(false);
       } catch (aiError) {
         console.error("Error getting AI response:", aiError);
         throw aiError; // Propagate to outer catch block
+      } finally {
+        setIsSendingMessage(false);
       }
     } catch (error) {
       console.error("Error getting AI response or saving message:", error);
@@ -881,6 +883,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       // No need to save this particular client-side error message to DB usually
     } finally {
       setIsLoading(false);
+      setIsSendingMessage(false);
       setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
 
@@ -952,6 +955,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     ],
   );
 
+
   // Fetch suggested responses when the last message is from the assistant
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -983,7 +987,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
   // Handle clicking on a suggestion button
   const handleSuggestionClick = (suggestion: string) => {
-    
     setSuggestedResponses([]);
     
     // Instantly send the message
