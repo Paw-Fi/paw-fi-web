@@ -172,7 +172,7 @@ function PricingPage() {
   const handleSubscribe = async (plan: string) => {
     try {
       if (plan === "premium") {
-        window.open("https://moneko.io/#waitlistform", "_blank");
+        navigate({ to: "/early-access" });
         return;
       }
       setIsLoading(true);
@@ -185,7 +185,7 @@ function PricingPage() {
 
       if (!userId) {
         toast.error("Please sign in to subscribe");
-        navigate({ to: "/login" });
+        navigate({ to: "/login",search:{redirect:"/pricing"} });
         setIsLoading(false);
         return;
       }

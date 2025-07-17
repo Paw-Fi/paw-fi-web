@@ -157,6 +157,25 @@ export const DashboardBlockModal = () => {
           </motion.div>
         </div>
 
+        {/* Free Trial Banner */}
+        <motion.div
+          className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          <div className="text-center">
+            <div className="text-2xl mb-2">🚀</div>
+            <div className="text-lg font-bold text-green-600 dark:text-green-400 mb-1">
+              FREE TRIAL AVAILABLE
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              We're currently offering a <span className="font-bold text-primary">free trial</span> to the first{' '}
+              <span className="font-bold text-primary">100 users</span>!
+            </div>
+          </div>
+        </motion.div>
+
         <motion.h2
           className="mb-4 text-center bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
           initial={{ opacity: 0 }}
@@ -201,14 +220,15 @@ export const DashboardBlockModal = () => {
         </motion.div>
 
         <motion.div
-          className="flex justify-center"
+          className="flex justify-center items-center flex-col space-x-4"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.5 }}
         >
-          <Link to={config.ctaLink} search={!user ? { redirect: "/dashboard" } : undefined} className="group w-full sm:w-auto">
+          {/* Primary CTA - Get Early Access */}
+          <Link to="/early-access" className="group w-full sm:w-auto">
             <motion.div
-              className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
+              className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
               whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.98 }}
               transition={{
@@ -217,14 +237,21 @@ export const DashboardBlockModal = () => {
                 damping: 25,
               }}
             >
-              <FontAwesomeIcon
-                className="h-5 w-5"
-                icon={faSignInAlt}
-              />
               <span className="text-lg font-medium">
-                {config.ctaText}
+                Get Early Access
+              </span>
+              <span className="text-sm bg-white/20 px-2 py-1 rounded-full">
+                FREE
               </span>
             </motion.div>
+          </Link>
+          
+          {/* Secondary CTA - Original Action */}
+          <Link to={config.ctaLink} search={!user ? { redirect: "/dashboard" } : undefined} className="group">
+                 
+              <span className="text-sm font-medium mt-2 underline">
+                {config.ctaText}
+              </span>
           </Link>
         </motion.div>
       </motion.div>
