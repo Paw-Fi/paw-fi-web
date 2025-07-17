@@ -134,6 +134,14 @@ export const createConversation = async (
   initialMessages: Message[] = []
 ): Promise<Conversation> => {
   try {
+    // Get the session token for authorization
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
     const { data, error } = await supabase.functions.invoke('chat_sessions', {
       method: 'POST',
       body: {
@@ -141,7 +149,8 @@ export const createConversation = async (
         messages: initialMessages
       },
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -258,15 +267,48 @@ export async function getAIResponseFromEdge(
   prompt: string,
   history: any[],
   userId?: string,
-  userProfile: string
+  userProfile?: string
 ): Promise<AIResponse> {
   try {
-    console.log('Sending request to chat_stream function with body:', { message: prompt, history , userId, userProfile: userProfile ? 'Profile provided' : 'No profile' });
-    const { data, error } = await supabase.functions.invoke('chat_stream', {
-      method: 'POST',
-      body: { message: prompt, history, userId, userProfile }
-      // Supabase will handle JSON serialization and headers automatically
+    // Get the session token for authorization if user is authenticated
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    // Debug logging
+    console.log('getAIResponseFromEdge called with:', { 
+      prompt: prompt, 
+      promptLength: prompt?.length, 
+      promptType: typeof prompt,
+      history: history?.length || 0, 
+      userId, 
+      userProfile: userProfile ? 'Profile provided' : 'No profile' 
     });
+
+    if (!prompt || prompt.trim() === '') {
+      console.error('Empty prompt passed to getAIResponseFromEdge');
+      return {
+        response: "I'm sorry, I didn't receive your message. Please try again.",
+        isComplete: true
+      };
+    }
+    
+    const requestBody = { message: prompt, history, userId, userProfile };
+    console.log('Sending to chat_stream:', requestBody);
+    
+    // Use the same pattern as the working addMessage function
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if we have a token (for authenticated users)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const { data, error } = await supabase.functions.invoke('chat_stream', {
+      body: requestBody,
+      headers: Object.keys(headers).length > 0 ? headers : undefined
+    });
+    
+    console.log('Response from chat_stream:', { data, error });
     if (error) throw error;
     return data as AIResponse;
   } catch (error: any) {

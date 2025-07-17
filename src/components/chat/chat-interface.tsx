@@ -89,11 +89,21 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   }
   // Initialize messages state with empty array for SSR
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
+
+  const isAuthenticated = !!user;
+
   
   // Load messages from localStorage after component mounts
   useEffect(() => {
-    loadGuestMessages();
-  }, []);
+    const savedMessages = loadGuestMessages();
+    setLocalMessages(savedMessages);
+    
+    // For guest users, also set the main messages state from cookies
+    if (!isAuthenticated) {
+      setMessages(savedMessages);
+    }
+  }, [isAuthenticated]);
   
   
   
@@ -169,8 +179,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   // Track guest messages separately for merging
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
-  const { user } = useAuth();
-  const isAuthenticated = !!user;
   
   // Load financial health profile for authenticated users
   const { profile, isLoading: isProfileLoading, error: profileError, hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
@@ -204,12 +212,16 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     // Only proceed if there's an initial question and we haven't processed it yet
     if (initialQuestion && !hasProcessedInitialQuestion && guestSessionId) {
       setHasProcessedInitialQuestion(true); // Mark as processed immediately
-      handleCreateConversationAndSendMessage(
-        user?.id || guestSessionId,
-        initialQuestion
-      );
+      
+      if (isAuthenticated && user?.id) {
+        // For authenticated users, create a conversation
+        handleCreateConversationAndSendMessage(user.id, initialQuestion);
+      } else {
+        // For guest users, use the regular send message flow (guest flow)
+        handleSendMessage(initialQuestion);
+      }
     }
-  }, [initialQuestion, guestSessionId, hasProcessedInitialQuestion, user?.id]);
+  }, [initialQuestion, guestSessionId, hasProcessedInitialQuestion, user?.id, isAuthenticated]);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
