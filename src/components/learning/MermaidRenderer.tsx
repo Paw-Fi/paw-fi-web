@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import { supabase } from '@/lib/supabase';
 import './mermaid-styles.css';
 
 // Initialize mermaid with stable configuration
@@ -24,10 +25,13 @@ interface MermaidRendererProps {
   id: string;
   content: string;
   caption?: string;
+  questionId?: string;
 }
 
-export default function MermaidRenderer({ id, content, caption }: MermaidRendererProps) {
+export default function MermaidRenderer({ id, content, caption, questionId }: MermaidRendererProps) {
   const diagramRef = useRef<HTMLDivElement>(null);
+  const [isFixing, setIsFixing] = useState(false);
+  const [currentContent, setCurrentContent] = useState(content);
 
   // Render the mermaid diagram
   const renderMermaid = async (source: string, elementId: string) => {
@@ -128,7 +132,14 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
         }
       } catch (error) {
         if (diagramRef.current) {
-          diagramRef.current.innerHTML = '<div class="text-red-500">Failed to render diagram</div>';
+          // If we have a questionId, try to fix the malformed code
+          if (questionId && !isFixing) {
+            setIsFixing(true);
+            diagramRef.current.innerHTML = '<div class="flex items-center justify-center p-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>';
+            await fixMalformedCode(currentContent, questionId);
+          } else {
+            diagramRef.current.innerHTML = '<div class="text-red-500">Failed to render diagram</div>';
+          }
         }
       }
     };
@@ -140,7 +151,36 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
         diagramRef.current.innerHTML = '';
       }
     };
-  }, [id, content]);
+  }, [id, currentContent, isFixing, questionId]);
+
+  // Function to fix malformed mermaid code
+  const fixMalformedCode = async (malformedCode: string, qId: string) => {
+    try {
+      // Call the fix-mermaid-code function
+      const { data, error } = await supabase.functions.invoke('fix-mermaid-code', {
+        body: { 
+          mermaidCode: malformedCode,
+          questionId: qId
+        }
+      });
+
+      if (error) {
+        console.error('Error fixing mermaid code:', error);
+        setIsFixing(false);
+        return;
+      }
+
+      if (data?.success && data?.fixedCode) {
+        console.log('Successfully fixed mermaid code');
+        // Update the current content to trigger re-render
+        setCurrentContent(data.fixedCode);
+      }
+    } catch (error) {
+      console.error('Error in fixMalformedCode:', error);
+    } finally {
+      setIsFixing(false);
+    }
+  };
 
   // No hover handlers or modal functionality
 
