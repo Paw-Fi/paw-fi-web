@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -34,6 +34,9 @@ import { BetaPill } from "../ui/beta-pill";
 import { FinancialHealthQuiz } from "@/components/financial-health/FinancialHealthQuiz";
 
 const INITIAL_SUGGESTIONS = ["Start"];
+const MAX_TIME_TO_SHOW_LOADING = 9;
+const MAX_GUEST_MESSAGES = 100; // Limit guest messages to prevent cookie overflow
+const MESSAGE_MERGE_BATCH_SIZE = 10; // Batch size for merging messages
 
 interface Message {
   content: string;
@@ -43,98 +46,152 @@ interface Message {
   userId?: string;
   metadata?: Record<string, any>;
 }
-const MAX_TIME_TO_SHOW_LOADING = 9;
 
 interface ChatInterfaceProps {
   initialQuestion?: string;
 }
 
-export const iconContainer=(size:string="size-8")=>{
-  return(
+export const iconContainer = (size: string = "size-8") => {
+  return (
     <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-    <img src={logo} alt="Moneko AI" className={size} />
-  </div>
-  )
-}
+      <img src={logo} alt="Moneko AI" className={size} />
+    </div>
+  );
+};
 
 export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([]);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
-  const [hasProcessedInitialQuestion, setHasProcessedInitialQuestion] = useState(false);
   const { getCookie, setCookie } = useCookie();
   const [isVoiceModalOpen, setVoiceModalOpen] = useState(false);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
-  // --- Guest Conversation Utilities ---
-  // State for client values with consistent initial SSR values
-  const [guestSessionId, setGuestSessionId] = useState("");
+    // Initialize query client for React Query
+    const queryClient = useQueryClient();
+
+      // Initialize messages state with empty array for SSR
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthenticated = !!user;
+
+    // --- Guest Conversation Utilities ---
+    const [guestSessionId, setGuestSessionId] = useState("");
+    const [isClientInitialized, setIsClientInitialized] = useState(false);
+  
+  
+    // Fetch all conversations
+    const { 
+      data: conversationsData,
+      isLoading: isConversationsLoading,
+      refetch: refetchConversations,
+      error: conversationsError
+    } = useQuery({
+      queryKey: ['conversations'],
+      queryFn: () => fetchConversations(supabase),
+      enabled: isAuthenticated && isClientInitialized,
+      staleTime: 30000,
+      retry: 3,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    });
+
+
+  
+  // Error states for better UX
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   
   // Initialize client-side values after hydration
   useEffect(() => {
-    // This will only run on the client after hydration
+    if (typeof window === "undefined") return;
+    
     let id = getCookie("paw-fi-guest-session-id");
     if (!id) {
       id = crypto.randomUUID();
       setCookie("paw-fi-guest-session-id", id, { days: 365, path: "/", sameSite: "Lax" });
     }
     setGuestSessionId(id);
-  }, []);
+    setIsClientInitialized(true);
+  }, [getCookie, setCookie]);
   
-  function getGuestSessionId(): string {
+  const getGuestSessionId = useCallback((): string => {
     return guestSessionId;
-  }
-  function guestMessagesKey() {
+  }, [guestSessionId]);
+  
+  const guestMessagesKey = useCallback(() => {
     return `paw-fi-guest-messages-${getGuestSessionId()}`;
-  }
-  // Initialize messages state with empty array for SSR
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
-  const { user } = useAuth();
+  }, [getGuestSessionId]);
+  
 
-  const isAuthenticated = !!user;
-
+  // Track initialization states
+  const [hasLoadedInitialMessages, setHasLoadedInitialMessages] = useState(false);
+  const [hasProcessedUrlQuery, setHasProcessedUrlQuery] = useState(false);
   
-  // Load messages from localStorage after component mounts
-  useEffect(() => {
-    const savedMessages = loadGuestMessages();
-    setLocalMessages(savedMessages);
-    
-    // For guest users, also set the main messages state from cookies
-    if (!isAuthenticated) {
-      setMessages(savedMessages);
-    }
-  }, [isAuthenticated]);
+  // Function to compress and decompress messages for cookie storage
+  const compressMessages = (messages: Message[]): string => {
+    // Simple compression: store only essential fields
+    const compressed = messages.map(m => ({
+      c: m.content,
+      r: m.role === "user" ? "u" : "a",
+      t: Math.floor(m.timestamp / 1000), // Store seconds instead of milliseconds
+      m: m.metadata
+    }));
+    return JSON.stringify(compressed);
+  };
   
-  
-  
-  function loadGuestMessages(): Message[] {
-    // During SSR or initial render, return the state
-    if (typeof window === "undefined") return localMessages;
+  const decompressMessages = (compressed: string): Message[] => {
     try {
-      const raw = getCookie(guestMessagesKey());
-      return raw ? JSON.parse(raw) : [];
+      const parsed = JSON.parse(compressed);
+      return parsed.map((m: any) => ({
+        content: m.c,
+        role: m.r === "u" ? "user" : "assistant",
+        timestamp: m.t * 1000,
+        chat_session_id: getGuestSessionId(),
+        metadata: m.m
+      }));
     } catch {
       return [];
     }
-  }
-  function saveGuestMessages(messages: Message[]) {
-    // Update local state first for consistent UI
+  };
+  
+  const loadGuestMessages = useCallback((): Message[] => {
+    if (typeof window === "undefined") return localMessages;
+    try {
+      const raw = getCookie(guestMessagesKey());
+      return raw ? decompressMessages(raw) : [];
+    } catch (error) {
+      console.error("Error loading guest messages:", error);
+      return [];
+    }
+  }, [getCookie, guestMessagesKey, localMessages]);
+  
+  const saveGuestMessages = useCallback((messages: Message[]) => {
     setLocalMessages(messages);
     
-    // Skip localStorage operations during SSR
     if (typeof window === "undefined") return;
     
     try {
-      setCookie(guestMessagesKey(), JSON.stringify(messages), { days: 365, path: "/", sameSite: "Lax" });
+      // Limit the number of messages to prevent cookie overflow
+      const messagesToSave = messages.slice(-MAX_GUEST_MESSAGES);
+      const compressed = compressMessages(messagesToSave);
+      
+      // Check if compressed size is reasonable (cookies have ~4KB limit)
+      if (compressed.length > 3500) {
+        // If still too large, save fewer messages
+        const fewerMessages = messagesToSave.slice(-Math.floor(MAX_GUEST_MESSAGES / 2));
+        setCookie(guestMessagesKey(), compressMessages(fewerMessages), { days: 365, path: "/", sameSite: "Lax" });
+      } else {
+        setCookie(guestMessagesKey(), compressed, { days: 365, path: "/", sameSite: "Lax" });
+      }
     } catch (error) {
       console.error("Error saving guest messages:", error);
+      setConnectionError("Failed to save chat history. Some messages may be lost.");
     }
-  }
-  function clearGuestMessages() {
-    // Update local state first for consistent UI
+  }, [guestMessagesKey, setCookie]);
+  
+  const clearGuestMessages = useCallback(() => {
     setLocalMessages([]);
     
-    // Skip cookie operations during SSR
     if (typeof window === "undefined") return;
     
     try {
@@ -142,86 +199,54 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     } catch (error) {
       console.error("Error clearing guest messages:", error);
     }
-  }
+  }, [guestMessagesKey, setCookie]);
+  
+  // Load messages from localStorage after component mounts
+  useEffect(() => {
+    if (!isClientInitialized || hasLoadedInitialMessages) return;
+    
+    const savedMessages = loadGuestMessages();
+    setLocalMessages(savedMessages);
+    
+    // For guest users, set the main messages state from cookies
+    if (!isAuthenticated && !isAuthLoading) {
+      setMessages(savedMessages);
+      setHasLoadedInitialMessages(true);
+    }
+    // For authenticated users, mark as loaded if no conversations exist
+    else if (isAuthenticated && !isAuthLoading && !isConversationsLoading) {
+      if (!conversationsData || conversationsData.length === 0) {
+        setHasLoadedInitialMessages(true);
+      }
+    }
+  }, [isAuthenticated, isAuthLoading, isClientInitialized, hasLoadedInitialMessages, loadGuestMessages, isConversationsLoading, conversationsData]);
   
   // Server-stable timestamp to prevent hydration mismatches
-  const [baseTimestamp] = useState(() => {
-    // Use a consistent timestamp during SSR and initial client render
-    return 1717000000000; // Fixed timestamp for SSR (May 30, 2024)
-  });
-  
-  // Get a timestamp that's consistent between server and client
-  // but still provides relative time differences for sorting
-  function getConsistentTimestamp(): number {
+  const getConsistentTimestamp = useCallback((): number => {
     if (typeof window === "undefined") {
-      // During SSR, use the base timestamp + a small increment for ordering
-      return baseTimestamp;
+      return 1717000000000; // Fixed timestamp for SSR
     }
-    // On client after hydration, use real timestamps
     return Date.now();
-  }
+  }, []);
 
-  function acquireMergeLock(): boolean {
+  const acquireMergeLock = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
     const now = getConsistentTimestamp();
     const lockKey = "paw-fi-chat-merge-lock";
     const lockVal = getCookie(lockKey);
-    if (lockVal && now - parseInt(lockVal, 10) < 10000) return false; // 10s lock
+    if (lockVal && now - parseInt(lockVal, 10) < 10000) return false;
     setCookie(lockKey, now.toString(), { days: 1, path: "/", sameSite: "Lax" });
     return true;
-  }
-  function releaseMergeLock() {
+  }, [getCookie, setCookie, getConsistentTimestamp]);
+  
+  const releaseMergeLock = useCallback(() => {
     if (typeof window === "undefined") return;
     setCookie("paw-fi-chat-merge-lock", "", { days: -1, path: "/", sameSite: "Lax" });
-  }
+  }, [setCookie]);
+  
   const navigate = useNavigate();
   
   const [messages, setMessages] = useState<Message[]>([]);
-  // Track guest messages separately for merging
-  const [guestMessages, setGuestMessages] = useState<Message[]>([]);
-  
-  // Load financial health profile for authenticated users
-  const { profile, isLoading: isProfileLoading, error: profileError, hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
-  
-  // Track merge state to avoid duplicate merges
-  const [hasMergedGuest, setHasMergedGuest] = useState(false);
-  // Track if a guest-to-auth merge is in progress
-  const [isMergingGuestToAuth, setIsMergingGuestToAuth] = useState(false);
-
-  // Helper: Only clear guest messages after merged messages are fetched and displayed
-  useEffect(() => {
-    if (
-      isMergingGuestToAuth &&
-      messages.length > 0 &&
-      guestMessages.length > 0
-    ) {
-      // Merge is complete and merged messages are now displayed, safe to clear guest messages
-      clearGuestMessages();
-      setGuestMessages([]);
-      setIsMergingGuestToAuth(false);
-    }
-  }, [isMergingGuestToAuth, messages, guestMessages]);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
-  const [loadingDuration, setLoadingDuration] = useState(0);
-  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Handle initial question if provided
-  useEffect(() => {
-    // Only proceed if there's an initial question and we haven't processed it yet
-    if (initialQuestion && !hasProcessedInitialQuestion && guestSessionId) {
-      setHasProcessedInitialQuestion(true); // Mark as processed immediately
-      
-      if (isAuthenticated && user?.id) {
-        // For authenticated users, create a conversation
-        handleCreateConversationAndSendMessage(user.id, initialQuestion);
-      } else {
-        // For guest users, use the regular send message flow (guest flow)
-        handleSendMessage(initialQuestion);
-      }
-    }
-  }, [initialQuestion, guestSessionId, hasProcessedInitialQuestion, user?.id, isAuthenticated]);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [pendingLessonJson, setPendingLessonJson] = useState<any>(null);
   const [recommendedCourse, setRecommendedCourse] = useState<any>(null);
@@ -229,49 +254,23 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-
-  function handleScroll() {
-    const container = chatContainerRef.current;
-    if (!container) return;
-    const threshold = 100; // px from bottom
-    const atBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      threshold;
-    setAutoScroll(atBottom);
-  }
-
-  // Scroll to bottom helper
-  function scrollToBottom() {
-    if (chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      // Use smooth scrolling behavior
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-
-    // Also ensure the messagesEndRef is scrolled into view smoothly
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }
-
-  // Initialize query client for React Query
-  const queryClient = useQueryClient();
   
-  // Fetch all conversations
-  const { 
-    data: conversationsData,
-    isLoading: isConversationsLoading,
-    refetch: refetchConversations
-  } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => fetchConversations(supabase),
-    enabled: isAuthenticated,
-    staleTime: 30000, // 30 seconds
-  });
+  // Loading states
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
+  const [loadingDuration, setLoadingDuration] = useState(0);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Load financial health profile for authenticated users
+  const { profile, isLoading: isProfileLoading, error: profileError, hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
+  
+  // Track merge state
+  const [hasMergedGuest, setHasMergedGuest] = useState(false);
+  const [isMergingGuestToAuth, setIsMergingGuestToAuth] = useState(false);
+  const mergeRetryCount = useRef(0);
+  const MAX_MERGE_RETRIES = 3;
+
+
   
   const conversations = useMemo(
     () => conversationsData || [],
@@ -279,11 +278,12 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   );
 
   const currentConversationId = useMemo(() => {
-    // Attempt to get from localStorage first, then fallback to first in list
-    const storedConvId =
-      typeof window !== "undefined"
-        ? localStorage.getItem("paw-fi-current-conversation")
-        : null;
+    if (!conversations.length) return null;
+    
+    const storedConvId = typeof window !== "undefined"
+      ? localStorage.getItem("paw-fi-current-conversation")
+      : null;
+      
     if (storedConvId && conversations.find((c) => c.id === storedConvId)) {
       return storedConvId;
     }
@@ -294,27 +294,40 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
   const { 
     data: currentConversationData,
     isLoading: isConversationLoading,
-    refetch: refetchConversation
+    refetch: refetchConversation,
+    error: conversationError
   } = useQuery({
     queryKey: ['conversation', currentConversationId],
-    queryFn: () => fetchConversation(supabase, currentConversationId),
-    enabled: !!currentConversationId && isAuthenticated,
-    staleTime: 10000, // 10 seconds
+    queryFn: () => fetchConversation(supabase, currentConversationId!),
+    enabled: !!currentConversationId && isAuthenticated && isClientInitialized,
+    staleTime: 10000,
+    retry: 3,
   });
 
-  // Only sync messages from Supabase on initial load or when switching conversations
+  // Handle connection errors
+  useEffect(() => {
+    if (conversationsError || conversationError) {
+      setConnectionError("Having trouble connecting. Your messages are saved locally.");
+    } else {
+      setConnectionError(null);
+    }
+  }, [conversationsError, conversationError]);
+
+  // Sync messages from Supabase
   const hasInitializedMessages = useRef<string | null>(null);
   useEffect(() => {
     if (
       isAuthenticated &&
       currentConversationId &&
       currentConversationData?.messages &&
-      hasInitializedMessages.current !== currentConversationId
+      hasInitializedMessages.current !== currentConversationId &&
+      !isMergingGuestToAuth
     ) {
       setMessages(currentConversationData.messages);
       hasInitializedMessages.current = currentConversationId;
+      setHasLoadedInitialMessages(true);
     }
-  }, [isAuthenticated, currentConversationId, currentConversationData]);
+  }, [isAuthenticated, currentConversationId, currentConversationData, isMergingGuestToAuth]);
 
   // Create conversation mutation
   const createConversationMutation = useMutation({
@@ -322,7 +335,8 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       createNewConversation(supabase, params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    }
+    },
+    retry: 3,
   });
 
   // Add message mutation
@@ -332,30 +346,329 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       queryClient.invalidateQueries({ 
         queryKey: ['conversation', currentConversationId] 
       });
-    }
+    },
+    retry: 2,
   });
   
-  // Function to create a new conversation and send the first message
-  async function handleCreateConversationAndSendMessage(
+  // Improved deduplication function
+  const dedupeMessages = useCallback((messages: Message[]): Message[] => {
+    const seen = new Map<string, Message>();
+    
+    for (const msg of messages) {
+      // Create a robust key that includes content hash
+      const contentHash = msg.content.split('').reduce(
+        (acc, char) => (acc * 31 + char.charCodeAt(0)) & 0xffffffff,
+        0
+      );
+      const key = `${msg.role}|${contentHash}|${Math.floor(msg.timestamp / 1000)}`;
+      
+      if (!seen.has(key)) {
+        seen.set(key, msg);
+      }
+    }
+    
+    return Array.from(seen.values()).sort((a, b) => a.timestamp - b.timestamp);
+  }, []);
+
+  // Scroll management
+  const handleScroll = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const threshold = 100;
+    const atBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    setAutoScroll(atBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, []);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (autoScroll || isLoading) {
+      const timeoutId = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, isLoading, autoScroll, scrollToBottom]);
+
+  // Guest to Auth Migration with retry logic
+  useEffect(() => {
+    if (!isAuthenticated || !isClientInitialized || !user?.id || hasMergedGuest || isMergingGuestToAuth || isAuthLoading) {
+      return;
+    }
+
+    const guestMsgs = loadGuestMessages();
+    if (guestMsgs.length === 0) {
+      setHasMergedGuest(true);
+      return;
+    }
+
+    // Wait for initial data to load
+    if (isConversationsLoading || (currentConversationId && isConversationLoading)) {
+      return;
+    }
+
+    if (!acquireMergeLock()) return;
+    
+    setIsMergingGuestToAuth(true);
+    setMergeError(null);
+    
+    (async () => {
+      try {
+        let sessionId = currentConversationId;
+        
+        if (!sessionId) {
+          // Create new conversation
+          const created = await createConversationMutation.mutateAsync({
+            userId: user.id,
+            sessionId: getGuestSessionId(),
+            initialMessages: [],
+          });
+          sessionId = created.id;
+          
+          if (typeof window !== "undefined") {
+            localStorage.setItem("paw-fi-current-conversation", sessionId);
+          }
+        }
+
+        // Batch merge messages for better performance
+        const messagesToMerge = [...guestMsgs];
+        const batches = [];
+        
+        for (let i = 0; i < messagesToMerge.length; i += MESSAGE_MERGE_BATCH_SIZE) {
+          batches.push(messagesToMerge.slice(i, i + MESSAGE_MERGE_BATCH_SIZE));
+        }
+
+        for (const batch of batches) {
+          await Promise.all(
+            batch.map(msg => 
+              addMessageMutation.mutateAsync({
+                ...msg,
+                chat_session_id: sessionId!,
+                userId: user.id,
+              })
+            )
+          );
+        }
+
+        // Refresh data and verify messages were saved
+        await Promise.all([
+          refetchConversations(),
+          refetchConversation()
+        ]);
+
+        // Double-check that messages were actually saved before clearing
+        const verifyData = await refetchConversation();
+        const savedMessagesCount = verifyData?.data?.messages?.length || 0;
+        
+        if (savedMessagesCount >= guestMsgs.length) {
+          // Safe to clear guest messages - they're in the database
+          clearGuestMessages();
+          setHasMergedGuest(true);
+          mergeRetryCount.current = 0;
+        } else {
+          throw new Error(`Expected ${guestMsgs.length} messages, but only ${savedMessagesCount} were saved`);
+        }
+        
+      } catch (err) {
+        console.error("Error merging guest messages:", err);
+        
+        // Retry logic
+        if (mergeRetryCount.current < MAX_MERGE_RETRIES) {
+          mergeRetryCount.current++;
+          setMergeError(`Retrying merge (${mergeRetryCount.current}/${MAX_MERGE_RETRIES})...`);
+          setTimeout(() => {
+            setIsMergingGuestToAuth(false);
+            releaseMergeLock();
+          }, 2000 * mergeRetryCount.current);
+        } else {
+          setMergeError("Failed to sync chat history. Your messages are saved locally.");
+          // Don't clear guest messages on failure
+        }
+      } finally {
+        if (mergeRetryCount.current === 0 || mergeRetryCount.current >= MAX_MERGE_RETRIES) {
+          setIsMergingGuestToAuth(false);
+          releaseMergeLock();
+        }
+      }
+    })();
+  }, [
+    isAuthenticated,
+    isClientInitialized,
+    hasMergedGuest,
+    isMergingGuestToAuth,
+    isAuthLoading,
+    user,
+    currentConversationId,
+    isConversationsLoading,
+    isConversationLoading,
+    acquireMergeLock,
+    releaseMergeLock,
+    loadGuestMessages,
+    clearGuestMessages,
+    getGuestSessionId,
+    createConversationMutation,
+    addMessageMutation,
+    refetchConversations,
+    refetchConversation,
+  ]);
+
+  // Function to clean URL parameters after processing
+  const cleanUrlParameters = useCallback(() => {
+    if (typeof window !== "undefined" && initialQuestion) {
+      // Remove the 'q' parameter from URL without causing navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete('q');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [initialQuestion]);
+
+  // Handle initial question from URL - only execute if no chat history exists
+  useEffect(() => {
+    if (!initialQuestion || !isClientInitialized || hasProcessedUrlQuery) {
+      return;
+    }
+
+    // For authenticated users, wait for data and merge to complete
+    if (isAuthenticated) {
+      if (isAuthLoading || isMergingGuestToAuth || isConversationsLoading || !hasLoadedInitialMessages) {
+        return;
+      }
+      
+      // Only execute initial question if NO chat history exists and question doesn't already exist
+      const hasExistingMessages = messages.length > 0;
+      const questionExists = messages.some(msg => 
+        msg.role === 'user' && msg.content.trim() === initialQuestion.trim()
+      );
+      
+      if (!hasExistingMessages && !questionExists && user?.id) {
+        setHasProcessedUrlQuery(true);
+        cleanUrlParameters();
+        if (currentConversationId) {
+          handleSendMessage(initialQuestion);
+        } else {
+          handleCreateConversationAndSendMessage(user.id, initialQuestion);
+        }
+      } else {
+        // Chat history already exists, just clean the URL and don't send message
+        setHasProcessedUrlQuery(true);
+        cleanUrlParameters();
+      }
+    } else if (!isAuthLoading && hasLoadedInitialMessages) {
+      // For guest users - wait for messages to be loaded, then check if history exists
+      const hasExistingMessages = messages.length > 0;
+      const questionExists = messages.some(msg => 
+        msg.role === 'user' && msg.content.trim() === initialQuestion.trim()
+      );
+      
+      if (!hasExistingMessages && !questionExists) {
+        setHasProcessedUrlQuery(true);
+        cleanUrlParameters();
+        handleSendMessage(initialQuestion);
+      } else {
+        // Chat history already exists, just clean the URL and don't send message
+        setHasProcessedUrlQuery(true);
+        cleanUrlParameters();
+      }
+    }
+  }, [
+    initialQuestion,
+    isClientInitialized,
+    hasProcessedUrlQuery,
+    isAuthenticated,
+    isAuthLoading,
+    isMergingGuestToAuth,
+    isConversationsLoading,
+    hasLoadedInitialMessages,
+    messages,
+    localMessages,
+    user?.id,
+    currentConversationId,
+    cleanUrlParameters,
+  ]);
+
+  // Update loading message based on duration
+  useEffect(() => {
+    if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
+      setLoadingMessage("Crafting your personalized financial lessons... 📚");
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 15) {
+      setLoadingMessage("Building knowledge blocks just for you! Almost there... 🧩");
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 30) {
+      setLoadingMessage("Creating something special! Your financial wisdom is on the way... ✨");
+    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 45) {
+      setLoadingMessage("Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱");
+    }
+  }, [loadingDuration]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Check for lesson JSON in messages
+  useEffect(() => {
+    if (!isAuthenticated && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "assistant") {
+        const extractedJson = extractFirstJson(lastMessage.content);
+        if (extractedJson?.json && extractedJson.json.type === "lesson") {
+          setPendingLessonJson(extractedJson.json);
+          setShowSignupPrompt(true);
+        }
+      }
+    }
+  }, [messages, isAuthenticated]);
+
+  // Persist currentConversationId
+  useEffect(() => {
+    if (currentConversationId && typeof window !== "undefined") {
+      localStorage.setItem("paw-fi-current-conversation", currentConversationId);
+    }
+  }, [currentConversationId]);
+
+  const handleQuizComplete = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+    setIsQuizModalOpen(false);
+    handleSendMessage("I've completed the questionnaire", profile);
+  };
+
+  const handleOpenQuizModal = () => {
+    setIsQuizModalOpen(true);
+  };
+
+  const handleCreateConversationAndSendMessage = async (
     userIdParam: string,
     firstMessageContent: string,
-  ) {
+  ) => {
     try {
       setIsSendingMessage(true);
       setIsLoading(true);
       setLoadingMessage("Creating conversation...");
       
-      // Clear any existing timer
       if (loadingTimerRef.current) {
         clearInterval(loadingTimerRef.current);
       }
       
-      // Start a new timer to track loading duration
       loadingTimerRef.current = setInterval(() => {
         setLoadingDuration((prev) => prev + 1);
       }, 1000);
 
-      // Create a new conversation
       const sessionId = getGuestSessionId();
       const result = await createConversationMutation.mutateAsync({
         userId: userIdParam,
@@ -369,12 +682,10 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
 
       const newConversationId = result.id;
 
-      // Update local state
       if (typeof window !== "undefined") {
         localStorage.setItem("paw-fi-current-conversation", newConversationId);
       }
 
-      // Add the user's message to the conversation
       const userMessage: Message = {
         content: firstMessageContent,
         role: "user",
@@ -383,13 +694,10 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         userId: userIdParam,
       };
 
-      // Show user message immediately
       setMessages([userMessage]);
 
-      // Save the user message
       await addMessageMutation.mutateAsync(userMessage);
 
-      // Fetch AI response
       setLoadingMessage("Moneko is thinking...");
       const profileContext = profile ? formatProfileForAI(profile) : undefined;
       const aiResponse = await getAIResponseFromEdge(
@@ -400,7 +708,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         profileContext
       );
 
-      // Add AI response to conversation
       const assistantMessage: Message = {
         content: aiResponse.response || "I'm sorry, I couldn't generate a response.",
         role: "assistant",
@@ -410,22 +717,17 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         metadata: aiResponse.generatedLessons ? { courseRecommendation: aiResponse.generatedLessons } : undefined,
       };
 
-      // Save the assistant message
       await addMessageMutation.mutateAsync(assistantMessage);
 
-      // Refresh the conversations list and current conversation
       await Promise.all([refetchConversations(), refetchConversation()]);
 
-      // Update local state with the new messages
       setMessages([userMessage, assistantMessage]);
 
-      // Check for course recommendation
       if (assistantMessage.metadata?.courseRecommendation) {
         setRecommendedCourse(assistantMessage.metadata.courseRecommendation);
       }
     } catch (error) {
       console.error("Error in handleCreateConversationAndSendMessage:", error);
-      // Show error message to user
       const errorMsg: Message = {
         content: "Sorry, I couldn't start a new conversation. Please try again.",
         role: "assistant",
@@ -435,256 +737,29 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         metadata: { isError: true },
       };
       
-      setMessages((prev) => {
-        // Check if this exact error message already exists
-        const messageExists = prev.some(
-          (msg) =>
-            msg.timestamp === errorMsg.timestamp &&
-            msg.role === errorMsg.role &&
-            msg.content === errorMsg.content,
-        );
-
-        return messageExists ? prev : [...prev, errorMsg];
-      });
+      setMessages((prev) => dedupeMessages([...prev, errorMsg]));
     } finally {
       setIsSendingMessage(false);
       setIsLoading(false);
       setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
 
-      // Clear the loading timer
       if (loadingTimerRef.current) {
         clearInterval(loadingTimerRef.current);
         loadingTimerRef.current = null;
       }
       setTimeout(() => scrollToBottom(), 100);
     }
-  }
-
-  const authenticatedMessage =
-    "Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
-  const baseWelcomeMessage = authenticatedMessage;
-
-  // Scroll to bottom on mount and whenever messages change or loading state changes
-  useEffect(() => {
-    // Use a small delay to ensure content is rendered before scrolling
-    const timeoutId = setTimeout(() => {
-      scrollToBottom();
-    }, 100);
-
-    // Check for lesson JSON in the latest message if user is not authenticated
-    if (!isAuthenticated && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === "assistant") {
-        const extractedJson = extractFirstJson(lastMessage.content);
-        if (extractedJson?.json && extractedJson.json.type === "lesson") {
-          setPendingLessonJson(extractedJson.json);
-          setShowSignupPrompt(true);
-        }
-      }
-    }
-    return () => clearTimeout(timeoutId);
-  }, [messages, isAuthenticated]);
-
-  // --- Guest/Authenticated Merge Effect ---
-  useEffect(() => {
-    if (isAuthenticated && !hasMergedGuest) {
-      const guestMsgs = loadGuestMessages();
-      if (guestMsgs.length === 0) {
-        setHasMergedGuest(true);
-        setIsMergingGuestToAuth(false);
-        return;
-      }
-      if (!acquireMergeLock()) return;
-      setIsMergingGuestToAuth(true);
-      (async () => {
-        try {
-          // Use TanStack Query to fetch conversations
-          await refetchConversations();
-          const conversations = conversationsData || [];
-          let session = conversations.find(
-            (c: { user_id: string; id: string }) => c.user_id === user.id,
-          );
-          let sessionId = session?.id;
-          if (!sessionId) {
-            // Create new session with a new session id (reuse guest session id for continuity)
-            sessionId = getGuestSessionId();
-            const created = await createConversationMutation.mutateAsync({
-              userId: user.id,
-              sessionId,
-              initialMessages: [],
-            });
-            sessionId = created.id;
-          }
-          // Fetch all existing messages for deduplication
-          await refetchConversation();
-          const conversationData = { messages: [] }; // Default empty if not available
-          const existingMsgs = conversationData.messages || [];
-          // Deduplicate guest messages
-          const deduped = guestMsgs.filter(
-            (m: ServiceMessage) =>
-              !existingMsgs.some(
-                (em: ServiceMessage) =>
-                  em.role === m.role &&
-                  em.content === m.content &&
-                  Math.abs(em.timestamp - m.timestamp) < 2000, // 2s window
-              ),
-          );
-          // Insert deduped guest messages
-          for (const msg of deduped) {
-            await addMessageMutation.mutateAsync({
-              ...msg,
-              chat_session_id: sessionId,
-            });
-          }
-          // Wait for the refetch to complete before clearing guest state
-          await refetchConversations();
-          await refetchConversation();
-          clearGuestMessages();
-          setGuestMessages([]);
-          setHasMergedGuest(true);
-          setIsMergingGuestToAuth(false);
-          releaseMergeLock();
-        } catch (err) {
-          // Fail silently
-          setIsMergingGuestToAuth(false);
-          releaseMergeLock();
-        }
-      })();
-    }
-  }, [
-    isAuthenticated,
-    hasMergedGuest,
-    user,
-    refetchConversations,
-    refetchConversation,
-  ]);
-
-  // Always scroll to bottom when the component mounts (page reload)
-  useEffect(() => {
-    // Initial scroll with a delay to ensure DOM is fully rendered
-    const timeoutId = setTimeout(() => {
-      scrollToBottom();
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Additional effect to handle scroll after data is loaded
-  useEffect(() => {
-    if (!isConversationsLoading && !isConversationLoading) {
-      const timeoutId = setTimeout(() => {
-        scrollToBottom();
-      }, 300);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isConversationsLoading, isConversationLoading]);
-
-  // Effect for cleanup
-  useEffect(() => {
-    return () => {
-      // Clear any timers when component unmounts
-      if (loadingTimerRef.current) {
-        clearInterval(loadingTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Effect to update loading message based on duration
-  useEffect(() => {
-    if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
-      setLoadingMessage("Crafting your personalized financial lessons... 📚");
-    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 15) {
-      setLoadingMessage(
-        "Building knowledge blocks just for you! Almost there... 🧩",
-      );
-    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 30) {
-      setLoadingMessage(
-        "Creating something special! Your financial wisdom is on the way... ✨",
-      );
-    } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 45) {
-      setLoadingMessage(
-        "Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱",
-      );
-    }
-  }, [loadingDuration]);
-
-  // Effect for setting initial messages (welcome or from conversation)
-  // Utility: deduplicate array of messages by role, content, and timestamp (rounded to nearest second)
-  function dedupeMessages(messages: Message[]): Message[] {
-    const seen = new Set<string>();
-    return messages.filter((msg) => {
-      // Round timestamp to nearest second for deduplication
-      const roundedTimestamp = Math.round(msg.timestamp / 1000);
-      const key = `${msg.role}|${msg.content}|${roundedTimestamp}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  // Helper: Compare two arrays of messages for shallow equality
-  function areMessagesSimilar(arr1: Message[], arr2: Message[]): boolean {
-    if (arr1.length !== arr2.length) return false;
-    for (let i = 0; i < arr1.length; i++) {
-      const a = arr1[i];
-      const b = arr2[i];
-      if (
-        a.role !== b.role ||
-        a.content !== b.content ||
-        Math.round(a.timestamp / 1000) !== Math.round(b.timestamp / 1000)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Persist currentConversationId to localStorage
-  useEffect(() => {
-    if (currentConversationId && typeof window !== "undefined") {
-      localStorage.setItem(
-        "paw-fi-current-conversation",
-        currentConversationId,
-      );
-    }
-  }, [currentConversationId]);
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (container) {
-      // Determine if user was near the bottom before new messages were added
-      const isScrolledNearBottom =
-        container.scrollHeight - container.clientHeight <=
-        container.scrollTop + 250; // 250px threshold
-
-      if (isScrolledNearBottom || isLoading) {
-        // Scroll if near bottom OR if a new loading indicator for AI response appears
-        messagesEndRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-      }
-    }
-  }, [isLoading, messages])
-  
-
-  const handleQuizComplete = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
-    // Close the modal first
-    setIsQuizModalOpen(false);
-    
-    handleSendMessage("I've completed the questionnaire",profile);
-  };
-
-  const handleOpenQuizModal = () => {
-    setIsQuizModalOpen(true);
   };
 
   const handleSendMessage = async (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+    if (!content.trim() || isSendingMessage) return;
+    
     setIsSendingMessage(true);
-    if (!content.trim()) return;
+    setConnectionError(null);
+
     if (!isAuthenticated || !user?.id) {
-      // --- Guest Flow ---
+      // Guest Flow
       const guestId = getGuestSessionId();
       const userMessage: Message = {
         content,
@@ -692,30 +767,30 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         timestamp: getConsistentTimestamp(),
         chat_session_id: guestId,
       };
-      // Add to UI and guest state
+
       setMessages((prev) => {
         const next = dedupeMessages([...prev, userMessage]);
-        next.sort((a, b) => a.timestamp - b.timestamp);
         saveGuestMessages(next);
-        setGuestMessages(next);
         return next;
       });
+
       setTimeout(() => scrollToBottom(), 50);
       setIsLoading(true);
       setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
+
       if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
       loadingTimerRef.current = setInterval(
         () => setLoadingDuration((prev) => prev + 1),
         1000,
       );
+
       try {
-        // Call AI API as usual
         const contextMessages = [...messages, userMessage].map((msg) => ({
           role: msg.role,
           content: msg.content,
         }));
-     
+
         const response = await getAIResponseFromEdge(
           supabase,
           content,
@@ -723,38 +798,35 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           undefined,
           ""
         );
+
         const assistantMessage: Message = {
-          content:
-            response.response || "I'm sorry, I couldn't generate a response.",
+          content: response.response || "I'm sorry, I couldn't generate a response.",
           role: "assistant",
           timestamp: getConsistentTimestamp(),
           chat_session_id: guestId,
         };
+
         setMessages((prev) => {
           const next = dedupeMessages([...prev, assistantMessage]);
-          next.sort((a, b) => a.timestamp - b.timestamp);
           saveGuestMessages(next);
-          setGuestMessages(next);
           return next;
         });
-        setIsLoading(false);
-        // If lesson JSON, prompt for signup handled in effect
       } catch (error) {
+        console.error("Error getting AI response:", error);
         const errorMessage: Message = {
-          content:
-            "Sorry, I had trouble connecting. Please check your connection or try again.",
+          content: "Sorry, I had trouble connecting. Please check your connection or try again.",
           role: "assistant",
           timestamp: getConsistentTimestamp(),
           chat_session_id: guestId,
           metadata: { isError: true },
         };
+
         setMessages((prev) => {
           const next = dedupeMessages([...prev, errorMessage]);
-          next.sort((a, b) => a.timestamp - b.timestamp);
           saveGuestMessages(next);
-          setGuestMessages(next);
           return next;
         });
+        setConnectionError("Connection error. Your messages are saved locally.");
       } finally {
         setIsLoading(false);
         setIsSendingMessage(false);
@@ -768,133 +840,98 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
       }
       return;
     }
-    // --- Authenticated Flow ---
-    if (!content.trim()) return;
-    if (!isAuthenticated || !user?.id) {
-      console.error("User not authenticated. Cannot send message.");
+
+    // Authenticated Flow
+    if (!currentConversationId) {
+      await handleCreateConversationAndSendMessage(user.id, content);
       return;
     }
 
-    // Construct user message first
     const userMessage: Message = {
       content,
       role: "user",
       timestamp: getConsistentTimestamp(),
       chat_session_id: currentConversationId,
+      userId: user.id,
     };
 
-    // Immediately add user message to UI for instant feedback
-    // First check if this message already exists to prevent duplicates
-    setMessages((prevMessages) => {
-      // Add and deduplicate
-      const next = dedupeMessages([...prevMessages, userMessage]);
-      next.sort((a, b) => a.timestamp - b.timestamp);
-      return next;
-    });
-
-    if (!currentConversationId) {
-      // If no current conversation, create one and then send the message
-      await handleCreateConversationAndSendMessage(user.id, content);
-      return;
-    }
-
-    // Force scroll to bottom after adding user message
+    setMessages((prev) => dedupeMessages([...prev, userMessage]));
     setTimeout(() => scrollToBottom(), 50);
 
     setIsLoading(true);
     setLoadingMessage("Moneko is thinking...");
     setLoadingDuration(0);
 
-    // Clear any existing timer
     if (loadingTimerRef.current) {
       clearInterval(loadingTimerRef.current);
     }
 
-    // Start a new timer to track loading duration
     loadingTimerRef.current = setInterval(() => {
       setLoadingDuration((prev) => prev + 1);
     }, 1000);
 
     try {
-      // Save user message to database
       await addMessageMutation.mutateAsync(userMessage);
 
-      // Get response from AI
-      try {
-        // Format messages for the API
-        // Use the latest messages including the just-sent user message
-        const contextMessages = [...messages, userMessage].map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }));
+      const contextMessages = [...messages, userMessage].map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-        const current_profile=manual_profile || profile||undefined;
-        const profileContext = formatProfileForAI(current_profile);
-        const response = await getAIResponseFromEdge(
-          supabase,
-          content,
-          contextMessages,
-          user.id,
-          profileContext
-        );
+      const current_profile = manual_profile || profile || undefined;
+      const profileContext = formatProfileForAI(current_profile);
+      
+      const response = await getAIResponseFromEdge(
+        supabase,
+        content,
+        contextMessages,
+        user.id,
+        profileContext
+      );
 
-        // Add the assistant response to the messages (optimistic update)
-        const assistantMessage: Message = {
-          content:
-            response.response || "I'm sorry, I couldn't generate a response.",
-          role: "assistant",
-          timestamp: getConsistentTimestamp(),
-          chat_session_id: currentConversationId,
-        };
-        setMessages((prevMessages) => {
-          // Add and deduplicate
-          const next = dedupeMessages([...prevMessages, assistantMessage]);
-          next.sort((a, b) => a.timestamp - b.timestamp);
-          return next;
-        });
-        setIsLoading(false); // Hide loading as soon as response is rendered
-        setTimeout(() => scrollToBottom(), 100);
-        // Save assistant message to database (do not refetch after)
-        await addMessageMutation.mutateAsync(assistantMessage);
-      } catch (aiError) {
-        console.error("Error getting AI response:", aiError);
-        throw aiError; // Propagate to outer catch block
-      } finally {
-        setIsSendingMessage(false);
-      }
-    } catch (error) {
-      console.error("Error getting AI response or saving message:", error);
-      const errorMessage: Message = {
-        content:
-          "Sorry, I had trouble connecting. Please check your connection or try again.",
+      const assistantMessage: Message = {
+        content: response.response || "I'm sorry, I couldn't generate a response.",
         role: "assistant",
         timestamp: getConsistentTimestamp(),
         chat_session_id: currentConversationId,
+        userId: user.id,
+        metadata: response.generatedLessons ? { courseRecommendation: response.generatedLessons } : undefined,
+      };
+
+      setMessages((prev) => dedupeMessages([...prev, assistantMessage]));
+      setIsLoading(false);
+      setTimeout(() => scrollToBottom(), 100);
+
+      await addMessageMutation.mutateAsync(assistantMessage);
+
+      if (assistantMessage.metadata?.courseRecommendation) {
+        setRecommendedCourse(assistantMessage.metadata.courseRecommendation);
+      }
+    } catch (error) {
+      console.error("Error processing message:", error);
+      const errorMessage: Message = {
+        content: "Sorry, I had trouble connecting. Please check your connection or try again.",
+        role: "assistant",
+        timestamp: getConsistentTimestamp(),
+        chat_session_id: currentConversationId,
+        userId: user.id,
         metadata: { isError: true },
       };
-      setMessages((prevMessages) => {
-        // Add and deduplicate
-        const next = dedupeMessages([...prevMessages, errorMessage]);
-        next.sort((a, b) => a.timestamp - b.timestamp);
-        return next;
-      });
-      setIsSendingMessage(false);
 
-      // No need to save this particular client-side error message to DB usually
+      setMessages((prev) => dedupeMessages([...prev, errorMessage]));
+      setConnectionError("Connection error. Retrying...");
     } finally {
       setIsLoading(false);
       setIsSendingMessage(false);
       setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
 
-      // Clear the loading timer
       if (loadingTimerRef.current) {
         clearInterval(loadingTimerRef.current);
         loadingTimerRef.current = null;
       }
-      // inputRef.current?.focus();
+      
       refetchConversation();
-      // Final scroll to bottom
       setTimeout(() => scrollToBottom(), 100);
     }
   };
@@ -935,8 +972,6 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     return null;
   };
 
-  
-
   const isBackendProcessing = useMemo(
     () =>
       !!(isMergingGuestToAuth ||
@@ -955,16 +990,15 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
     ],
   );
 
-
-  // Fetch suggested responses when the last message is from the assistant
+  // Fetch suggested responses
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (messages.length > 0 &&!lastMsg?.content?.includes('```json')&& lastMsg?.role === 'assistant' && !isLoading) {
+      const lastMsg = messages[messages.length - 1];
+      if (messages.length > 0 && !lastMsg?.content?.includes('```json') && lastMsg?.role === 'assistant' && !isLoading) {
         setIsFetchingSuggestions(true);
-        const lastMessage = messages[messages.length - 1];
         const contextMessages = messages.map(msg => ({ role: msg.role, content: msg.content }));
         try {
-          const suggestions = await getPredictedResponses(supabase, lastMessage.content, contextMessages);
+          const suggestions = await getPredictedResponses(supabase, lastMsg.content, contextMessages);
           setSuggestedResponses(suggestions);
           scrollToBottom();
         } catch (error) {
@@ -973,32 +1007,26 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         } finally {
           setIsFetchingSuggestions(false);
         }
+      } else if (!isLoading && !messages.length && !isBackendProcessing) {
+        setSuggestedResponses(INITIAL_SUGGESTIONS);
       } else {
-        if(!isLoading&&!messages.length&&!isBackendProcessing)
-        {
-          setSuggestedResponses(INITIAL_SUGGESTIONS);
-        }
-        else
         setSuggestedResponses([]);
       }
     };
     fetchSuggestions();
-  }, [messages, isLoading,isBackendProcessing]);
+  }, [messages, isLoading, isBackendProcessing, scrollToBottom]);
 
-  // Handle clicking on a suggestion button
   const handleSuggestionClick = (suggestion: string) => {
     setSuggestedResponses([]);
-    
-    // Instantly send the message
     handleSendMessage(suggestion);
   };
 
+  const authenticatedMessage = "Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
+  const baseWelcomeMessage = authenticatedMessage;
+
   // Registration prompt logic
   const lastMsg = messages[messages.length - 1];
-  const shouldPromptRegister =
-    lastMsg?.content?.includes('```json') && !isAuthenticated;
-
-  
+  const shouldPromptRegister = lastMsg?.content?.includes('```json') && !isAuthenticated;
 
   return (
     <div className="flex w-full flex-1 flex-col overflow-hidden">
@@ -1012,35 +1040,66 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           <div className="relative flex h-full flex-col">
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Moneko AI</h1>
           </div>
-          <BetaPill/>
-
+          <BetaPill />
         </div>
-        {/* Add any header controls here if needed */}
       </div>
 
+      {/* Error Messages */}
+      {(connectionError || mergeError) && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {connectionError || mergeError}
+          </p>
+        </div>
+      )}
+
       {/* Messages Area */}
-      <div id="messages" className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" ref={chatContainerRef} onScroll={handleScroll}>
+      <div 
+        id="messages" 
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" 
+        ref={chatContainerRef} 
+        onScroll={handleScroll}
+      >
         {isBackendProcessing && (
           <div className="space-y-6 p-4 sm:p-6">
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className={`flex animate-pulse items-end gap-3 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
-                {i % 2 !== 0 && <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>}
+                className={`flex animate-pulse items-end gap-3 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+              >
+                {i % 2 !== 0 && (
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                )}
                 <div
-                  className={`w-3/5 rounded-2xl p-4 ${i % 2 === 0 ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"}`}>
+                  className={`w-3/5 rounded-2xl p-4 ${
+                    i % 2 === 0 
+                      ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" 
+                      : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"
+                  }`}
+                >
                   <div
-                    className={`mb-2 h-4 rounded ${i % 2 === 0 ? "bg-purple-300/50 dark:bg-purple-600/50" : "bg-slate-300/50 dark:bg-slate-600/50"} w-3/4`}>
-                  </div>
+                    className={`mb-2 h-4 rounded ${
+                      i % 2 === 0 
+                        ? "bg-purple-300/50 dark:bg-purple-600/50" 
+                        : "bg-slate-300/50 dark:bg-slate-600/50"
+                    } w-3/4`}
+                  ></div>
                   <div
-                    className={`h-4 rounded ${i % 2 === 0 ? "bg-purple-300/50 dark:bg-purple-600/50" : "bg-slate-300/50 dark:bg-slate-600/50"} w-full`}>
-                  </div>
+                    className={`h-4 rounded ${
+                      i % 2 === 0 
+                        ? "bg-purple-300/50 dark:bg-purple-600/50" 
+                        : "bg-slate-300/50 dark:bg-slate-600/50"
+                    } w-full`}
+                  ></div>
                 </div>
-                {i % 2 === 0 && <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>}
+                {i % 2 === 0 && (
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                )}
               </div>
             ))}
           </div>
         )}
+
         {!isBackendProcessing && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 dark:text-slate-400">
             <div className="mb-4 rounded-full bg-white/30 p-4 backdrop-blur-md dark:bg-slate-800/30">
@@ -1063,6 +1122,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
             <p className="text-sm text-slate-400 dark:text-slate-500">Ask me anything to get started!</p>
           </div>
         )}
+
         <AnimatePresence initial={false}>
           {messages.map((message, index) => {
             const contentHash =
@@ -1076,24 +1136,25 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                     )
                 : 0;
             return (
-            <motion.div
-              key={`${message.timestamp}-${message.role}-${contentHash}`}
-              layout
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
-            >
-              <ChatMessageItem 
-                message={message} 
-                formatTime={formatTime} 
-                extractFirstJson={extractFirstJson}
-                navigate={navigate}
-                onOpenQuizModal={handleOpenQuizModal}
-              />
-            </motion.div>
-          )}
-          )}
+              <motion.div
+                key={`${message.timestamp}-${message.role}-${contentHash}`}
+                layout
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+              >
+                <ChatMessageItem 
+                  message={message} 
+                  formatTime={formatTime} 
+                  extractFirstJson={extractFirstJson}
+                  navigate={navigate}
+                  onOpenQuizModal={handleOpenQuizModal}
+                />
+              </motion.div>
+            );
+          })}
+
           {isLoading && !messages[messages.length - 1]?.metadata?.isStreaming && (
             <motion.div
               layout
@@ -1104,7 +1165,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
               <div className="flex justify-start">
                 <div className="flex items-center gap-3 max-w-xs lg:max-w-md">
                   <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 shrink-0">
-                   {iconContainer("size-6")}
+                    {iconContainer("size-6")}
                   </div>
                   <div className="bg-white/80 dark:bg-slate-700 rounded-2xl p-4">
                     <div className="flex items-center space-x-3">
@@ -1112,12 +1173,13 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
                         <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
                           {loadingMessage}
                         </div>
-                      ):  <div className="flex items-center space-x-2">
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.3s]"></div>
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.15s]"></div>
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400"></div>
-                    </div>}
-                    
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.3s]"></div>
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.15s]"></div>
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400"></div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1128,21 +1190,23 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
         <div ref={messagesEndRef} />
       </div>
 
-        {/* Hide suggestions and disable input if last message contains QUESTIONNAIRE keyword AND user doesn't have profile */}
-        {(!messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') || hasProfile) && (
-          <ChatSuggestions
-            suggestions={suggestedResponses}
-            onSuggestionClick={handleSuggestionClick}
-            isLoading={isLoading}
-            isSendingMessage={isSendingMessage}
-          />
-        )}
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          isLoading={isLoading || shouldPromptRegister || (messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') && !hasProfile)} 
-          onOpenVoiceModal={() => setVoiceModalOpen(true)} 
+      {/* Suggestions and Input */}
+      {(!messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') || hasProfile) && (
+        <ChatSuggestions
+          suggestions={suggestedResponses}
+          onSuggestionClick={handleSuggestionClick}
+          isLoading={isLoading}
+          isSendingMessage={isSendingMessage}
         />
-      {/* Registration Modal - Unchanged but kept for functionality */}
+      )}
+
+      <ChatInput 
+        onSendMessage={handleSendMessage} 
+        isLoading={isLoading || shouldPromptRegister || (messages[messages.length - 1]?.content?.includes('``QUESTIONNAIRE``') && !hasProfile)} 
+        onOpenVoiceModal={() => setVoiceModalOpen(true)} 
+      />
+
+      {/* Registration Modal */}
       <Modal
         isOpen={shouldPromptRegister}
         onClose={() => {}}
@@ -1154,7 +1218,9 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
             <FontAwesomeIcon icon={faGraduationCap} className="text-white text-3xl" />
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">Your personalized lesson is ready!</h2>
+          <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
+            Your personalized lesson is ready!
+          </h2>
           <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
             Register a free account to view this personalized lesson and access more features.
           </p>
@@ -1166,7 +1232,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
             </ul>
           </div>
           <div className="w-full flex flex-col gap-2">
-            <Link to="/register" search={{redirect: "/dashboard/chat"}} className="w-full">
+            <Link to="/register" search={{ redirect: "/dashboard/chat" }} className="w-full">
               <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
                 Register for Free
               </Button>
@@ -1174,8 +1240,7 @@ export function ChatInterface({ initialQuestion = '' }: ChatInterfaceProps) {
           </div>
         </div>
       </Modal>
-      {/* <VoiceConversationModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} /> */}
-      
+
       {/* Financial Health Quiz Modal */}
       <Modal
         isOpen={isQuizModalOpen}
