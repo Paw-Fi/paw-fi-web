@@ -67,8 +67,17 @@ serve(async (req: Request): Promise<Response> => {
 
     // Check if user is authenticated but has no profile
     if (userId && !userProfile) {
-      console.log("User is authenticated but has no financial profile - prompting to complete questionnaire");
-      const profilePromptMessage = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+      // Check if this is the first message by looking at conversation history
+      const isFirstMessage = !history || history.length <=1;
+      
+      let profilePromptMessage;
+      if (isFirstMessage) {
+        // First message - welcome message
+        profilePromptMessage = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+      } else {
+        // Has conversation history - encourage completing assessment
+        profilePromptMessage = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+      }
       
       return new Response(JSON.stringify({ response: profilePromptMessage }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
