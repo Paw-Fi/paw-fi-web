@@ -20,7 +20,7 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
   const [selectedOption, setSelectedOption] = useState<string | null>(
     value || null,
   );
-  const itemsPerRow = question.itemsPerRow || 1;
+  const itemsPerRow = question.itemsPerRow || 2;
 
   const handleOptionClick = (optionId: string) => {
     setSelectedOption(optionId);
@@ -60,7 +60,7 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
             ) : option.imagePrompt ? (
               <div 
                 className="w-full h-full flex items-center justify-center" 
-                style={{ minHeight: '15rem' }}
+                style={{ height: '30rem' }}
               >
                 <MermaidRenderer 
                   id={question.id} 

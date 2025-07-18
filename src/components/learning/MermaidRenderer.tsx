@@ -74,7 +74,7 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
       // Apply styles directly for better fit
       svg.style.display = 'block';
       svg.style.maxWidth = '100%';
-      svg.style.maxHeight = '100%';
+      svg.style.maxHeight = '30rem';
       svg.style.margin = '0 auto';
       
       // Special handling for pie charts
@@ -264,7 +264,7 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
         return (
           <div 
             ref={diagramRef} 
-            className={`w-full flex items-center justify-center overflow-hidden ${isPieChart ? 'min-h-72 md:min-h-80' : 'min-h-56 md:min-h-64'}`}
+            className={`w-full flex items-center justify-center overflow-hidden ${isPieChart ? 'min-h-48 md:min-h-56' : 'min-h-32 md:min-h-40'}`}
           />
         );
     }

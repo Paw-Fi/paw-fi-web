@@ -12,11 +12,28 @@ const supabaseClient = createClient(
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-const AI_PROMPT = `The following is a piece of malformed Mermaid code. Your task is to correct any syntax errors and return only the valid, complete Mermaid code block.
+const AI_PROMPT = `You will be given a piece of Mermaid code that may contain syntax errors or stylistic inconsistencies. Your task is to fix the code and return a valid, well-formed, and complete Mermaid code block.
 
-Do not add any explanations, greetings, or any text whatsoever before or after the code block. Your entire response must be the corrected code itself.
+Follow these specific rules for the correction:
 
-Here is the code:`;
+1.  **Diagram Definition:** The code must begin with a valid diagram definition (e.g., \`graph TD\`, \`flowchart LR\`). Remove any extraneous text before it.
+
+2.  **Node Syntax:**
+    * **Shape:** Standardize all nodes to use rounded corners. All node text must be enclosed in parentheses and double quotes. Example: \`nodeId("Display Text")\`.
+    * **IDs:** Ensure node IDs are simple alphanumeric strings without spaces or special characters (e.g., \`nodeA\`, \`process1\`).
+
+3.  **Link/Edge Syntax:** Use only valid link styles. The standard arrow is \`-->\`. For text on a link, use the format \`-- "link text" -->\`.
+
+4.  **Structural Integrity:**
+    * **Subgraphs:** Ensure any \`subgraph\` is correctly formatted with a title and is properly closed with an \`end\` statement.
+    * **Ordering:** Define all nodes, edges, and subgraphs first. Place all styling commands (like \`style\`, \`classDef\`, \`linkStyle\`) at the end of the code block.
+
+5.  **Comments:** Preserve any existing comments, which start with \`%%\`.
+
+Your entire response must be ONLY the corrected, complete Mermaid code block. Do not include markdown language specifiers (like \`\`\`mermaid), explanations, greetings, or any other text before or after the code.
+
+Here is the code:`
+
 
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
