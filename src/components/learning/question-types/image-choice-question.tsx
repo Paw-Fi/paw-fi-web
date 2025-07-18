@@ -63,7 +63,7 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
                 style={{ minHeight: '15rem' }}
               >
                 <MermaidRenderer 
-                  id={option.id} 
+                  id={question.id} 
                   content={option.imagePrompt} 
                   caption={option.caption} 
                 />

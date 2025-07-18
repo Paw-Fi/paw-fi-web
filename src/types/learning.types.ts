@@ -81,6 +81,7 @@ export type Tutorial={
 
 // A fully flexible Question type to accommodate JSON data
 export interface Question {
+  id: string;
   question_id: string;
   type: QuestionType;
   question: string;

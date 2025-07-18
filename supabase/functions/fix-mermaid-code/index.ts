@@ -103,7 +103,7 @@ serve(async (req: Request): Promise<Response> => {
     }, generationConfig);
 
     const response = result.response;
-    const fixedCode = response.text();
+    let fixedCode = response.text();
 
     if (!fixedCode) {
       return new Response(
@@ -115,55 +115,65 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // Clean up the AI response
+    // Remove markdown code blocks if present
+    fixedCode = fixedCode.replace(/```mermaid\n?/g, '').replace(/```\n?/g, '');
+    
+    // Replace literal \n with actual newlines
+    fixedCode = fixedCode.replace(/\\n/g, '\n');
+    
+    // Clean up any extra whitespace
+    fixedCode = fixedCode.trim();
+
     console.log("Successfully fixed Mermaid code");
 
     // Update the database with the fixed code if questionId is provided
-    if (questionId) {
-      try {
-        const { error: updateError } = await supabaseClient
-          .from('user_questions')
-          .update({ 
-            image_options: { mermaidCode: fixedCode.trim() },
-            updated_at: new Date().toISOString()
-          })
-          .eq('question_id', questionId);
+    // if (questionId) {
+    //   try {
+    //     const { error: updateError } = await supabaseClient
+    //       .from('user_questions')
+    //       .update({ 
+    //         image_options: { mermaidCode: fixedCode },
+    //         updated_at: new Date().toISOString()
+    //       })
+    //       .eq('id', questionId);
 
-        if (updateError) {
-          console.error('Error updating database:', updateError);
-          return new Response(
-            JSON.stringify({ 
-              error: "Failed to update database", 
-              details: updateError.message,
-              timestamp: new Date().toISOString(),
-            }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
+    //     if (updateError) {
+    //       console.error('Error updating database:', updateError);
+    //       return new Response(
+    //         JSON.stringify({ 
+    //           error: "Failed to update database", 
+    //           details: updateError.message,
+    //           timestamp: new Date().toISOString(),
+    //         }),
+    //         {
+    //           status: 500,
+    //           headers: { ...corsHeaders, "Content-Type": "application/json" },
+    //         },
+    //       );
+    //     }
 
-        console.log("Successfully updated mermaid code in database");
-      } catch (dbError) {
-        console.error('Database update error:', dbError);
-        return new Response(
-          JSON.stringify({ 
-            error: "Database update failed", 
-            details: dbError instanceof Error ? dbError.message : "Unknown database error",
-            timestamp: new Date().toISOString(),
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-    }
+    //     console.log("Successfully updated mermaid code in database");
+    //   } catch (dbError) {
+    //     console.error('Database update error:', dbError);
+    //     return new Response(
+    //       JSON.stringify({ 
+    //         error: "Database update failed", 
+    //         details: dbError instanceof Error ? dbError.message : "Unknown database error",
+    //         timestamp: new Date().toISOString(),
+    //       }),
+    //       {
+    //         status: 500,
+    //         headers: { ...corsHeaders, "Content-Type": "application/json" },
+    //       },
+    //     );
+    //   }
+    // }
 
     return new Response(
       JSON.stringify({
         success: true,
-        fixedCode: fixedCode.trim(),
+        fixedCode: fixedCode,
         questionId: questionId || null,
         databaseUpdated: !!questionId,
         debug: {
