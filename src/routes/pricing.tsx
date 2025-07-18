@@ -169,10 +169,10 @@ function PricingPage() {
     );
   };
 
-  const handleSubscribe = async (plan: string) => {
+  const handleSubscribe = async (plan: string, isTrial: boolean = false) => {
     try {
       if (plan === "premium") {
-        navigate({ to: "/early-access" });
+       window.location.href = "mailto:hello@moneko.io?subject=Waitlist%20Request&body=Please%20add%20me%20to%20the%20waitlist!"
         return;
       }
       setIsLoading(true);
@@ -207,6 +207,7 @@ function PricingPage() {
             userId,
             successUrl,
             cancelUrl,
+            isTrial,
           },
         },
       );
@@ -221,7 +222,7 @@ function PricingPage() {
       // Redirect to checkout page with plan and billing interval
       navigate({
         to: "/checkout",
-        search: { plan, billing: billingInterval },
+        search: { plan, billing: billingInterval, trial: isTrial ? "true" : "false" },
       });
 
       setIsLoading(false);
@@ -373,7 +374,8 @@ function PricingPage() {
                     const planParam = tier.title.toLowerCase().includes("plus")
                       ? "plus"
                       : "premium";
-                    handleSubscribe(planParam);
+                    const isTrial = tier.title.toLowerCase().includes("plus") && tier.actionText === "Start Free Trial";
+                    handleSubscribe(planParam, isTrial);
                   }}
                   className={`mt-auto block w-full cursor-pointer rounded-lg px-6 py-3 text-center text-base font-medium shadow-md transition-transform duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                     tier.highlight

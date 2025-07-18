@@ -123,7 +123,7 @@ export const planData: Record<string, PlanData> = {
     actionLink: "/checkout?plan=plus",
     badgeText: "Most Popular",
     trialText: "Free for the First 100 Users\n— only a few spots left!",
-    audienceText: "7-day free trial, cancel anytime",
+    audienceText: "30-day free trial, cancel anytime, no credit card needed",
     bgColor: "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20",
     textColor: "text-gray-900 dark:text-white",
     borderColor: "border-purple-200 dark:border-purple-800",
