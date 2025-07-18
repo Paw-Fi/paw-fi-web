@@ -25,9 +25,10 @@ import { useCookie } from '@/utils/use-cookie';
 
 interface FloatingGuideWindowProps {
   className?: string;
+  onClose?: () => void;
 }
 
-export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ className }) => {
+export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ className, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { getCookie, setCookie } = useCookie();
   const [isHidden, setIsHidden] = useState(() => getCookie('paw-fi-guide-hidden') === 'true');
@@ -60,6 +61,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
   const handleHide = () => {
     setIsHidden(true);
     setCookie('paw-fi-guide-hidden', 'true', { days: 365 });
+    onClose?.();
   };
 
   // Don't render if hidden

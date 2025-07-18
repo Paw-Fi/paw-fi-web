@@ -108,10 +108,11 @@ export function Dashboard() {
   const { isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
-  const isGuideHidden = getCookie('paw-fi-guide-hidden') === 'true';
+  const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
 
   const showGuide = () => {
     setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
+    setIsGuideHidden(false);
   };
 
 
@@ -807,7 +808,7 @@ export function Dashboard() {
           </div>}
         </div>
       </div>
-      {!isGuideHidden && <FloatingGuideWindow />}
+      {!isGuideHidden && <FloatingGuideWindow onClose={() => setIsGuideHidden(true)} />}
     </>
   );
 }
