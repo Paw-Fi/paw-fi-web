@@ -29,7 +29,6 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts:["feasible-dog-thankful.ngrok-free.app"]
   },
   plugins: [
     tsConfigPaths({
