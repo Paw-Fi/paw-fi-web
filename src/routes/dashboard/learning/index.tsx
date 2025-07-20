@@ -5,6 +5,20 @@ import { useUserCourses, CourseDataSource } from "@/services/course-service";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { motion, Variants } from "framer-motion";
 import { EmptyStatePrompt } from "@/components/ui/empty-state-prompt";
+import { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faGraduationCap, 
+  faRobot, 
+  faComments, 
+  faChevronDown, 
+  faChevronUp,
+  faBrain,
+  faMagicWandSparkles,
+  faBullseye 
+} from '@fortawesome/free-solid-svg-icons';
+import { ChatInterface } from '@/components/chat/chat-interface';
+import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 
 // Import data from separate data file
 
@@ -80,6 +94,9 @@ interface LearningPageProps {
 
 export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
   const { user } = useAuth();
+  const [showLearningAI, setShowLearningAI] = useState(false);
+  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  
   const {
     data: courses = [],
     isLoading,
@@ -90,12 +107,81 @@ export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
     source: dataSource 
   });
   
+  // Auto-expand AI for first-time users (no courses)
+  useEffect(() => {
+    if (!isLoading && courses.length === 0 && dataSource === 'remote') {
+      setShowLearningAI(true);
+    }
+  }, [isLoading, courses.length, dataSource]);
+  
+  // Cycle through suggested prompts for returning users
+  useEffect(() => {
+    if (courses.length > 0 && !showLearningAI) {
+      const interval = setInterval(() => {
+        setCurrentPromptIndex((prevIndex) => (prevIndex + 1) % learningPrompts.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [courses.length, showLearningAI]);
+  
+  // Get user's learning context for enhanced AI responses
+  const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
+  
+  // Define suggested prompts
+  const learningPrompts = [
+    "Create a custom lesson about investing",
+    "Help me choose the right course to start with",
+    "Explain budgeting fundamentals", 
+    "Generate practice questions for financial planning",
+    "Create a personalized learning path",
+    "Teach me about retirement planning",
+    "Help me understand investment risks",
+    "Create lessons based on my financial goals"
+  ];
+  
+  // Calculate overall learning progress across all courses
+  const learningProgress = courses.length > 0 ? {
+    totalCourses: courses.length,
+    totalLessons: courses.reduce((acc, course) => acc + course.lessons.length, 0),
+    completedLessons: courses.reduce((acc, course) => 
+      acc + course.lessons.filter(lesson => lesson.unlocked).length, 0
+    ),
+    totalXP: courses.reduce((acc, course) => 
+      acc + course.lessons.filter(lesson => lesson.unlocked).reduce((xpAcc, lesson) => xpAcc + (lesson.xp || 0), 0), 0
+    ),
+  } : null;
+
+  // Create context-aware initial message for learning AI
+  const getInitialMessage = () => {
+    // Special message for first-time users
+    if (courses.length === 0 && dataSource === 'remote') {
+      return "Welcome to your Learning Hub! I'm your AI Coach.\\n\\nIt looks like you don't have any courses yet. We can fix that right now!\\n\\nTell me what you want to learn about, or select a prompt below to create your first personalized course.";
+    }
+    
+    let contextMessage = "Hello! I'm your AI Learning Coach. I create personalized financial lessons and help you with any learning questions.";
+    
+    if (learningProgress) {
+      contextMessage += `\\n\\nI can see you've completed ${learningProgress.completedLessons} out of ${learningProgress.totalLessons} lessons across ${learningProgress.totalCourses} courses and earned ${learningProgress.totalXP} XP. `;
+    }
+    
+    if (hasProfile && financialProfile) {
+      const priorities = financialProfile.profile_data.goals_and_timeline.financial_priorities;
+      if (priorities.length > 0) {
+        contextMessage += `Based on your financial priorities (${priorities.slice(0, 2).join(', ')}), `;
+      }
+      contextMessage += "I can create lessons that match your specific situation and goals.";
+    }
+    
+    contextMessage += `\\n\\nWhat would you like to learn about today? I can create custom lessons, explain financial concepts, or help you choose the right course!`;
+    return contextMessage;
+  };
+  
   // Define animation variants for cards
   const containerVariants: Variants = {
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: 0.15
+        staggerChildren: 0.1
       }
     }
   };
@@ -177,6 +263,35 @@ export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
             : 'Choose a course to continue learning. You can generate more courses with our AI.'}
         </p>
       </div>
+      {/* Personalization Banner for Essential Lessons */}
+      {dataSource === 'local' && courses.length > 0 && (
+        <motion.div 
+          className="mb-8 max-w-4xl mx-auto"
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-cyan-50 border border-purple-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Go Beyond the Basics</h3>
+                <p className="text-gray-600 text-sm">These essentials are a great start. For a truly tailored experience, our AI Coach can create lessons based on your unique financial goals.</p>
+              </div>
+              <button
+                onClick={() => {
+                  document.getElementById('ai-coach')?.scrollIntoView({ behavior: 'smooth' });
+                  setShowLearningAI(true);
+                }}
+                className="ml-6 flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <FontAwesomeIcon icon={faMagicWandSparkles} className="h-4 w-4 mr-2" />
+                Create Custom Lesson
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
       {isLoading ? (
         <div className="flex h-40 items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-purple-500"></div>
@@ -214,7 +329,52 @@ export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
                 </div>
               </div>
             ) : (
-              <EmptyStatePrompt type="courses" />
+              <div className="col-span-full">
+                {/* Integrated Empty State with AI Coach */}
+                <motion.div 
+                  className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200 shadow-lg overflow-hidden"
+                  variants={cardVariants}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* AI-Focused Empty State Header */}
+                  <div className="p-8 text-center border-b border-green-200">
+                    <div className="mb-6 mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white shadow-lg">
+                      <FontAwesomeIcon icon={faGraduationCap} className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Start Your Learning Journey</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">Create your first personalized course with our AI Learning Coach. Tell us what you want to learn!</p>
+                    
+                    {/* Features preview */}
+                    <div className="grid grid-cols-3 gap-4 text-sm mb-6">
+                      <div className="flex items-center justify-center text-green-700">
+                        <FontAwesomeIcon icon={faBrain} className="h-3 w-3 mr-2" />
+                        <span>Adaptive</span>
+                      </div>
+                      <div className="flex items-center justify-center text-emerald-700">
+                        <FontAwesomeIcon icon={faMagicWandSparkles} className="h-3 w-3 mr-2" />
+                        <span>Custom</span>
+                      </div>
+                      <div className="flex items-center justify-center text-teal-700">
+                        <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2" />
+                        <span>Goal-Oriented</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Auto-expanded Chat Interface for first-time users */}
+                  <div className="h-96">
+                    <ChatInterface 
+                      initialQuestion={getInitialMessage()}
+                      suggestedPrompts={learningPrompts}
+                      assistantType="learning-coach"
+                      placeholder="Tell me what you want to learn about..."
+                      userProfile={hasProfile ? financialProfile : undefined}
+                      learningContext={learningProgress}
+                    />
+                  </div>
+                </motion.div>
+              </div>
             )
           ) : (
             courses.map((course) => (
@@ -261,6 +421,125 @@ export function LearningPage({ dataSource = 'remote' }: LearningPageProps) {
           )}
         </motion.div>
       )}
+      
+      {/* Learning AI Chat Section */}
+      <motion.div 
+        id="ai-coach"
+        className="mt-12 max-w-4xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div 
+          className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200 shadow-lg overflow-hidden"
+          variants={cardVariants}
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* Learning AI Header */}
+          <div className="p-6 border-b border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white shadow-md">
+                  <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">AI Learning Coach</h3>
+                  <p className="text-sm text-gray-600">
+                    {dataSource === 'local' && courses.length > 0 
+                      ? "Ready to create lessons tailored specifically for you?" 
+                      : "Get personalized help with your financial education"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                {!showLearningAI && courses.length > 0 && dataSource === 'remote' && (
+                  <motion.div 
+                    key={currentPromptIndex}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-2 text-xs text-green-600 text-right max-w-48"
+                  >
+                    "{learningPrompts[currentPromptIndex]}"
+                  </motion.div>
+                )}
+                <button
+                  onClick={() => setShowLearningAI(!showLearningAI)}
+                  className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <FontAwesomeIcon icon={faComments} className="h-4 w-4 mr-2" />
+                  {showLearningAI ? 'Hide' : 'Ask the Coach'}
+                  <FontAwesomeIcon 
+                    icon={showLearningAI ? faChevronUp : faChevronDown} 
+                    className="h-4 w-4 ml-2" 
+                  />
+                </button>
+              </div>
+            </div>
+            
+            {/* Features */}
+            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center text-green-700" title="Adapts to your learning pace and knowledge level">
+                <FontAwesomeIcon icon={faBrain} className="h-3 w-3 mr-2" />
+                <span>Adaptive Learning</span>
+              </div>
+              <div className="flex items-center text-emerald-700" title="Creates personalized lessons just for you">
+                <FontAwesomeIcon icon={faMagicWandSparkles} className="h-3 w-3 mr-2" />
+                <span>Custom Content</span>
+              </div>
+              <div className="flex items-center text-teal-700" title="Focuses on your specific financial goals">
+                <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2" />
+                <span>Goal-Oriented</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Learning Progress Panel */}
+          {learningProgress && (
+            <div className="px-6 py-3 bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 border-b border-green-200">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-green-800">
+                  <FontAwesomeIcon icon={faRobot} className="h-4 w-4 mr-2" />
+                  <span className="font-medium">
+                    I'll help you learn based on your overall progress and goals
+                  </span>
+                </div>
+                <div className="flex items-center space-x-4 text-xs text-green-700">
+                  <span>{learningProgress.totalCourses} courses</span>
+                  <span>{learningProgress.completedLessons} lessons completed</span>
+                  <span>{learningProgress.totalXP} XP earned</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chat Interface */}
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ 
+              height: showLearningAI ? 'auto' : 0, 
+              opacity: showLearningAI ? 1 : 0 
+            }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            {showLearningAI && (
+              <div className="h-96">
+                <ChatInterface 
+                  initialQuestion={getInitialMessage()}
+                  suggestedPrompts={learningPrompts}
+                  assistantType="learning-coach"
+                  placeholder="Ask me to create lessons, explain concepts, or help with course selection..."
+                  userProfile={hasProfile ? financialProfile : undefined}
+                  learningContext={learningProgress}
+                />
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

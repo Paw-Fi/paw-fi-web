@@ -9,6 +9,8 @@ import type { Lesson, Course } from '@/types/learning.types';
 import { useNavigate } from '@tanstack/react-router';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from '@/utils/seo';
+import { useState } from 'react';
+import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 
 export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   component: CourseDetailPage,
@@ -84,6 +86,8 @@ export default function CourseDetailPage({ dataSource = 'remote' }: CourseDetail
   const routePath = dataSource === 'local' ? '/dashboard/essentials/$courseId/' : '/dashboard/learning/$courseId/';
   const { courseId } = useParams({ from: routePath });
   const { user } = useAuth();
+  const [showLearningAI, setShowLearningAI] = useState(false);
+  
   const {
     data: courses = [],
     isLoading,
@@ -94,6 +98,46 @@ export default function CourseDetailPage({ dataSource = 'remote' }: CourseDetail
     source: dataSource 
   });
   const course = courseId === basicCourse.course_id ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
+  
+  // Get user's learning context for enhanced AI responses
+  const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
+  
+  // Calculate learning progress for this course
+  const learningProgress = course ? {
+    courseName: course.title,
+    totalLessons: course.lessons.length,
+    completedLessons: course.lessons.filter(lesson => lesson.unlocked).length,
+    totalXP: course.lessons.filter(lesson => lesson.unlocked).reduce((acc, lesson) => acc + (lesson.xp || 0), 0),
+  } : null;
+
+  // Create context-aware initial message for learning AI
+  const getInitialMessage = () => {
+    let contextMessage = `Hello! I'm your AI Learning Coach for the "${course?.title}" course. I create personalized lessons and answer questions about this topic.`;
+    
+    if (learningProgress) {
+      contextMessage += `\\n\\nI can see you've completed ${learningProgress.completedLessons} out of ${learningProgress.totalLessons} lessons in this course and earned ${learningProgress.totalXP} XP. `;
+    }
+    
+    if (hasProfile && financialProfile) {
+      const priorities = financialProfile.profile_data.goals_and_timeline.financial_priorities;
+      if (priorities.length > 0) {
+        contextMessage += `Based on your financial priorities (${priorities.slice(0, 2).join(', ')}), `;
+      }
+      contextMessage += "I can create lessons that match your specific situation and goals.";
+    }
+    
+    contextMessage += `\\n\\nWhat would you like to learn about ${course?.title.toLowerCase()}? I can create custom lessons, explain concepts, or help you with practice questions!`;
+    return contextMessage;
+  };
+
+  const learningPrompts = [
+    `Create a custom lesson about ${course?.title.toLowerCase()}`,
+    `Explain advanced concepts in ${course?.title.toLowerCase()}`,
+    `Generate practice questions for this course`,
+    `Help me understand a specific topic better`,
+    `Create a study plan for this course`,
+    `Show me real-world examples`,
+  ];
 
   // Define animation variants for container and lesson cards
   const containerVariants: Variants = {

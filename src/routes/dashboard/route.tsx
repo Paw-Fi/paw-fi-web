@@ -23,6 +23,8 @@ import {
   faTimes,
   faLightbulb,
   faHandHoldingDollar,
+  faFire,
+  faHouseChimney,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -36,6 +38,7 @@ import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWi
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
 import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
+import { useGamification } from "@/hooks/use-gamification";
 
 
 const NON_PROTECTED_ROUTES = [
@@ -109,6 +112,7 @@ export function Dashboard() {
   const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
+  const { gamificationData } = useGamification();
 
   const showGuide = () => {
     setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
@@ -161,7 +165,8 @@ export function Dashboard() {
   }, [courses]);
 
   const menuItems = [
-    { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard"},
+    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
+    { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
@@ -475,14 +480,29 @@ export function Dashboard() {
         <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
           <div className="flex-1 py-6">
             {/* Logo Section - Hidden on mobile (shown in top bar) */}
-            <Link to="/" className="mb-8 ml-4 hidden md:flex items-center space-x-3">
-              <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-                <img src={logo} className="h-6 w-6" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-gray-900">
-                Moneko
-              </span>
-            </Link>
+            <div className="mb-6 ml-4 hidden md:block">
+              <Link to="/" className="flex items-center space-x-3 mb-4">
+                <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
+                  <img src={logo} className="h-6 w-6" />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-gray-900">
+                  Moneko
+                </span>
+              </Link>
+              
+              {/* Streak Counter in Sidebar */}
+              <motion.div 
+                className="flex items-center bg-gradient-to-r from-orange-50 to-red-50 rounded-lg px-3 py-2 border border-orange-200"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-orange-500 mr-2" />
+                <div>
+                  <div className="text-lg font-bold text-orange-600">{gamificationData.streak}</div>
+                  <div className="text-xs text-orange-700 leading-tight">day streak</div>
+                </div>
+              </motion.div>
+            </div>
 
             {/* Navigation Menu */}
             <nav className="flex-1 space-y-2 px-4">

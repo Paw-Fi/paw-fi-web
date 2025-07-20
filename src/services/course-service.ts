@@ -93,6 +93,7 @@ export function getEssentialCourses(): Promise<Course[]> {
  */
 export function useUserCourses(userId: string, options?: CourseOptions) {
   const source = options?.source || 'remote';
+  return []
   
   return useQuery<Course[]>({
     // Include source in queryKey for proper caching
