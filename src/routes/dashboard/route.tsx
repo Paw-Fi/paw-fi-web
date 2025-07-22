@@ -459,17 +459,45 @@ export function Dashboard() {
               </Link>
               
               {/* Streak Counter in Sidebar */}
-              <motion.div 
-                className="flex items-center bg-gradient-to-r from-orange-50 to-red-50 rounded-lg px-3 py-2 border border-orange-200"
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
+              <Link
+                to="/dashboard/daily-challenges"
               >
-                <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-orange-500 mr-2" />
-                <div>
-                  <div className="text-lg font-bold text-orange-600">{gamificationData.streak}</div>
-                  <div className="text-xs text-orange-700 leading-tight">day streak</div>
+                
+                <div className="relative flex items-center px-4 py-3 hover:bg-red-50 transition-all duration-300 rounded-lg">
+                  {/* Fire icon with pulse animation */}
+                  <div className="relative mr-3">
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-orange-400/30 blur-md" />
+                    <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 shadow-md shadow-orange-500/30">
+                      <FontAwesomeIcon 
+                        icon={faFire} 
+                        className="h-4 w-4 text-white drop-shadow-sm" 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    {/* Streak number with enhanced typography */}
+                    <div className="flex items-baseline space-x-1">
+                      <span className="text-2xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+                        {gamificationData.streak}
+                      </span>
+                      <div className="h-1 w-1 rounded-full bg-orange-400 animate-pulse" />
+                    </div>
+                    
+                    {/* Label with improved spacing */}
+                    <div className="text-xs font-medium text-orange-700/80 leading-tight tracking-wide uppercase">
+                      Daily Streak
+                    </div>
+                  </div>
+                  
+                  {/* Subtle arrow indicator */}
+                  <div className="ml-2 text-orange-400/60 transition-all duration-300 group-hover:text-orange-500 group-hover:translate-x-1">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
-              </motion.div>
+              </Link>
             </div>
 
             {/* Navigation Menu */}

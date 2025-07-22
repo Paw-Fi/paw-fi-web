@@ -40,6 +40,10 @@ import {
   faChartBar,
   faHeartbeat,
   faWallet,
+  faGift,
+  faLock,
+  faTimes,
+  faUnlock,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useUserCourses } from "@/services/course-service";
@@ -51,6 +55,8 @@ import { getConversations } from "@/services/conversation-service";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
+import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
+import { useGamification } from "@/hooks/use-gamification";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -114,7 +120,8 @@ const cardHoverVariants: Variants = {
 
 function DashboardHome() {
   const { user } = useAuth();
-  
+  // Rewards modal state
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
   // Real data hooks - NO MOCK DATA
   const { dashboardData, views, status: dashboardStatus } = useDashboard(user?.id);
   const { data: courses = [], isLoading: coursesLoading } = useUserCourses(user?.id || "", { enabled: !!user });
@@ -173,6 +180,19 @@ function DashboardHome() {
       }
     };
   }, [dashboardData, views]);
+
+
+
+
+  // Time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    const name = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
+    
+    if (hour < 12) return `Good morning, ${name}!`;
+    if (hour < 17) return `Good afternoon, ${name}!`;
+    return `Good evening, ${name}!`;
+  };
 
   // Calculate real learning progress from actual course data
   const learningInsights = useMemo(() => {
@@ -375,6 +395,17 @@ function DashboardHome() {
     },
   ];
 
+  const { gamificationData } = useGamification();
+
+  // Use real gamification data
+  const currentStreak = gamificationData.streak;
+  const currentXP = gamificationData.xp;
+  const levelInfo = getCurrentLevelInfo(currentXP);
+
+  const currentLevelReward = LEVEL_REWARDS.find(r => r.level === levelInfo.level);
+  const nextLevelReward = LEVEL_REWARDS.find(r => r.level === levelInfo.level + 1);
+
+
   if (!user) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -393,26 +424,149 @@ function DashboardHome() {
         initial="hidden"
         animate="visible"
       >
-        {/* Daily Briefing - The Centerpiece */}
-        <motion.section 
-          className="px-4 py-8 sm:px-6 lg:px-8"
-          variants={itemVariants}
-        >
-          <div className="mx-auto max-w-7xl">
-            <DailyBriefing 
-              userProgress={{
-                streak: 7, // TODO: Get from actual user data
-                xp: learningInsights.hasCourses ? learningInsights.totalXP : 0,
-                level: Math.floor((learningInsights.hasCourses ? learningInsights.totalXP : 0) / 500) + 1,
-                completedQuests: [] // TODO: Get from actual user data
-              }}
-              onCompleteQuest={(questId) => {
-                // TODO: Handle quest completion
-                console.log('Quest completed:', questId);
-              }}
-            />
+           {/* Hero Header with Level Progression */}
+           <motion.div
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-8 shadow-2xl"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/2 -right-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-1/2 -left-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Greeting and Level Info */}
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
+                  {getGreeting()}
+                </h1>
+                <p className="text-purple-200 text-lg">
+                  Your daily financial mastery dashboard
+                </p>
+              </div>
+              
+              {/* Current Level Badge */}
+              {currentLevelReward && (
+                <motion.div
+                  className="group relative inline-flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                >
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${currentLevelReward.color}`}>
+                    <FontAwesomeIcon icon={currentLevelReward.icon} className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold">Level {levelInfo.level}</div>
+                    <div className="text-purple-200 text-sm">{currentLevelReward.title}</div>
+                  </div>
+                  
+                  {/* Detailed hover tooltip */}
+                  <motion.div
+                    className="absolute top-full left-0 mt-2 p-4 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 min-w-80"
+                    initial={{ opacity: 0, y: 10 }}
+                    whileHover={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="text-white font-semibold mb-2">Level {levelInfo.level} Details</div>
+                    <div className="text-gray-300 text-sm mb-3">{currentLevelReward.description}</div>
+                    <div className="text-green-400 text-sm font-medium">✨ {currentLevelReward.reward}</div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </div>
+            
+            {/* Streak and Stats */}
+            <div className="flex gap-4">
+              <motion.div
+                className="group relative px-6 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-orange-400 to-red-500">
+                    <FontAwesomeIcon icon={faFire} className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white">{currentStreak}</div>
+                    <div className="text-orange-200 text-sm">day streak</div>
+                  </div>
+                </div>
+                
+                {/* Streak tooltip */}
+                <motion.div
+                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-3 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 whitespace-nowrap"
+                  initial={{ opacity: 0, y: 10 }}
+                  whileHover={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="text-orange-400 font-semibold text-sm">Keep it burning! 🔥</div>
+                  <div className="text-gray-300 text-xs">Daily learning streak</div>
+                </motion.div>
+              </motion.div>
+            </div>
           </div>
-        </motion.section>
+          
+          {/* XP Progress Bar */}
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-between text-white/90">
+              <span className="text-sm font-medium">
+                {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
+              </span>
+              {!levelInfo.isMaxLevel && (
+                <span className="text-sm">
+                  {levelInfo.xpNeededForNext.toLocaleString()} XP to level {levelInfo.level + 1}
+                </span>
+              )}
+            </div>
+            
+            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full relative"
+                style={{ width: `${levelInfo.progressPercentage}%` }}
+                initial={{ width: 0 }}
+                animate={{ width: `${levelInfo.progressPercentage}%` }}
+                transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 animate-pulse"></div>
+              </motion.div>
+            </div>
+            
+            {/* Next Level Reward Preview & Rewards Button */}
+            <div className="flex items-center justify-between">
+              {nextLevelReward && (
+                <motion.div
+                  className="flex items-center gap-3 text-purple-200 text-sm"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.7 }}
+                >
+                  <FontAwesomeIcon icon={faGift} className="h-4 w-4" />
+                  <span>Next reward: {nextLevelReward.reward} at Level {nextLevelReward.level}</span>
+                </motion.div>
+              )}
+              
+              <motion.button
+                onClick={() => setShowRewardsModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white text-sm font-medium transition-all duration-200"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.8 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FontAwesomeIcon icon={faTrophy} className="h-4 w-4" />
+                <span>View All Rewards</span>
+                <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
         <div className="mx-auto max-w-7xl">
       
@@ -942,6 +1096,182 @@ function DashboardHome() {
         </div>
       </motion.div>
       <FloatingChatButton/>
+
+        {/* Rewards Modal */}
+        {showRewardsModal && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowRewardsModal(false)}
+          />
+          
+          {/* Modal */}
+          <motion.div
+            className="fixed inset-4 md:inset-8 lg:inset-16 xl:inset-24 z-50 flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", duration: 0.5 }}
+          >
+            <div className="relative w-full max-w-4xl max-h-full bg-white rounded-3xl shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-white/20">
+                      <FontAwesomeIcon icon={faTrophy} className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">Rewards Roadmap</h2>
+                      <p className="text-amber-100">
+                        {LEVEL_REWARDS.filter(r => levelInfo.level >= r.level).length} / {LEVEL_REWARDS.length} rewards unlocked
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowRewardsModal(false)}
+                    className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Scrollable Content */}
+              <div className="max-h-96 overflow-y-auto p-6">
+                <div className="relative">
+                  {/* Progress line */}
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-200 via-orange-300 to-amber-200"></div>
+                  
+                  <div className="space-y-4">
+                    {LEVEL_REWARDS.map((reward, index) => {
+                      const isUnlocked = levelInfo.level >= reward.level;
+                      const isNext = !isUnlocked && reward.level === levelInfo.level + 1;
+                      const xpRequired = LEVEL_REQUIREMENTS[reward.level - 1] || 0;
+                      
+                      return (
+                        <motion.div
+                          key={reward.level}
+                          className={`relative flex items-start gap-4 p-4 rounded-xl transition-all duration-200 ${
+                            isUnlocked 
+                              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200' 
+                              : isNext
+                              ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 ring-2 ring-amber-200'
+                              : 'bg-gray-50 border border-gray-200 opacity-75'
+                          }`}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                        >
+                          {/* Level indicator */}
+                          <div className={`relative flex-shrink-0 p-3 rounded-xl shadow-lg ${
+                            isUnlocked 
+                              ? `bg-gradient-to-br ${reward.color}` 
+                              : isNext
+                              ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                              : 'bg-gradient-to-br from-gray-300 to-gray-400'
+                          }`}>
+                            <FontAwesomeIcon 
+                              icon={isUnlocked ? faUnlock : reward.icon} 
+                              className="h-4 w-4 text-white" 
+                            />
+                            {!isUnlocked && (
+                              <div className="absolute -top-1 -right-1 p-1 bg-gray-600 rounded-full">
+                                <FontAwesomeIcon icon={faLock} className="h-2 w-2 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-lg font-bold ${
+                                  isUnlocked ? 'text-green-900' : isNext ? 'text-amber-900' : 'text-gray-700'
+                                }`}>
+                                  Level {reward.level}
+                                </span>
+                                {isNext && (
+                                  <span className="px-2 py-1 bg-amber-200 text-amber-800 text-xs font-bold rounded-full">
+                                    NEXT
+                                  </span>
+                                )}
+                                {isUnlocked && (
+                                  <span className="px-2 py-1 bg-green-200 text-green-800 text-xs font-bold rounded-full">
+                                    ✓ UNLOCKED
+                                  </span>
+                                )}
+                              </div>
+                              <div className={`text-sm font-medium ${
+                                isUnlocked ? 'text-green-600' : isNext ? 'text-amber-600' : 'text-gray-500'
+                              }`}>
+                                {xpRequired.toLocaleString()} XP
+                              </div>
+                            </div>
+                            
+                            <h4 className={`font-bold mb-1 ${
+                              isUnlocked ? 'text-green-900' : isNext ? 'text-amber-900' : 'text-gray-700'
+                            }`}>
+                              {reward.title}
+                            </h4>
+                            <p className={`text-sm mb-3 ${
+                              isUnlocked ? 'text-green-700' : isNext ? 'text-amber-700' : 'text-gray-600'
+                            }`}>
+                              {reward.description}
+                            </p>
+                            
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`p-1.5 rounded-lg ${
+                                isUnlocked ? 'bg-green-200' : isNext ? 'bg-amber-200' : 'bg-gray-200'
+                              }`}>
+                                <FontAwesomeIcon 
+                                  icon={faGift} 
+                                  className={`h-3 w-3 ${
+                                    isUnlocked ? 'text-green-600' : isNext ? 'text-amber-600' : 'text-gray-500'
+                                  }`} 
+                                />
+                              </div>
+                              <span className={`text-sm font-semibold ${
+                                isUnlocked ? 'text-green-800' : isNext ? 'text-amber-800' : 'text-gray-600'
+                              }`}>
+                                🎁 {reward.reward}
+                              </span>
+                            </div>
+                            
+                            {isNext && (
+                              <div className="p-3 bg-amber-100 rounded-lg border border-amber-200">
+                                <div className="text-xs text-amber-800 font-medium mb-2">
+                                  {levelInfo.xpNeededForNext.toLocaleString()} XP needed to unlock
+                                </div>
+                                <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min((currentXP / xpRequired) * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer */}
+              <div className="p-4 bg-gray-50 border-t">
+                <div className="text-center text-sm text-gray-600">
+                  Keep learning and growing to unlock amazing rewards! 🚀
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
     </ProtectedRouteSubscription>
   );
 }
