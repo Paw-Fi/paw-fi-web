@@ -19,9 +19,10 @@ import {
 import { toast } from "react-toastify";
 import { User } from "@/contexts/auth-context";
 import { FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
+import { FinancialAdvisorMessageGenerator, AdvisorMessage } from "./financial-advisor-messages";
 
 // Types
-type QuestionCategory =
+export type QuestionCategory =
   | "current-situation"
   | "liquidity-needs"
   | "risk-assessment"
@@ -72,6 +73,8 @@ interface QuizState {
   isComplete: boolean;
   isProcessing: boolean;
   currentTip: number;
+  advisorMessage: AdvisorMessage | null;
+  showAdvisorMessage: boolean;
 }
 
 interface ExtendedCalculationResults extends CalculationResults {
@@ -587,6 +590,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     isComplete: false,
     isProcessing: false,
     currentTip: 0,
+    advisorMessage: null,
+    showAdvisorMessage: false,
   });
 
   // Group questions by category for easier rendering
@@ -681,6 +686,28 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const isQuizComplete = useCallback((): boolean => {
     return categories.every((category) => isCategoryComplete(category.id));
   }, [categories, isCategoryComplete]);
+
+  // Generate advisor message for current category
+  const updateAdvisorMessage = useCallback(() => {
+    if (isCategoryComplete(state.activeCategory)) {
+      const message = FinancialAdvisorMessageGenerator.getCategoryMessage(state.activeCategory, state.answers);
+      setState(prev => ({
+        ...prev,
+        advisorMessage: message,
+        showAdvisorMessage: true
+      }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        showAdvisorMessage: false
+      }));
+    }
+  }, [state.activeCategory, state.answers, isCategoryComplete]);
+
+  // Update advisor message when answers change or category is complete
+  useEffect(() => {
+    updateAdvisorMessage();
+  }, [updateAdvisorMessage]);
 
   // Handle answer changes for single-choice and number inputs
   const handleAnswerChange = (questionId: string, value: string | number | boolean | string[] | DebtDetail[]) => {
@@ -865,7 +892,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
       );
       
       setStatus('complete');
-      onDashboardCreated(financialProfile);
+      if (financialProfile) {
+        onDashboardCreated(financialProfile);
+      }
     
     } catch (err) {
       console.error('Error creating portfolio:', err);
@@ -1358,6 +1387,68 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                               )}
                           </div>
                         ))}
+                      
+                      {/* Advisor Message */}
+                      {state.showAdvisorMessage && state.advisorMessage && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: 0.3 }}
+                          className={`rounded-lg p-6 shadow-sm border-l-4 ${
+                            state.advisorMessage.tone === 'congratulatory' 
+                              ? 'bg-green-50 border-green-400' 
+                              : state.advisorMessage.tone === 'encouraging'
+                              ? 'bg-blue-50 border-blue-400'
+                              : state.advisorMessage.tone === 'motivational'
+                              ? 'bg-purple-50 border-purple-400'
+                              : 'bg-amber-50 border-amber-400'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white ${
+                              state.advisorMessage.tone === 'congratulatory' 
+                                ? 'bg-green-500' 
+                                : state.advisorMessage.tone === 'encouraging'
+                                ? 'bg-blue-500'
+                                : state.advisorMessage.tone === 'motivational'
+                                ? 'bg-purple-500'
+                                : 'bg-amber-500'
+                            }`}>
+                              <FontAwesomeIcon 
+                                icon={state.advisorMessage.tone === 'congratulatory' ? faCheck : faChevronRight} 
+                                className="text-sm" 
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className={`text-sm font-semibold mb-2 ${
+                                state.advisorMessage.tone === 'congratulatory' 
+                                  ? 'text-green-800' 
+                                  : state.advisorMessage.tone === 'encouraging'
+                                  ? 'text-blue-800'
+                                  : state.advisorMessage.tone === 'motivational'
+                                  ? 'text-purple-800'
+                                  : 'text-amber-800'
+                              }`}>
+                                {state.advisorMessage.tone === 'congratulatory' && '🎉 Great work!'}
+                                {state.advisorMessage.tone === 'encouraging' && '💪 You\'re on the right track!'}
+                                {state.advisorMessage.tone === 'motivational' && '🚀 Let\'s build momentum!'}
+                                {state.advisorMessage.tone === 'reassuring' && '🤝 You\'re not alone in this!'}
+                              </h4>
+                              <p className={`text-sm leading-relaxed ${
+                                state.advisorMessage.tone === 'congratulatory' 
+                                  ? 'text-green-700' 
+                                  : state.advisorMessage.tone === 'encouraging'
+                                  ? 'text-blue-700'
+                                  : state.advisorMessage.tone === 'motivational'
+                                  ? 'text-purple-700'
+                                  : 'text-amber-700'
+                              }`}>
+                                {state.advisorMessage.message}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   )}
                 </motion.div>
