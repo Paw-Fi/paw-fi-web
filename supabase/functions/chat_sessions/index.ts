@@ -7,24 +7,13 @@ console.log(`Function "chat_sessions" up and running!`);
 // Define types for our conversation data
 interface Message {
   id?: string;
-  conversation_id?: string;
+  chat_session_id?: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: number;
   created_at?: string;
   updated_at?: string;
   metadata?: Record<string, unknown>;
-}
-
-interface ChatSession {
-  id: string;
-  user_id: string;
-  session_id: string;
-  model: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  messages?: Message[];
 }
 
 interface ErrorResponse {
@@ -107,7 +96,8 @@ async function handleGetSessions(
   supabase: SupabaseClient,
   userId: string,
   sessionId: string | undefined,
-  headers: Record<string, string>
+  headers: Record<string, string>,
+  url: URL
 ): Promise<Response> {
   try {
     if (sessionId) {
@@ -127,7 +117,7 @@ async function handleGetSessions(
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('conversation_id', sessionId)
+        .eq('chat_session_id', sessionId)
         .order('timestamp', { ascending: true });
 
       if (messagesError) {
@@ -144,12 +134,22 @@ async function handleGetSessions(
       );
     }
 
-    // Get all chat sessions for the user
-    const { data: chatSessions, error: chatSessionsError } = await supabase
+    // Get model parameter from query string
+    const model = url.searchParams.get('model');
+    
+    // Build query for all chat sessions for the user
+    let query = supabase
       .from('chat_sessions')
       .select('*')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
+    
+    // Filter by model if provided
+    if (model) {
+      query = query.eq('model', model);
+    }
+    
+    const { data: chatSessions, error: chatSessionsError } = await query;
 
     if (chatSessionsError) {
       return createErrorResponse(500, 'Failed to fetch chat sessions', chatSessionsError);
@@ -189,6 +189,14 @@ async function handleCreateSession(
     const sessionId = requestData?.session_id || crypto.randomUUID();
     const model = requestData?.model || 'gemini-pro';
     const now = new Date().toISOString();
+    
+    // Debug logging
+    console.log('Creating chat session with:', {
+      sessionId,
+      model,
+      receivedModel: requestData?.model,
+      userId
+    });
 
     // Create the chat session
     const { data: newChatSession, error: sessionInsertError } = await supabase
@@ -213,7 +221,7 @@ async function handleCreateSession(
     // Insert messages into the chat session
     if (requestData?.messages) {
       const messagesToInsert = requestData.messages.map((msg: Message) => ({
-        conversation_id: newChatSession.id,
+        chat_session_id: newChatSession.id,
         content: msg.content,
         role: msg.role,
         timestamp: msg.timestamp || Date.now()
@@ -289,7 +297,7 @@ async function handleUpdateSession(
     // Insert messages into the chat session if provided
     if (requestData.messages && requestData.messages.length > 0) {
       const messagesToInsert = requestData.messages.map((msg: Message) => ({
-        conversation_id: sessionId,
+        chat_session_id: sessionId,
         content: msg.content,
         role: msg.role,
         timestamp: msg.timestamp || Date.now(),
@@ -340,7 +348,7 @@ async function handleDeleteSession(
     const { error: deleteMessagesError } = await supabase
       .from('chat_messages')
       .delete()
-      .eq('conversation_id', sessionId);
+      .eq('chat_session_id', sessionId);
 
     if (deleteMessagesError) {
       console.error('Error deleting messages:', deleteMessagesError);
@@ -411,7 +419,7 @@ Deno.serve(async (req: Request) => {
     // Route the request based on HTTP method and path
     switch (req.method) {
       case 'GET':
-        return handleGetSessions(supabase, userId, sessionId, headers);
+        return handleGetSessions(supabase, userId, sessionId, headers, url);
       case 'POST':
         return handleCreateSession(supabase, userId, req, headers);
       case 'PUT':

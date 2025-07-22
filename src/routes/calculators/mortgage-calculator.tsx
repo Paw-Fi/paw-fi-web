@@ -6,7 +6,7 @@ import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/dashboard/calculators/mortgage-calculator')({
+export const Route = createFileRoute('/calculators/mortgage-calculator')({
   component: MortgageCalculatorPage,
   head: () => {
     // Use the canonical helper to ensure consistent URLs

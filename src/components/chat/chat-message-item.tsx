@@ -5,11 +5,12 @@ import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
-import { iconContainer } from "./chat-interface";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useEffect } from "react";
+import { iconContainer } from "./chat-conversation-display";
+import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
 
 interface Message {
   content: string;
@@ -21,18 +22,18 @@ interface Message {
 
 interface ChatMessageItemProps {
   message: Message;
-  formatTime: (timestamp: number) => string;
-  extractFirstJson: (text: string) => { json: any; start: number; end: number } | null;
-  navigate: (opts: { to: string }) => void;
+  navigate?: (opts: { to: string }) => void;
   onOpenQuizModal?: () => void;
+  formatTime?: (timestamp: number) => string;
 }
+
+
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
-  formatTime,
-  extractFirstJson,
   navigate,
   onOpenQuizModal,
+  formatTime: formatTimeProp,
 }) => {
   const isUser = message.role === "user";
   const { user } = useAuth();
@@ -76,7 +77,12 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
-        {formatTime(message.timestamp)}
+        {(formatTimeProp || defaultFormatTime)(message.timestamp)}
+        {message.metadata?.isStreaming && !isUser && (
+          <span className="ml-2 inline-flex items-center">
+            <div className="animate-pulse w-2 h-2 bg-emerald-400 rounded-full"></div>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -98,7 +104,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
               icon={json.icon || ""}
               description={json.description || ""}
               lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: "/dashboard/learning" })}
+              onClick={() => navigate?.({ to: "/dashboard/learning" })}
             />
           </div>
           {outro && <ReactMarkdown>{outro}</ReactMarkdown>}

@@ -12,10 +12,9 @@ import classNames from 'classnames';
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
   isLoading: boolean;
-  onOpenVoiceModal: () => void;
 }
 
-export function ChatInput({ onSendMessage, isLoading, onOpenVoiceModal }: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   const [message, setMessage] = useState('');
   
   const inputRef = useRef<HTMLTextAreaElement | null>(null);

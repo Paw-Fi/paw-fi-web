@@ -14,6 +14,7 @@ export const HomeHeader=()=>{
         {to:"/dashboard/essentials",label:"Learning"},
         {to:"/blogs",label:"Blogs"},
         {to:"/pricing",label:"Pricing"},
+        {to:"/calculators",label:"Calculators"},
 
     ]
 

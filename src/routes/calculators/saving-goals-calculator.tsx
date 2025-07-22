@@ -5,7 +5,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/dashboard/calculators/saving-goals-calculator')({
+export const Route = createFileRoute('/calculators/saving-goals-calculator')({
   component: SavingGoalsCalculatorPage,
   head: () => {
     const pageUrl = 'https://moneko.io/calculators/saving-goals-calculator';

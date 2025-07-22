@@ -25,6 +25,7 @@ import {
   faHandHoldingDollar,
   faFire,
   faHouseChimney,
+  faHome,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -85,7 +86,7 @@ export const Route = createFileRoute("/dashboard")({
         },
         {
           name: 'description',
-          content: 'Your personalized financial education portfolio. Access learning materials, calculators, and tools.',
+          content: 'Your personalized financial education portfolio. Access learning materials, and tools.',
         },
       ],
       link: [
@@ -109,7 +110,7 @@ export function Dashboard() {
     { enabled: !!user },
   );
   const { isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
-  const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
+  const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
   const { gamificationData } = useGamification();
@@ -151,92 +152,59 @@ export function Dashboard() {
 
   // Generate dynamic learning submenu from courses
   const learningSubmenu = useMemo<SubMenuItem[]>(() => {
-    // Add courses to submenu if they exist
+    const submenuItems: SubMenuItem[] = [];
+    
+    // Add Financial Essentials course first
+    submenuItems.push({
+      id: basicLessonsData.course_id,
+      label: basicLessonsData.title,
+      path: `/dashboard/learning/${basicLessonsData.course_id}`,
+    });
+    
+    // Add AI-generated courses if they exist
     if (courses && courses.length > 0) {
       const courseItems = courses.map((course) => ({
-        id: course.course_id || course.id || `course-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is always a string
+        id: course.course_id || course.id || `course-${Math.random().toString(36).substring(2, 9)}`,
         label: course.title,
         path: `/dashboard/learning/${course.course_id || course.id}`,
       }));
-      return courseItems;
+      submenuItems.push(...courseItems);
     }
 
-    return [];
+    return submenuItems;
   }, [courses]);
 
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
-    { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
     {
       id: "learning",
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
       submenu: learningSubmenu,
-    },
-    {
-      id: "essentials",
-      label: "Essentials",
-      icon: faBookOpen,
-      path: `/dashboard/essentials/your-2025-guide-to-investing`,
-      submenu: basicLessonsData.lessons.map((lesson) => ({
-        id: lesson.lesson_id,
-        label: lesson.title,
-        path: `/dashboard/essentials/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`,
-      })),
-    },
-    {
-      id: "calculators",
-      label: "Calculators",
-      icon: faCalculator,
-      path: "/dashboard/calculators",
-      submenu: [
-        {
-          id: "mortgage",
-          label: "Mortgage Calculator",
-          path: "/dashboard/calculators/mortgage-calculator",
-        },
-        {
-          id: "compound",
-          label: "Compound Interest",
-          path: "/dashboard/calculators/compound-calculator",
-        },
-        {
-          id: "investment",
-          label: "Investment Calculator",
-          path: "/dashboard/calculators/investment-calculator",
-        },
-        {
-          id: "retirement",
-          label: "Retirement Calculator",
-          path: "/dashboard/calculators/retirement-calculator",
-        },
-        {
-          id: "auto-loan",
-          label: "Auto Loan Calculator",
-          path: "/dashboard/calculators/auto-loan-calculator",
-        },
-        {
-          id: "saving-goals",
-          label: "Saving Goals Calculator",
-          path: "/dashboard/calculators/saving-goals-calculator",
-        },
-      ],
-    },
+    },    
     // Only show membership and settings if user is logged in
     ...(user ? [
-      {
-        id: "membership",
-        label: "Membership",
-        icon: faUser,
-        path: "/dashboard/membership",
-      },
       {
         id: "user-settings",
         label: "Settings",
         icon: faCog,
         path: "/dashboard/user-settings",
+        submenu: [
+          {
+            id: "profile",
+            label: "Profile",
+            icon: faUser,
+            path: "/dashboard/user-settings/",
+          },
+          {
+            id: "membership",
+            label: "Membership",
+            icon: faUser,
+            path: "/dashboard/user-settings/membership",
+          },
+        ],
       },
     ] : []),
   ];
@@ -513,10 +481,8 @@ export function Dashboard() {
                     className="group"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      // Track visits for essentials and calculators
-                      if (item.id === 'essentials') {
-                        markEssentialsVisited();
-                      } else if (item.id === 'calculators') {
+                      // Track visits for calculators
+                      if (item.id === 'calculators') {
                         markCalculatorsVisited();
                       }
                     }}

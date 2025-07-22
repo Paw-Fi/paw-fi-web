@@ -14,11 +14,12 @@ import { motion, Variants } from 'framer-motion';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
+import { HomeHeader } from '@/components/index/header';
 
-export const Route = createFileRoute('/dashboard/calculators/')({
+export const Route = createFileRoute('/calculators/')({
   component: CalculatorsPage,
   head: () => {
-    const pageUrl = getCanonicalUrl('/dashboard/calculators');
+    const pageUrl = getCanonicalUrl('/calculators');
     const meta = seo({
       title: 'Financial Calculators | Moneko',
       description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
@@ -37,37 +38,37 @@ export const Route = createFileRoute('/dashboard/calculators/')({
           "@type": "ListItem",
           "position": 1,
           "name": "Compound Interest Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/compound-calculator')
+          "url": getCanonicalUrl('/calculators/compound-calculator')
         },
         {
           "@type": "ListItem",
           "position": 2,
           "name": "Mortgage Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/mortgage-calculator')
+          "url": getCanonicalUrl('/calculators/mortgage-calculator')
         },
         {
           "@type": "ListItem",
           "position": 3,
           "name": "Investment Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/investment-calculator')
+          "url": getCanonicalUrl('/calculators/investment-calculator')
         },
         {
           "@type": "ListItem",
           "position": 4,
           "name": "Auto Loan Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/auto-loan-calculator')
+          "url": getCanonicalUrl('/calculators/auto-loan-calculator')
         },
         {
           "@type": "ListItem",
           "position": 5,
           "name": "Retirement Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/retirement-calculator')
+          "url": getCanonicalUrl('/calculators/retirement-calculator')
         },
         {
           "@type": "ListItem",
           "position": 6,
           "name": "Savings Goal Calculator",
-          "url": getCanonicalUrl('/dashboard/calculators/saving-goals-calculator')
+          "url": getCanonicalUrl('/calculators/saving-goals-calculator')
         }
       ]
     };
@@ -137,48 +138,50 @@ function CalculatorsPage() {
       title: 'Compound Interest',
       description: 'See your investments snowball with the magic of compound interest.',
       icon: faChartLine,
-      path: '/dashboard/calculators/compound-calculator',
+      path: '/calculators/compound-calculator',
       available: true
     },
     {
       title: 'Mortgage',
       description: 'Estimate monthly payments and understand your home loan better.',
       icon: faHome,
-      path: '/dashboard/calculators/mortgage-calculator',
+      path: '/calculators/mortgage-calculator',
       available: true
     },
     {
       title: 'Savings Goal',
       description: 'Chart a course to your financial dreams, one saving step at a time.',
       icon: faPiggyBank,
-      path: '/dashboard/calculators/saving-goals-calculator',
+      path: '/calculators/saving-goals-calculator',
       available: true
     },
     {
       title: 'Investment Growth',
       description: 'Project potential returns and explore different investment scenarios.',
       icon: faPercent, // Could use faSeedling or faChartPie for more visual variety if desired
-      path: '/dashboard/calculators/investment-calculator',
+      path: '/calculators/investment-calculator',
       available: true
     },
     {
       title: 'Auto Loan',
       description: 'Calculate car loan payments and total costs, including taxes and fees.',
       icon: faMoneyBillWave, // Could use faCar
-      path: '/dashboard/calculators/auto-loan-calculator',
+      path: '/calculators/auto-loan-calculator',
       available: true
     },
     {
       title: 'Retirement Planner',
       description: 'Map out your golden years with retirement savings and withdrawal estimates.',
       icon: faCreditCard, // Could use faUmbrellaBeach or faMountainSun
-      path: '/dashboard/calculators/retirement-calculator',
+      path: '/calculators/retirement-calculator',
       available: true
     },
   ];
 
   return (
-    <motion.div 
+    <AmbientHaloLayout>
+      <HomeHeader/>
+      <motion.div 
       className="container mx-auto px-4 py-6"
       variants={pageVariants}
       initial="hidden"
@@ -186,7 +189,7 @@ function CalculatorsPage() {
     >
       <div className="text-center mb-12 md:mb-16">
         <motion.h1 
-          className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400 text-transparent bg-clip-text"
+          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400 text-transparent bg-clip-text"
           initial={{ opacity: 0, y: -20 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -263,5 +266,6 @@ function CalculatorsPage() {
         ))}
       </motion.div>
     </motion.div>
+    </AmbientHaloLayout>
   );
 }

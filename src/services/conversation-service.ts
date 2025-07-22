@@ -1,9 +1,13 @@
+import { AI_ROLE } from '@/components/chat/ai-roles';
+import { supabase } from '@/lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 // Define types for our conversation data
 export interface AIResponse {
   response: string;
   isComplete: boolean;
   generatedLessons?: any;
+  messageId?: string;
+  conversationId?: string;
 }
 
 export interface Message {
@@ -20,7 +24,7 @@ export interface Conversation {
   id: string;
   user_id: string;
   session_id: string;
-  model: string;
+  model: AI_ROLE;
   system_prompt?: any;
   is_active: boolean;
   created_at: string;
@@ -42,8 +46,8 @@ export async function fetchConversation(supabase: SupabaseClient, id: string | u
   return getConversation(supabase, id);
 }
 
-export async function createNewConversation(supabase: SupabaseClient, params: { userId: string; sessionId: string; initialMessages?: Message[] }) {
-  return createConversation(supabase, params.userId, params.sessionId, params.initialMessages);
+export async function createNewConversation(supabase: SupabaseClient, params: { userId: string; sessionId: string; initialMessages?: Message[]; model?: string }) {
+  return createConversation(supabase, params.userId, params.sessionId, params.initialMessages || [], params.model as AI_ROLE);
 }
 
 export async function updateConversationData(supabase: SupabaseClient, params: { conversationId: string; updates: Partial<Conversation> }) {
@@ -62,11 +66,9 @@ export async function deleteConversationById(supabase: SupabaseClient, conversat
 
 export const getConversations = async (supabase: SupabaseClient): Promise<Conversation[]> => {
   try {
-    const { data, error } = await supabase.functions.invoke('chat_sessions', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    // Use chat_sessions Edge Function with explicit GET method and model parameter
+    const { data, error } = await supabase.functions.invoke('chat_sessions?model=financial_educator', {
+      method: 'GET'
     });
 
     if (error) {
@@ -86,38 +88,18 @@ export const getConversations = async (supabase: SupabaseClient): Promise<Conver
  */
 export const getConversation = async (supabase: SupabaseClient, id: string): Promise<Conversation> => {
   try {
-    // Get the conversation
-    const { data: conversation, error: conversationError } = await supabase.functions.invoke('chat_sessions', {
-      method: 'GET',
-      path: `/${id}`,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    // Use chat_sessions Edge Function to get specific conversation with messages
+    // The sessionId should be in the URL path, not the body
+    const { data, error } = await supabase.functions.invoke(`chat_sessions/${id}`, {
+      method: 'GET'
     });
 
-    if (conversationError) throw conversationError;
-
-    // Get the messages for this conversation
-    console.log('Fetching messages for conversation:', id);
-    const { data: messages, error: messagesError } = await supabase.functions.invoke(
-      `chat_messages/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      throw messagesError;
+    if (error) {
+      console.error('Error fetching conversation:', error);
+      throw error;
     }
 
-    // Combine conversation with messages
-    return {
-      ...conversation,
-      messages: messages || []
-    };
+    return data;
   } catch (error) {
     console.error('Error fetching conversation:', error);
     throw error;
@@ -131,7 +113,8 @@ export const createConversation = async (
   supabase: SupabaseClient,
   userId: string,
   sessionId: string,
-  initialMessages: Message[] = []
+  initialMessages: Message[] = [],
+  model: AI_ROLE
 ): Promise<Conversation> => {
   try {
     // Get the session token for authorization
@@ -142,18 +125,15 @@ export const createConversation = async (
       throw new Error('No authentication token available');
     }
 
+    const requestBody = {
+      session_id: sessionId,
+      messages: initialMessages,
+      model: model
+    };
     const { data, error } = await supabase.functions.invoke('chat_sessions', {
-      method: 'POST',
-      body: {
-        session_id: sessionId,
-        messages: initialMessages
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+      body: requestBody
     });
-
+    
     if (error) {
       console.error('Error creating conversation:', error);
       throw new Error(`Failed to create conversation: ${error.message}`);
@@ -260,12 +240,90 @@ export const addMessage = async (
 };
 
 /**
- * Call Supabase Edge Function for AI chat
+ * Simplified guest/auth chat function - sends message with session/conversation info
+ * Backend handles all context, persistence, and session management
  */
-export async function getAIResponseFromEdge(
+export async function sendChatMessage(
   supabase: SupabaseClient,
-  prompt: string,
-  history: any[],
+  message: string,
+  options: {
+    conversationId?: string | null;
+    userId?: string | null;
+    sessionId?: string | null;
+    model: string;
+    profile?: any;
+  }
+): Promise<AIResponse> {
+  try {
+    if (!message || message.trim() === '') {
+      return {
+        response: "I'm sorry, I didn't receive your message. Please try again.",
+        isComplete: true
+      };
+    }
+    const requestBody = { 
+      message,
+      conversationId: options.conversationId,
+      userId: options.userId,
+      sessionId: options.sessionId,
+      model: options.model,
+      userProfile: options.profile
+    };
+    
+    // Let Supabase handle method, headers, and JSON serialization automatically
+    const { data, error } = await supabase.functions.invoke('chat_stream', {
+      body: requestBody
+    });
+    
+    if (error) throw error;
+    
+    return {
+      response: data.response || data.content,
+      isComplete: true,
+      messageId: data.messageId,
+      conversationId: data.conversationId // For guest sessions, backend returns new session ID
+    };
+  } catch (error: any) {
+    return {
+      response: error.message || "An error occurred while processing your message. Please try again.",
+      isComplete: false,
+    };
+  }
+}
+
+/**
+ * Update guest session with user ID on login
+ */
+export async function updateGuestSession(
+  sessionId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const requestBody = { sessionId, userId };
+    
+    // Let Supabase handle authorization automatically
+    const { data, error } = await supabase.functions.invoke('update_guest_session', {
+      body: requestBody
+    });
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error: any) {
+    return { 
+      success: false, 
+      error: error.message || "Failed to update guest session" 
+    };
+  }
+}
+
+/**
+ * Optimized AI chat function - only sends new user message, backend handles context and DB updates
+ */
+export async function sendMessageOptimized(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userMessage: string,
   userId?: string,
   userProfile?: string
 ): Promise<AIResponse> {
@@ -274,28 +332,28 @@ export async function getAIResponseFromEdge(
     const session = (await supabase.auth.getSession()).data.session;
     const token = session?.access_token;
 
-    // Debug logging
-    console.log('getAIResponseFromEdge called with:', { 
-      prompt: prompt, 
-      promptLength: prompt?.length, 
-      promptType: typeof prompt,
-      history: history?.length || 0, 
-      userId, 
-      userProfile: userProfile ? 'Profile provided' : 'No profile' 
-    });
-
-    if (!prompt || prompt.trim() === '') {
-      console.error('Empty prompt passed to getAIResponseFromEdge');
+    if (!userMessage || userMessage.trim() === '') {
       return {
         response: "I'm sorry, I didn't receive your message. Please try again.",
         isComplete: true
       };
     }
+
+    if (!conversationId) {
+      return {
+        response: "Error: Missing conversation ID. Please refresh and try again.",
+        isComplete: true
+      };
+    }
     
-    const requestBody = { message: prompt, history, userId, userProfile };
-    console.log('Sending to chat_stream:', requestBody);
+    const requestBody = { 
+      conversationId, 
+      userMessage, 
+      userId, 
+      userProfile 
+    };
     
-    // Use the same pattern as the working addMessage function
+    // Set up headers with authorization token
     const headers: Record<string, string> = {};
     
     // Add authorization header if we have a token (for authenticated users)
@@ -303,17 +361,21 @@ export async function getAIResponseFromEdge(
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const { data, error } = await supabase.functions.invoke('chat_stream', {
+    const { data, error } = await supabase.functions.invoke('chat_optimized', {
       body: requestBody,
       headers: Object.keys(headers).length > 0 ? headers : undefined
     });
     
-    console.log('Response from chat_stream:', { data, error });
     if (error) throw error;
-    return data as AIResponse;
+    
+    return {
+      response: data.response,
+      isComplete: true,
+      messageId: data.messageId
+    };
   } catch (error: any) {
     return {
-      content: error.message || "Unknown error",
+      response: error.message || "An error occurred while processing your message. Please try again.",
       isComplete: false,
     };
   }
@@ -347,21 +409,18 @@ export async function getPredictedResponses(
   history: any[]
 ): Promise<string[]> {
   try {
-    console.log(message)
     const { data, error } = await supabase.functions.invoke('predict-user-responses', {
       method: 'POST',
       body: { message, history }
     });
     
     if (error) {
-      console.error('Error getting predicted responses:', error);
       return [];
     }
     
     // Return the array of suggested responses or an empty array if no data
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error in getPredictedResponses:', error);
     return [];
   }
 }

@@ -50,43 +50,64 @@ import { supabase } from "@/lib/supabase";
 import { getConversations } from "@/services/conversation-service";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
+import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
 });
 
-// Animation variants
+// Modern 2025 animation variants with spring physics
 const containerVariants: Variants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 0, y: 40 },
   visible: {
     opacity: 1,
+    y: 0,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
+      type: "spring",
+      damping: 20,
+      stiffness: 100,
+      staggerChildren: 0.08,
+      delayChildren: 0.15,
     },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { 
+    opacity: 0, 
+    y: 40, 
+    scale: 0.95,
+    rotateX: 10,
+  },
   visible: {
     opacity: 1,
     y: 0,
+    scale: 1,
+    rotateX: 0,
     transition: {
-      duration: 0.5,
-      ease: "easeOut",
+      type: "spring",
+      damping: 25,
+      stiffness: 120,
+      mass: 1,
     },
   },
 };
 
 const cardHoverVariants: Variants = {
-  rest: { scale: 1, y: 0 },
+  rest: { 
+    y: 0,
+    rotateX: 0,
+    rotateY: 0,
+  },
   hover: { 
-    scale: 1.02, 
     y: -4,
+    rotateX: 1,
+    rotateY: 1,
     transition: {
-      duration: 0.2,
-      ease: "easeOut",
+      type: "spring",
+      damping: 20,
+      stiffness: 300,
+      mass: 0.8,
     },
   },
 };
@@ -367,7 +388,7 @@ function DashboardHome() {
   return (
     <ProtectedRouteSubscription>
       <motion.div
-        className="min-h-screen bg-gradient-to-br from-background via-purple-50/30 to-blue-50/20"
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/40 to-indigo-100/60 dark:from-slate-900 dark:via-purple-900/20 dark:to-indigo-900/30"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -393,104 +414,8 @@ function DashboardHome() {
           </div>
         </motion.section>
 
-        <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-          {/* Status Bar */}
-          <motion.div 
-            className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4"
-            variants={containerVariants}
-          >
-            <motion.div 
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/20"
-              variants={itemVariants}
-            >
-              <div className="flex items-center">
-                <FontAwesomeIcon 
-                  icon={subscriptionInsights.isSubscribed ? faCheckCircle : faTimesCircle} 
-                  className={`h-5 w-5 mr-3 ${subscriptionInsights.isSubscribed ? 'text-green-500' : 'text-gray-400'}`} 
-                />
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {subscriptionInsights.isSubscribed ? subscriptionInsights.plan : 'Free Plan'}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {subscriptionInsights.isSubscribed ? 
-                      (subscriptionInsights.isTrialing ? 'Trial Active' : 'Subscribed') : 
-                      'Limited Access'
-                    }
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/20"
-              variants={itemVariants}
-            >
-              <div className="flex items-center">
-                <FontAwesomeIcon 
-                  icon={financialProfileInsights.hasProfile ? faHeartbeat : faUser} 
-                  className={`h-5 w-5 mr-3 ${financialProfileInsights.hasProfile ? 'text-green-500' : 'text-gray-400'}`} 
-                />
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {financialProfileInsights.hasProfile ? 'Profile Complete' : 'Setup Needed'}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {financialProfileInsights.hasProfile ? 
-                      `Age ${financialProfileInsights.age}` : 
-                      'Create profile'
-                    }
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/20"
-              variants={itemVariants}
-            >
-              <div className="flex items-center">
-                <FontAwesomeIcon 
-                  icon={portfolioInsights.hasPortfolio ? faWallet : faPlus} 
-                  className={`h-5 w-5 mr-3 ${portfolioInsights.hasPortfolio ? 'text-blue-500' : 'text-gray-400'}`} 
-                />
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {portfolioInsights.hasPortfolio ? `${portfolioInsights.totalViews} Portfolios` : 'No Portfolio'}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {portfolioInsights.hasPortfolio ? 
-                      `${portfolioInsights.totalWidgets} widgets` : 
-                      'Get started'
-                    }
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/20"
-              variants={itemVariants}
-            >
-              <div className="flex items-center">
-                <FontAwesomeIcon 
-                  icon={learningInsights.hasCourses ? faTrophy : faBookOpen} 
-                  className={`h-5 w-5 mr-3 ${learningInsights.hasCourses ? 'text-yellow-500' : 'text-gray-400'}`} 
-                />
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {learningInsights.hasCourses ? `${learningInsights.totalXP} XP` : 'Start Learning'}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {learningInsights.hasCourses ? 
-                      `${Math.round(learningInsights.progress)}% complete` : 
-                      'Begin journey'
-                    }
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+        <div className="mx-auto max-w-7xl">
+      
 
           {/* Main Content Grid */}
           <motion.div 
@@ -503,16 +428,17 @@ function DashboardHome() {
               {/* Financial Health Overview */}
               {financialProfileInsights.hasProfile ? (
                 <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-purple-500/80"
                   variants={cardHoverVariants}
                   initial="rest"
                   whileHover="hover"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-blue-500/5"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>
                   <div className="relative p-8">
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center">
-                        <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-blue-600 text-white shadow-lg">
+                        <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-xl">
                           <FontAwesomeIcon icon={faHeartbeat} className="h-6 w-6" />
                         </div>
                         <div>
@@ -596,21 +522,22 @@ function DashboardHome() {
                 </motion.div>
               ) : (
                 <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-pink-500/80"
                   variants={cardHoverVariants}
                   initial="rest"
                   whileHover="hover"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>
                   <div className="relative p-8 text-center">
-                    <div className="mb-6 mx-auto w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faUser} className="h-10 w-10 text-blue-600" />
+                    <div className="mb-6 mx-auto w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center shadow-lg">
+                      <FontAwesomeIcon icon={faUser} className="h-10 w-10 text-purple-600" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Financial Profile</h3>
                     <p className="text-gray-600 mb-6">Get personalized insights by completing your financial health assessment</p>
                     <Link
                       to="/dashboard/portfolio"
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
                       <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
                       Start Assessment
@@ -621,16 +548,17 @@ function DashboardHome() {
 
               {/* Learning Progress Section */}
               <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-indigo-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(168,85,247,0.1),transparent_50%)]"></div>
                 <div className="relative p-8">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center">
-                      <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
+                      <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-xl">
                         <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
                       </div>
                       <div>
@@ -670,37 +598,49 @@ function DashboardHome() {
                         </div>
                       </div>
                       
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
                         <motion.div 
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${learningInsights.progress}%` }}
-                          transition={{ duration: 1, delay: 0.5 }}
-                        ></motion.div>
+                          className="bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 h-3 rounded-full relative"
+                          initial={{ width: 0, x: -10 }}
+                          animate={{ width: `${learningInsights.progress}%`, x: 0 }}
+                          transition={{ 
+                            type: "spring",
+                            damping: 20,
+                            stiffness: 100,
+                            duration: 1.2,
+                            delay: 0.5 
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                        </motion.div>
                       </div>
 
                       {learningInsights.nextLesson && (
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+                        <motion.div 
+                          className="bg-gradient-to-r from-purple-50/80 to-pink-50/80 border border-purple-200 rounded-2xl p-6 backdrop-blur-sm border-t-4 border-t-purple-400/80"
+                          whileHover={{ y: -2 }}
+                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center mb-2">
-                                <FontAwesomeIcon icon={faBolt} className="h-4 w-4 text-green-600 mr-2" />
-                                <h4 className="font-semibold text-green-800">Continue Learning</h4>
+                                <FontAwesomeIcon icon={faBolt} className="h-4 w-4 text-purple-600 mr-2" />
+                                <h4 className="font-semibold text-purple-800">Continue Learning</h4>
                               </div>
-                              <p className="text-green-700 font-medium mb-2">{learningInsights.nextLesson.title}</p>
-                              <p className="text-green-600 text-sm mb-3">{learningInsights.nextLesson.description}</p>
-                              <div className="text-xs text-green-600">
+                              <p className="text-purple-700 font-medium mb-2">{learningInsights.nextLesson.title}</p>
+                              <p className="text-purple-600 text-sm mb-3">{learningInsights.nextLesson.description}</p>
+                              <div className="text-xs text-purple-600">
                                 Course: {learningInsights.currentCourse?.title}
                               </div>
                             </div>
                             <Link
                               to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}`}
-                              className="ml-4 px-6 py-3 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                              className="ml-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                             >
                               Continue
                             </Link>
-                          </div>
                         </div>
+                        </motion.div>
                       )}
 
                       {learningInsights.recentActivity && (
@@ -720,14 +660,14 @@ function DashboardHome() {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <div className="mb-4 mx-auto w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                        <FontAwesomeIcon icon={faBookOpen} className="h-8 w-8 text-green-600" />
+                      <div className="mb-4 mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center shadow-lg">
+                        <FontAwesomeIcon icon={faBookOpen} className="h-8 w-8 text-purple-600" />
                       </div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">Start Your Learning Journey</h4>
                       <p className="text-gray-600 mb-4">Unlock personalized courses tailored to your financial goals</p>
                       <Link
                         to="/dashboard/learning"
-                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
                         <FontAwesomeIcon icon={faGraduationCap} className="mr-2 h-4 w-4" />
                         Explore Courses
@@ -743,15 +683,16 @@ function DashboardHome() {
               
               {/* AI Assistant Section */}
               <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-pink-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-purple-500/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(236,72,153,0.1),transparent_50%)]"></div>
                 <div className="relative p-6">
                   <div className="flex items-center mb-4">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-md">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-xl">
                       <FontAwesomeIcon icon={faComments} className="h-5 w-5" />
                     </div>
                     <div>
@@ -896,16 +837,17 @@ function DashboardHome() {
 
               {/* Quick Calculators */}
               <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-indigo-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-red-500/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1),transparent_50%)]"></div>
                 <div className="relative p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
-                      <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-md">
+                      <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-xl">
                         <FontAwesomeIcon icon={faCalculator} className="h-5 w-5" />
                       </div>
                       <div>
@@ -922,28 +864,33 @@ function DashboardHome() {
                   </div>
 
                   <div className="space-y-3">
-                    {availableCalculators.slice(0, 4).map((calculator, index) => (
-                      <Link
+                    {availableCalculators.slice(0, 4).map((calculator) => (
+                      <motion.div
                         key={calculator.title}
-                        to={calculator.path}
-                        className="block group/item p-3 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-gray-300 transition-all duration-200 hover:shadow-md"
+                        whileHover={{ x: 4 }}
+                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
                       >
-                        <div className="flex items-center">
-                          <div className={`mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${calculator.color} text-white shadow-sm`}>
-                            <FontAwesomeIcon icon={calculator.icon} className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm font-semibold text-gray-900 group-hover/item:text-gray-800">
-                              {calculator.title}
+                        <Link
+                          to={calculator.path}
+                          className="block group/item p-3 rounded-xl bg-gradient-to-r from-white/80 to-gray-50/80 border border-purple-200/30 hover:border-purple-300/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
+                        >
+                          <div className="flex items-center">
+                            <div className={`mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${calculator.color} text-white shadow-sm`}>
+                              <FontAwesomeIcon icon={calculator.icon} className="h-4 w-4" />
                             </div>
-                            <div className="text-xs text-gray-600">{calculator.category}</div>
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold text-gray-900 group-hover/item:text-gray-800">
+                                {calculator.title}
+                              </div>
+                              <div className="text-xs text-gray-600">{calculator.category}</div>
+                            </div>
+                            <FontAwesomeIcon 
+                              icon={faChevronRight} 
+                              className="h-3 w-3 text-gray-400 group-hover/item:text-purple-600 transition-colors" 
+                            />
                           </div>
-                          <FontAwesomeIcon 
-                            icon={faChevronRight} 
-                            className="h-3 w-3 text-gray-400 group-hover/item:text-gray-600 transition-colors" 
-                          />
-                        </div>
-                      </Link>
+                        </Link>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -951,15 +898,16 @@ function DashboardHome() {
 
               {/* Essential Lessons Quick Access */}
               <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
+                className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-purple-600/80"
                 variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(147,51,234,0.1),transparent_50%)]"></div>
                 <div className="relative p-6">
                   <div className="flex items-center mb-4">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-md">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-xl">
                       <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5" />
                     </div>
                     <div>
@@ -993,6 +941,7 @@ function DashboardHome() {
           </motion.div>
         </div>
       </motion.div>
+      <FloatingChatButton/>
     </ProtectedRouteSubscription>
   );
 }

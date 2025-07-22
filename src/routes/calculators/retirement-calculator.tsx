@@ -20,7 +20,7 @@ function RetirementCalculatorPage() {
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/dashboard/calculators/retirement-calculator')({
+export const Route = createFileRoute('/calculators/retirement-calculator')({
   component: RetirementCalculatorPage,
   head: () => {
     const pageUrl = 'https://moneko.io/calculators/retirement-calculator';

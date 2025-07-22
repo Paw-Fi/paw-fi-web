@@ -3,7 +3,7 @@ import { MembershipDashboard } from "@/components/membership/MembershipDashboard
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 
-export const Route = createFileRoute("/dashboard/membership/")({
+export const Route = createFileRoute("/dashboard/user-settings/membership/")({
   component: MembershipPage,
   head: () => {
     const pageUrl = getCanonicalUrl('/dashboard/membership');

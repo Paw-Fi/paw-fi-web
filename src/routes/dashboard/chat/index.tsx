@@ -14,7 +14,7 @@ import {
   faChartBar,
   faBullseye,
 } from "@fortawesome/free-solid-svg-icons";
-import { ChatInterface } from "@/components/chat/chat-interface";
+import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { useAuth } from "@/contexts/auth-context";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useDashboard } from "@/hooks/use-dashboard";
@@ -55,27 +55,6 @@ function FinancialAdvisorChat() {
   // Get user's financial context for enhanced AI responses
   const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
   const { dashboardData } = useDashboard(user?.id);
-
-  // Create context-aware initial message
-  const getInitialMessage = () => {
-    if (initialQuestion) return initialQuestion;
-    
-    let contextMessage = "Hello! I'm your AI Financial Advisor. I'm here to help you with investment strategies, portfolio optimization, and financial planning.";
-    
-    if (hasProfile && financialProfile) {
-      const profile = financialProfile.profile_data;
-      contextMessage += `\n\nI can see you're ${profile.demographics.age} years old with $${profile.calculated_metrics.total_assets?.toLocaleString() || 0} in total assets. `;
-      
-      if (profile.calculated_metrics.years_to_retirement) {
-        contextMessage += `With ${profile.calculated_metrics.years_to_retirement} years to retirement, `;
-      }
-      
-      contextMessage += "I'm ready to provide personalized advice based on your financial situation.";
-    }
-    
-    contextMessage += "\n\nWhat financial questions can I help you with today?";
-    return contextMessage;
-  };
 
   const advisorPrompts = [
     "Analyze my current portfolio allocation",
@@ -160,8 +139,7 @@ function FinancialAdvisorChat() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <ChatInterface 
-          initialQuestion={getInitialMessage()}
+        <FinancialAdvisorChatInterface 
           suggestedPrompts={advisorPrompts}
           assistantType="financial-advisor"
           placeholder="Ask about investments, portfolio analysis, financial planning..."

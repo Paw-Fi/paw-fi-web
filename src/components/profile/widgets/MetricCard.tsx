@@ -34,7 +34,7 @@ const getTrendColor = (trend: IMetricCardItem['trend']) => {
   return 'text-slate-400';
 };
 
-// Helper function to get metric type and benchmarks
+// Helper function to get metric type and benchmarks - enhanced for confidence building
 const getMetricAnalysis = (metricItem: IMetricCardItem) => {
   const numericValue = metricItem?.value ? parseFloat(metricItem.value.toString().replace(/[^0-9.-]/g, '')) : 0;
   const description = metricItem?.description?.toLowerCase() || '';
@@ -45,12 +45,16 @@ const getMetricAnalysis = (metricItem: IMetricCardItem) => {
     return {
       type: 'Savings Rate',
       benchmark: '15-20%',
-      status: numericValue >= 15 ? (numericValue <= 20 ? 'optimal' : 'excellent') : 'needs-improvement',
+      status: numericValue >= 15 ? (numericValue <= 20 ? 'optimal' : 'excellent') : numericValue >= 5 ? 'building' : 'starting',
       guidance: numericValue >= 15 && numericValue <= 20 
         ? 'Your savings rate is in the optimal range for wealth building.'
         : numericValue > 20 
         ? 'Excellent savings rate! You\'re building wealth aggressively.'
-        : 'Consider increasing your savings rate to 15-20% for optimal wealth building.',
+        : numericValue >= 5
+        ? `Great start! You're saving ${numericValue}%. Try increasing by just 1% each month to reach 15-20%.`
+        : numericValue > 0
+        ? `Every dollar saved is progress! You're building the habit. Next goal: reach 5% savings rate.`
+        : 'Starting your savings journey is the hardest step - you\'ve got this! Even $1 a day makes a difference.',
       icon: faChartLine,
     };
   }
@@ -59,11 +63,13 @@ const getMetricAnalysis = (metricItem: IMetricCardItem) => {
     return {
       type: 'Debt Ratio',
       benchmark: '< 36%',
-      status: numericValue <= 36 ? 'good' : 'needs-attention',
+      status: numericValue <= 36 ? 'good' : numericValue <= 50 ? 'manageable' : 'focus-area',
       guidance: numericValue <= 36 
         ? 'Your debt-to-income ratio is within healthy limits.'
-        : 'Consider reducing debt to below 36% of your income for better financial health.',
-      icon: faExclamationTriangle,
+        : numericValue <= 50
+        ? `Your debt ratio is manageable at ${numericValue}%. Focus on small wins - pay an extra $25/month on highest interest debt.`
+        : `You're working with a ${numericValue}% debt ratio. Every payment brings you closer to freedom. Consider the debt snowball method.`,
+      icon: faInfoCircle, // Changed from warning to info icon
     };
   }
   
@@ -71,12 +77,16 @@ const getMetricAnalysis = (metricItem: IMetricCardItem) => {
     return {
       type: 'Emergency Fund',
       benchmark: '3-6 months',
-      status: numericValue >= 3 ? (numericValue >= 6 ? 'excellent' : 'good') : 'needs-improvement',
+      status: numericValue >= 3 ? (numericValue >= 6 ? 'excellent' : 'good') : numericValue >= 1 ? 'building' : 'starting',
       guidance: numericValue >= 6 
-        ? 'Excellent emergency fund coverage!'
+        ? 'Excellent emergency fund coverage! You\'re financially resilient.'
         : numericValue >= 3 
-        ? 'Good emergency fund. Consider building to 6 months of expenses.'
-        : 'Build your emergency fund to at least 3-6 months of expenses.',
+        ? 'Solid emergency fund! You\'re building financial security. Consider expanding to 6 months.'
+        : numericValue >= 1
+        ? `You have ${numericValue} month(s) covered - great foundation! Add $50/month to reach 3 months.`
+        : numericValue > 0
+        ? 'You\'ve started your emergency fund - that\'s the hardest part! Keep building momentum.'
+        : 'Start with just $100 as your emergency fund foundation. You can do this!',
       icon: faInfoCircle,
     };
   }
@@ -103,7 +113,7 @@ const getMetricAnalysis = (metricItem: IMetricCardItem) => {
   };
 };
 
-// Helper function to get status color and icon
+// Helper function to get status color and icon - more encouraging approach
 const getStatusIndicator = (status: string) => {
   switch (status) {
     case 'excellent':
@@ -111,32 +121,45 @@ const getStatusIndicator = (status: string) => {
     case 'optimal':
     case 'good':
       return { color: 'text-blue-600', bgColor: 'bg-blue-50', icon: faCheckCircle };
+    case 'building':
+    case 'manageable':
+      return { color: 'text-purple-600', bgColor: 'bg-purple-50', icon: faChartLine };
+    case 'starting':
+    case 'focus-area':
+      return { color: 'text-amber-600', bgColor: 'bg-amber-50', icon: faInfoCircle };
     case 'needs-improvement':
     case 'needs-attention':
-      return { color: 'text-amber-600', bgColor: 'bg-amber-50', icon: faExclamationTriangle };
+      return { color: 'text-orange-600', bgColor: 'bg-orange-50', icon: faInfoCircle };
     default:
       return { color: 'text-slate-600', bgColor: 'bg-slate-50', icon: faInfoCircle };
   }
 };
 
-// Progress bar component for visual representation
+// Progress bar component for visual representation - encouraging design
 const ProgressBar = ({ value, max, status }: { value: number; max: number; status: string }) => {
   const percentage = Math.min((value / max) * 100, 100);
   const statusColors = {
     'excellent': 'bg-emerald-500',
     'optimal': 'bg-blue-500',
     'good': 'bg-blue-500',
-    'needs-improvement': 'bg-amber-500',
-    'needs-attention': 'bg-red-500',
+    'building': 'bg-purple-500',
+    'manageable': 'bg-purple-500',
+    'starting': 'bg-amber-500',
+    'focus-area': 'bg-amber-500',
+    'needs-improvement': 'bg-orange-400',
+    'needs-attention': 'bg-orange-400',
     'neutral': 'bg-slate-500',
   };
   
   const barColor = statusColors[status as keyof typeof statusColors] || 'bg-slate-500';
   
+  // Show growth mindset messaging
+  const progressText = percentage < 25 ? '🌱 Growing' : percentage < 50 ? '📈 Building' : percentage < 75 ? '🎯 Progressing' : '🏆 Excelling';
+  
   return (
     <div className="w-full">
       <div className="flex justify-between text-xs text-slate-500 mb-1">
-        <span>Current: {value}%</span>
+        <span>{progressText}: {value}%</span>
         <span>Target: {max}%</span>
       </div>
       <div className="w-full bg-slate-200 rounded-full h-2">
@@ -180,9 +203,11 @@ export function MetricCard({ widget }: MetricCardProps) {
             <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">
               {metricItem?.value}
             </span>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              Saving ${savingAmount} per month
-            </span>
+            {savingAmount > 0 && (
+              <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                💚 Saving ${savingAmount} per month
+              </span>
+            )}
 
           {/* Status Indicator */}
 
