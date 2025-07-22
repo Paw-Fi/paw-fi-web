@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { AnimatePresence, motion } from "framer-motion";
 import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
 import { ChatInput } from './chat-input';
 import logo from "@/assets/images/icon.svg";
+import { getPredictedResponses } from '@/services/conversation-service';
+import { supabase } from '@/lib/supabase';
 
 export interface ConversationMessage {
   content: string;
@@ -19,7 +21,6 @@ export interface ConversationMessage {
 interface ChatConversationDisplayProps {
   messages: ConversationMessage[];
   onMessageSend: (content: string) => Promise<void> | void;
-  isLoading?: boolean;
   isSendingMessage?: boolean;
   
   // Optional customization
@@ -28,10 +29,7 @@ interface ChatConversationDisplayProps {
   welcomeMessage?: string;
   welcomeSubtitle?: string;
   loadingMessage?: string;
-  
-  // Suggestions
-  suggestions?: string[];
-  onSuggestionClick?: (suggestion: string) => void;
+
   
   // Error handling
   connectionError?: string;
@@ -68,15 +66,11 @@ export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
 export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = ({
   messages,
   onMessageSend,
-  isLoading = false,
   isSendingMessage = false,
-  agentName = "AI Assistant",
   agentIcon,
   welcomeMessage = "Hi! I'm here to help you. Ask me anything to get started!",
   welcomeSubtitle = "Type a message below to begin our conversation.",
   loadingMessage = "AI is thinking...",
-  suggestions = [],
-  onSuggestionClick,
   connectionError,
   mergeError,
   isBackendProcessing = false,
@@ -111,32 +105,49 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       scrollToBottom();
     }, 100);
     return () => clearTimeout(timeoutId);
-  }, [messages, isLoading, scrollToBottom]);
+  }, [messages, scrollToBottom]);
 
   const handleSuggestionClick = (suggestion: string) => {
-    if (onSuggestionClick) {
-      onSuggestionClick(suggestion);
-    } else {
+    setSuggestedResponses([]);
       onMessageSend(suggestion);
-    }
+    
   };
 
   const MAX_TIME_TO_SHOW_LOADING = 9;
+  
+  const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
+  
+  ]);
+
+  useEffect(() => {
+    if(messages.length > 0) {
+      fetchSuggestions(messages[messages.length - 1].content);
+    }
+  }, [messages]);
+  
+  // Fetch suggested responses based on assistant message
+  const fetchSuggestions = async (lastAssistantMessage: string) => {
+    try {
+      const contextMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      // Add the final assistant message to context
+      contextMessages.push({
+        role: 'assistant',
+        content: lastAssistantMessage
+      });
+      
+      const suggestions = await getPredictedResponses(supabase, lastAssistantMessage, contextMessages);
+      setSuggestedResponses(suggestions);
+    } catch (error) {
+      setSuggestedResponses([]);
+    }
+  };
 
   return (
-    <div className={`flex w-full flex-1 flex-col overflow-hidden ${className}`}>
-      {/* Header */}
-      <div className={`flex items-center justify-between border-b border-white/20 ${headerClassName}`}>
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-            {agentIcon || iconContainer()}
-            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-400 border-2 border-white/50" />
-          </div>
-          <div className="relative flex h-full flex-col">
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{agentName}</h1>
-          </div>
-        </div>
-      </div>
+    <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
 
       {/* Error Messages */}
       {(connectionError || mergeError) && (
@@ -250,7 +261,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
           })}
 
           {/* Loading Message */}
-          {isLoading && !messages[messages.length - 1]?.metadata?.isStreaming && (
+          {isSendingMessage && (
             <motion.div
               layout
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -286,11 +297,11 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       </div>
 
       {/* Suggestions */}
-      {suggestions.length > 0 && (
+      {suggestedResponses.length > 0 && (
         <ChatSuggestions
-          suggestions={suggestions}
+          suggestions={suggestedResponses}
           onSuggestionClick={handleSuggestionClick}
-          isLoading={isLoading}
+          isLoading={isSendingMessage}
           isSendingMessage={isSendingMessage}
         />
       )}
@@ -298,7 +309,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       {/* Input */}
       <ChatInput 
         onSendMessage={onMessageSend} 
-        isLoading={isLoading} 
+        isLoading={isSendingMessage} 
       />
     </div>
   );

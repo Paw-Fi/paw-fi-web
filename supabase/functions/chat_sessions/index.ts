@@ -100,12 +100,26 @@ async function handleGetSessions(
   url: URL
 ): Promise<Response> {
   try {
-    if (sessionId) {
-      // Get a specific chat session
+    // Get model parameter from query string
+    const model = url.searchParams.get('model');
+    let _sessionId=sessionId
+    if(!sessionId){
       const { data: chatSession, error: chatSessionError } = await supabase
         .from('chat_sessions')
         .select('*')
-        .eq('id', sessionId)
+        .eq('user_id', userId)
+        .eq('model', model)
+        .order('updated_at', { ascending: false })
+        .single();
+      if (chatSessionError) {
+        return createErrorResponse(404, 'Chat session not found', chatSessionError);
+      }
+      _sessionId=chatSession.id
+    }
+      const { data: chatSession, error: chatSessionError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('id', _sessionId)
         .eq('user_id', userId)
         .single();
 
@@ -117,7 +131,7 @@ async function handleGetSessions(
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('chat_session_id', sessionId)
+        .eq('chat_session_id', _sessionId)
         .order('timestamp', { ascending: true });
 
       if (messagesError) {
@@ -132,33 +146,8 @@ async function handleGetSessions(
         }),
         { status: 200, headers }
       );
-    }
-
-    // Get model parameter from query string
-    const model = url.searchParams.get('model');
     
-    // Build query for all chat sessions for the user
-    let query = supabase
-      .from('chat_sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false });
-    
-    // Filter by model if provided
-    if (model) {
-      query = query.eq('model', model);
-    }
-    
-    const { data: chatSessions, error: chatSessionsError } = await query;
 
-    if (chatSessionsError) {
-      return createErrorResponse(500, 'Failed to fetch chat sessions', chatSessionsError);
-    }
-
-    return new Response(
-      JSON.stringify(chatSessions || []),
-      { status: 200, headers }
-    );
   } catch (error) {
     console.error('Error in handleGetSessions:', error);
     return createErrorResponse(500, 'Failed to get chat session', error instanceof Error ? error.message : 'Unknown error');

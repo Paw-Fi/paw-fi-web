@@ -124,7 +124,7 @@ function DashboardHome() {
   // Fetch real conversation data
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
     queryKey: ['conversations', user?.id],
-    queryFn: () => getConversations(supabase),
+    queryFn: () => [],
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });

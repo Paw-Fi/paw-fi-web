@@ -37,8 +37,8 @@ export interface Conversation {
  */
 // --- HOOKS ---
 
-export async function fetchConversations(supabase: SupabaseClient) {
-  return getConversations(supabase);
+export async function fetchConversations(supabase: SupabaseClient, model: AI_ROLE) {
+  return getConversations(supabase, model);
 }
 
 export async function fetchConversation(supabase: SupabaseClient, id: string | undefined) {
@@ -64,22 +64,22 @@ export async function deleteConversationById(supabase: SupabaseClient, conversat
 
 // --- RAW ASYNC FUNCTIONS (for use in hooks only) ---
 
-export const getConversations = async (supabase: SupabaseClient): Promise<Conversation[]> => {
+export const getConversations = async (supabase: SupabaseClient, model: AI_ROLE): Promise<Conversation | null> => {
   try {
     // Use chat_sessions Edge Function with explicit GET method and model parameter
-    const { data, error } = await supabase.functions.invoke('chat_sessions?model=financial_educator', {
+    const { data, error } = await supabase.functions.invoke('chat_sessions?model=' + model, {
       method: 'GET'
     });
 
     if (error) {
       console.error('Error fetching conversations:', error);
-      return [];
+      return null;
     }
 
-    return data || [];
+    return data || null;
   } catch (error) {
     console.error('Error in getConversations:', error);
-    return [];
+    return null;
   }
 };
 

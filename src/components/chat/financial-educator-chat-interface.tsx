@@ -15,7 +15,7 @@ import {
   type Conversation,
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
-import { useFinancialHealthProfile, FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
+import { useFinancialHealthProfile, FinancialHealthProfile, formatProfileForAI } from "@/hooks/use-financial-health-profile";
 import { ChatConversationDisplay, ConversationMessage } from "./chat-conversation-display";
 import { supabase } from "@/lib/supabase";
 import { sendChatMessage, updateGuestSession } from "@/services/conversation-service";
@@ -65,11 +65,9 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   const { user, isLoading: isAuthLoading } = useAuth();
   const isAuthenticated = !!user;
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
@@ -92,43 +90,32 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   
   // Load financial health profile for authenticated users
   const { profile } = useFinancialHealthProfile(user?.id);
-  console.log("profile", profile)
   
-  // Fetch conversations for authenticated users
+  // Fetch conversations for authenticated users - only once initially
   const { 
     data: conversationsData,
     isLoading: isConversationsLoading,
-    refetch: refetchConversations
   } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => fetchConversations(supabase),
+    queryKey: ['conversations', AI_ROLES.FINANCIAL_EDUCATOR],
+    queryFn: () => fetchConversations(supabase, AI_ROLES.FINANCIAL_EDUCATOR),
     enabled: isAuthenticated,
-    staleTime: 30000,
+    staleTime: Infinity, // Never refetch automatically
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   
   // Backend already filters by model, so use conversations directly
-  const conversations = conversationsData || [];
-  const currentConversationId = conversations[0]?.id || null;
-  
-  // Fetch current conversation messages for authenticated users
-  const { 
-    data: currentConversationData,
-    isLoading: isConversationLoading,
-    refetch: refetchConversation
-  } = useQuery({
-    queryKey: ['conversation', currentConversationId],
-    queryFn: () => fetchConversation(supabase, currentConversationId!),
-    enabled: !!currentConversationId && isAuthenticated,
-    staleTime: 10000,
-  });
-  
-  // Load messages from conversation data
-  useEffect(() => {
-    if (isAuthenticated && currentConversationData?.messages) {
-      setMessages(currentConversationData.messages);
-    }
-  }, [isAuthenticated, currentConversationData]);
-  
+  const currentConversationId =conversationsData?.id || null;
+
+    // Load messages from conversation data - only once initially
+    const [hasLoadedInitialMessages, setHasLoadedInitialMessages] = useState(false);
+    useEffect(() => {
+      if (isAuthenticated && conversationsData?.messages && !hasLoadedInitialMessages) {
+        setMessages(conversationsData.messages);
+        setHasLoadedInitialMessages(true);
+      }
+    }, [isAuthenticated, conversationsData, hasLoadedInitialMessages]);
+
   // Update guest session on login
   useEffect(() => {
     if (isAuthenticated && user?.id && !hasUpdatedGuestSession) {
@@ -146,7 +133,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
     if (!content.trim() || isSendingMessage) return;
     
     setIsSendingMessage(true);
-    setIsLoading(true);
     setConnectionError(undefined);
     setLoadingMessage("Moneko is thinking...");
     setLoadingDuration(0);
@@ -176,20 +162,12 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         userId: user?.id || null,
         sessionId: isAuthenticated ? null : getGuestSessionId(),
         model: AI_ROLES.FINANCIAL_EDUCATOR,
-        profile: manual_profile || (profile ?  profile.profile_description : null)
+        profile: formatProfileForAI(user, manual_profile || profile)
       });
       
       // For guest users, store the new session ID if provided
       if (!isAuthenticated && response.conversationId) {
         setGuestSessionId(response.conversationId);
-      }
-      
-      // For authenticated users, if we got a new conversation ID, invalidate and refetch
-      if (isAuthenticated && response.conversationId) {
-        // Invalidate conversations query to refetch the list
-        queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        // Invalidate the specific conversation query
-        queryClient.invalidateQueries({ queryKey: ['conversation', response.conversationId] });
       }
       
       // Create AI message from response
@@ -210,12 +188,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         setShowSignupPrompt(true);
       }
       
-      // Refresh conversation data for authenticated users
-      if (isAuthenticated) {
-        refetchConversation();
-        refetchConversations();
-      }
-      
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -232,7 +204,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
       setMessages(prev => [...prev, errorMessage]);
       setConnectionError("Connection error. Please try again.");
     } finally {
-      setIsLoading(false);
       setIsSendingMessage(false);
       setLoadingMessage("Moneko is thinking...");
       setLoadingDuration(0);
@@ -258,35 +229,26 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
       }
     };
   }, []);
+
   
   const welcomeMessage = "Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything.";
-  const isBackendProcessing = (isAuthenticated && (isConversationsLoading || isConversationLoading)) && messages.length === 0;
+  const isBackendProcessing = (isAuthenticated && (isConversationsLoading)) && messages.length === 0;
   
   return (
     <>
       <ChatConversationDisplay
         messages={messages}
         onMessageSend={handleSendMessage}
-        isLoading={isLoading}
         isSendingMessage={isSendingMessage}
-        agentName="Moneko AI"
         welcomeMessage={welcomeMessage}
         welcomeSubtitle="Ask me anything to get started!"
         loadingMessage={loadingMessage}
-        suggestions={messages.length === 0 && !isLoading ? INITIAL_SUGGESTIONS : []}
-        onSuggestionClick={handleSendMessage}
         connectionError={connectionError}
         isBackendProcessing={isBackendProcessing}
         loadingDuration={loadingDuration}
         onOpenQuizModal={() => setIsQuizModalOpen(true)}
         navigate={navigate}
-        headerClassName="p-4"
-        agentIcon={
-          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-            <img src="@/assets/images/icon.svg" alt="Moneko AI" className="size-8" />
-            <BetaPill />
-          </div>
-        }
+        headerClassName="p-4"        
       />
 
       {/* Registration Modal */}

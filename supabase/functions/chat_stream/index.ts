@@ -6,6 +6,7 @@ import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { tryExtractCourseJson } from "./utils.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
+import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -108,10 +109,12 @@ serve(async (req: Request): Promise<Response> => {
     }
     
     // Fetch recent conversation history (sliding window - last 20 messages)
+    // Also verify the session has the correct model to prevent cross-contamination
     const { data: recentMessages, error: fetchError } = await supabase
       .from('chat_messages')
-      .select('content, role')
+      .select('content, role, chat_sessions!inner(model)')
       .eq('chat_session_id', currentConversationId)
+      .eq('chat_sessions.model', chatModel)
       .order('timestamp', { ascending: true })
       .limit(20);
       
@@ -204,10 +207,16 @@ serve(async (req: Request): Promise<Response> => {
         return jsonEnd !== -1;
       }
 
+      // Select appropriate prompt based on model
+      let basePrompt = AI_PROMPT; // Default to financial educator prompt
+      if (chatModel === 'financial_advisor') {
+        basePrompt = FA_PROMPT;
+      }
+      
       // Construct system instruction with user profile if available
-      let systemInstruction = AI_PROMPT;
+      let systemInstruction = basePrompt;
       if (userProfile) {
-        systemInstruction = `${AI_PROMPT}\n\n${userProfile}`;
+        systemInstruction = `${basePrompt}\n\n${userProfile}`;
       }
 
       // Initial generation

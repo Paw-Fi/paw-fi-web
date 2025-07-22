@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/lib/supabase';
+import { AuthContextType } from "@/contexts/auth-context";
 
 // Define types for financial health profile data
 export interface FinancialHealthProfile {
@@ -78,7 +79,7 @@ const fetchFinancialHealthProfile = async (userId: string | undefined): Promise<
     return null;
   }
   
-  console.log('Successfully fetched financial health profile:', data.profile.id);
+  console.log('Successfully fetched financial health profile:', data.profile);
   return data.profile as FinancialHealthProfile;
 };
 
@@ -108,13 +109,14 @@ export function useFinancialHealthProfile(userId: string | undefined) {
 }
 
 // Helper function to format profile data for AI context
-export function formatProfileForAI(profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null): string {
+export function formatProfileForAI(user:AuthContextType['user'],profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null): string {
   if (!profile) return '';
   
   return `
 FINANCIAL CASE FILE FOR USER:
 
 ## User Profile Summary:
+${user?`Name: ${user?.user_metadata?.full_name}`:``}
 ${profile.profile_description}
 
 ## Key Financial Data:
