@@ -11,6 +11,7 @@ import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile"
 import { useEffect } from "react";
 import { iconContainer } from "./chat-conversation-display";
 import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
+import { useNavigate } from "@tanstack/react-router";
 
 interface Message {
   content: string;
@@ -22,7 +23,6 @@ interface Message {
 
 interface ChatMessageItemProps {
   message: Message;
-  navigate?: (opts: { to: string }) => void;
   onOpenQuizModal?: () => void;
   formatTime?: (timestamp: number) => string;
 }
@@ -31,11 +31,11 @@ interface ChatMessageItemProps {
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
-  navigate,
   onOpenQuizModal,
   formatTime: formatTimeProp,
 }) => {
   const isUser = message.role === "user";
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   // Check if user has completed the financial assessment
@@ -104,7 +104,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
               icon={json.icon || ""}
               description={json.description || ""}
               lessonCount={json.lesson_count || 0}
-              onClick={() => navigate?.({ to: "/dashboard/learning" })}
+              onClick={() => navigate({ to: `/dashboard/learning/${json.id}` })}
             />
           </div>
           {outro && <ReactMarkdown>{outro}</ReactMarkdown>}

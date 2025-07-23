@@ -28,7 +28,6 @@ interface ChatConversationDisplayProps {
   agentIcon?: React.ReactNode;
   welcomeMessage?: string;
   welcomeSubtitle?: string;
-  loadingMessage?: string;
 
   
   // Error handling
@@ -70,7 +69,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   agentIcon,
   welcomeMessage = "Hi! I'm here to help you. Ask me anything to get started!",
   welcomeSubtitle = "Type a message below to begin our conversation.",
-  loadingMessage = "AI is thinking...",
   connectionError,
   mergeError,
   isBackendProcessing = false,
@@ -114,6 +112,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   };
 
   const MAX_TIME_TO_SHOW_LOADING = 9;
+  const [loadingMessage, setLoadingMessage] = useState<string>("Moneko is thinking...");
   
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
   
@@ -145,6 +144,26 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       setSuggestedResponses([]);
     }
   };
+
+  useEffect(() => {
+    if(loadingDuration >= MAX_TIME_TO_SHOW_LOADING && !isSendingMessage) {
+     
+    }
+  }, [messages]);
+
+    // Update loading message based on duration
+    useEffect(() => {
+      if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
+        setLoadingMessage("Crafting your personalized financial lessons... 📚");
+      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 15) {
+        setLoadingMessage("Building knowledge blocks just for you! Almost there... 🧩");
+      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 30) {
+        setLoadingMessage("Creating something special! Your financial wisdom is on the way... ✨");
+      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 45) {
+        setLoadingMessage("Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱");
+      }
+    }, [loadingDuration]);
+  
 
   return (
     <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
@@ -253,7 +272,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
               >
                 <ChatMessageItem 
                   message={message} 
-                  navigate={navigate}
                   onOpenQuizModal={onOpenQuizModal}
                 />
               </motion.div>

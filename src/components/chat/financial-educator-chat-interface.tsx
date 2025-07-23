@@ -74,11 +74,11 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   const { user, isLoading: isAuthLoading } = useAuth();
   const isAuthenticated = !!user;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Moneko is thinking...");
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [connectionError, setConnectionError] = useState<string | undefined>(undefined);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
@@ -151,7 +151,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
     
     setIsSendingMessage(true);
     setConnectionError(undefined);
-    setLoadingMessage("Moneko is thinking...");
     setLoadingDuration(0);
     
     // Start loading timer
@@ -209,6 +208,10 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
       if (!isAuthenticated && response.response?.includes('```json')) {
         setShowSignupPrompt(true);
       }
+     else if(isAuthenticated && response.response?.includes('```json')) {
+        await queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
+
+      }
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -227,7 +230,7 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
       setConnectionError("Connection error. Please try again.");
     } finally {
       setIsSendingMessage(false);
-      setLoadingMessage("Moneko is thinking...");
+      set("Moneko is thinking...");
       setLoadingDuration(0);
       
       if (loadingTimerRef.current) {
@@ -264,7 +267,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         isSendingMessage={isSendingMessage}
         welcomeMessage={welcomeMessage}
         welcomeSubtitle="Ask me anything to get started!"
-        loadingMessage={loadingMessage}
         connectionError={connectionError}
         isBackendProcessing={isBackendProcessing}
         loadingDuration={loadingDuration}
