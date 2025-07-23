@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useUserTotalXp } from '@/hooks/useUserTotalXp';
+import { useUserStreak } from '@/hooks/useUserStreak';
 
 interface GamificationData {
   streak: number;
@@ -34,10 +36,17 @@ export function useGamification() {
   const [gamificationData, setGamificationData] = useState<GamificationData>(DEFAULT_GAMIFICATION_DATA);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use TanStack Query for XP data with caching
+  const { data: dbXp = 0, isLoading: xpLoading, refetch: refetchXp } = useUserTotalXp(user?.id);
+  
+  // Use real streak data from activities
+  const { streak: dbStreak, loading: streakLoading } = useUserStreak(user?.id);
+    
+
   // Get storage key for user-specific data
   const getStorageKey = () => `gamification_${user?.id || 'guest'}`;
 
-  // Load gamification data from localStorage
+  // Load gamification data from localStorage and merge with DB XP
   useEffect(() => {
     if (!user) {
       setIsLoading(false);
@@ -45,16 +54,26 @@ export function useGamification() {
     }
 
     const savedData = localStorage.getItem(getStorageKey());
+    let localData = DEFAULT_GAMIFICATION_DATA;
+    
     if (savedData) {
       try {
-        const parsedData = JSON.parse(savedData);
-        setGamificationData(parsedData);
+        localData = JSON.parse(savedData);
       } catch (error) {
         console.error('Error parsing gamification data:', error);
       }
     }
-    setIsLoading(false);
-  }, [user]);
+
+    // Merge local data with database XP and streak
+    const mergedData = {
+      ...localData,
+      xp: dbXp, // Always use database XP as source of truth
+      streak: dbStreak, // Always use calculated streak from activities
+    };
+
+    setGamificationData(mergedData);
+    setIsLoading(xpLoading || streakLoading);
+  }, [user, dbXp, xpLoading, dbStreak, streakLoading]);
 
   // Save gamification data to localStorage
   const saveData = (data: GamificationData) => {
@@ -63,58 +82,24 @@ export function useGamification() {
     setGamificationData(data);
   };
 
-  // Check and update streak
-  const checkStreak = () => {
-    const today = new Date().toDateString();
-    const lastVisit = new Date(gamificationData.lastVisit || '').toDateString();
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-
-    let newStreak = gamificationData.streak;
-
-    if (lastVisit === today) {
-      // Already visited today, no change
-      return gamificationData;
-    } else if (lastVisit === yesterday) {
-      // Visited yesterday, increment streak
-      newStreak = gamificationData.streak + 1;
-    } else if (lastVisit && lastVisit !== yesterday) {
-      // Missed a day, reset streak
-      newStreak = 1;
-    } else {
-      // First visit
-      newStreak = 1;
-    }
-
-    const updatedData = {
-      ...gamificationData,
-      streak: newStreak,
-      lastVisit: today,
-    };
-
-    saveData(updatedData);
-    return updatedData;
-  };
-
-  // Add XP and check for level up
+  // Add XP and check for level up (XP is managed by database, this just triggers refetch)
   const addXP = (amount: number) => {
-    const newXP = gamificationData.xp + amount;
-    const newLevel = Math.floor(newXP / 500) + 1; // Level up every 500 XP
+    const previousLevel = gamificationData.level;
     
-    const updatedData = {
-      ...gamificationData,
-      xp: newXP,
-      level: newLevel,
-    };
-
-    saveData(updatedData);
+    // Refetch XP from database (will automatically update via useEffect)
+    refetchXp();
+    
+    // Calculate expected new level for notification
+    const expectedNewXP = gamificationData.xp + amount;
+    const expectedNewLevel = Math.floor(expectedNewXP / 500) + 1;
 
     // Show level up notification if applicable
-    if (newLevel > gamificationData.level) {
+    if (expectedNewLevel > previousLevel) {
       // TODO: Show level up toast/modal
-      console.log(`Level up! You are now level ${newLevel}`);
+      console.log(`Level up! You are now level ${expectedNewLevel}`);
     }
 
-    return updatedData;
+    return gamificationData;
   };
 
   // Complete a quest
@@ -185,7 +170,7 @@ export function useGamification() {
         title: 'Earn 50 XP',
         description: 'Complete lessons or use tools',
         xpReward: 0,
-        completed: false, // This would be checked against daily XP gained
+        completed: true, // This would be checked against daily XP gained
       },
       {
         id: 'practice-session',
@@ -234,7 +219,6 @@ export function useGamification() {
   // Initialize streak check on load
   useEffect(() => {
     if (!isLoading && user) {
-      checkStreak();
       checkAchievements();
     }
   }, [isLoading, user]);
@@ -246,7 +230,6 @@ export function useGamification() {
     completeQuest,
     unlockAchievement,
     getDailyQuests,
-    checkStreak,
     checkAchievements,
   };
 }

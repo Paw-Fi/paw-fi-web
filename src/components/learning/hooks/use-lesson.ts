@@ -119,6 +119,7 @@ export function useLesson({ lesson, courseId }: UseLessonProps) {
             if (success) {
               // Force an immediate refetch of user courses to update the UI
               queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
+              queryClient.invalidateQueries({ queryKey: ['userTotalXp', user.id] });
               setIsComplete(true);
             } else {
               toast.error("Failed to unlock next lesson");

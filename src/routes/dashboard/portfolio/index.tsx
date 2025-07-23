@@ -33,6 +33,7 @@ import FinancialHealthFinetune from "@/components/financial-health/FinancialHeal
 import classNames from "classnames";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { EmptyStatePrompt } from "@/components/ui/empty-state-prompt";
+import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 
 export const Route = createFileRoute("/dashboard/portfolio/")({
   component: Profile,
@@ -689,7 +690,7 @@ function Profile() {
         </div>
       </Modal>
 
-      {/* <FloatingChatButton /> */}
+      <FloatingChatButton />
     </ProtectedRouteSubscription>
   );
 }

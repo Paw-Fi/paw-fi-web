@@ -53,7 +53,16 @@ const setGuestSessionId = (sessionId: string) => {
   setCookie(GUEST_SESSION_COOKIE, sessionId, 365);
 };
 
+const getGuestCourseId = (): string | null => {
+  return getCookie(GUEST_COURSE_COOKIE);
+};
+
+const setGuestCourseId = (courseId: string) => {
+  setCookie(GUEST_COURSE_COOKIE, courseId, 365);
+};
+
 const GUEST_SESSION_COOKIE = "paw-fi-guest-session";
+const GUEST_COURSE_COOKIE = "paw-fi-guest-course";
 const INITIAL_SUGGESTIONS = ["Start"];
 
 type Message = ConversationMessage;
@@ -121,7 +130,15 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
     if (isAuthenticated && user?.id && !hasUpdatedGuestSession) {
       const guestSessionId = getCookie(GUEST_SESSION_COOKIE);
       if (guestSessionId) {
-        updateGuestSession(guestSessionId, user.id);
+        updateGuestSession(guestSessionId, user.id)
+          .then(() => {
+            // Clean up guest cookies after successful session transfer
+            deleteCookie(GUEST_SESSION_COOKIE);
+            deleteCookie(GUEST_COURSE_COOKIE);
+          })
+          .catch((error) => {
+            console.error('Failed to update guest session:', error);
+          });
         setHasUpdatedGuestSession(true);
       }
     }
@@ -165,9 +182,14 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         profile: formatProfileForAI(user, manual_profile || profile)
       });
       
-      // For guest users, store the new session ID if provided
-      if (!isAuthenticated && response.conversationId) {
-        setGuestSessionId(response.conversationId);
+      // For guest users, store the new session ID and course ID if provided
+      if (!isAuthenticated) {
+        if (response.conversationId) {
+          setGuestSessionId(response.conversationId);
+        }
+        if (response.course_id) {
+          setGuestCourseId(response.course_id);
+        }
       }
       
       // Create AI message from response

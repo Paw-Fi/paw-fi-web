@@ -48,6 +48,7 @@ import {
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useUserCourses } from "@/services/course-service";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useUserActivities } from "@/hooks/useUserActivities";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -193,6 +194,9 @@ function DashboardHome() {
     if (hour < 17) return `Good afternoon, ${name}!`;
     return `Good evening, ${name}!`;
   };
+
+  // Subscribe to user activities
+  const { activities, loading: isActivitiesLoading, error: activitiesError } = useUserActivities(user?.id);
 
   // Calculate real learning progress from actual course data
   const learningInsights = useMemo(() => {
@@ -419,14 +423,14 @@ function DashboardHome() {
   return (
     <ProtectedRouteSubscription>
       <motion.div
-        className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/40 to-indigo-100/60 dark:from-slate-900 dark:via-purple-900/20 dark:to-indigo-900/30"
+        className="max-w-7xl mx-auto py-12"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
            {/* Hero Header with Level Progression */}
            <motion.div
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-8 shadow-2xl"
+        className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-8 shadow-2xl"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -454,7 +458,6 @@ function DashboardHome() {
               {currentLevelReward && (
                 <motion.div
                   className="group relative inline-flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl cursor-pointer"
-                  whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
                   <div className={`p-2 rounded-xl bg-gradient-to-br ${currentLevelReward.color}`}>
@@ -469,7 +472,6 @@ function DashboardHome() {
                   <motion.div
                     className="absolute top-full left-0 mt-2 p-4 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 min-w-80"
                     initial={{ opacity: 0, y: 10 }}
-                    whileHover={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                   >
                     <div className="text-white font-semibold mb-2">Level {levelInfo.level} Details</div>
@@ -484,7 +486,6 @@ function DashboardHome() {
             <div className="flex gap-4">
               <motion.div
                 className="group relative px-6 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl cursor-pointer"
-                whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
                 <div className="flex items-center gap-3">
@@ -501,7 +502,6 @@ function DashboardHome() {
                 <motion.div
                   className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-3 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 whitespace-nowrap"
                   initial={{ opacity: 0, y: 10 }}
-                  whileHover={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
                 >
                   <div className="text-orange-400 font-semibold text-sm">Keep it burning! 🔥</div>
@@ -552,11 +552,10 @@ function DashboardHome() {
               
               <motion.button
                 onClick={() => setShowRewardsModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white text-sm font-medium transition-all duration-200"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10  border border-white/20 rounded-xl text-white text-sm font-medium transition-all duration-200"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.8 }}
-                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <FontAwesomeIcon icon={faTrophy} className="h-4 w-4" />
@@ -568,7 +567,7 @@ function DashboardHome() {
         </div>
       </motion.div>
 
-        <div className="mx-auto max-w-7xl">
+        <div className="">
       
 
           {/* Main Content Grid */}
@@ -582,10 +581,9 @@ function DashboardHome() {
               {/* Financial Health Overview */}
               {financialProfileInsights.hasProfile ? (
                 <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-purple-500/80"
+                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl  border-t-purple-500/80"
                   variants={cardHoverVariants}
                   initial="rest"
-                  whileHover="hover"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>
@@ -679,7 +677,6 @@ function DashboardHome() {
                   className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-pink-500/80"
                   variants={cardHoverVariants}
                   initial="rest"
-                  whileHover="hover"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>
@@ -705,7 +702,6 @@ function DashboardHome() {
                 className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-indigo-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
-                whileHover="hover"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(168,85,247,0.1),transparent_50%)]"></div>
@@ -772,7 +768,6 @@ function DashboardHome() {
                       {learningInsights.nextLesson && (
                         <motion.div 
                           className="bg-gradient-to-r from-purple-50/80 to-pink-50/80 border border-purple-200 rounded-2xl p-6 backdrop-blur-sm border-t-4 border-t-purple-400/80"
-                          whileHover={{ y: -2 }}
                           transition={{ type: "spring", damping: 20, stiffness: 300 }}
                         >
                           <div className="flex items-start justify-between">
@@ -797,20 +792,95 @@ function DashboardHome() {
                         </motion.div>
                       )}
 
-                      {learningInsights.recentActivity && (
+                     
                         <div className="p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-2xl">
                           <h4 className="font-semibold text-gray-900 mb-2">Recent Activity</h4>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4 text-green-500 mr-2" />
-                            Completed: {learningInsights.recentActivity.title}
-                            {learningInsights.recentActivity.xp && (
-                              <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                                +{learningInsights.recentActivity.xp} XP
-                              </span>
-                            )}
-                          </div>
+                          
+                          {/* Loading State */}
+                          {isActivitiesLoading && (
+                            <div className="space-y-3">
+                              {[1, 2, 3].map((i) => (
+                                <div key={i} className="animate-pulse">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                                    <div className="flex-1">
+                                      <div className="h-3 bg-gray-300 rounded w-3/4 mb-1"></div>
+                                      <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+                                    </div>
+                                    <div className="w-12 h-5 bg-gray-300 rounded-full"></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Empty State */}
+                          {!isActivitiesLoading && activities.length === 0 && (
+                            <div className="text-center py-6">
+                              <div className="mb-3 mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                                <FontAwesomeIcon icon={faHistory} className="h-6 w-6 text-gray-400" />
+                              </div>
+                              <p className="text-sm text-gray-500">No recent activity</p>
+                            </div>
+                          )}
+
+                          {/* Activities List */}
+                          {!isActivitiesLoading && activities.length > 0 && (
+                            <div className="space-y-3 max-h-48 overflow-y-auto">
+                              {activities.slice(0, 5).map((activity) => (
+                                <div key={activity.id} className="flex items-center text-sm text-gray-600">
+                                  <FontAwesomeIcon 
+                                    icon={
+                                      activity.activity.action === 'completed_lesson' ? faCheckCircle :
+                                      activity.activity.action === 'completed_qotd' ? faLightbulb :
+                                      faAward
+                                    } 
+                                    className={`h-4 w-4 mr-2 ${
+                                      activity.activity.action === 'completed_lesson' ? 'text-green-500' :
+                                      activity.activity.action === 'completed_qotd' ? 'text-yellow-500' :
+                                      'text-purple-500'
+                                    }`} 
+                                  />
+                                  <div className="flex-1">
+                                    <div className="text-gray-900">
+                                      {activity.activity.action === 'completed_lesson' && 
+                                        `Completed: ${activity.activity.lesson_title || 'Lesson'}`
+                                      }
+                                      {activity.activity.action === 'completed_qotd' && 
+                                        'Completed daily challenge'
+                                      }
+                                      {activity.activity.action === 'ask_for_new_lesson' && 
+                                        'Requested new lesson'
+                                      }
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      {new Date(activity.created_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </div>
+                                  </div>
+                                  {activity.activity.xp && (
+                                    <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                                      +{activity.activity.xp} XP
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Error State */}
+                          {activitiesError && (
+                            <div className="text-center py-4">
+                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-red-500 mb-2" />
+                              <p className="text-sm text-red-600">Failed to load activities</p>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -840,7 +910,6 @@ function DashboardHome() {
                 className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-pink-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
-                whileHover="hover"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(236,72,153,0.1),transparent_50%)]"></div>
@@ -929,7 +998,6 @@ function DashboardHome() {
                   className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
                   variants={cardHoverVariants}
                   initial="rest"
-                  whileHover="hover"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5"></div>
                   <div className="relative p-6">
@@ -994,7 +1062,6 @@ function DashboardHome() {
                 className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-indigo-500/80"
                 variants={cardHoverVariants}
                 initial="rest"
-                whileHover="hover"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1),transparent_50%)]"></div>
@@ -1010,7 +1077,7 @@ function DashboardHome() {
                       </div>
                     </div>
                     <Link
-                      to="/dashboard/calculators"
+                      to="/calculators"
                       className="text-xs text-orange-600 hover:text-orange-800 transition-colors font-semibold"
                     >
                       View All ({availableCalculators.length})
@@ -1021,7 +1088,6 @@ function DashboardHome() {
                     {availableCalculators.slice(0, 4).map((calculator) => (
                       <motion.div
                         key={calculator.title}
-                        whileHover={{ x: 4 }}
                         transition={{ type: "spring", damping: 20, stiffness: 300 }}
                       >
                         <Link
@@ -1055,7 +1121,6 @@ function DashboardHome() {
                 className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl hover:shadow-purple-500/20 border-t-4 border-t-purple-600/80"
                 variants={cardHoverVariants}
                 initial="rest"
-                whileHover="hover"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(147,51,234,0.1),transparent_50%)]"></div>

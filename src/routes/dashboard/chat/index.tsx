@@ -1,15 +1,13 @@
 "use client";
 
-import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartLine,
-  faArrowLeft,
   faRobot,
-  faHandHoldingUsd,
   faBrain,
   faChartBar,
   faBullseye,
@@ -50,22 +48,10 @@ export const Route = createFileRoute("/dashboard/chat/")({
 function FinancialAdvisorChat() {
   const { user } = useAuth();
   const searchParams = useSearch({ from: '/dashboard/chat/' });
-  const initialQuestion = (searchParams as any)?.q || '';
   
   // Get user's financial context for enhanced AI responses
   const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
-  const { dashboardData } = useDashboard(user?.id);
 
-  const advisorPrompts = [
-    "Analyze my current portfolio allocation",
-    "What's my optimal investment strategy?", 
-    "How can I reduce my financial risk?",
-    "Should I rebalance my investments?",
-    "What are the best tax-advantaged accounts for me?",
-    "How much should I save for retirement?",
-    "Review my emergency fund strategy",
-    "What investment opportunities match my risk profile?"
-  ];
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50">
@@ -140,10 +126,6 @@ function FinancialAdvisorChat() {
         transition={{ duration: 0.5, delay: 0.3 }}
       >
         <FinancialAdvisorChatInterface 
-          suggestedPrompts={advisorPrompts}
-          assistantType="financial-advisor"
-          placeholder="Ask about investments, portfolio analysis, financial planning..."
-          userProfile={hasProfile ? financialProfile : undefined}
         />
       </motion.div>
     </div>

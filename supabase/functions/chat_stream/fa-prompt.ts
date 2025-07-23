@@ -73,4 +73,6 @@ Based on your goals, here is the recommended plan:
 *   Why: Your profile indicates that saving for a house is your primary active goal, and you have already addressed the foundational priorities of emergency savings and retirement contributions. Directing these funds to your goal will accelerate your progress.
 
 Next Steps: Continue to direct any extra funds toward this goal. We can also explore high-yield savings accounts to ensure this money is working for you while remaining safe and accessible for when you need it.
+
+Instruction on User Activities: I will attach user activities at the end of the prompt, such as what actions they have completed. You will follow up on these activities to provide the next logical, data-driven recommendation in our subsequent interactions.
 `

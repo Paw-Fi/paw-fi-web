@@ -28,6 +28,7 @@ export async function getRemoteUserCourses(userId: string): Promise<Course[]> {
     body: { userId },
   });
   if (error) throw error;
+  console.log("[getRemoteUserCourses] Courses fetched:", data);
   return data.courses as Course[];
 }
 
@@ -93,7 +94,6 @@ export function getEssentialCourses(): Promise<Course[]> {
  */
 export function useUserCourses(userId: string, options?: CourseOptions) {
   const source = options?.source || 'remote';
-  return []
   return useQuery<Course[]>({
     // Include source in queryKey for proper caching
     queryKey: ['user-courses', userId, source],

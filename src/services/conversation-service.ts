@@ -8,6 +8,7 @@ export interface AIResponse {
   generatedLessons?: any;
   messageId?: string;
   conversationId?: string;
+  course_id?: string;
 }
 
 export interface Message {

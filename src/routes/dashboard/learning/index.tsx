@@ -18,7 +18,6 @@ import {
   faWandMagicSparkles,
   faBookOpen
 } from '@fortawesome/free-solid-svg-icons';
-import { FinancialAdvisorChatInterface } from '@/components/chat/financial-advisor-chat-interface';
 import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
@@ -128,83 +127,7 @@ export function UnifiedLearningPage() {
     <div className="px-4 py-12">
   
 
-      {/* Financial Essentials Section */}
-      <motion.section 
-        className="mb-16"
-        variants={sectionVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg">
-                <FontAwesomeIcon icon={faGraduationCap} className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-emerald-800">Financial Essentials</h2>
-                <p className="text-sm text-emerald-600 font-medium">Expert-Led Fundamentals</p>
-              </div>
-            </div>
-          </div>
-          <p className="text-center text-gray-600 max-w-2xl mx-auto">
-            🎓 Master the fundamentals with lessons crafted by certified financial advisors. 
-            These essential courses build your financial foundation step by step.
-          </p>
-        </div>
-
-        <motion.div
-          className="max-w-4xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div
-            variants={cardVariants}
-            whileHover={{ y: -5, boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.15)" }}
-          >
-            <Link
-              to={`/dashboard/learning/${basicCourse.course_id}`}
-              className="block cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 shadow-lg hover:border-emerald-300 transition-all duration-300"
-            >
-              <div className="p-8">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="text-4xl" aria-hidden="true">
-                    {basicCourse.icon || "🎓"}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-xl font-bold text-emerald-900">
-                        {basicCourse.title}
-                      </h3>
-                      <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white">
-                        Expert-Led
-                      </span>
-                    </div>
-                    <p className="text-emerald-700 mb-4">
-                      {basicCourse.description}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between border-t border-emerald-200 pt-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center">
-                      <div className="bg-emerald-500 mr-2 flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-                        {basicCourse.lessons.length}
-                      </div>
-                      <span className="text-sm text-emerald-800 font-medium">Essential Lessons</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-emerald-600 font-medium">
-                    Start Learning →
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        </motion.div>
-      </motion.section>
+  
 
       {/* AI Personalized Learning Section */}
       <motion.section 
@@ -283,7 +206,7 @@ export function UnifiedLearningPage() {
                     className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
                   >
                     <FontAwesomeIcon icon={faWandMagicSparkles} className="h-5 w-5 mr-2" />
-                    Create Your First Course
+                    Create Your First Course with AI
                   </button>
                 </motion.div>
               </div>
@@ -341,7 +264,7 @@ export function UnifiedLearningPage() {
       {/* AI Learning Coach Section */}
       <motion.section 
         id="ai-coach"
-        className="max-w-4xl mx-auto"
+        className="max-w-5xl mx-auto"
         variants={sectionVariants}
         initial="hidden"
         animate="visible"
@@ -430,6 +353,84 @@ export function UnifiedLearningPage() {
                 <FinancialEducatorChatInterface 
                 />
             )}
+          </motion.div>
+        </motion.div>
+      </motion.section>
+
+        {/* Financial Essentials Section */}
+        <motion.section 
+        className="my-16"
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg">
+                <FontAwesomeIcon icon={faGraduationCap} className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-emerald-800">Financial Essentials</h2>
+                <p className="text-sm text-emerald-600 font-medium">Expert-Led Fundamentals</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-center text-gray-600 max-w-2xl mx-auto">
+            🎓 Master the fundamentals with lessons crafted by certified financial advisors. 
+            These essential courses build your financial foundation step by step.
+          </p>
+        </div>
+
+        <motion.div
+          className="max-w-5xl mx-auto"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -5, boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.15)" }}
+          >
+            <Link
+              to={`/dashboard/learning/${basicCourse.course_id}`}
+              className="block cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 shadow-lg hover:border-emerald-300 transition-all duration-300"
+            >
+              <div className="p-8">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="text-4xl" aria-hidden="true">
+                    {basicCourse.icon || "🎓"}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xl font-bold text-emerald-900">
+                        {basicCourse.title}
+                      </h3>
+                      <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white">
+                        Expert-Led
+                      </span>
+                    </div>
+                    <p className="text-emerald-700 mb-4">
+                      {basicCourse.description}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between border-t border-emerald-200 pt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center">
+                      <div className="bg-emerald-500 mr-2 flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
+                        {basicCourse.lessons.length}
+                      </div>
+                      <span className="text-sm text-emerald-800 font-medium">Essential Lessons</span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-emerald-600 font-medium">
+                    Start Learning →
+                  </div>
+                </div>
+              </div>
+            </Link>
           </motion.div>
         </motion.div>
       </motion.section>

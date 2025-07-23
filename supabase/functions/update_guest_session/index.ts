@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../shared/cors.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,14 +26,14 @@ serve(async (req) => {
     }
 
     // Update the chat session to associate it with the authenticated user
-    const { error: updateError } = await supabase
+    const { error: updateSessionError } = await supabase
       .from('chat_sessions')
       .update({ user_id: userId })
       .eq('id', sessionId)
       .is('user_id', null); // Only update if it's currently a guest session
 
-    if (updateError) {
-      console.error('Error updating guest session:', updateError);
+    if (updateSessionError) {
+      console.error('Error updating guest session:', updateSessionError);
       return new Response(
         JSON.stringify({ error: "Failed to update session" }),
         {
@@ -46,6 +41,22 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // Also update any guest courses associated with this session
+    const { error: updateCoursesError } = await supabase
+      .from('user_courses')
+      .update({ 
+        user_id: userId,
+        session_id: null // Clear session_id since we now have user_id
+      })
+      .eq('session_id', sessionId)
+      .is('user_id', null); // Only update if it's currently a guest course
+
+    if (updateCoursesError) {
+      console.error('Error updating guest courses:', updateCoursesError);
+      // Don't fail the entire request, just log the error
+      // The session update was successful
     }
 
     return new Response(

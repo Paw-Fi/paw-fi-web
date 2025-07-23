@@ -12,7 +12,7 @@ interface LevelReward {
   
   // Level progression system
   export const LEVEL_REQUIREMENTS = [
-    0, 100, 250, 500, 1000, 1750, 2750, 4000, 5500, 7500, 10000, 13000, 16500, 20500, 25000, 30000
+    0, 1000, 2500, 5000, 10000, 17500, 27500, 40000, 55000, 75000, 100000, 130000, 165000, 205000, 250000, 300000
   ];
   
   export const LEVEL_REWARDS: LevelReward[] = [
@@ -33,6 +33,7 @@ interface LevelReward {
 
   // Level progression calculations
   export const getCurrentLevelInfo = (xp: number) => {
+    console.log("cu8rrent xp", xp)
     let level = 1;
     for (let i = LEVEL_REQUIREMENTS.length - 1; i >= 0; i--) {
       if (xp >= LEVEL_REQUIREMENTS[i]) {

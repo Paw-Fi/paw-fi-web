@@ -3,10 +3,10 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
-import { tryExtractCourseJson } from "./utils.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
 import { prompt as FA_PROMPT } from "./fa-prompt.ts";
+import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -130,6 +130,23 @@ serve(async (req: Request): Promise<Response> => {
     // Note: User message will be saved to database after AI response is generated
 
     let aiResponse: string;
+
+    let userActivities=null;
+
+    if(userId)
+    {
+      const { data: userActivitiesData, error: activitiesError } = await supabase.functions.invoke(
+        `user-activities?user_id=${userId}`,
+        {
+          method: "GET",
+        },
+      );
+      if (activitiesError) {
+        console.error('Error fetching user activities:', activitiesError);
+      }else
+      userActivities = userActivitiesData?.activities;
+    }
+  
     
     // Check if user is authenticated but has no profile
     if (userId && !userProfile) {
@@ -138,10 +155,27 @@ serve(async (req: Request): Promise<Response> => {
       
       if (isFirstMessage) {
         // First message - welcome message
-        aiResponse = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+        {
+          
+          aiResponse = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+        }
+        else
+        {
+          aiResponse = "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking the QUESTIONNAIRE button below. This will help me create a personalized learning plan to boost your financial literacy.";
+        }
       } else {
         // Has conversation history - encourage completing assessment
-        aiResponse = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+          {
+
+            aiResponse = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+          }
+          else
+          {
+            aiResponse = " I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click the ``QUESTIONNAIRE`` button below to begin!";
+          }
+        
       }
     } else {
       // User has profile, generate AI response using Gemini
@@ -209,7 +243,7 @@ serve(async (req: Request): Promise<Response> => {
 
       // Select appropriate prompt based on model
       let basePrompt = AI_PROMPT; // Default to financial educator prompt
-      if (chatModel === 'financial_advisor') {
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
         basePrompt = FA_PROMPT;
       }
       
@@ -217,6 +251,9 @@ serve(async (req: Request): Promise<Response> => {
       let systemInstruction = basePrompt;
       if (userProfile) {
         systemInstruction = `${basePrompt}\n\n${userProfile}`;
+      }
+      if(userActivities){
+        systemInstruction = `${systemInstruction}\n\nMost recent activities of this user: ${userActivities}`;
       }
 
       // Initial generation
@@ -315,6 +352,7 @@ serve(async (req: Request): Promise<Response> => {
     // If it doesn't look like JSON at all, treat it as simple text response
     let finalResponse = cleanedResponse;
     let extractedCourse = null;
+    let course_id = null;
     
     if (!hasJsonMarkdown && !looksLikeRawJson) {
       // Simple text response (like profile prompts)
@@ -363,50 +401,50 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     try {
+
       // Only try to parse if it looks like JSON
       const parsedJsonObject = parse(stringToParseForJson);
 
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
       console.log("wellFormedJsonString", wellFormedJsonString);
-      // --- Course Extraction & Async Storage ---
+      // --- Course Extraction & Storage ---
       // Attempt to extract a valid course object using Zod
       const extractedCourse = wellFormedJsonString
       if (extractedCourse) {
-        // Fire-and-forget async storage
-        (async () => {
+        // Await course storage to get course_id (works for both authenticated and guest users)
+        try {
+          // For guest users, use the session ID as user identifier; for authenticated users, use user_id
+          const user_id = requestData.userId || currentConversationId;
+          
+          // Ensure course is an object, not a string
+          let parsedCourse;
           try {
-            // Replace with actual user_id extraction if available
-            const user_id = requestData.userId || null;
-            if (!user_id) {
-              console.error("No user_id provided for course storage.");
-              return;
-            }
-            // Ensure course is an object, not a string
-            let parsedCourse;
-            try {
-              parsedCourse = typeof extractedCourse === "string" ? JSON.parse(extractedCourse) : extractedCourse;
-            } catch (err) {
-              console.error("Failed to parse extractedCourse as JSON", err);
-              return;
-            }
-            const client = createClient(
-              Deno.env.get("SUPABASE_URL")!,
-              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            );
-            const { error } = await client.functions.invoke(
+            parsedCourse = typeof extractedCourse === "string" ? JSON.parse(extractedCourse) : extractedCourse;
+          } catch (err) {
+            console.error("Failed to parse extractedCourse as JSON", err);
+          }
+          
+          if (parsedCourse && user_id) {
+            const { error, data } = await supabase.functions.invoke(
               "store-course-from-ai",
               {
-                body: { user_id, course: parsedCourse },
+                body: { 
+                  user_id: requestData.userId || null, // null for guests
+                  session_id: requestData.userId ? null : currentConversationId, // session_id for guests
+                  course: parsedCourse 
+                },
               },
             );
             if (error) {
               console.error("Error invoking store-course-from-ai:", error);
+            } else if (data?.course_id) {
+              course_id = data.course_id;
             }
-          } catch (err) {
-            console.error("Async course storage error:", err);
           }
-        })();
+        } catch (err) {
+          console.error("Course storage error:", err);
+        }
       } else {
         console.log("No valid course JSON detected in AI response.");
       }
@@ -515,7 +553,8 @@ ${markdownSuffix}`,
       JSON.stringify({ 
         response: finalResponse,
         conversationId: currentConversationId,
-        generatedLessons: extractedCourse
+        generatedLessons: extractedCourse,
+        course_id
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
