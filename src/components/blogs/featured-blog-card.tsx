@@ -28,7 +28,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
             alt={`Cover image for ${blog.title}`}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          <div className="absolute left-4 top-4 bg-purple-500 px-3 py-1 text-sm font-semibold text-white">
+          <div className="absolute left-4 top-4 bg-primary dark:bg-dark-primary px-3 py-1 text-sm font-semibold text-white">
             Featured
           </div>
         </div>
@@ -38,7 +38,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
             {blog.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag.id}
-                className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                className="inline-flex items-center rounded-full bg-primary/10 dark:bg-dark-primary/10 px-3 py-1 text-sm font-medium text-primary dark:text-dark-primary"
               >
                 <FontAwesomeIcon icon={faTag} className="mr-1.5 h-3 w-3" aria-hidden="true" />
                 {tag.name}
@@ -46,7 +46,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
             ))}
           </div>
 
-          <h2 className="text-2xl font-bold leading-tight text-gray-900 transition-colors group-hover:text-purple-600 dark:text-white dark:group-hover:text-purple-400 md:text-3xl">
+          <h2 className="text-2xl font-bold leading-tight text-foreground dark:text-dark-foreground transition-colors group-hover:text-primary dark:group-hover:text-dark-primary md:text-3xl">
             {blog.title}
           </h2>
 
@@ -62,7 +62,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
                 className="h-10 w-10 rounded-full"
               />
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">{blog.author.name}</p>
+                <p className="font-medium text-foreground dark:text-dark-foreground">{blog.author.name}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{blog.author.title}</p>
               </div>
             </div>

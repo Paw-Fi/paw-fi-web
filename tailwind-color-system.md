@@ -71,6 +71,36 @@ Our color system uses Tailwind's `darkMode: 'selector'` strategy with colors def
 
 ## 🛠 Usage in Components
 
+### Blog System
+The blog system (`/routes/blogs/`) fully utilizes the semantic color system:
+
+```jsx
+// Blog page title with gradient
+<h1 className="bg-gradient-to-r from-primary via-accent-pink to-accent-indigo dark:from-dark-primary dark:via-dark-accent-pink dark:to-dark-accent-indigo bg-clip-text text-transparent">
+  Financial Education Blog
+</h1>
+
+// Blog filters with semantic colors
+<button className="bg-primary/10 dark:bg-dark-primary/10 text-primary dark:text-dark-primary hover:bg-primary/20 dark:hover:bg-dark-primary/20">
+  Filter
+</button>
+
+// Blog card tags
+<span className="bg-primary/10 dark:bg-dark-primary/10 text-primary dark:text-dark-primary">
+  Tag Name
+</span>
+
+// Featured badge
+<div className="bg-primary dark:bg-dark-primary text-white">
+  Featured
+</div>
+
+// Blog content with prose styling
+<article className="prose prose-purple dark:prose-invert prose-headings:text-foreground dark:prose-headings:text-dark-foreground prose-a:text-primary dark:prose-a:text-dark-primary">
+  Blog content here
+</article>
+```
+
 ### Using Semantic Colors with Dark Mode Variants
 
 ```jsx
