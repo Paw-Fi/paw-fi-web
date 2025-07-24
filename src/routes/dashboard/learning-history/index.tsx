@@ -586,15 +586,14 @@ function LearningHistory() {
                   <FontAwesomeIcon icon={faGraduationCap} className="mr-2 h-4 w-4" />
                   Explore Courses
                 </motion.a>
-                <motion.a
-                  href="/dashboard/daily-challenges"
+                <motion.div
                   className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <FontAwesomeIcon icon={faLightbulb} className="mr-2 h-4 w-4" />
                   Daily Challenge
-                </motion.a>
+                </motion.div>
               </div>
             </div>
           ) : (
