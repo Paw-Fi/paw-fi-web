@@ -154,7 +154,7 @@ export const useLocalProgress = () => {
         id: 'calculators',
         title: 'Financial Calculators',
         description: 'Use our comprehensive suite of financial calculators',
-        path: '/dashboard/calculators',
+        path: '/calculators',
         isCompleted: calculatorsCompleted,
         isNextStep: essentialsCompleted && !calculatorsCompleted,
       },

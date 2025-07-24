@@ -5,12 +5,15 @@ import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useNavigate } from '@tanstack/react-router';
+import { HomeHeader } from '@/components/index/header';
+import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
+import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 
 export const Route = createFileRoute('/calculators/mortgage-calculator')({
   component: MortgageCalculatorPage,
   head: () => {
     // Use the canonical helper to ensure consistent URLs
-    const routePath = '/dashboard/calculators/mortgage-calculator';
+    const routePath = '/calculators/mortgage-calculator';
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
       title: 'Mortgage Calculator | Moneko',
@@ -55,7 +58,12 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
 function MortgageCalculatorPage  ()  {
   const navigate = useNavigate();
   return (
-<div className="container mx-auto px-4 py-8 md:px-8 lg:px-12">
+<AmbientHaloLayout>
+<div className="container mx-auto px-4 py-4 md:px-8 lg:px-12">
+<HomeHeader/>
+      <div className="mt-4 mb-8">
+      <BreadCrumbsHeader/>
+      </div>
       <h1 className="mb-8 text-3xl font-bold text-center">Mortgage Calculator</h1>
       <p className="mb-6 text-lg text-center">
         Calculate your monthly mortgage payments and see a complete amortization schedule.
@@ -63,5 +71,6 @@ function MortgageCalculatorPage  ()  {
       <MortgageCalculator />
       <MortgageCalculatorSEOContent />
     </div>
+    </AmbientHaloLayout>
   );
 };

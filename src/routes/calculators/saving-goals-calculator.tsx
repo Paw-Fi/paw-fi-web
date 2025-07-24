@@ -1,7 +1,9 @@
 import { SavingGoalsCalculator } from '@/components/calculators/saving-goals/saving-goals-calculator';
 import { SavingGoalsSEOContent } from '@/components/calculators/saving-goals/saving-goals-seo-contents';
 import { createFileRoute } from '@tanstack/react-router';
-
+import { HomeHeader } from '@/components/index/header';
+import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
+import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 import { seo } from '@/utils/seo';
 import { useNavigate } from '@tanstack/react-router';
 
@@ -53,7 +55,12 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
 function SavingGoalsCalculatorPage() {
   const navigate = useNavigate();
   return (
-    <div className="mx-auto px-4 py-8">
+    <AmbientHaloLayout>
+    <div className="container mx-auto px-4 py-4 md:px-8 lg:px-12">
+      <HomeHeader/>
+      <div className="mt-4 mb-8">
+      <BreadCrumbsHeader/>
+      </div>
       <h1 className="mb-8 text-3xl font-bold text-center">Savings Goal Calculator</h1>
       <p className="mb-6 text-lg text-center">
         Find out how much you need to save each month or year to reach your savings goal, factoring in compound interest and your current balance.
@@ -61,5 +68,6 @@ function SavingGoalsCalculatorPage() {
       <SavingGoalsCalculator />
       <SavingGoalsSEOContent />
     </div>
+    </AmbientHaloLayout>
   );
 }

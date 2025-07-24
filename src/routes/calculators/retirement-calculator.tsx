@@ -1,24 +1,32 @@
 import { RetirementCalculator } from '@/components/calculators/retirement/retirement-calculator';
 import { RetirementCalculatorSEOContent } from '@/components/calculators/retirement/retirement-seo-contents';
 import { createFileRoute } from '@tanstack/react-router';
-
+import { seo } from '@/utils/seo';
+import { useNavigate } from '@tanstack/react-router';
+import { HomeHeader } from '@/components/index/header';
+import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
+import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 function RetirementCalculatorPage() {
   const navigate = useNavigate();
   return (
-    <div className="container mx-auto px-4 py-8">
-
+    <AmbientHaloLayout>
+    <div className="container mx-auto px-4 py-4 md:px-8 lg:px-12">
+      <HomeHeader/>
+      <div className="mt-4 mb-8">
+      <BreadCrumbsHeader/>
+      </div>
       <h1 className="mb-8 text-3xl font-bold text-center">Retirement Calculator</h1>
       <p className="mb-6 text-lg text-center">
         Estimate your retirement needs, savings, and withdrawal strategies.
       </p>
       <RetirementCalculator />
       <RetirementCalculatorSEOContent />
-    </div>
+    </div>  
+    </AmbientHaloLayout>
   );
 }
 
-import { seo } from '@/utils/seo';
-import { useNavigate } from '@tanstack/react-router';
+
 
 export const Route = createFileRoute('/calculators/retirement-calculator')({
   component: RetirementCalculatorPage,

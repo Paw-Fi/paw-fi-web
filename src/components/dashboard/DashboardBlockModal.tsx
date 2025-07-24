@@ -103,7 +103,7 @@ const getPageConfig = (path: string, user: any): PageConfig => {
       ],
       ctaText: user ? "Unlock Full Library" : "Sign In for Financial Education"
     };
-  } else if (path.startsWith("/dashboard/calculators")) {
+  } else if (path.startsWith("/calculators")) {
     config = {
       ...config,
       backgroundImage: dashboardCalculatorsImage,

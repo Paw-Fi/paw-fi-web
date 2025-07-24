@@ -37,8 +37,8 @@ export function getCanonicalPath(routePath: string): string {
   }
   
   // Remove common unnecessary path segments
-  if (normalizedPath.startsWith('/dashboard/calculators')) {
-    return normalizedPath.replace('/dashboard/calculators', '/calculators');
+  if (normalizedPath.startsWith('/calculators')) {
+    return normalizedPath.replace('/calculators', '/calculators');
   }
   
   return normalizedPath;

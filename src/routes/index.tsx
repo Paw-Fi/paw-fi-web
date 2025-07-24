@@ -540,7 +540,7 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.6}>
                 <Link
-                  to="/dashboard/calculators"
+                  to="/calculators"
                   className="text-gray-400 hover:text-white"
                 >
                   Financial Calculators

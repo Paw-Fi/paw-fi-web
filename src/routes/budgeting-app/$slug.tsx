@@ -276,14 +276,14 @@ function BudgetingAppPage() {
         {
           name: 'Retirement Calculator',
           description: 'Plan your retirement with AI-powered projections',
-          url: '/dashboard/calculators/retirement-calculator',
+          url: '/calculators/retirement-calculator',
           icon: '🏦',
           gradient: 'from-blue-500 to-cyan-500'
         },
         {
           name: 'Investment Calculator',
           description: 'Calculate potential returns on your investments',
-          url: '/dashboard/calculators/investment-calculator',
+          url: '/calculators/investment-calculator',
           icon: '📈',
           gradient: 'from-green-500 to-emerald-500'
         }
@@ -294,7 +294,7 @@ function BudgetingAppPage() {
       calculators.push({
         name: 'Mortgage Calculator',
         description: 'Calculate monthly payments and total costs',
-        url: '/dashboard/calculators/mortgage-calculator',
+        url: '/calculators/mortgage-calculator',
         icon: '🏠',
         gradient: 'from-orange-500 to-red-500'
       });
@@ -305,14 +305,14 @@ function BudgetingAppPage() {
         {
           name: 'Saving Goals Calculator',
           description: 'Plan how to reach your savings targets',
-          url: '/dashboard/calculators/saving-goals-calculator',
+          url: '/calculators/saving-goals-calculator',
           icon: '🎯',
           gradient: 'from-purple-500 to-pink-500'
         },
         {
           name: 'Compound Interest Calculator',
           description: 'See how your money grows over time',
-          url: '/dashboard/calculators/compound-calculator',
+          url: '/calculators/compound-calculator',
           icon: '💰',
           gradient: 'from-yellow-500 to-orange-500'
         }
@@ -323,7 +323,7 @@ function BudgetingAppPage() {
       calculators.push({
         name: 'Auto Loan Calculator',
         description: 'Calculate car loan payments and costs',
-        url: '/dashboard/calculators/auto-loan-calculator',
+        url: '/calculators/auto-loan-calculator',
         icon: '🚗',
         gradient: 'from-indigo-500 to-purple-500'
       });
@@ -333,7 +333,7 @@ function BudgetingAppPage() {
       calculators.push({
         name: 'Compound Interest Calculator',
         description: 'See how your money grows over time',
-        url: '/dashboard/calculators/compound-calculator',
+        url: '/calculators/compound-calculator',
         icon: '💰',
         gradient: 'from-yellow-500 to-orange-500'
       });
