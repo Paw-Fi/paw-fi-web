@@ -127,9 +127,6 @@ export default function ModernCourseDetailPage() {
   });
 
   const course = isEssentialsCourse ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
-
-  // Get user's learning context
-  const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
   
   // Get completed lessons data
   const { data: completedLessons = [], isLoading: isLoadingCompleted } = useCompletedLessons(user?.id);
@@ -181,14 +178,6 @@ export default function ModernCourseDetailPage() {
     };
   })() : null;
 
-  // Mock achievements for the course
-  const achievements = courseMetrics ? [
-    { id: 1, title: "Quick Starter", description: "Complete your first lesson", icon: faRocket, earned: courseMetrics.completedLessons > 0, color: "from-green-400 to-emerald-500" },
-    { id: 2, title: "Halfway Hero", description: "Complete 50% of the course", icon: faMedal, earned: courseMetrics.progress >= 50, color: "from-blue-400 to-indigo-500" },
-    { id: 3, title: "Course Master", description: "Complete all lessons", icon: faTrophy, earned: courseMetrics.progress === 100, color: "from-yellow-400 to-orange-500" },
-    { id: 4, title: "XP Champion", description: "Earn 500+ XP", icon: faGem, earned: courseMetrics.earnedXP >= 500, color: "from-purple-400 to-pink-500" }
-  ] : [];
-
   // Animation variants
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -200,15 +189,6 @@ export default function ModernCourseDetailPage() {
     }
   };
 
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 }
-    }
-  };
-
   const heroVariants: Variants = {
     hidden: { opacity: 0, scale: 0.95 },
     visible: {
@@ -217,6 +197,8 @@ export default function ModernCourseDetailPage() {
       transition: { duration: 0.6, ease: "easeOut" }
     }
   };
+
+  const isFirstLesson=courseMetrics?.nextLesson?.id===course?.lessons[0].id;
 
   if (isLoading || isLoadingCompleted) {
     return (
@@ -347,9 +329,8 @@ export default function ModernCourseDetailPage() {
                           }
                         `}
                       >
-                        <FontAwesomeIcon icon={faPlay} className="h-5 w-5" />
-                        <span>Continue Learning</span>
-                        <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <span>{isFirstLesson? "Start Learning" : "Continue Learning"}</span>
+                        <FontAwesomeIcon icon={faPlay} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     ) : courseMetrics.progress === 100 ? (
                       <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium shadow-lg">

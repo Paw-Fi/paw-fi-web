@@ -319,7 +319,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         <ChatSuggestions
           suggestions={suggestedResponses}
           onSuggestionClick={handleSuggestionClick}
-          isLoading={isSendingMessage}
           isSendingMessage={isSendingMessage}
         />
       )}

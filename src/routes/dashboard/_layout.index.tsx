@@ -50,9 +50,11 @@ import { useUserCourses } from "@/services/course-service";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useUserActivities } from "@/hooks/useUserActivities";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
+import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { getConversations } from "@/services/conversation-service";
+import basicCourse from "@/data/basic-lessons.json";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
@@ -125,9 +127,17 @@ function DashboardHome() {
   const [showRewardsModal, setShowRewardsModal] = useState(false);
   // Real data hooks - NO MOCK DATA
   const { dashboardData, views, status: dashboardStatus } = useDashboard(user?.id);
-  const { data: courses = [], isLoading: coursesLoading } = useUserCourses(user?.id || "", { enabled: !!user });
+  const { data: remoteCourses = [], isLoading: coursesLoading } = useUserCourses(user?.id || "", { enabled: !!user });
   const { subscription, features, paymentMethod, invoices, isLoading: subLoading, isActive } = useSubscription(user?.id);
   const { profile: financialProfile, isLoading: profileLoading, hasProfile } = useFinancialHealthProfile(user?.id);
+  
+  // Get completed lessons data using the same method as course detail page
+  const { data: completedLessons = [], isLoading: isLoadingCompleted } = useCompletedLessons(user?.id);
+  
+  // Include essentials course with remote courses for consistent data
+  const courses = useMemo(() => {
+    return [basicCourse as any, ...remoteCourses];
+  }, [remoteCourses]);
   
   // Fetch real conversation data
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
@@ -198,9 +208,9 @@ function DashboardHome() {
   // Subscribe to user activities
   const { activities, loading: isActivitiesLoading, error: activitiesError } = useUserActivities(user?.id);
 
-  // Calculate real learning progress from actual course data
+  // Calculate real learning progress from actual course data using consistent logic
   const learningInsights = useMemo(() => {
-    if (coursesLoading || !courses.length) {
+    if (coursesLoading || isLoadingCompleted || !courses.length) {
       return {
         hasCourses: false,
         totalCourses: 0,
@@ -210,45 +220,102 @@ function DashboardHome() {
         currentCourse: null,
         nextLesson: null,
         totalXP: 0,
+        earnedXP: 0,
         recentActivity: null,
       };
     }
 
     const totalLessons = courses.reduce((acc, course) => acc + course.lessons.length, 0);
-    const completedLessons = courses.reduce((acc, course) => 
-      acc + course.lessons.filter(lesson => lesson.unlocked).length, 0
+    
+    // Count completed lessons using the same logic as course detail page
+    const totalCompletedLessons = completedLessons.length;
+    
+    // Calculate total available XP and earned XP
+    const totalXP = courses.reduce((acc: number, course: any) => 
+      acc + course.lessons.reduce((xpAcc: number, lesson: any) => xpAcc + (lesson.xp || 0), 0), 0
     );
     
-    const totalXP = courses.reduce((acc, course) => 
-      acc + course.lessons.filter(lesson => lesson.unlocked).reduce((xpAcc, lesson) => xpAcc + (lesson.xp || 0), 0), 0
-    );
+    const earnedXP = completedLessons.reduce((acc, completedLesson) => {
+      // Find the lesson across all courses
+      const lesson = courses
+        .flatMap((course: any) => course.lessons)
+        .find((l: any) => l.id === completedLesson.lesson_id);
+      return acc + (lesson?.xp || 0);
+    }, 0);
 
-    // Find current course (one with most recent progress)
-    const currentCourse = courses.find(course => 
-      course.lessons.some(lesson => lesson.unlocked && lesson.lesson_id !== course.lessons[0]?.lesson_id)
-    ) || courses[0];
+    // Find current course with most recent activity
+    let currentCourse: any = null;
+    let mostRecentCompletedLesson: any = null;
+    
+    if (completedLessons.length > 0) {
+      // Get the most recent completed lesson (using created_at instead of completed_at)
+      const sortedCompleted = [...completedLessons].sort((a, b) => 
+        new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime()
+      );
+      
+      if (sortedCompleted[0]) {
+        mostRecentCompletedLesson = sortedCompleted[0];
+        // Find which course this lesson belongs to
+        currentCourse = courses.find((course: any) => 
+          course.lessons.some((lesson: any) => lesson.id === mostRecentCompletedLesson.lesson_id)
+        );
+      }
+    }
+    
+    // If no completed lessons, default to essentials course
+    if (!currentCourse) {
+      currentCourse = courses.find((course: any) => course.course_id === basicCourse.course_id) || courses[0];
+    }
 
-    // Find next lesson to unlock
-    const nextLesson = currentCourse?.lessons?.find(lesson => !lesson.unlocked) || null;
+    // Find next lesson using the same logic as course detail page
+    let nextLesson: any = null;
+    if (currentCourse) {
+      const isEssentialsCourse = currentCourse.course_id === basicCourse.course_id;
+      const courseCompletedLessons = completedLessons.filter(cl => 
+        currentCourse.lessons.some((lesson: any) => lesson.id === cl.lesson_id)
+      );
+      
+      if (isEssentialsCourse) {
+        // For essentials course, find first lesson that's unlocked but not completed
+        nextLesson = currentCourse.lessons.find((lesson: any, index: number) => {
+          const isCompleted = courseCompletedLessons.some(cl => cl.lesson_id === lesson.id);
+          if (isCompleted) return false;
+          
+          // First lesson is always unlocked
+          if (index === 0) return true;
+          
+          // Subsequent lessons are unlocked if previous lesson is completed
+          const previousLesson = currentCourse.lessons[index - 1];
+          return courseCompletedLessons.some(cl => cl.lesson_id === previousLesson.id);
+        });
+      } else {
+        // For other courses, use the lesson's unlocked property
+        nextLesson = currentCourse.lessons.find((lesson: any) => 
+          lesson.unlocked && !courseCompletedLessons.some(cl => cl.lesson_id === lesson.id)
+        );
+      }
+    }
 
-    // Get most recent lesson completed
-    const recentLesson = courses
-      .flatMap(course => course.lessons.filter(lesson => lesson.unlocked))
-      .sort((a, b) => (b.lesson_id || '').localeCompare(a.lesson_id || ''))
-      [0] || null;
+    // Get most recent lesson activity
+    const recentActivity = mostRecentCompletedLesson ? 
+      courses
+        .flatMap((course: any) => course.lessons)
+        .find((lesson: any) => lesson.id === mostRecentCompletedLesson.lesson_id) 
+      : null;
 
     return {
       hasCourses: true,
       totalCourses: courses.length,
       totalLessons,
-      completedLessons,
-      progress: totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0,
+      completedLessons: totalCompletedLessons,
+      progress: totalLessons > 0 ? (totalCompletedLessons / totalLessons) * 100 : 0,
       currentCourse,
       nextLesson,
       totalXP,
-      recentActivity: recentLesson,
+      earnedXP,
+      recentActivity,
     };
-  }, [courses, coursesLoading]);
+  }, [courses, coursesLoading, completedLessons, isLoadingCompleted]);
 
   // Real subscription insights
   const subscriptionInsights = useMemo(() => {
@@ -401,7 +468,6 @@ function DashboardHome() {
 
   const { gamificationData } = useGamification();
 
-  // Use real gamification data
   const currentStreak = gamificationData.streak;
   const currentXP = gamificationData.xp;
   const levelInfo = getCurrentLevelInfo(currentXP);
@@ -430,11 +496,7 @@ function DashboardHome() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
       >
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-1/2 -right-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-1/2 -left-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-3xl animate-pulse delay-1000"></div>
-        </div>
+   
         
         <div className="relative z-10">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -728,7 +790,7 @@ function DashboardHome() {
                         </div>
                         <div className="text-center">
                           <div className="text-3xl font-bold text-blue-600 mb-1">
-                            {learningInsights.totalXP}
+                            {learningInsights.earnedXP}
                           </div>
                           <div className="text-sm text-gray-600">XP Earned</div>
                         </div>

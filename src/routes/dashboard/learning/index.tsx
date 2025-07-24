@@ -2,9 +2,10 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
+import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faGraduationCap, 
@@ -31,6 +32,7 @@ import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { createPortal } from "react-dom";
+import { useGamification } from "@/hooks/use-gamification";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
@@ -63,7 +65,8 @@ export function UnifiedLearningPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'personalized' | 'essentials'>('all');
   const [showAICoach, setShowAICoach] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
-  
+  const { gamificationData } = useGamification();
+
   const {
     data: aiCourses = [],
     isLoading: isAICoursesLoading,
@@ -72,6 +75,9 @@ export function UnifiedLearningPage() {
     enabled: !!user,
     source: 'remote' 
   });
+  
+  // Get completed lessons data using the same method as other pages
+  const { data: completedLessons = [], isLoading: isLoadingCompleted } = useCompletedLessons(user?.id);
   
   const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
   
@@ -106,17 +112,31 @@ export function UnifiedLearningPage() {
     }
   ];
   
-  // Calculate learning stats
-  const learningStats = {
-    totalCourses: aiCourses.length + 1, // +1 for essentials
-    completedLessons: aiCourses.reduce((acc, course) => 
-      acc + course.lessons.filter(lesson => lesson.unlocked).length, 0
-    ),
-    totalXP: aiCourses.reduce((acc, course) => 
-      acc + course.lessons.filter(lesson => lesson.unlocked).reduce((xpAcc, lesson) => xpAcc + (lesson.xp || 0), 0), 0
-    ),
-    streak: 3, // Mock data
-  };
+  // Calculate learning stats using consistent completion logic
+  const learningStats = useMemo(() => {
+    if (isLoadingCompleted) {
+      return {
+        totalCourses: 0,
+        completedLessons: 0,
+        totalXP: 0,
+        earnedXP: 0,
+        streak: 0,
+      };
+    }
+
+    // Include essentials course with AI courses for total count
+    const allCourses = [basicCourse, ...aiCourses];
+    
+    return {
+      totalCourses: allCourses.length,
+      completedLessons: completedLessons.length, // Total completed lessons across all courses
+      totalXP: allCourses.reduce((acc, course) => 
+        acc + course.lessons.reduce((xpAcc, lesson) => xpAcc + (lesson.xp || 0), 0), 0
+      ),
+      earnedXP: gamificationData.xp,
+      streak: gamificationData.streak,
+    };
+  }, [aiCourses, completedLessons, isLoadingCompleted,gamificationData]);
 
   // Combine all courses for unified view
   const allCourses = [
@@ -131,7 +151,7 @@ export function UnifiedLearningPage() {
       ...course,
       type: 'personalized',
       difficulty: 'Adaptive',
-      duration: 'Self-paced',
+      duration: course.lessons.length<3?"~30 mins":course.lessons.length<6?"~1 hour":course.lessons.length<9?"~2 hours":"~3 hours",
       students: 'Just for you',
     }))
   ];
@@ -425,27 +445,41 @@ export function UnifiedLearningPage() {
 
                         {/* Course Info */}
                         <div className="p-6 pt-4 space-y-4">
-                          {/* Progress Bar (for enrolled courses) */}
-                          {course.type === 'personalized' && (
-                            <div>
-                              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                                <span>Progress</span>
-                                <span>
-                                  {course.lessons.filter(l => l.unlocked).length}/{course.lessons.length} lessons
-                                </span>
+                          {/* Progress Bar (for all courses) */}
+                          {(() => {
+                            // Calculate course-specific completion using consistent logic
+                            const courseCompletedLessons = completedLessons.filter(cl => 
+                              course.lessons.some((lesson: any) => lesson.id === cl.lesson_id)
+                            );
+                            const completedCount = courseCompletedLessons.length;
+                            const totalCount = course.lessons.length;
+                            const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                            
+                            return (
+                              <div>
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                  <span>Progress</span>
+                                  <span>
+                                    {completedCount}/{totalCount} lessons completed
+                                  </span>
+                                </div>
+                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    className={`h-full ${
+                                      course.type === 'essential' 
+                                        ? 'bg-gradient-to-r from-emerald-500 to-green-500'
+                                        : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                                    }`}
+                                    initial={{ width: 0 }}
+                                    animate={{ 
+                                      width: `${progressPercentage}%` 
+                                    }}
+                                    transition={{ duration: 1, delay: 0.5 }}
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <motion.div 
-                                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
-                                  initial={{ width: 0 }}
-                                  animate={{ 
-                                    width: `${(course.lessons.filter(l => l.unlocked).length / course.lessons.length) * 100}%` 
-                                  }}
-                                  transition={{ duration: 1, delay: 0.5 }}
-                                />
-                              </div>
-                            </div>
-                          )}
+                            );
+                          })()}
 
                           {/* Course Meta */}
                           <div className="grid grid-cols-3 gap-3 text-center">
