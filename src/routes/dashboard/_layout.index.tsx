@@ -418,22 +418,17 @@ function DashboardHome() {
     );
   }
 
-  const isLoading = coursesLoading || subLoading || profileLoading || conversationsLoading;
 
   return (
     <ProtectedRouteSubscription>
       <motion.div
         className="max-w-7xl mx-auto py-12"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
       >
            {/* Hero Header with Level Progression */}
            <motion.div
         className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-8 shadow-2xl"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -501,7 +496,6 @@ function DashboardHome() {
                 {/* Streak tooltip */}
                 <motion.div
                   className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-3 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 whitespace-nowrap"
-                  initial={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2 }}
                 >
                   <div className="text-orange-400 font-semibold text-sm">Keep it burning! 🔥</div>
@@ -582,8 +576,6 @@ function DashboardHome() {
               {financialProfileInsights.hasProfile ? (
                 <motion.div
                   className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-purple-200/50 shadow-2xl  border-t-purple-500/80"
-                  variants={cardHoverVariants}
-                  initial="rest"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>

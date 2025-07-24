@@ -1,38 +1,21 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faFire,
   faCheckCircle,
   faTimesCircle,
-  faBolt,
-  faArrowRight,
   faQuestionCircle,
   faTrophy,
   faLightbulb,
   faCoins,
-  faBullseye,
   faPenToSquare,
   faPaperPlane,
   faThumbsUp,
   faStar,
-  faGift,
-  faCrown,
-  faGem,
   faRocket,
-  faShield,
-  faMedal,
   faTreeCity,
-  faLock,
-  faUnlock,
-  faChevronRight,
-  faCalendar,
-  faInfinity,
-  faChevronDown,
-  faChevronUp,
-  faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/auth-context';
@@ -109,16 +92,6 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
     } : undefined
   }));
 
-  // AI-powered next step recommendation
-  const nextStepRecommendation = {
-    title: "Continue Your Investing Journey",
-    description: "You explored the Compound Interest Calculator yesterday. Ready for a 5-minute lesson on understanding risk vs. return?",
-    action: {
-      type: 'link' as const,
-      path: '/dashboard/learning',
-      buttonText: 'Start Lesson'
-    }
-  };
 
   const handleAnswerSelect = (answerIndex: number) => {
     setSelectedAnswer(answerIndex);
@@ -277,176 +250,134 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
           )}
         </motion.div>
 
-        {/* AI-Powered Next Step */}
+        {/* Financial Progress Diary - Modern Design */}
         <motion.div 
-          className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl border border-purple-200/50 p-6 shadow-lg hover:shadow-2xl transition-all duration-300"
+          className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl border border-green-200/50 p-6 shadow-lg hover:shadow-2xl transition-all duration-300"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          whileHover={{ y: -4 }}
         >
           {/* Gradient accent */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-teal-500"></div>
           
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg">
-              <FontAwesomeIcon icon={faRocket} className="h-5 w-5 text-white" />
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-teal-600 shadow-lg">
+              <FontAwesomeIcon icon={faPenToSquare} className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900">AI Recommendation</h3>
-              <p className="text-gray-600 text-sm">Personalized next step</p>
+              <h3 className="text-xl font-bold text-gray-900">Progress Journal</h3>
+              <p className="text-gray-600 text-sm">Document your financial wins</p>
             </div>
           </div>
           
-          <h4 className="text-lg font-bold text-gray-900 mb-3">{nextStepRecommendation.title}</h4>
-          <p className="text-gray-700 mb-6 leading-relaxed">{nextStepRecommendation.description}</p>
+          <p className="text-gray-700 mb-6 leading-relaxed">
+            Share your financial journey today! Track savings, spending, investments, or learning milestones.
+          </p>
           
-          <Link to={nextStepRecommendation.action.path}>
-            <motion.button
-              className="w-full group/btn relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 text-white font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-pink-700 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center justify-center gap-3">
-                <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-                <span>{nextStepRecommendation.action.buttonText}</span>
-                <FontAwesomeIcon 
-                  icon={faArrowRight} 
-                  className="h-4 w-4 transform group-hover/btn:translate-x-1 transition-transform duration-300" 
+          {!diarySubmitted ? (
+            <div className="space-y-6">
+              <div className="relative">
+                <textarea
+                  value={diaryEntry}
+                  onChange={(e) => setDiaryEntry(e.target.value)}
+                  placeholder="e.g., 'Saved $50 by meal prepping' • 'Invested $200 in S&P 500' • 'Completed lesson on compound interest'"
+                  className="w-full px-5 py-4 bg-white/50 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:border-green-400 focus:bg-white transition-all duration-300 text-sm font-medium shadow-inner"
+                  rows={4}
+                  maxLength={200}
                 />
+                <div className="absolute bottom-3 right-3 px-2 py-1 bg-gray-100 rounded-lg text-xs text-gray-500 font-medium">
+                  {diaryEntry.length}/200
+                </div>
               </div>
-            </motion.button>
-          </Link>
+              
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-sm text-gray-600 font-medium mb-1">Quick templates:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { text: "Saving", example: "Saved $25 by bringing lunch to work today", color: "from-green-400 to-green-500" },
+                      { text: "Spending", example: "Spent $40 on groceries for the week", color: "from-blue-400 to-blue-500" },
+                      { text: "Investing", example: "Invested $100 in my index fund today", color: "from-purple-400 to-purple-500" }
+                    ].map((template) => (
+                      <motion.button
+                        key={template.text}
+                        onClick={() => setDiaryEntry(template.example)}
+                        className={`px-3 py-1.5 text-xs font-medium text-white rounded-lg bg-gradient-to-r ${template.color} shadow-md hover:shadow-lg transition-all duration-200`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {template.text}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+                
+                <motion.button
+                  onClick={handleDiarySubmit}
+                  disabled={!diaryEntry.trim()}
+                  className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                    diaryEntry.trim()
+                      ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white hover:from-green-700 hover:to-teal-700 shadow-lg hover:shadow-xl'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                  whileHover={diaryEntry.trim() ? { scale: 1.02 } : {}}
+                  whileTap={diaryEntry.trim() ? { scale: 0.98 } : {}}
+                >
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
+                    Share Progress
+                  </div>
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="space-y-4"
+            >
+              <div className="relative p-5 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-green-200 rounded-xl">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-teal-600">
+                    <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-green-900 mb-2">Today's Achievement</div>
+                    <p className="text-gray-800 font-medium italic mb-3 p-3 bg-white/60 rounded-lg border border-green-200">
+                      "{diaryEntry}"
+                    </p>
+                    <p className="text-green-700 font-medium">{diaryFeedback}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-white/60 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2 text-green-600">
+                  <div className="p-1.5 rounded-lg bg-green-100">
+                    <FontAwesomeIcon icon={faCoins} className="h-4 w-4" />
+                  </div>
+                  <span className="font-bold text-sm">+15 XP earned!</span>
+                </div>
+                
+                <motion.button
+                  onClick={() => {
+                    setDiarySubmitted(false);
+                    setDiaryEntry('');
+                    setDiaryFeedback('');
+                    setDiaryCategory(null);
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-800 font-medium hover:bg-gray-100 px-3 py-1 rounded-lg transition-all duration-200"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  Add another entry
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 
-      {/* Financial Progress Diary - Modern Design */}
-      <motion.div 
-        className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl border border-green-200/50 p-6 shadow-lg hover:shadow-2xl transition-all duration-300"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        {/* Gradient accent */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-teal-500"></div>
-        
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-teal-600 shadow-lg">
-            <FontAwesomeIcon icon={faPenToSquare} className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Progress Journal</h3>
-            <p className="text-gray-600 text-sm">Document your financial wins</p>
-          </div>
-        </div>
-        
-        <p className="text-gray-700 mb-6 leading-relaxed">
-          Share your financial journey today! Track savings, spending, investments, or learning milestones.
-        </p>
-        
-        {!diarySubmitted ? (
-          <div className="space-y-6">
-            <div className="relative">
-              <textarea
-                value={diaryEntry}
-                onChange={(e) => setDiaryEntry(e.target.value)}
-                placeholder="e.g., 'Saved $50 by meal prepping' • 'Invested $200 in S&P 500' • 'Completed lesson on compound interest'"
-                className="w-full px-5 py-4 bg-white/50 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:border-green-400 focus:bg-white transition-all duration-300 text-sm font-medium shadow-inner"
-                rows={4}
-                maxLength={200}
-              />
-              <div className="absolute bottom-3 right-3 px-2 py-1 bg-gray-100 rounded-lg text-xs text-gray-500 font-medium">
-                {diaryEntry.length}/200
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm text-gray-600 font-medium mb-1">Quick templates:</span>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { text: "Saving", example: "Saved $25 by bringing lunch to work today", color: "from-green-400 to-green-500" },
-                    { text: "Spending", example: "Spent $40 on groceries for the week", color: "from-blue-400 to-blue-500" },
-                    { text: "Investing", example: "Invested $100 in my index fund today", color: "from-purple-400 to-purple-500" }
-                  ].map((template) => (
-                    <motion.button
-                      key={template.text}
-                      onClick={() => setDiaryEntry(template.example)}
-                      className={`px-3 py-1.5 text-xs font-medium text-white rounded-lg bg-gradient-to-r ${template.color} shadow-md hover:shadow-lg transition-all duration-200`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {template.text}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-              
-              <motion.button
-                onClick={handleDiarySubmit}
-                disabled={!diaryEntry.trim()}
-                className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
-                  diaryEntry.trim()
-                    ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white hover:from-green-700 hover:to-teal-700 shadow-lg hover:shadow-xl'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-                whileHover={diaryEntry.trim() ? { scale: 1.02 } : {}}
-                whileTap={diaryEntry.trim() ? { scale: 0.98 } : {}}
-              >
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
-                  Share Progress
-                </div>
-              </motion.button>
-            </div>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="space-y-4"
-          >
-            <div className="relative p-5 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-green-200 rounded-xl">
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-teal-600">
-                  <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-bold text-green-900 mb-2">Today's Achievement</div>
-                  <p className="text-gray-800 font-medium italic mb-3 p-3 bg-white/60 rounded-lg border border-green-200">
-                    "{diaryEntry}"
-                  </p>
-                  <p className="text-green-700 font-medium">{diaryFeedback}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-white/60 rounded-xl border border-gray-200">
-              <div className="flex items-center gap-2 text-green-600">
-                <div className="p-1.5 rounded-lg bg-green-100">
-                  <FontAwesomeIcon icon={faCoins} className="h-4 w-4" />
-                </div>
-                <span className="font-bold text-sm">+15 XP earned!</span>
-              </div>
-              
-              <motion.button
-                onClick={() => {
-                  setDiarySubmitted(false);
-                  setDiaryEntry('');
-                  setDiaryFeedback('');
-                  setDiaryCategory(null);
-                }}
-                className="text-sm text-gray-600 hover:text-gray-800 font-medium hover:bg-gray-100 px-3 py-1 rounded-lg transition-all duration-200"
-                whileHover={{ scale: 1.05 }}
-              >
-                Add another entry
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
 
       {/* Learning Tree - Daily Quests Redesigned */}
       <motion.div 
@@ -456,11 +387,11 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
         transition={{ duration: 0.6, delay: 0.5 }}
       >
         {/* Gradient accent */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
         
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg">
               <FontAwesomeIcon icon={faTreeCity} className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -469,10 +400,10 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
             </div>
           </div>
           
-          <div className="px-4 py-2 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-xl border border-indigo-200">
+          <div className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl border border-purple-200">
             <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faTrophy} className="h-4 w-4 text-indigo-600" />
-              <span className="text-sm font-bold text-indigo-900">
+              <FontAwesomeIcon icon={faTrophy} className="h-4 w-4 text-purple-600" />
+              <span className="text-sm font-bold text-purple-900">
                 {completedQuests}/{totalQuests} completed
               </span>
             </div>
@@ -485,8 +416,8 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
             <defs>
               <linearGradient id="questLine" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgb(99 102 241)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="rgb(147 51 234)" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="rgb(168 85 247)" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="rgb(236 72 153)" stopOpacity="0.2" />
               </linearGradient>
             </defs>
             {dailyQuests.map((_, index) => (
@@ -512,7 +443,7 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
                 className={`group relative p-5 rounded-2xl border-2 transition-all duration-300 ${
                   quest.completed 
                     ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-lg' 
-                    : 'bg-white border-indigo-200 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-1'
+                    : 'bg-white border-purple-200 hover:border-purple-300 hover:shadow-lg hover:-translate-y-1'
                 }`}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -559,7 +490,7 @@ export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingPr
                   {quest.action && !quest.completed && (
                     <Link to={quest.action.path || '#'}>
                       <motion.button
-                        className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                        className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >

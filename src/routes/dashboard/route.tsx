@@ -150,29 +150,6 @@ export function Dashboard() {
     return currentPath === path;
   };
 
-  // Generate dynamic learning submenu from courses
-  const learningSubmenu = useMemo<SubMenuItem[]>(() => {
-    const submenuItems: SubMenuItem[] = [];
-    
-    // Add Financial Essentials course first
-    submenuItems.push({
-      id: basicLessonsData.course_id,
-      label: basicLessonsData.title,
-      path: `/dashboard/learning/${basicLessonsData.course_id}`,
-    });
-    
-    // Add AI-generated courses if they exist
-    if (courses && courses.length > 0) {
-      const courseItems = courses.map((course) => ({
-        id: course.course_id || course.id || `course-${Math.random().toString(36).substring(2, 9)}`,
-        label: course.title,
-        path: `/dashboard/learning/${course.course_id || course.id}`,
-      }));
-      submenuItems.push(...courseItems);
-    }
-
-    return submenuItems;
-  }, [courses]);
 
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
@@ -182,7 +159,6 @@ export function Dashboard() {
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
-      submenu: learningSubmenu,
     },    
     // Only show membership and settings if user is logged in
     ...(user ? [
@@ -458,46 +434,7 @@ export function Dashboard() {
                 </span>
               </Link>
               
-              {/* Streak Counter in Sidebar */}
-              <Link
-                to="/dashboard/daily-challenges"
-              >
-                
-                <div className="relative flex items-center px-4 py-3 hover:bg-red-50 transition-all duration-300 rounded-lg">
-                  {/* Fire icon with pulse animation */}
-                  <div className="relative mr-3">
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-orange-400/30 blur-md" />
-                    <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 shadow-md shadow-orange-500/30">
-                      <FontAwesomeIcon 
-                        icon={faFire} 
-                        className="h-4 w-4 text-white drop-shadow-sm" 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    {/* Streak number with enhanced typography */}
-                    <div className="flex items-baseline space-x-1">
-                      <span className="text-2xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
-                        {gamificationData.streak}
-                      </span>
-                      <div className="h-1 w-1 rounded-full bg-orange-400 animate-pulse" />
-                    </div>
-                    
-                    {/* Label with improved spacing */}
-                    <div className="text-xs font-medium text-orange-700/80 leading-tight tracking-wide uppercase">
-                      Daily Streak
-                    </div>
-                  </div>
-                  
-                  {/* Subtle arrow indicator */}
-                  <div className="ml-2 text-orange-400/60 transition-all duration-300 group-hover:text-orange-500 group-hover:translate-x-1">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </Link>
+           
             </div>
 
             {/* Navigation Menu */}

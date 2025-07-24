@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { motion, Variants } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -11,17 +11,26 @@ import {
   faRobot, 
   faComments, 
   faChevronDown, 
-  faChevronUp,
   faBrain,
-  faMagicWandSparkles,
-  faBullseye,
-  faWandMagicSparkles,
-  faBookOpen
+  faBookOpen,
+  faWandSparkles,
+  faLightbulb,
+  faRocket,
+  faTrophy,
+  faFire,
+  faChartLine,
+  faCirclePlay,
+  faArrowRight,
+  faBolt,
+  faPlus,
+  faGem,
+  faStar
 } from '@fortawesome/free-solid-svg-icons';
 import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
+import { createPortal } from "react-dom";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
@@ -51,7 +60,9 @@ export const Route = createFileRoute("/dashboard/learning/")({
 
 export function UnifiedLearningPage() {
   const { user } = useAuth();
-  const [showLearningAI, setShowLearningAI] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'personalized' | 'essentials'>('all');
+  const [showAICoach, setShowAICoach] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   
   const {
     data: aiCourses = [],
@@ -62,378 +73,512 @@ export function UnifiedLearningPage() {
     source: 'remote' 
   });
   
-  // Get user's learning context for enhanced AI responses
   const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
   
-  // Define suggested prompts
-  const learningPrompts = [
-    "Create a custom lesson about investing",
-    "Help me choose the right course to start with",
-    "Explain budgeting fundamentals", 
-    "Generate practice questions for financial planning",
-    "Create a personalized learning path",
-    "Teach me about retirement planning",
-    "Help me understand investment risks",
-    "Create lessons based on my financial goals"
+  // Learning prompts organized by category
+  const promptCategories = [
+    {
+      icon: faLightbulb,
+      title: "Getting Started",
+      prompts: [
+        "Help me choose the right course to start with",
+        "Explain budgeting fundamentals",
+        "What should I learn first?"
+      ]
+    },
+    {
+      icon: faRocket,
+      title: "Advanced Topics",
+      prompts: [
+        "Create a custom lesson about investing",
+        "Teach me about retirement planning",
+        "Help me understand investment risks"
+      ]
+    },
+    {
+      icon: faBolt,
+      title: "Personalized Learning",
+      prompts: [
+        "Create a personalized learning path",
+        "Create lessons based on my financial goals",
+        "Generate practice questions for financial planning"
+      ]
+    }
   ];
   
-  // Calculate overall learning progress across all courses
-  const learningProgress = aiCourses.length > 0 ? {
-    totalCourses: aiCourses.length,
-    totalLessons: aiCourses.reduce((acc, course) => acc + course.lessons.length, 0),
+  // Calculate learning stats
+  const learningStats = {
+    totalCourses: aiCourses.length + 1, // +1 for essentials
     completedLessons: aiCourses.reduce((acc, course) => 
       acc + course.lessons.filter(lesson => lesson.unlocked).length, 0
     ),
     totalXP: aiCourses.reduce((acc, course) => 
       acc + course.lessons.filter(lesson => lesson.unlocked).reduce((xpAcc, lesson) => xpAcc + (lesson.xp || 0), 0), 0
     ),
-  } : null;
-  
-  // Define animation variants for cards
-  const containerVariants: Variants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+    streak: 3, // Mock data
   };
-  
-  const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { 
-        duration: 0.5,
-        ease: "easeOut"
-      }
+
+  // Combine all courses for unified view
+  const allCourses = [
+    {
+      ...basicCourse,
+      type: 'essential',
+      difficulty: 'Beginner',
+      duration: '2-3 hours',
+      students: '10k+',
+    },
+    ...aiCourses.map(course => ({
+      ...course,
+      type: 'personalized',
+      difficulty: 'Adaptive',
+      duration: 'Self-paced',
+      students: 'Just for you',
+    }))
+  ];
+
+  const filteredCourses = activeTab === 'all' 
+    ? allCourses 
+    : allCourses.filter(course => 
+        activeTab === 'personalized' ? course.type === 'personalized' : course.type === 'essential'
+      );
+
+  // Animation variants
+  const pageVariants: Variants = {
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.5, staggerChildren: 0.1 }
     }
   };
 
-  const sectionVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { 
+  const itemVariants: Variants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { 
       opacity: 1, 
-      y: 0, 
-      transition: { 
-        duration: 0.6,
-        ease: "easeOut"
-      }
+      y: 0,
+      transition: { duration: 0.4 }
+    }
+  };
+
+  const courseCardVariants: Variants = {
+    initial: { opacity: 0, scale: 0.95 },
+    animate: { 
+      opacity: 1, 
+      scale: 1,
+      transition: { duration: 0.3 }
+    },
+    hover: {
+      scale: 1.02,
+      transition: { duration: 0.2 }
     }
   };
 
   return (
-    <div className="px-4 py-12">
-  
-
-  
-
-      {/* AI Personalized Learning Section */}
+    <motion.div 
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+    >
+      {/* Modern Hero Section with Stats */}
       <motion.section 
-        className="mb-16"
-        variants={sectionVariants}
-        initial="hidden"
-        animate="visible"
-        transition={{ delay: 0.2 }}
+        className="relative px-4 py-8 mb-8 overflow-hidden"
+        variants={itemVariants}
       >
-        <div className="mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg">
-                <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-purple-800">AI-Personalized Learning</h2>
-                <p className="text-sm text-purple-600 font-medium">Tailored to Your Goals</p>
-              </div>
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-purple-600/5 to-indigo-600/5 rounded-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl" />
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            {/* Welcome Section */}
+            <div className="flex-1">
+              <motion.div
+        
+              >
+                <h1 className="text-4xl lg:text-5xl font-bold mb-4">
+                  <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    Welcome back, {user?.user_metadata?.full_name || 'Learner'}
+                  </span>
+                  <motion.span
+                    className="inline-block ml-3"
+                    animate={{ rotate: [0, 20, 0] }}
+                    transition={{ duration: 1, repeat: Infinity, repeatDelay: 3 }}
+                  >
+                    👋
+                  </motion.span>
+                </h1>
+                <p className="text-lg text-gray-600 mb-6">
+                  Continue your journey to financial mastery with AI-powered and expert-crafted courses.
+                </p>
+                
+                {/* Quick Actions */}
+                <div className="flex flex-wrap gap-3">
+                  <motion.button
+                    onClick={() => setShowAICoach(true)}
+                    className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-purple-600/20 hover:shadow-xl hover:shadow-purple-600/30 transition-all duration-300"
+                  >
+                    <FontAwesomeIcon icon={faWandSparkles} className="h-5 w-5" />
+                    <span>Create AI Course</span>
+                    <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
+                  </motion.button>
+                  
+                  {aiCourses.length > 0 && (
+                    <Link
+                      to={`/dashboard/learning/${aiCourses[0].course_id}`}
+                      className="group flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:border-purple-300 hover:text-purple-700 transition-all duration-300"
+                    >
+                      <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
+                      <span>Resume Learning</span>
+                    </Link>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-4 lg:w-auto">
+              <motion.div 
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <FontAwesomeIcon icon={faFire} className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-800">{learningStats.streak}</span>
+                </div>
+                <p className="text-sm text-gray-600">Day Streak</p>
+              </motion.div>
+
+              <motion.div 
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-800">{learningStats.totalXP}</span>
+                </div>
+                <p className="text-sm text-gray-600">Total XP</p>
+              </motion.div>
+
+              <motion.div 
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-800">{learningStats.totalCourses}</span>
+                </div>
+                <p className="text-sm text-gray-600">Courses</p>
+              </motion.div>
+
+              <motion.div 
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <FontAwesomeIcon icon={faChartLine} className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-800">{learningStats.completedLessons}</span>
+                </div>
+                <p className="text-sm text-gray-600">Lessons Done</p>
+              </motion.div>
             </div>
           </div>
-          <p className="text-center text-gray-600 max-w-2xl mx-auto">
-            ✨ Courses created specifically for your financial situation, goals, and learning pace. 
-            Our AI adapts as you progress and learns what works best for you.
-          </p>
         </div>
+      </motion.section>
 
-        {isAICoursesLoading ? (
-          <div className="flex h-40 items-center justify-center">
-            <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-purple-500"></div>
+      {/* Modern Tab Navigation */}
+      <motion.div 
+        className="px-4 mb-8"
+        variants={itemVariants}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-gray-100">
+            <div className="flex gap-2">
+              {[
+                { id: 'all', label: 'All Courses', icon: faBookOpen },
+                { id: 'personalized', label: 'AI Personalized', icon: faRobot },
+                { id: 'essentials', label: 'Essentials', icon: faGraduationCap }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-300
+                    ${activeTab === tab.id 
+                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <FontAwesomeIcon icon={tab.icon} className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <motion.div
-            className="max-w-5xl mx-auto grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {aiCourses.length === 0 ? (
-              <div className="col-span-full">
-                <motion.div 
-                  className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-2xl border-2 border-purple-200 shadow-lg p-8 text-center"
-                  variants={cardVariants}
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="mb-6 mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg">
-                    <FontAwesomeIcon icon={faWandMagicSparkles} className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-purple-900 mb-2">Ready for Personalized Learning?</h3>
-                  <p className="text-purple-700 mb-6 max-w-md mx-auto">
-                    Create your first AI-generated course below. Tell our Learning Coach what you want to learn!
-                  </p>
-                  
-                  {/* Features preview */}
-                  <div className="grid grid-cols-3 gap-4 text-sm mb-6">
-                    <div className="flex items-center justify-center text-purple-700">
-                      <FontAwesomeIcon icon={faBrain} className="h-4 w-4 mr-2" />
-                      <span>Adaptive</span>
-                    </div>
-                    <div className="flex items-center justify-center text-indigo-700">
-                      <FontAwesomeIcon icon={faMagicWandSparkles} className="h-4 w-4 mr-2" />
-                      <span>Custom</span>
-                    </div>
-                    <div className="flex items-center justify-center text-blue-700">
-                      <FontAwesomeIcon icon={faBullseye} className="h-4 w-4 mr-2" />
-                      <span>Goal-Focused</span>
-                    </div>
-                  </div>
+        </div>
+      </motion.div>
 
-                  <button
-                    onClick={() => {
-                      document.getElementById('ai-coach')?.scrollIntoView({ behavior: 'smooth' });
-                      setShowLearningAI(true);
-                    }}
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-                  >
-                    <FontAwesomeIcon icon={faWandMagicSparkles} className="h-5 w-5 mr-2" />
-                    Create Your First Course with AI
-                  </button>
-                </motion.div>
+      {/* Course Grid */}
+      <motion.section 
+        className="px-4 mb-12"
+        variants={itemVariants}
+      >
+        <div className="max-w-7xl mx-auto">
+          {isAICoursesLoading && activeTab !== 'essentials' ? (
+            <div className="flex justify-center py-20">
+              <motion.div 
+                className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+            </div>
+          ) : filteredCourses.length === 0 ? (
+            <motion.div 
+              className="text-center py-20"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
+                <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600" />
               </div>
-            ) : (
-              aiCourses.map((course) => (
-                <motion.div
-                  key={course.course_id}
-                  variants={cardVariants}
-                  whileHover={{ y: -5, boxShadow: "0 15px 35px -5px rgba(139, 92, 246, 0.15)" }}
-                >
-                  <Link
-                    to={`/dashboard/learning/${course.course_id}`}
-                    className="block cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 shadow-lg hover:border-purple-300 transition-all duration-300"
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">No courses yet</h3>
+              <p className="text-gray-600 mb-6">Start your learning journey by creating your first AI-powered course!</p>
+              <button
+                onClick={() => setShowAICoach(true)}
+                className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Create Your First Course
+              </button>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {filteredCourses.map((course, index) => (
+                  <motion.div
+                    key={course.course_id}
+                    variants={courseCardVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    whileHover="hover"
+                    layout
+                    transition={{ delay: index * 0.1 }}
                   >
-                    <div className="p-6">
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className="text-3xl" aria-hidden="true">
-                          {course.icon || "🤖"}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-lg font-bold text-purple-900">
-                              {course.title}
-                            </h3>
-                            <span className="rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-2 py-1 text-xs font-medium text-white">
-                              AI-Generated
-                            </span>
+                    <Link
+                      to={`/dashboard/learning/${course.course_id}`}
+                      className="block h-full"
+                    >
+                      <div className={`
+                        h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border
+                        ${course.type === 'essential' 
+                          ? 'border-emerald-200 hover:border-emerald-300' 
+                          : 'border-purple-200 hover:border-purple-300'
+                        }
+                      `}>
+                        {/* Course Header */}
+                        <div className={`
+                          p-6 pb-4 relative overflow-hidden
+                          ${course.type === 'essential' 
+                            ? 'bg-gradient-to-br from-emerald-50 to-green-50' 
+                            : 'bg-gradient-to-br from-purple-50 to-indigo-50'
+                          }
+                        `}>
+                          {/* Decorative background */}
+                          <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
+                          
+                          <div className="relative flex items-start gap-4">
+                            <div className="text-4xl flex-shrink-0">{course.icon || "📚"}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`
+                                  px-3 py-1 text-xs font-semibold rounded-full
+                                  ${course.type === 'essential' 
+                                    ? 'bg-emerald-500 text-white' 
+                                    : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
+                                  }
+                                `}>
+                                  {course.type === 'essential' ? 'Expert-Led' : 'AI-Powered'}
+                                </span>
+                                {course.type === 'personalized' && (
+                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                                    <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
+                                    Premium
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 line-clamp-2 mb-2">
+                                {course.title}
+                              </h3>
+                            </div>
                           </div>
-                          <p className="text-sm text-purple-700">
+                          
+                          <p className="text-sm text-gray-600 line-clamp-3">
                             {course.description}
                           </p>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between border-t border-purple-200 pt-3">
-                        <div className="flex items-center">
-                          <div className="bg-gradient-to-r from-purple-500 to-indigo-500 mr-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold text-white">
-                            {course.lessons.length}
+
+                        {/* Course Info */}
+                        <div className="p-6 pt-4 space-y-4">
+                          {/* Progress Bar (for enrolled courses) */}
+                          {course.type === 'personalized' && (
+                            <div>
+                              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <span>Progress</span>
+                                <span>
+                                  {course.lessons.filter(l => l.unlocked).length}/{course.lessons.length} lessons
+                                </span>
+                              </div>
+                              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <motion.div 
+                                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
+                                  initial={{ width: 0 }}
+                                  animate={{ 
+                                    width: `${(course.lessons.filter(l => l.unlocked).length / course.lessons.length) * 100}%` 
+                                  }}
+                                  transition={{ duration: 1, delay: 0.5 }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Course Meta */}
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div>
+                              <p className="text-xs text-gray-500">Difficulty</p>
+                              <p className="text-sm font-semibold text-gray-700">{course.difficulty}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Duration</p>
+                              <p className="text-sm font-semibold text-gray-700">{course.duration}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Students</p>
+                              <p className="text-sm font-semibold text-gray-700">{course.students}</p>
+                            </div>
                           </div>
-                          <span className="text-sm text-purple-800 font-medium">Lessons</span>
+
+                          {/* CTA Button */}
+                          <button className={`
+                            w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2
+                            ${course.type === 'essential' 
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                            }
+                          `}>
+                            {course.type === 'personalized' && course.lessons.some(l => l.unlocked) ? (
+                              <>
+                                <FontAwesomeIcon icon={faCirclePlay} className="h-4 w-4" />
+                                Continue Learning
+                              </>
+                            ) : (
+                              <>
+                                <FontAwesomeIcon icon={faRocket} className="h-4 w-4" />
+                                Start Course
+                              </>
+                            )}
+                          </button>
                         </div>
-                        <div className="text-sm text-purple-600 font-medium">
-                          Continue →
-                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+
+                {/* Add New Course Card */}
+                {activeTab !== 'essentials' && (
+                  <motion.div
+                    variants={courseCardVariants}
+                    initial="initial"
+                    animate="animate"
+                    whileHover="hover"
+                    onClick={() => setShowAICoach(true)}
+                    className="cursor-pointer"
+                  >
+                    <div className="h-full bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center p-8">
+                      <div className="text-center">
+                        <motion.div 
+                          className="w-20 h-20 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-lg"
+                          whileHover={{ rotate: 180 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600" />
+                        </motion.div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-2">Create New Course</h3>
+                        <p className="text-sm text-gray-600">Let AI design a course tailored to your goals</p>
                       </div>
                     </div>
-                  </Link>
-                </motion.div>
-              ))
-            )}
-          </motion.div>
-        )}
-      </motion.section>
-
-      {/* AI Learning Coach Section */}
-      <motion.section 
-        id="ai-coach"
-        className="max-w-5xl mx-auto"
-        variants={sectionVariants}
-        initial="hidden"
-        animate="visible"
-        transition={{ delay: 0.4 }}
-      >
-        <motion.div 
-          className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200 shadow-lg overflow-hidden"
-          variants={cardVariants}
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Learning AI Header */}
-          <div className="p-6 border-b border-green-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white shadow-md">
-                  <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">AI Learning Coach</h3>
-                  <p className="text-sm text-gray-600">
-                    Create personalized courses and get help with your financial education
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowLearningAI(!showLearningAI)}
-                className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <FontAwesomeIcon icon={faComments} className="h-4 w-4 mr-2" />
-                {showLearningAI ? 'Hide Coach' : 'Ask the Coach'}
-                <FontAwesomeIcon 
-                  icon={showLearningAI ? faChevronUp : faChevronDown} 
-                  className="h-4 w-4 ml-2" 
-                />
-              </button>
-            </div>
-            
-            {/* Features */}
-            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center text-green-700" title="Adapts to your learning pace and knowledge level">
-                <FontAwesomeIcon icon={faBrain} className="h-3 w-3 mr-2" />
-                <span>Adaptive Learning</span>
-              </div>
-              <div className="flex items-center text-emerald-700" title="Creates personalized lessons just for you">
-                <FontAwesomeIcon icon={faMagicWandSparkles} className="h-3 w-3 mr-2" />
-                <span>Custom Content</span>
-              </div>
-              <div className="flex items-center text-teal-700" title="Focuses on your specific financial goals">
-                <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2" />
-                <span>Goal-Oriented</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Learning Progress Panel */}
-          {learningProgress && (
-            <div className="px-6 py-3 bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 border-b border-green-200">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center text-green-800">
-                  <FontAwesomeIcon icon={faRobot} className="h-4 w-4 mr-2" />
-                  <span className="font-medium">
-                    I'll help you learn based on your progress and goals
-                  </span>
-                </div>
-                <div className="flex items-center space-x-4 text-xs text-green-700">
-                  <span>{learningProgress.totalCourses} courses</span>
-                  <span>{learningProgress.completedLessons} lessons completed</span>
-                  <span>{learningProgress.totalXP} XP earned</span>
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
-
-          {/* Chat Interface */}
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ 
-              height: showLearningAI ? 'auto' : 0, 
-              opacity: showLearningAI ? 1 : 0 
-            }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            {showLearningAI && (
-                <FinancialEducatorChatInterface 
-                />
-            )}
-          </motion.div>
-        </motion.div>
-      </motion.section>
-
-        {/* Financial Essentials Section */}
-        <motion.section 
-        className="my-16"
-        variants={sectionVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg">
-                <FontAwesomeIcon icon={faGraduationCap} className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-emerald-800">Financial Essentials</h2>
-                <p className="text-sm text-emerald-600 font-medium">Expert-Led Fundamentals</p>
-              </div>
-            </div>
-          </div>
-          <p className="text-center text-gray-600 max-w-2xl mx-auto">
-            🎓 Master the fundamentals with lessons crafted by certified financial advisors. 
-            These essential courses build your financial foundation step by step.
-          </p>
         </div>
-
-        <motion.div
-          className="max-w-5xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div
-            variants={cardVariants}
-            whileHover={{ y: -5, boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.15)" }}
-          >
-            <Link
-              to={`/dashboard/learning/${basicCourse.course_id}`}
-              className="block cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 shadow-lg hover:border-emerald-300 transition-all duration-300"
-            >
-              <div className="p-8">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="text-4xl" aria-hidden="true">
-                    {basicCourse.icon || "🎓"}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-xl font-bold text-emerald-900">
-                        {basicCourse.title}
-                      </h3>
-                      <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white">
-                        Expert-Led
-                      </span>
-                    </div>
-                    <p className="text-emerald-700 mb-4">
-                      {basicCourse.description}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between border-t border-emerald-200 pt-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center">
-                      <div className="bg-emerald-500 mr-2 flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-                        {basicCourse.lessons.length}
-                      </div>
-                      <span className="text-sm text-emerald-800 font-medium">Essential Lessons</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-emerald-600 font-medium">
-                    Start Learning →
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        </motion.div>
       </motion.section>
-    </div>
+
+      {/* AI Coach Floating Button (Mobile) */}
+      <motion.button
+        onClick={() => setShowAICoach(!showAICoach)}
+        className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center text-white z-40"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
+      </motion.button>
+
+      {/* AI Coach Modal/Sidebar */}
+      {
+        createPortal(<AnimatePresence>
+          {showAICoach && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowAICoach(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              />
+  
+              {/* AI Coach Panel */}
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="fixed flex flex-col right-0 top-0 h-screen w-full lg:w-[40vw] bg-white shadow-2xl z-50 overflow-hidden"
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r py-3 w-full from-violet-600 to-purple-600 px-6 text-white flex flex-row items-center gap-4">
+                      <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold">AI Learning Coach</h3>
+                        <p className="text-sm text-white/80">Create personalized courses instantly</p>
+                      </div>
+                </div>
+  
+  
+                {/* Chat Interface */}
+                 <div className="flex-1 h-full overflow-hidden">
+                 <FinancialEducatorChatInterface 
+                    initialPrompt={selectedPrompt}
+                    onPromptUsed={() => setSelectedPrompt(null)}
+                  />
+                 </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>, document.body)
+      }
+    </motion.div>
   );
 }

@@ -259,9 +259,9 @@ Don't Example: "lessons": { "id": "lesson1", ... } (object instead of array)
 
 Lesson Generation - Quantity
 
-Core Requirement: Generate a minimum of 3 lessons. Aim for 4-5 lessons, or more if the conversation provides enough distinct topics.
+Core Requirement: Generate a minimum of 5 lessons. Aim for 8-10 lessons, or more if the conversation provides enough distinct topics. The contents should be engaging and cover a range of topics, the total duration of the course should be around 1 hour.
 
-Do: Create at least 3 lesson objects in the lessons array, and ideally more if distinct, relevant topics were identified from the user chat.
+Do: Create at least 5 lesson objects in the lessons array, and ideally more if distinct, relevant topics were identified from the user chat.
 
 Do Example (Conceptual): If user mentioned interest in "saving for a bike" and "understanding game microtransactions," these could become two separate lessons, plus a foundational "what is money" lesson.
 
@@ -453,9 +453,9 @@ Don't Example: "questions": {} or "questions": "Question 1 text"
 
 Question Generation - Quantity per Lesson
 
-Core Requirement: Each lesson must contain 5–12 questions. Aim for 8–12 questions for thoroughness.
+Core Requirement: Each lesson must contain 8–12 questions. Aim for 10–12 questions for thoroughness.
 
-Do: Create a robust set of questions for each lesson, ideally closer to 8-12, to ensure comprehensive coverage and engagement.
+Do: Create a robust set of questions for each lesson, ideally closer to 10-12, to ensure comprehensive coverage and engagement.
 
 Do Example (Conceptual): A lesson on budgeting has 10 questions covering different aspects like tracking, needs vs wants, setting goals.
 
