@@ -47,14 +47,14 @@ export function Button({
       'w-full': fullWidth,
       
       // Color variants
-      'bg-primary text-white hover:opacity-90 active:opacity-80': variant === 'primary' && !props.disabled,
-      'bg-secondary text-gray-800 hover:opacity-90 active:opacity-80': variant === 'secondary' && !props.disabled,
-      'bg-transparent border border-primary text-primary hover:bg-primary hover:text-white': variant === 'outline' && !props.disabled,
-      'bg-transparent text-primary hover:opacity-90 underline': variant === 'text' && !props.disabled,
-      'bg-[#1b1b1b] text-white hover:opacity-90 active:opacity-80': variant === 'dark' && !props.disabled,
+      'bg-primary dark:bg-dark-primary text-white hover:bg-primary/90 dark:hover:bg-dark-primary/90 active:bg-primary/80 dark:active:bg-dark-primary/80': variant === 'primary' && !props.disabled,
+      'bg-secondary dark:bg-dark-secondary text-white hover:bg-secondary/90 dark:hover:bg-dark-secondary/90 active:bg-secondary/80 dark:active:bg-dark-secondary/80': variant === 'secondary' && !props.disabled,
+      'bg-transparent border border-primary dark:border-dark-primary text-primary dark:text-dark-primary hover:bg-primary dark:hover:bg-dark-primary hover:text-white': variant === 'outline' && !props.disabled,
+      'bg-transparent text-primary dark:text-dark-primary hover:opacity-90 underline': variant === 'text' && !props.disabled,
+      'bg-gray-900 dark:bg-gray-800 text-white hover:bg-gray-800 dark:hover:bg-gray-700 active:bg-gray-700 dark:active:bg-gray-600': variant === 'dark' && !props.disabled,
       
       // Disabled state
-      'bg-gray-200 text-gray-400 cursor-not-allowed': props.disabled,
+      'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed': props.disabled,
       'opacity-85 cursor-wait': isLoading && !props.disabled,
     },
     className
