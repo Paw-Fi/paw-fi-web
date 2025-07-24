@@ -189,7 +189,7 @@ function CalculatorsPage() {
     >
       <div className="text-center mb-12 md:mb-16">
         <motion.h1 
-          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400 text-transparent bg-clip-text"
+          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-accent-pink to-accent-indigo dark:from-dark-primary dark:via-dark-accent-pink dark:to-dark-accent-indigo text-transparent bg-clip-text"
           initial={{ opacity: 0, y: -20 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -219,15 +219,15 @@ function CalculatorsPage() {
             {calculator.available ? (
               <Link 
                 to={calculator.path} 
-                className="block h-full bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:border-white/30 dark:hover:border-slate-600/70 hover:-translate-y-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-opacity-75"
+                className="block h-full bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:border-white/30 dark:hover:border-gray-600/70 hover:-translate-y-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-dark-primary focus-visible:ring-opacity-75"
                 aria-label={`Try the ${calculator.title} calculator`}
               >
                 <div className="p-6 flex flex-col h-full">
                   <div className="flex items-start mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md group-hover:shadow-purple-500/30 transition-all duration-300 mr-4 shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary dark:from-dark-primary dark:to-dark-secondary rounded-xl flex items-center justify-center text-white shadow-md group-hover:shadow-primary/30 dark:group-hover:shadow-dark-primary/30 transition-all duration-300 mr-4 shrink-0">
                       <FontAwesomeIcon icon={calculator.icon} size="lg" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 leading-tight">
+                    <h3 className="text-xl font-semibold text-foreground dark:text-dark-foreground group-hover:text-primary dark:group-hover:text-dark-primary transition-colors duration-300 leading-tight">
                       {calculator.title}
                     </h3>
                   </div>
@@ -235,7 +235,7 @@ function CalculatorsPage() {
                     {calculator.description}
                   </p>
                   <div className="mt-auto pt-2">
-                    <span className="inline-flex items-center text-sm font-semibold text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors duration-300">
+                    <span className="inline-flex items-center text-sm font-semibold text-primary dark:text-dark-primary group-hover:text-secondary dark:group-hover:text-dark-secondary transition-colors duration-300">
                       Try Calculator
                       <FontAwesomeIcon icon={faArrowRight} className="ml-1.5 w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform duration-300" />
                     </span>
@@ -243,7 +243,7 @@ function CalculatorsPage() {
                 </div>
               </Link>
             ) : (
-              <div className="h-full p-6 bg-slate-100/40 dark:bg-slate-800/40 backdrop-blur-lg border border-slate-200/50 dark:border-slate-700/30 rounded-2xl shadow-md flex flex-col opacity-70">
+              <div className="h-full p-6 bg-gray-100/40 dark:bg-gray-800/40 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/30 rounded-2xl shadow-md flex flex-col opacity-70">
                 <div className="flex items-start mb-4">
                   <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 mr-4 shrink-0">
                     <FontAwesomeIcon icon={calculator.icon} size="lg" />

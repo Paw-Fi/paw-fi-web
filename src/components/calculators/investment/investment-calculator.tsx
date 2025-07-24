@@ -22,7 +22,7 @@ export function InvestmentCalculator() {
   return (
     <section className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 md:p-8 mt-8 transition-all duration-300">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-3 text-gray-900 dark:text-white">Investment Calculator</h1>
+        <h1 className="text-3xl font-bold mb-3 text-foreground dark:text-dark-foreground">Investment Calculator</h1>
         <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
           Plan your financial future by calculating investment growth, required contributions, rates of return, and more.
         </p>
@@ -35,8 +35,8 @@ export function InvestmentCalculator() {
               key={tab.key}
               className={`px-4 py-3 rounded-xl font-medium text-sm md:text-base flex items-center gap-2 transition-all duration-200 ${
                 activeTab === tab.key
-                  ? "bg-blue-600 text-white shadow-md transform scale-105"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  ? "bg-primary dark:bg-dark-primary text-white shadow-md transform scale-105"
+                  : "bg-gray-100 dark:bg-gray-700 text-foreground dark:text-dark-foreground hover:bg-gray-200 dark:hover:bg-gray-600"
               } flex-shrink-0`}
               onClick={() => setActiveTab(tab.key)}
               aria-current={activeTab === tab.key ? "page" : undefined}
@@ -135,8 +135,8 @@ function ReturnRateTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredRate), [inputs, requiredRate]);
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-2">Required Return Rate</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Return Rate</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
           <InputField label="Starting Amount" type="number" value={inputs.startingAmount} min={0} onChange={v => handleChange('startingAmount', Number(v))} prefix="$" />
@@ -147,10 +147,10 @@ function ReturnRateTab() {
           <SelectField label="Compounding" value={inputs.compound} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'annually', label: 'Annually' }]} onChange={v => handleChange('compound', v)} />
         </div>
         <div className="flex flex-col items-center justify-center">
-          <div className="bg-blue-50 rounded-lg p-4 w-full text-center mb-4">
-            <div className="text-lg font-semibold mb-1">Required Return Rate</div>
-            <div className="text-2xl font-bold text-blue-700">{requiredRate.toFixed(2)}%</div>
-            <div className="text-sm text-gray-600 mt-1">per year to reach your goal</div>
+          <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
+            <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Return Rate</div>
+            <div className="text-2xl font-bold text-primary dark:text-dark-primary">{requiredRate.toFixed(2)}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">per year to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -158,8 +158,8 @@ function ReturnRateTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.1)',
+                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"
@@ -214,8 +214,8 @@ function StartingAmountTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredStart), [inputs, requiredStart]);
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-2">Required Starting Amount</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Starting Amount</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
           <InputField label="Target Amount" type="number" value={inputs.targetAmount} min={0} onChange={v => handleChange('targetAmount', Number(v))} prefix="$" />
@@ -226,10 +226,10 @@ function StartingAmountTab() {
           <SelectField label="Compounding" value={inputs.compound} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'annually', label: 'Annually' }]} onChange={v => handleChange('compound', v)} />
         </div>
         <div className="flex flex-col items-center justify-center">
-          <div className="bg-blue-50 rounded-lg p-4 w-full text-center mb-4">
-            <div className="text-lg font-semibold mb-1">Required Starting Amount</div>
-            <div className="text-2xl font-bold text-blue-700">${requiredStart.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div className="text-sm text-gray-600 mt-1">needed to reach your goal</div>
+          <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
+            <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Starting Amount</div>
+            <div className="text-2xl font-bold text-primary dark:text-dark-primary">${requiredStart.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">needed to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -237,8 +237,8 @@ function StartingAmountTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.1)',
+                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"
@@ -295,8 +295,8 @@ function InvestmentLengthTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredYears), [inputs, requiredYears]);
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-2">Required Investment Length</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Investment Length</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
           <InputField label="Starting Amount" type="number" value={inputs.startingAmount} min={0} onChange={v => handleChange('startingAmount', Number(v))} prefix="$" />
@@ -307,10 +307,10 @@ function InvestmentLengthTab() {
           <SelectField label="Compounding" value={inputs.compound} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'annually', label: 'Annually' }]} onChange={v => handleChange('compound', v)} />
         </div>
         <div className="flex flex-col items-center justify-center">
-          <div className="bg-blue-50 rounded-lg p-4 w-full text-center mb-4">
-            <div className="text-lg font-semibold mb-1">Required Investment Length</div>
-            <div className="text-2xl font-bold text-blue-700">{requiredYears.toFixed(2)} years</div>
-            <div className="text-sm text-gray-600 mt-1">needed to reach your goal</div>
+          <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
+            <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Investment Length</div>
+            <div className="text-2xl font-bold text-primary dark:text-dark-primary">{requiredYears.toFixed(2)} years</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">needed to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -318,8 +318,8 @@ function InvestmentLengthTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.1)',
+                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"
@@ -335,8 +335,8 @@ function InvestmentLengthTab() {
 // --- SEO/Educational Section ---
 export function InvestmentCalculatorSEOContent() {
   return (
-    <section className="max-w-4xl mx-auto mt-12 px-4 md:px-0 text-gray-800" aria-labelledby="investment-education-title">
-      <h2 id="investment-education-title" className="text-2xl font-bold mb-4">Investment Calculator Guide &amp; FAQs</h2>
+    <section className="max-w-4xl mx-auto mt-12 px-4 md:px-0 text-gray-800 dark:text-gray-200" aria-labelledby="investment-education-title">
+      <h2 id="investment-education-title" className="text-2xl font-bold mb-4 text-foreground dark:text-dark-foreground">Investment Calculator Guide &amp; FAQs</h2>
       <article className="prose prose-blue max-w-none">
         <h3>How Do Investment Calculators Work?</h3>
         <p>Investment calculators use compound interest formulas to project how your money can grow over time. You can solve for the ending amount, required contribution, return rate, starting amount, or investment length—each mode helps answer a different financial question.</p>
@@ -415,7 +415,7 @@ function AdditionalContributionTab() {
       }}
       aria-labelledby="additional-contribution-form-title"
     >
-      <h2 id="additional-contribution-form-title" className="text-xl font-semibold mb-2">Required Contribution Calculator</h2>
+      <h2 id="additional-contribution-form-title" className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Contribution Calculator</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <InputField
           label="Your Target"
@@ -486,7 +486,7 @@ function AdditionalContributionTab() {
       </div>
       <button
         type="submit"
-        className="mt-2 px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition-colors"
+        className="mt-2 px-6 py-2 bg-primary dark:bg-dark-primary text-white rounded font-semibold shadow hover:bg-secondary dark:hover:bg-dark-secondary transition-colors"
       >
         Calculate
       </button>
@@ -566,15 +566,15 @@ function calculateAdditionalContribution(inputs: AdditionalContributionInputs): 
 // --- Results Summary ---
 function AdditionalContributionResults({ requiredContribution, endBalance, startingAmount, totalContributions, totalInterest }: AdditionalContributionResult) {
   return (
-    <div className="bg-green-50 rounded-lg p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div className="bg-success/10 dark:bg-dark-success/10 rounded-lg p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
       <div>
-        <h3 className="font-semibold text-lg mb-2">Results</h3>
+        <h3 className="font-semibold text-lg mb-2 text-foreground dark:text-dark-foreground">Results</h3>
         <div className="flex flex-col gap-1">
-          <div><span className="font-medium">Required Contribution:</span> <span className="text-green-700 font-bold">${requiredContribution.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
-          <div><span className="font-medium">End Balance:</span> ${endBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Starting Amount:</span> ${startingAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Total Contributions:</span> ${totalContributions.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Total Interest:</span> ${totalInterest.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          <div><span className="font-medium text-foreground dark:text-dark-foreground">Required Contribution:</span> <span className="text-success dark:text-dark-success font-bold">${requiredContribution.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+          <div><span className="font-medium text-foreground dark:text-dark-foreground">End Balance:</span> <span className="text-foreground dark:text-dark-foreground">${endBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+          <div><span className="font-medium text-foreground dark:text-dark-foreground">Starting Amount:</span> <span className="text-foreground dark:text-dark-foreground">${startingAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+          <div><span className="font-medium text-foreground dark:text-dark-foreground">Total Contributions:</span> <span className="text-foreground dark:text-dark-foreground">${totalContributions.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+          <div><span className="font-medium text-foreground dark:text-dark-foreground">Total Interest:</span> <span className="text-foreground dark:text-dark-foreground">${totalInterest.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
         </div>
       </div>
     </div>
@@ -783,7 +783,7 @@ function InputField({ label, type, value, min, max, step, prefix, suffix, onChan
         )}
         <input
           id={id}
-          className={`w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 py-2.5 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-7' : 'pr-3'}`}
+          className={`w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-7' : 'pr-3'}`}
           type={type}
           value={value}
           min={min}
@@ -821,7 +821,7 @@ function SelectField({ label, value, options, onChange, description }: SelectFie
       <div className="relative">
         <select
           id={id}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 py-2.5 pl-3 pr-10 appearance-none"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 pl-3 pr-10 appearance-none"
           value={value}
           onChange={e => onChange(e.target.value)}
         >
@@ -858,7 +858,7 @@ function RadioGroup({ label, options, value, onChange, description }: RadioGroup
         {options.map(opt => {
           const id = `${groupName}-${opt.value}`;
           return (
-            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-400' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-primary/10 dark:bg-dark-primary/10 border-primary dark:border-dark-primary text-primary dark:text-dark-primary' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
               <input
                 id={id}
                 type="radio"
@@ -869,7 +869,7 @@ function RadioGroup({ label, options, value, onChange, description }: RadioGroup
                 className="sr-only"
               />
               {value === opt.value && (
-                <span className="text-blue-600 dark:text-blue-400">
+                <span className="text-primary dark:text-dark-primary">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>

@@ -45,7 +45,7 @@ export function BarChart({ labels, datasets, title, stacked = true }: BarChartPr
       legend: {
         position: 'top' as const,
         labels: {
-          color: '#374151',
+          color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -53,19 +53,33 @@ export function BarChart({ labels, datasets, title, stacked = true }: BarChartPr
         ? {
             display: true,
             text: title,
-            color: '#111827',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,
     },
     scales: stacked
       ? {
-          x: { stacked: true, grid: { color: '#E5E7EB' } },
-          y: { stacked: true, grid: { color: '#E5E7EB' } },
+          x: { 
+            stacked: true, 
+            grid: { color: 'rgba(156, 163, 175, 0.3)' },
+            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+          },
+          y: { 
+            stacked: true, 
+            grid: { color: 'rgba(156, 163, 175, 0.3)' },
+            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+          },
         }
       : {
-          x: { grid: { color: '#E5E7EB' } },
-          y: { grid: { color: '#E5E7EB' } },
+          x: { 
+            grid: { color: 'rgba(156, 163, 175, 0.3)' },
+            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+          },
+          y: { 
+            grid: { color: 'rgba(156, 163, 175, 0.3)' },
+            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+          },
         },
   };
 

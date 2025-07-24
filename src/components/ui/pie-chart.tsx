@@ -25,13 +25,20 @@ export function PieChart({ labels, data, title }: PieChartProps) {
     datasets: [
       {
         data,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.8)',
-          'rgba(54, 162, 235, 0.8)',
-          'rgba(255, 206, 86, 0.8)',
-          'rgba(75, 192, 192, 0.8)',
-          'rgba(153, 102, 255, 0.8)',
-          'rgba(255, 159, 64, 0.8)',
+        backgroundColor: document.documentElement.classList.contains('dark') ? [
+          '#8B70FF', // dark-primary
+          '#16CDA2', // dark-success
+          '#FFCD29', // dark-warning
+          '#FF6B6B', // dark-danger
+          '#1DD1F3', // dark-info
+          '#9333EA', // dark-accent-purple
+        ] : [
+          '#7458FF', // primary
+          '#10B981', // success
+          '#F59E0B', // warning
+          '#EF4444', // danger
+          '#06B6D4', // info
+          '#8B5CF6', // accent-purple
         ],
         borderWidth: 0,
       },
@@ -44,7 +51,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: '#374151',
+          color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -61,7 +68,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
         ? {
             display: true,
             text: title,
-            color: '#111827',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,

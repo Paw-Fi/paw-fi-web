@@ -63,8 +63,8 @@ function CompoundCalculatorPage() {
       <div className="mt-4 mb-8">
       <BreadCrumbsHeader/>
       </div>
-      <h1 className="mb-8 text-3xl font-bold text-center">Compound Interest Calculator</h1>
-      <p className="mb-6 text-lg text-center">
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Compound Interest Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
         Discover the power of compound interest and see how your investments can grow over time.
       </p>
       <CompoundCalculator />

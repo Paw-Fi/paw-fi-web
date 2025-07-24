@@ -51,7 +51,7 @@ export function LineChart({ labels, datasets, title }: LineChartProps) {
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: '#374151',
+          color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -68,23 +68,30 @@ export function LineChart({ labels, datasets, title }: LineChartProps) {
         ? {
             display: true,
             text: title,
-            color: '#111827',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,
     },
     scales: {
       x: {
-        ticks: { color: '#6B7280', font: { size: 12 } },
-        grid: { color: '#E5E7EB' },
+        ticks: { 
+          color: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#6B7280', 
+          font: { size: 12 } 
+        },
+        grid: { 
+          color: document.documentElement.classList.contains('dark') ? 'rgba(156, 163, 175, 0.3)' : '#E5E7EB' 
+        },
       },
       y: {
         ticks: {
-          color: '#6B7280',
+          color: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#6B7280',
           font: { size: 12 },
           callback: (v: number | string) => `$${Number(v) / 1000}k`,
         },
-        grid: { color: '#E5E7EB' },
+        grid: { 
+          color: document.documentElement.classList.contains('dark') ? 'rgba(156, 163, 175, 0.3)' : '#E5E7EB' 
+        },
       },
     },
   };

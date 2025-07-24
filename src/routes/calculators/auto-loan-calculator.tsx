@@ -2,7 +2,6 @@ import { AutoLoanCalculator } from '@/components/calculators/auto-loan/auto-loan
 import { AutoLoanCalculatorSEOContent } from '@/components/calculators/auto-loan/auto-loan-seo-contents';
 import { createFileRoute } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
-import { useNavigate } from '@tanstack/react-router';
 import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
 import { HomeHeader } from '@/components/index/header';
 import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
@@ -15,12 +14,6 @@ interface AutoLoanInputs {
 }
 
 function AutoLoanCalculatorPage() {
-  const navigate = useNavigate();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setInputs((prev) => ({ ...prev, [name]: value === '' ? '' : Number(value) }));
-  };
 
   return (
     <AmbientHaloLayout>
@@ -29,8 +22,8 @@ function AutoLoanCalculatorPage() {
       <div className="mt-4 mb-8">
       <BreadCrumbsHeader/>
       </div>
-      <h1 className="mb-8 text-3xl font-bold text-center">Auto Loan Calculator</h1>
-      <p className="mb-6 text-lg text-center">
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Auto Loan Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
         Estimate your monthly auto loan payments, see a full amortization schedule, and learn about car financing.
       </p>
       <AutoLoanCalculator />

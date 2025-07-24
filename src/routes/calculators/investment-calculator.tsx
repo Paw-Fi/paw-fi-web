@@ -61,8 +61,8 @@ function InvestmentCalculatorPage() {
       <div className="mt-4 mb-8">
       <BreadCrumbsHeader/>
       </div>
-      <h1 className="mb-8 text-3xl font-bold text-center">Investment Calculator</h1>
-      <p className="mb-6 text-lg text-center">
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Investment Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
         Explore how your investments can grow over time and compare different scenarios. Calculate future value, required contributions, return rates, starting amounts, and investment durations.
       </p>
       <InvestmentCalculator />

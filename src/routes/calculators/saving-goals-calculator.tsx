@@ -61,8 +61,8 @@ function SavingGoalsCalculatorPage() {
       <div className="mt-4 mb-8">
       <BreadCrumbsHeader/>
       </div>
-      <h1 className="mb-8 text-3xl font-bold text-center">Savings Goal Calculator</h1>
-      <p className="mb-6 text-lg text-center">
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Savings Goal Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
         Find out how much you need to save each month or year to reach your savings goal, factoring in compound interest and your current balance.
       </p>
       <SavingGoalsCalculator />

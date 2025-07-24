@@ -2,8 +2,8 @@ export const InvestmentCalculatorSEOContent = () => {
   return (
     <section className="max-w-5xl mx-auto mt-16 mb-20 px-4 md:px-6 text-gray-800 dark:text-gray-200 font-sans">
       <div className="mb-12 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">Understanding Investment Growth</h2>
-        <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto mb-6 rounded-full"></div>
+        <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground dark:text-dark-foreground">Understanding Investment Growth</h2>
+        <div className="w-20 h-1 bg-gradient-to-r from-primary to-secondary dark:from-dark-primary dark:to-dark-secondary mx-auto mb-6 rounded-full"></div>
         <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-600 dark:text-gray-300">
           Learn how to project and optimize your investment growth with our comprehensive guide
         </p>
@@ -11,7 +11,7 @@ export const InvestmentCalculatorSEOContent = () => {
 
       {/* Introduction Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 md:p-8 mb-10 border border-gray-100 dark:border-gray-700">
-        <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">How Do Investment Projections Work?</h3>
+        <h3 className="text-2xl font-bold mb-4 text-foreground dark:text-dark-foreground">How Do Investment Projections Work?</h3>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
           Investment projections help you visualize how your money might grow over time based on different variables. By accounting for factors like initial investment amount, regular contributions, expected rate of return, and time horizon, you can create realistic forecasts of your future wealth. These projections allow you to adjust your investment strategy, set achievable financial goals, and understand the potential impact of different investment decisions.
         </p>
@@ -19,14 +19,14 @@ export const InvestmentCalculatorSEOContent = () => {
 
       {/* Key Terms Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-blue-100 dark:border-gray-700">
+        <div className="bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-dark-primary/10 dark:to-dark-secondary/10 rounded-2xl shadow-sm p-6 md:p-8 border border-primary/20 dark:border-gray-700">
           <div className="flex items-center mb-5">
-            <span className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mr-3">
+            <span className="w-10 h-10 rounded-full bg-primary dark:bg-dark-primary text-white flex items-center justify-center mr-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
               </svg>
             </span>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Key Investment Terms</h3>
+            <h3 className="text-xl font-bold text-foreground dark:text-dark-foreground">Key Investment Terms</h3>
           </div>
           <ul className="space-y-4">
             {[
@@ -37,22 +37,22 @@ export const InvestmentCalculatorSEOContent = () => {
               { term: 'Asset Allocation', def: 'The distribution of investments across different asset categories, such as stocks, bonds, and cash.' }
             ].map((item, index) => (
               <li key={index} className="flex">
-                <span className="font-semibold text-blue-700 dark:text-blue-400 min-w-[120px] md:min-w-[140px]">{item.term}:</span>
+                <span className="font-semibold text-primary dark:text-dark-primary min-w-[120px] md:min-w-[140px]">{item.term}:</span>
                 <span className="text-gray-700 dark:text-gray-300">{item.def}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-purple-100 dark:border-gray-700">
+        <div className="bg-gradient-to-br from-secondary/10 to-accent-pink/10 dark:from-dark-secondary/10 dark:to-dark-accent-pink/10 rounded-2xl shadow-sm p-6 md:p-8 border border-secondary/20 dark:border-gray-700">
           <div className="flex items-center mb-5">
-            <span className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center mr-3">
+            <span className="w-10 h-10 rounded-full bg-secondary dark:bg-dark-secondary text-white flex items-center justify-center mr-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
                 <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
               </svg>
             </span>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Benefits of Investment Planning</h3>
+            <h3 className="text-xl font-bold text-foreground dark:text-dark-foreground">Benefits of Investment Planning</h3>
           </div>
           <ul className="space-y-4">
             {[
@@ -63,7 +63,7 @@ export const InvestmentCalculatorSEOContent = () => {
               { benefit: 'Course Correction', desc: 'Regularly compare actual performance against projections to make necessary adjustments.' }
             ].map((item, index) => (
               <li key={index} className="flex">
-                <span className="font-semibold text-purple-700 dark:text-purple-400 min-w-[120px] md:min-w-[140px]">{item.benefit}:</span>
+                <span className="font-semibold text-secondary dark:text-dark-secondary min-w-[120px] md:min-w-[140px]">{item.benefit}:</span>
                 <span className="text-gray-700 dark:text-gray-300">{item.desc}</span>
               </li>
             ))}
@@ -72,14 +72,14 @@ export const InvestmentCalculatorSEOContent = () => {
       </div>
 
       {/* Investment Strategies Section */}
-      <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 mb-10 border border-green-100 dark:border-gray-700">
+      <div className="bg-gradient-to-br from-success/10 to-success-light/50 dark:from-dark-success/10 dark:to-dark-success-light rounded-2xl shadow-sm p-6 md:p-8 mb-10 border border-success/20 dark:border-gray-700">
         <div className="flex items-center mb-6">
-          <span className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center mr-3">
+          <span className="w-10 h-10 rounded-full bg-success dark:bg-dark-success text-white flex items-center justify-center mr-3">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
           </span>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Smart Investment Strategies</h3>
+          <h3 className="text-xl font-bold text-foreground dark:text-dark-foreground">Smart Investment Strategies</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -123,11 +123,11 @@ export const InvestmentCalculatorSEOContent = () => {
             }
           ].map((item, index) => (
             <div key={index} className="flex p-4 bg-gray-50 dark:bg-gray-750 rounded-xl">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mr-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-success/20 dark:bg-dark-success/20 text-success dark:text-dark-success flex items-center justify-center mr-4">
                 {item.icon}
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{item.tip}</h4>
+                <h4 className="font-semibold text-foreground dark:text-dark-foreground mb-1">{item.tip}</h4>
                 <p className="text-gray-700 dark:text-gray-300 text-sm">{item.desc}</p>
               </div>
             </div>
@@ -136,14 +136,14 @@ export const InvestmentCalculatorSEOContent = () => {
       </div>
 
       {/* Understanding Risk and Return Section */}
-      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 mb-10 border border-amber-100 dark:border-gray-700">
+      <div className="bg-gradient-to-br from-warning/10 to-warning-light/50 dark:from-dark-warning/10 dark:to-dark-warning-light rounded-2xl shadow-sm p-6 md:p-8 mb-10 border border-warning/20 dark:border-gray-700">
         <div className="flex items-center mb-4">
-          <span className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center mr-3">
+          <span className="w-10 h-10 rounded-full bg-warning dark:bg-dark-warning text-white flex items-center justify-center mr-3">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
           </span>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Understanding Risk and Return</h3>
+          <h3 className="text-xl font-bold text-foreground dark:text-dark-foreground">Understanding Risk and Return</h3>
         </div>
         
         <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
@@ -151,18 +151,18 @@ export const InvestmentCalculatorSEOContent = () => {
         </p>
         
         <div className="bg-white dark:bg-gray-750 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Common Investment Risk Types:</h4>
+          <h4 className="font-semibold text-foreground dark:text-dark-foreground mb-3">Common Investment Risk Types:</h4>
           <ul className="space-y-3">
             <li className="flex items-center">
-              <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mr-3 text-xs font-bold">1</span>
+              <span className="w-6 h-6 rounded-full bg-warning/20 dark:bg-dark-warning/20 text-warning dark:text-dark-warning flex items-center justify-center mr-3 text-xs font-bold">1</span>
               <span className="text-gray-700 dark:text-gray-300"><span className="font-medium">Market Risk:</span> The possibility of investments declining due to economic developments or other events that affect the entire market.</span>
             </li>
             <li className="flex items-center">
-              <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mr-3 text-xs font-bold">2</span>
+              <span className="w-6 h-6 rounded-full bg-warning/20 dark:bg-dark-warning/20 text-warning dark:text-dark-warning flex items-center justify-center mr-3 text-xs font-bold">2</span>
               <span className="text-gray-700 dark:text-gray-300"><span className="font-medium">Inflation Risk:</span> The risk that investment returns won't keep pace with inflation, reducing purchasing power over time.</span>
             </li>
             <li className="flex items-center">
-              <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mr-3 text-xs font-bold">3</span>
+              <span className="w-6 h-6 rounded-full bg-warning/20 dark:bg-dark-warning/20 text-warning dark:text-dark-warning flex items-center justify-center mr-3 text-xs font-bold">3</span>
               <span className="text-gray-700 dark:text-gray-300"><span className="font-medium">Liquidity Risk:</span> The risk of not being able to sell an investment quickly without a significant loss in value.</span>
             </li>
           </ul>
@@ -171,7 +171,7 @@ export const InvestmentCalculatorSEOContent = () => {
 
       {/* FAQ Section */}
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Frequently Asked Questions</h3>
+        <h3 className="text-2xl font-bold mb-6 text-foreground dark:text-dark-foreground">Frequently Asked Questions</h3>
         
         <div className="space-y-6">
           {[
@@ -193,8 +193,8 @@ export const InvestmentCalculatorSEOContent = () => {
             }
           ].map((item, index) => (
             <div key={index} className="bg-white dark:bg-gray-750 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white flex items-center">
-                <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center mr-3">{index + 1}</span>
+              <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground flex items-center">
+                <span className="w-6 h-6 rounded-full bg-secondary dark:bg-dark-secondary text-white text-xs flex items-center justify-center mr-3">{index + 1}</span>
                 {item.question}
               </h4>
               <p className="text-gray-700 dark:text-gray-300 pl-9">{item.answer}</p>
@@ -206,7 +206,7 @@ export const InvestmentCalculatorSEOContent = () => {
       {/* CTA Section */}
       <div className="mt-12 text-center">
         <p className="text-gray-600 dark:text-gray-400 mb-6">Ready to explore other calculators?</p>
-        <a href="/calculators" className="inline-flex items-center justify-center px-6 py-3 bg-purple-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+        <a href="/calculators" className="inline-flex items-center justify-center px-6 py-3 bg-primary dark:bg-dark-primary text-white font-medium rounded-lg shadow-sm hover:bg-secondary dark:hover:bg-dark-secondary focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:ring-offset-2 transition-colors duration-200">
           Try Our Calculators
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />

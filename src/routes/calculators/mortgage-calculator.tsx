@@ -64,8 +64,8 @@ function MortgageCalculatorPage  ()  {
       <div className="mt-4 mb-8">
       <BreadCrumbsHeader/>
       </div>
-      <h1 className="mb-8 text-3xl font-bold text-center">Mortgage Calculator</h1>
-      <p className="mb-6 text-lg text-center">
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Mortgage Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
         Calculate your monthly mortgage payments and see a complete amortization schedule.
       </p>
       <MortgageCalculator />
