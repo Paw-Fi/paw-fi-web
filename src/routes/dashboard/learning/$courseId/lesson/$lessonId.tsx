@@ -205,7 +205,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   }
   if (isCoursesError) {
     return (
-      <div className="py-16 text-center text-red-500">
+      <div className="py-16 text-center text-red-500 dark:text-red-400">
         Failed to load course data.
       </div>
     );
@@ -344,7 +344,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     (currentItemIndex / flashcardItems.length) * 100;
 
   return (
-    <div className="flex flex-1 flex-col bg-background px-4 lg:flex-row">
+    <div className="flex flex-1 flex-col bg-background dark:bg-dark-background px-4 lg:flex-row">
       <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
         {/* Secondary Navigation Menu */}
         
@@ -415,7 +415,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-3xl bg-white p-8 shadow-md">
+            <div className="rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-md">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle

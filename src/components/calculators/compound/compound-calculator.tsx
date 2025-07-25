@@ -212,15 +212,15 @@ const CompoundCalculator = () => {
                 <p className="text-lg font-bold text-primary dark:text-dark-primary">{formatCurrency(calculationResult.finalAmount)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Contributions</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Contributions</p>
                 <p className="text-lg font-bold text-secondary dark:text-dark-secondary">{formatCurrency(calculationResult.contributions)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Interest</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Interest</p>
                 <p className="text-lg font-bold text-success dark:text-dark-success">{formatCurrency(calculationResult.interest)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Interest / Contribution Ratio</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Interest / Contribution Ratio</p>
                 <p className="text-lg font-bold text-icon dark:text-dark-icon">
                   {(calculationResult.interest / calculationResult.contributions).toFixed(2)}x
                 </p>

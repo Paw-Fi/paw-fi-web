@@ -72,17 +72,17 @@ export function AutoLoanCalculator() {
           <span className="text-xs text-gray-500 dark:text-gray-400">months</span>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2" htmlFor="interestRate">Interest Rate</label>
-          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="interestRate">Interest Rate</label>
+          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2" htmlFor="cashIncentives">Cash Incentives</label>
-          <input id="cashIncentives" type="number" min={0} value={cashIncentives === '' ? '' : cashIncentives} onChange={e => setCashIncentives(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="cashIncentives">Cash Incentives</label>
+          <input id="cashIncentives" type="number" min={0} value={cashIncentives === '' ? '' : cashIncentives} onChange={e => setCashIncentives(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2" htmlFor="downPayment">Down Payment</label>
-          <input id="downPayment" type="number" min={0} value={downPayment === '' ? '' : downPayment} onChange={e => setDownPayment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-2" />
+          <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="downPayment">Down Payment</label>
+          <input id="downPayment" type="number" min={0} value={downPayment === '' ? '' : downPayment} onChange={e => setDownPayment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="tradeInValue">Trade-In Value</label>
@@ -102,7 +102,7 @@ export function AutoLoanCalculator() {
           <input id="titleFees" type="number" min={0} value={titleFees === '' ? '' : titleFees} onChange={e => setTitleFees(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div className="flex items-center">
-          <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2" />
+          <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2 h-4 w-4 text-primary dark:text-dark-primary focus:ring-primary dark:focus:ring-dark-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700" />
           <label htmlFor="includeFeesInLoan" className="text-sm text-foreground dark:text-dark-foreground">Include taxes and fees in loan</label>
         </div>
         <div>
@@ -243,7 +243,7 @@ function AmortizationSchedule({ principal, interestRate, months, monthlyPayment 
           </thead>
           <tbody>
             {schedule.map((row, index) => (
-              <tr key={index} className={index % 2 === 0 ? 'bg-blue-50 dark:bg-gray-750' : 'bg-yellow-50 dark:bg-gray-800'}>
+              <tr key={index} className={index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-750' : 'bg-white dark:bg-gray-800'}>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.period}</td>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.interestPaid + row.principalPaid}</td>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.principalPaid}</td>
@@ -297,26 +297,28 @@ function AmortizationLineChart({ principal, interestRate, months, monthlyPayment
   const principalPaid = schedule.map(row => row.principalPaid);
   const endingBalance = schedule.map(row => row.endingBalance);
 
+  const isDark = document.documentElement.classList.contains('dark');
+  
   const datasets = [
     {
       label: 'Interest Paid',
       data: interestPaid,
-      backgroundColor: 'rgba(247, 210, 196, 0.2)',
-      borderColor: '#f7d2c4',
+      backgroundColor: isDark ? 'rgba(255, 122, 122, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+      borderColor: isDark ? '#FF7A7A' : '#EF4444',
       fill: false
     },
     {
       label: 'Principal Paid',
       data: principalPaid,
-      backgroundColor: 'rgba(52, 199, 89, 0.2)',
-      borderColor: '#34c759',
+      backgroundColor: isDark ? 'rgba(31, 227, 184, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+      borderColor: isDark ? '#1FE3B8' : '#10B981',
       fill: false
     },
     {
       label: 'Ending Balance',
       data: endingBalance,
-      backgroundColor: 'rgba(79, 70, 229, 0.2)',
-      borderColor: '#4f46e5',
+      backgroundColor: isDark ? 'rgba(139, 112, 255, 0.2)' : 'rgba(116, 88, 255, 0.2)',
+      borderColor: isDark ? '#8B70FF' : '#7458FF',
       fill: false
     }
   ];

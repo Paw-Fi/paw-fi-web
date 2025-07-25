@@ -195,7 +195,7 @@ export function UnifiedLearningPage() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50"
+      className="min-h-screen bg-gradient-to-br from-background dark:from-dark-background via-white dark:via-gray-900 to-background dark:to-dark-background"
       variants={pageVariants}
       initial="initial"
       animate="animate"
@@ -206,9 +206,9 @@ export function UnifiedLearningPage() {
         variants={itemVariants}
       >
         {/* Background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-purple-600/5 to-indigo-600/5 rounded-3xl" />
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 dark:from-violet-400/10 via-purple-600/5 dark:via-purple-400/10 to-indigo-600/5 dark:to-indigo-400/10 rounded-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/10 dark:bg-purple-400/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 dark:bg-indigo-400/20 rounded-full blur-3xl" />
         
         <div className="relative max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -218,7 +218,7 @@ export function UnifiedLearningPage() {
         
               >
                 <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-                  <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-violet-600 dark:from-violet-400 via-purple-600 dark:via-purple-400 to-indigo-600 dark:to-indigo-400 bg-clip-text text-transparent">
                     Welcome back, {user?.user_metadata?.full_name || 'Learner'}
                   </span>
                   <motion.span
@@ -229,7 +229,7 @@ export function UnifiedLearningPage() {
                     👋
                   </motion.span>
                 </h1>
-                <p className="text-lg text-gray-600 mb-6">
+                <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
                   Continue your journey to financial mastery with AI-powered and expert-crafted courses.
                 </p>
                 
@@ -237,7 +237,7 @@ export function UnifiedLearningPage() {
                 <div className="flex flex-wrap gap-3">
                   <motion.button
                     onClick={() => setShowAICoach(true)}
-                    className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-purple-600/20 hover:shadow-xl hover:shadow-purple-600/30 transition-all duration-300"
+                    className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-purple-600/20 dark:shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-600/30 dark:hover:shadow-purple-500/40 transition-all duration-300"
                   >
                     <FontAwesomeIcon icon={faWandSparkles} className="h-5 w-5" />
                     <span>Create AI Course</span>
@@ -247,7 +247,7 @@ export function UnifiedLearningPage() {
                   {aiCourses.length > 0 && (
                     <Link
                       to={`/dashboard/learning/${aiCourses[0].course_id}`}
-                      className="group flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:border-purple-300 hover:text-purple-700 transition-all duration-300"
+                      className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:border-purple-300 dark:hover:border-purple-400 hover:text-purple-700 dark:hover:text-purple-400 transition-all duration-300"
                     >
                       <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
                       <span>Resume Learning</span>
@@ -260,51 +260,51 @@ export function UnifiedLearningPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-4 lg:w-auto">
               <motion.div 
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
                     <FontAwesomeIcon icon={faFire} className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-800">{learningStats.streak}</span>
+                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.streak}</span>
                 </div>
-                <p className="text-sm text-gray-600">Day Streak</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Day Streak</p>
               </motion.div>
 
               <motion.div 
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
                     <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-800">{learningStats.totalXP}</span>
+                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalXP}</span>
                 </div>
-                <p className="text-sm text-gray-600">Total XP</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total XP</p>
               </motion.div>
 
               <motion.div 
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
                     <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-800">{learningStats.totalCourses}</span>
+                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalCourses}</span>
                 </div>
-                <p className="text-sm text-gray-600">Courses</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Courses</p>
               </motion.div>
 
               <motion.div 
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-lg"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
                     <FontAwesomeIcon icon={faChartLine} className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-800">{learningStats.completedLessons}</span>
+                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.completedLessons}</span>
                 </div>
-                <p className="text-sm text-gray-600">Lessons Done</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Lessons Done</p>
               </motion.div>
             </div>
           </div>
@@ -317,7 +317,7 @@ export function UnifiedLearningPage() {
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-gray-100">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-gray-100 dark:border-gray-700">
             <div className="flex gap-2">
               {[
                 { id: 'all', label: 'All Courses', icon: faBookOpen },
@@ -331,7 +331,7 @@ export function UnifiedLearningPage() {
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-300
                     ${activeTab === tab.id 
                       ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }
                   `}
                 >
@@ -353,7 +353,7 @@ export function UnifiedLearningPage() {
           {isAICoursesLoading && activeTab !== 'essentials' ? (
             <div className="flex justify-center py-20">
               <motion.div 
-                className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full"
+                className="w-16 h-16 border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400 rounded-full"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
@@ -364,11 +364,11 @@ export function UnifiedLearningPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
-                <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600" />
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-indigo-100 dark:to-indigo-900/30 rounded-full flex items-center justify-center">
+                <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">No courses yet</h3>
-              <p className="text-gray-600 mb-6">Start your learning journey by creating your first AI-powered course!</p>
+              <h3 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-3">No courses yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">Start your learning journey by creating your first AI-powered course!</p>
               <button
                 onClick={() => setShowAICoach(true)}
                 className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
@@ -395,18 +395,18 @@ export function UnifiedLearningPage() {
                       className="block h-full"
                     >
                       <div className={`
-                        h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border
+                        h-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border
                         ${course.type === 'essential' 
-                          ? 'border-emerald-200 hover:border-emerald-300' 
-                          : 'border-purple-200 hover:border-purple-300'
+                          ? 'border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600' 
+                          : 'border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600'
                         }
                       `}>
                         {/* Course Header */}
                         <div className={`
                           p-6 pb-4 relative overflow-hidden
                           ${course.type === 'essential' 
-                            ? 'bg-gradient-to-br from-emerald-50 to-green-50' 
-                            : 'bg-gradient-to-br from-purple-50 to-indigo-50'
+                            ? 'bg-gradient-to-br from-emerald-50 dark:from-emerald-900/20 to-green-50 dark:to-green-900/20' 
+                            : 'bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-indigo-50 dark:to-indigo-900/20'
                           }
                         `}>
                           {/* Decorative background */}
@@ -426,19 +426,19 @@ export function UnifiedLearningPage() {
                                   {course.type === 'essential' ? 'Expert-Led' : 'AI-Powered'}
                                 </span>
                                 {course.type === 'personalized' && (
-                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                                  <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full">
                                     <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
                                     Premium
                                   </span>
                                 )}
                               </div>
-                              <h3 className="text-lg font-bold text-gray-900 line-clamp-2 mb-2">
+                              <h3 className="text-lg font-bold text-foreground dark:text-dark-foreground line-clamp-2 mb-2">
                                 {course.title}
                               </h3>
                             </div>
                           </div>
                           
-                          <p className="text-sm text-gray-600 line-clamp-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
                             {course.description}
                           </p>
                         </div>
@@ -457,13 +457,13 @@ export function UnifiedLearningPage() {
                             
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   <span>Progress</span>
                                   <span>
                                     {completedCount}/{totalCount} lessons completed
                                   </span>
                                 </div>
-                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                   <motion.div 
                                     className={`h-full ${
                                       course.type === 'essential' 
@@ -484,16 +484,16 @@ export function UnifiedLearningPage() {
                           {/* Course Meta */}
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="text-xs text-gray-500">Difficulty</p>
-                              <p className="text-sm font-semibold text-gray-700">{course.difficulty}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Difficulty</p>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.difficulty}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Duration</p>
-                              <p className="text-sm font-semibold text-gray-700">{course.duration}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.duration}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Students</p>
-                              <p className="text-sm font-semibold text-gray-700">{course.students}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Students</p>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.students}</p>
                             </div>
                           </div>
 
@@ -501,8 +501,8 @@ export function UnifiedLearningPage() {
                           <button className={`
                             w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2
                             ${course.type === 'essential' 
-                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50' 
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50'
                             }
                           `}>
                             {course.type === 'personalized' && course.lessons.some(l => l.unlocked) ? (
@@ -533,17 +533,17 @@ export function UnifiedLearningPage() {
                     onClick={() => setShowAICoach(true)}
                     className="cursor-pointer"
                   >
-                    <div className="h-full bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center p-8">
+                    <div className="h-full bg-gradient-to-br from-gray-50 dark:from-gray-800 to-gray-100 dark:to-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 flex items-center justify-center p-8">
                       <div className="text-center">
                         <motion.div 
-                          className="w-20 h-20 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-lg"
+                          className="w-20 h-20 mx-auto mb-4 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-lg"
                           whileHover={{ rotate: 180 }}
                           transition={{ duration: 0.5 }}
                         >
-                          <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600" />
+                          <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                         </motion.div>
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">Create New Course</h3>
-                        <p className="text-sm text-gray-600">Let AI design a course tailored to your goals</p>
+                        <h3 className="text-lg font-bold text-foreground dark:text-dark-foreground mb-2">Create New Course</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Let AI design a course tailored to your goals</p>
                       </div>
                     </div>
                   </motion.div>
@@ -578,7 +578,7 @@ export function UnifiedLearningPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setShowAICoach(false)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+                className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40"
               />
   
               {/* AI Coach Panel */}
@@ -587,7 +587,7 @@ export function UnifiedLearningPage() {
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="fixed flex flex-col right-0 top-0 h-screen w-full lg:w-[40vw] bg-white shadow-2xl z-50 overflow-hidden"
+                className="fixed flex flex-col right-0 top-0 h-screen w-full lg:w-[40vw] bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-hidden"
               >
                 {/* Header */}
                 <div className="bg-gradient-to-r py-3 w-full from-violet-600 to-purple-600 px-6 text-white flex flex-row items-center gap-4">
@@ -595,7 +595,7 @@ export function UnifiedLearningPage() {
                         <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold">AI Learning Coach</h3>
+                        <h3 className="text-lg font-bold text-white">AI Learning Coach</h3>
                         <p className="text-sm text-white/80">Create personalized courses instantly</p>
                       </div>
                 </div>

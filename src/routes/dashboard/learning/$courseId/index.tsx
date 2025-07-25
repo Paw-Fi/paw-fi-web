@@ -204,7 +204,7 @@ export default function ModernCourseDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div
-          className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full"
+          className="w-20 h-20 border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400 rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -216,12 +216,12 @@ export default function ModernCourseDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <FontAwesomeIcon icon={faBookOpen} className="h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Course not found</h2>
-          <p className="text-gray-600 mb-6">The course you're looking for doesn't exist.</p>
+          <FontAwesomeIcon icon={faBookOpen} className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <h2 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-2">Course not found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">The course you're looking for doesn't exist.</p>
           <Link
             to="/dashboard/learning"
-            className="px-6 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors"
           >
             Back to Learning Hub
           </Link>
@@ -232,7 +232,7 @@ export default function ModernCourseDetailPage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50"
+      className="min-h-screen bg-gradient-to-br from-background dark:from-dark-background via-white dark:via-gray-900 to-background dark:to-dark-background"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -244,13 +244,13 @@ export default function ModernCourseDetailPage() {
       >
         {/* Background Gradient */}
         <div className={`absolute inset-0 ${isEssentialsCourse
-            ? 'bg-gradient-to-br from-emerald-600/10 via-teal-600/10 to-green-600/10'
-            : 'bg-gradient-to-br from-purple-600/10 via-indigo-600/10 to-blue-600/10'
+            ? 'bg-gradient-to-br from-emerald-600/10 dark:from-emerald-400/20 via-teal-600/10 dark:via-teal-400/20 to-green-600/10 dark:to-green-400/20'
+            : 'bg-gradient-to-br from-purple-600/10 dark:from-purple-400/20 via-indigo-600/10 dark:via-indigo-400/20 to-blue-600/10 dark:to-blue-400/20'
           }`} />
 
         {/* Decorative Elements */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 dark:bg-purple-400/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/20 dark:bg-indigo-400/30 rounded-full blur-3xl" />
 
         <div className="relative px-4 py-8 max-w-7xl mx-auto">
           
@@ -277,7 +277,7 @@ export default function ModernCourseDetailPage() {
                       <span>{isEssentialsCourse ? 'Expert-Led Course' : 'AI-Personalized'}</span>
                     </div>
                     {!isEssentialsCourse && (
-                      <span className="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-full">
+                      <span className="px-3 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-sm font-medium rounded-full">
                         <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
                         Premium
                       </span>
@@ -296,23 +296,23 @@ export default function ModernCourseDetailPage() {
                       {course.title}
                     </span>
                   </h1>
-                  <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                  <p className="text-lg text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
                     {course.description}
                   </p>
 
                   {/* Course Metrics */}
                   <div className="flex flex-wrap gap-4 mb-6">
                     <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-gray-500" />
-                      <span className="text-gray-700">{courseMetrics.totalLessons} Lessons</span>
+                      <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-gray-700 dark:text-gray-300">{courseMetrics.totalLessons} Lessons</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-gray-500" />
-                      <span className="text-gray-700">~{courseMetrics.estimatedTime} minutes</span>
+                      <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-gray-700 dark:text-gray-300">~{courseMetrics.estimatedTime} minutes</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-gray-500" />
-                      <span className="text-gray-700">{courseMetrics.totalXP} XP Total</span>
+                      <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-gray-700 dark:text-gray-300">{courseMetrics.totalXP} XP Total</span>
                     </div>
                   </div>
 
@@ -370,7 +370,7 @@ export default function ModernCourseDetailPage() {
 
                     <button 
                       onClick={() => setShowShareModal(true)}
-                      className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:border-gray-300 transition-all duration-300"
+                      className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300"
                     >
                       <FontAwesomeIcon icon={faShareNodes} className="h-5 w-5" />
                       <span>Share</span>
@@ -386,8 +386,8 @@ export default function ModernCourseDetailPage() {
                 transition={{ delay: 0.2 }}
                 className="lg:col-span-1"
               >
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-gray-100">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Your Progress</h3>
+                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-foreground dark:text-dark-foreground mb-4">Your Progress</h3>
 
                   {/* Progress Ring */}
                   <div className="relative w-48 h-48 mx-auto mb-6">
@@ -399,7 +399,7 @@ export default function ModernCourseDetailPage() {
                         stroke="currentColor"
                         strokeWidth="12"
                         fill="none"
-                        className="text-gray-200"
+                        className="text-gray-200 dark:text-gray-600"
                       />
                       <motion.circle
                         cx="96"
@@ -410,35 +410,35 @@ export default function ModernCourseDetailPage() {
                         fill="none"
                         strokeDasharray={`${2 * Math.PI * 80}`}
                         strokeDashoffset={`${2 * Math.PI * 80 * (1 - courseMetrics.progress / 100)}`}
-                        className={isEssentialsCourse ? "text-emerald-500" : "text-purple-500"}
+                        className={isEssentialsCourse ? "text-emerald-500 dark:text-emerald-400" : "text-purple-500 dark:text-purple-400"}
                         initial={{ strokeDashoffset: `${2 * Math.PI * 80}` }}
                         animate={{ strokeDashoffset: `${2 * Math.PI * 80 * (1 - courseMetrics.progress / 100)}` }}
                         transition={{ duration: 1.5, ease: "easeOut" }}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-4xl font-bold text-gray-900">{courseMetrics.progress}%</span>
-                      <span className="text-sm text-gray-600">Complete</span>
+                      <span className="text-4xl font-bold text-foreground dark:text-dark-foreground">{courseMetrics.progress}%</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Complete</span>
                     </div>
                   </div>
 
                   {/* Stats */}
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-600">Lessons Completed</span>
-                      <span className="font-semibold text-gray-900">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-gray-600 dark:text-gray-400">Lessons Completed</span>
+                      <span className="font-semibold text-foreground dark:text-dark-foreground">
                         {courseMetrics.completedLessons}/{courseMetrics.totalLessons}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-600">XP Earned</span>
-                      <span className="font-semibold text-gray-900">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-gray-600 dark:text-gray-400">XP Earned</span>
+                      <span className="font-semibold text-foreground dark:text-dark-foreground">
                         {courseMetrics.earnedXP}/{courseMetrics.totalXP}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-600">Time Remaining</span>
-                      <span className="font-semibold text-gray-900">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-gray-600 dark:text-gray-400">Time Remaining</span>
+                      <span className="font-semibold text-foreground dark:text-dark-foreground">
                         ~{Math.round(courseMetrics.estimatedTime * (1 - courseMetrics.progress / 100))} min
                       </span>
                     </div>
@@ -448,13 +448,13 @@ export default function ModernCourseDetailPage() {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200"
+                      className="mt-4 p-4 bg-gradient-to-r from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700"
                     >
                       <div className="flex items-center gap-3">
-                        <FontAwesomeIcon icon={faCertificate} className="h-6 w-6 text-green-600" />
+                        <FontAwesomeIcon icon={faCertificate} className="h-6 w-6 text-green-600 dark:text-green-400" />
                         <div>
-                          <p className="font-semibold text-green-800">Certificate Available!</p>
-                          <p className="text-sm text-green-600">Download your completion certificate</p>
+                          <p className="font-semibold text-green-800 dark:text-green-300">Certificate Available!</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">Download your completion certificate</p>
                         </div>
                       </div>
                     </motion.div>
@@ -515,7 +515,7 @@ export default function ModernCourseDetailPage() {
                       {index < course.lessons.length - 1 && (
                         <div className={`
                           absolute left-8 top-20 w-0.5 h-16 
-                          ${isCompleted ? 'bg-green-400' : 'bg-gray-200'}
+                          ${isCompleted ? 'bg-green-400 dark:bg-green-500' : 'bg-gray-200 dark:bg-gray-600'}
                         `} />
                       )}
 
@@ -524,10 +524,10 @@ export default function ModernCourseDetailPage() {
                         className={`
                           block relative overflow-hidden rounded-2xl transition-all duration-300
                           ${isUnlocked
-                            ? 'bg-white shadow-lg hover:shadow-xl cursor-pointer'
-                            : 'bg-gray-50 cursor-not-allowed opacity-75'
+                            ? 'bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl cursor-pointer'
+                            : 'bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed opacity-75'
                           }
-                          ${isNext ? 'ring-2 ring-purple-500 ring-offset-2' : ''}
+                          ${isNext ? 'ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-2 dark:ring-offset-gray-900' : ''}
                         `}
                         onClick={(e) => !isUnlocked && e.preventDefault()}
                       >
@@ -539,8 +539,8 @@ export default function ModernCourseDetailPage() {
                               ${isCompleted
                                 ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white'
                                 : isUnlocked
-                                  ? 'bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-700'
-                                  : 'bg-gray-200 text-gray-500'
+                                  ? 'bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-indigo-100 dark:to-indigo-900/30 text-purple-700 dark:text-purple-300'
+                                  : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
                               }
                             `}>
                               {isCompleted ? (
@@ -558,13 +558,13 @@ export default function ModernCourseDetailPage() {
                                 <div>
                                   <h3 className={`
                                     text-lg font-bold mb-1
-                                    ${isUnlocked ? 'text-gray-900' : 'text-gray-500'}
+                                    ${isUnlocked ? 'text-foreground dark:text-dark-foreground' : 'text-gray-500 dark:text-gray-400'}
                                   `}>
                                     {lesson.title}
                                   </h3>
                                   <p className={`
                                     text-sm
-                                    ${isUnlocked ? 'text-gray-600' : 'text-gray-400'}
+                                    ${isUnlocked ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}
                                   `}>
                                     {lesson.description}
                                   </p>
@@ -578,24 +578,24 @@ export default function ModernCourseDetailPage() {
                               {/* Lesson Meta */}
                               <div className="flex items-center gap-4 mt-4">
                                 <div className="flex items-center gap-1.5">
-                                  <FontAwesomeIcon icon={faBookOpen} className={`h-4 w-4 ${isUnlocked ? 'text-gray-500' : 'text-gray-400'}`} />
-                                  <span className={`text-sm ${isUnlocked ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <FontAwesomeIcon icon={faBookOpen} className={`h-4 w-4 ${isUnlocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                                  <span className={`text-sm ${isUnlocked ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
                                     {lesson.questions.length} Questions
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <FontAwesomeIcon icon={faClock} className={`h-4 w-4 ${isUnlocked ? 'text-gray-500' : 'text-gray-400'}`} />
-                                  <span className={`text-sm ${isUnlocked ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <FontAwesomeIcon icon={faClock} className={`h-4 w-4 ${isUnlocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                                  <span className={`text-sm ${isUnlocked ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
                                     ~{Math.max(5, lesson.questions.length * 2)} min
                                   </span>
                                 </div>
                                 <div className={`
                                   ml-auto px-3 py-1 rounded-full text-sm font-semibold
                                   ${isCompleted
-                                    ? 'bg-green-100 text-green-700'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                     : isUnlocked
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : 'bg-gray-100 text-gray-500'
+                                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                                   }
                                 `}>
                                   +{lesson.xp} XP
@@ -607,16 +607,16 @@ export default function ModernCourseDetailPage() {
                                 <motion.div
                                   initial={{ opacity: 0, y: -10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="mt-3 p-3 bg-purple-50 rounded-lg flex items-center gap-2"
+                                  className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center gap-2"
                                 >
-                                  <FontAwesomeIcon icon={faForward} className="h-4 w-4 text-purple-600" />
-                                  <span className="text-sm font-medium text-purple-700">Let's move on!</span>
+                                  <FontAwesomeIcon icon={faForward} className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Let's move on!</span>
                                 </motion.div>
                               )}
                               {!isUnlocked && (
-                                <div className="mt-3 p-3 bg-gray-100 rounded-lg flex items-center gap-2">
-                                  <FontAwesomeIcon icon={faLock} className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm text-gray-600">Complete previous lessons to unlock</span>
+                                <div className="mt-3 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg flex items-center gap-2">
+                                  <FontAwesomeIcon icon={faLock} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Complete previous lessons to unlock</span>
                                 </div>
                               )}
                               {/* ===== FIX END ===== */}
@@ -639,12 +639,12 @@ export default function ModernCourseDetailPage() {
             
 
                   {/* Learning Tips */}
-                  <div className="mt-6 bg-yellow-50 rounded-2xl p-6 border border-yellow-200">
+                  <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-6 border border-yellow-200 dark:border-yellow-700">
                     <div className="flex items-center gap-2 mb-3">
-                      <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5 text-yellow-600" />
-                      <h4 className="font-semibold text-gray-900">Learning Tip</h4>
+                      <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <h4 className="font-semibold text-foreground dark:text-dark-foreground">Learning Tip</h4>
                     </div>
-                    <p className="text-sm text-gray-700">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
                       Complete lessons in order for the best learning experience. Each lesson builds on previous concepts!
                     </p>
                   </div>
@@ -664,25 +664,25 @@ export default function ModernCourseDetailPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowShareModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="p-6 border-b border-gray-100">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">Share Course</h3>
+                  <h3 className="text-xl font-bold text-foreground dark:text-dark-foreground">Share Course</h3>
                   <button
                     onClick={() => setShowShareModal(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -690,7 +690,7 @@ export default function ModernCourseDetailPage() {
               </div>
 
               {/* Course Preview */}
-              <div className="p-6 border-b border-gray-100">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-start gap-4">
                   <div className={`
                     w-16 h-16 rounded-xl flex items-center justify-center text-2xl flex-shrink-0
@@ -702,9 +702,9 @@ export default function ModernCourseDetailPage() {
                     {course?.icon || '📚'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2">{course?.title}</h4>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course?.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <h4 className="font-semibold text-foreground dark:text-dark-foreground mb-1 line-clamp-2">{course?.title}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{course?.description}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                       <span>{courseMetrics?.totalLessons} lessons</span>
                       <span>•</span>
                       <span>{courseMetrics?.totalXP} XP</span>
@@ -717,7 +717,7 @@ export default function ModernCourseDetailPage() {
 
               {/* Share Options */}
               <div className="p-6">
-                <p className="text-sm text-gray-600 mb-4">Share this course with your friends and help them learn!</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Share this course with your friends and help them learn!</p>
                 
                 {/* Copy Link */}
                 <button
@@ -726,14 +726,14 @@ export default function ModernCourseDetailPage() {
                     navigator.clipboard.writeText(url);
                     toast.success('Link copied to clipboard!');
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors mb-3"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mb-3"
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <FontAwesomeIcon icon={faCopy} className="h-4 w-4 text-gray-600" />
+                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <FontAwesomeIcon icon={faCopy} className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900">Copy Link</div>
-                    <div className="text-sm text-gray-500">Share via any platform</div>
+                    <div className="font-medium text-foreground dark:text-dark-foreground">Copy Link</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Share via any platform</div>
                   </div>
                 </button>
 
@@ -746,13 +746,13 @@ export default function ModernCourseDetailPage() {
                       const text = `Check out this amazing course: ${course?.title} on @PawFiApp! 🚀 #FinancialEducation #Learning`;
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
                       <FontAwesomeIcon icon={faTwitter} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">X (Twitter)</div>
+                      <div className="font-medium text-foreground dark:text-dark-foreground">X (Twitter)</div>
                     </div>
                   </button>
 
@@ -764,13 +764,13 @@ export default function ModernCourseDetailPage() {
                       const summary = course?.description || 'Learn financial concepts with this comprehensive course';
                       window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(summary)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                       <FontAwesomeIcon icon={faLinkedin} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">LinkedIn</div>
+                      <div className="font-medium text-foreground dark:text-dark-foreground">LinkedIn</div>
                     </div>
                   </button>
 
@@ -780,13 +780,13 @@ export default function ModernCourseDetailPage() {
                       const url = `https://pawfi.app/dashboard/learning/${courseId}`;
                       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                       <FontAwesomeIcon icon={faFacebook} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">Facebook</div>
+                      <div className="font-medium text-foreground dark:text-dark-foreground">Facebook</div>
                     </div>
                   </button>
 
@@ -797,13 +797,13 @@ export default function ModernCourseDetailPage() {
                       const title = `${course?.title} - Free Financial Education Course`;
                       window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
                       <FontAwesomeIcon icon={faReddit} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">Reddit</div>
+                      <div className="font-medium text-foreground dark:text-dark-foreground">Reddit</div>
                     </div>
                   </button>
                 </div>
@@ -816,14 +816,14 @@ export default function ModernCourseDetailPage() {
                     navigator.clipboard.writeText(message);
                     toast.success('Discord message copied to clipboard!');
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors mt-3"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mt-3"
                 >
                   <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
                     <FontAwesomeIcon icon={faDiscord} className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-medium text-gray-900">Discord</div>
-                    <div className="text-sm text-gray-500">Copy formatted message</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Copy formatted message</div>
                   </div>
                 </button>
               </div>

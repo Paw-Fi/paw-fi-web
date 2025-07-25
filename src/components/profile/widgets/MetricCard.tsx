@@ -20,18 +20,18 @@ interface MetricCardProps {
 
 // Helper component for trend icon
 const TrendIcon = ({ trend }: { trend: IMetricCardItem['trend'] }) => {
-  if (trend === 'up') return <FontAwesomeIcon icon={faArrowUp} className="h-3 w-3 text-emerald-500" />;
-  if (trend === 'down') return <FontAwesomeIcon icon={faArrowDown} className="h-3 w-3 text-red-500" />;
-  if (trend === 'stable') return <FontAwesomeIcon icon={faMinus} className="h-3 w-3 text-slate-500" />;
-  return <FontAwesomeIcon icon={faEllipsisH} className="h-3 w-3 text-slate-400" />;
+  if (trend === 'up') return <FontAwesomeIcon icon={faArrowUp} className="h-3 w-3 text-emerald-500 dark:text-emerald-400" />;
+  if (trend === 'down') return <FontAwesomeIcon icon={faArrowDown} className="h-3 w-3 text-red-500 dark:text-red-400" />;
+  if (trend === 'stable') return <FontAwesomeIcon icon={faMinus} className="h-3 w-3 text-slate-500 dark:text-slate-400" />;
+  return <FontAwesomeIcon icon={faEllipsisH} className="h-3 w-3 text-slate-400 dark:text-slate-500" />;
 };
 
 // Helper function for trend color
 const getTrendColor = (trend: IMetricCardItem['trend']) => {
-  if (trend === 'up') return 'text-emerald-500';
-  if (trend === 'down') return 'text-red-500';
-  if (trend === 'stable') return 'text-slate-500';
-  return 'text-slate-400';
+  if (trend === 'up') return 'text-emerald-500 dark:text-emerald-400';
+  if (trend === 'down') return 'text-red-500 dark:text-red-400';
+  if (trend === 'stable') return 'text-slate-500 dark:text-slate-400';
+  return 'text-slate-400 dark:text-slate-500';
 };
 
 // Helper function to get metric type and benchmarks - enhanced for confidence building
@@ -117,21 +117,21 @@ const getMetricAnalysis = (metricItem: IMetricCardItem) => {
 const getStatusIndicator = (status: string) => {
   switch (status) {
     case 'excellent':
-      return { color: 'text-emerald-600', bgColor: 'bg-emerald-50', icon: faCheckCircle };
+      return { color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-50 dark:bg-emerald-900/20', icon: faCheckCircle };
     case 'optimal':
     case 'good':
-      return { color: 'text-blue-600', bgColor: 'bg-blue-50', icon: faCheckCircle };
+      return { color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-900/20', icon: faCheckCircle };
     case 'building':
     case 'manageable':
-      return { color: 'text-purple-600', bgColor: 'bg-purple-50', icon: faChartLine };
+      return { color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-50 dark:bg-purple-900/20', icon: faChartLine };
     case 'starting':
     case 'focus-area':
-      return { color: 'text-amber-600', bgColor: 'bg-amber-50', icon: faInfoCircle };
+      return { color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-900/20', icon: faInfoCircle };
     case 'needs-improvement':
     case 'needs-attention':
-      return { color: 'text-orange-600', bgColor: 'bg-orange-50', icon: faInfoCircle };
+      return { color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-50 dark:bg-orange-900/20', icon: faInfoCircle };
     default:
-      return { color: 'text-slate-600', bgColor: 'bg-slate-50', icon: faInfoCircle };
+      return { color: 'text-slate-600 dark:text-slate-400', bgColor: 'bg-slate-50 dark:bg-slate-800', icon: faInfoCircle };
   }
 };
 
@@ -139,16 +139,16 @@ const getStatusIndicator = (status: string) => {
 const ProgressBar = ({ value, max, status }: { value: number; max: number; status: string }) => {
   const percentage = Math.min((value / max) * 100, 100);
   const statusColors = {
-    'excellent': 'bg-emerald-500',
-    'optimal': 'bg-blue-500',
-    'good': 'bg-blue-500',
-    'building': 'bg-purple-500',
-    'manageable': 'bg-purple-500',
-    'starting': 'bg-amber-500',
-    'focus-area': 'bg-amber-500',
-    'needs-improvement': 'bg-orange-400',
-    'needs-attention': 'bg-orange-400',
-    'neutral': 'bg-slate-500',
+    'excellent': 'bg-emerald-500 dark:bg-emerald-400',
+    'optimal': 'bg-blue-500 dark:bg-blue-400',
+    'good': 'bg-blue-500 dark:bg-blue-400',
+    'building': 'bg-purple-500 dark:bg-purple-400',
+    'manageable': 'bg-purple-500 dark:bg-purple-400',
+    'starting': 'bg-amber-500 dark:bg-amber-400',
+    'focus-area': 'bg-amber-500 dark:bg-amber-400',
+    'needs-improvement': 'bg-orange-400 dark:bg-orange-300',
+    'needs-attention': 'bg-orange-400 dark:bg-orange-300',
+    'neutral': 'bg-slate-500 dark:bg-slate-400',
   };
   
   const barColor = statusColors[status as keyof typeof statusColors] || 'bg-slate-500';
@@ -158,11 +158,11 @@ const ProgressBar = ({ value, max, status }: { value: number; max: number; statu
   
   return (
     <div className="w-full">
-      <div className="flex justify-between text-xs text-slate-500 mb-1">
+      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
         <span>{progressText}: {value}%</span>
         <span>Target: {max}%</span>
       </div>
-      <div className="w-full bg-slate-200 rounded-full h-2">
+      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
         <div 
           className={`h-2 rounded-full transition-all duration-300 ${barColor}`}
           style={{ width: `${percentage}%` }}

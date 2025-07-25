@@ -350,7 +350,7 @@ function Profile() {
                                 No portfolio views yet
                               </div>
                             )}
-                            {/* <button
+                            <button
                               onClick={() => {
                                 setIsViewDropdownOpen(false);
                                 setIsTemplateModalOpen(true);
@@ -359,7 +359,7 @@ function Profile() {
                             >
                               <FontAwesomeIcon icon={faPlus} className="mr-2" />
                               Create New View
-                            </button> */}
+                            </button>
                           </div>
                         </div>
                       )}

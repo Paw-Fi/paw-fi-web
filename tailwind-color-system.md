@@ -101,6 +101,111 @@ The blog system (`/routes/blogs/`) fully utilizes the semantic color system:
 </article>
 ```
 
+### Dashboard System
+The dashboard system (`/routes/dashboard/`) implements comprehensive dark mode support:
+
+```jsx
+// Main dashboard container with gradient background
+<div className="bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20">
+  Dashboard content
+</div>
+
+// Sidebar navigation with card design
+<div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80">
+  Sidebar content
+</div>
+
+// Active navigation items
+<div className="border-l-4 border-primary dark:border-dark-primary text-primary dark:text-dark-primary">
+  Active menu item
+</div>
+
+// Interactive navigation items
+<div className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
+  Menu item
+</div>
+
+// User profile section
+<div className="border-t border-gray-100 dark:border-gray-700">
+  <p className="text-foreground dark:text-dark-foreground">User Name</p>
+  <p className="text-gray-500 dark:text-gray-400">user@email.com</p>
+</div>
+
+// Secondary sidebar for submenus
+<div className="bg-purple-100 dark:bg-purple-900/30">
+  <div className="text-primary dark:text-dark-primary">Submenu icon</div>
+</div>
+
+// Main content area
+<main className="border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80">
+  Dashboard content
+</main>
+```
+
+### Learning Platform
+The learning system (`/routes/dashboard/learning/`) provides comprehensive dark mode for educational content:
+
+```jsx
+// Learning dashboard main background
+<div className="bg-gradient-to-br from-background dark:from-dark-background via-white dark:via-gray-900 to-background dark:to-dark-background">
+  Learning content
+</div>
+
+// Course cards with different types
+<div className="bg-white dark:bg-gray-800 border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600">
+  Essential course card
+</div>
+
+<div className="bg-white dark:bg-gray-800 border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600">
+  AI-powered course card
+</div>
+
+// Stats cards with glassmorphic effect
+<div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700">
+  <span className="text-foreground dark:text-dark-foreground">Stat Value</span>
+  <p className="text-gray-600 dark:text-gray-400">Stat Label</p>
+</div>
+
+// Tab navigation
+<div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700">
+  <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white">
+    Active Tab
+  </button>
+  <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+    Inactive Tab
+  </button>
+</div>
+
+// Loading spinner
+<div className="border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400 rounded-full" />
+
+// Progress bars and course metrics
+<div className="bg-gray-200 dark:bg-gray-700 rounded-full">
+  <div className="bg-gradient-to-r from-emerald-500 to-green-500">Progress</div>
+</div>
+
+// Lesson items with status
+<div className="bg-white dark:bg-gray-800 ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-2 dark:ring-offset-gray-900">
+  Next lesson highlight
+</div>
+
+// XP and achievement badges
+<div className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+  +50 XP
+</div>
+
+// Premium indicators
+<span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+  Premium Content
+</span>
+
+// Learning tips and hints
+<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700">
+  <div className="text-yellow-600 dark:text-yellow-400">Tip icon</div>
+  <p className="text-gray-700 dark:text-gray-300">Learning tip content</p>
+</div>
+```
+
 ### Using Semantic Colors with Dark Mode Variants
 
 ```jsx

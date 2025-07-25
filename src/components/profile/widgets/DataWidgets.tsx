@@ -19,7 +19,7 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
   const { data } = widget;
   
   if (!data || !data.items || data.items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
   }
   
   const { items, tip, footerLink, groupByCategory, showTotals } = data;
@@ -64,7 +64,7 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   const { data } = widget;
   const { items = [], showPercentages = true, sortBy = 'custom' } = data;
   if (!items || items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
   }
   
   // Calculate progress percentage for each item
@@ -132,7 +132,7 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-slate-600 dark:text-slate-300">{statusText}</span>
                 {showPercentages ? (
-                  <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">
+                  <span className="text-lg font-semibold text-primary dark:text-dark-primary">
                     {progressText}
                   </span>
                 ) : null}

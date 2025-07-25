@@ -23,13 +23,13 @@ export const FloatingChatButton = () => {
           scale: isHovered ? 1 : 0.8
         }}
         transition={{ type: "spring", damping: 20, stiffness: 300 }}
-        className="mb-2 px-3 py-2 bg-white/90 backdrop-blur-xl border border-purple-200/50 rounded-xl shadow-lg"
+        className="mb-2 px-3 py-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 rounded-xl shadow-lg"
       >
-        <div className="flex items-center space-x-2 text-sm font-semibold text-gray-800">
-          <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-primary" />
+        <div className="flex items-center space-x-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-primary dark:text-dark-primary" />
           <span>Financial Advisor</span>
         </div>
-        <div className="text-xs text-gray-600 mt-0.5">Ask me anything!</div>
+        <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Ask me anything!</div>
       </motion.div>
 
       {/* Chat Button */}
@@ -82,7 +82,7 @@ export const FloatingChatButton = () => {
         </motion.div>
         
         {/* Small advisor indicator */}
-        <div className="absolute -top-1 -right-1 h-5 w-5 bg-white/70 rounded-full flex items-center justify-center shadow-lg">
+        <div className="absolute -top-1 -right-1 h-5 w-5 bg-white/70 dark:bg-gray-200/70 rounded-full flex items-center justify-center shadow-lg">
           <img src={monekoIcon} alt="Moneko Icon" className="h-4 w-4" />
         </div>
       </motion.button>
