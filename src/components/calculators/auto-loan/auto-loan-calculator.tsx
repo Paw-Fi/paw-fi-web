@@ -59,47 +59,47 @@ export function AutoLoanCalculator() {
   const totalCost = totalPayments + upfrontPayment;
 
   return (
-    <div className="w-full max-w-full md:max-w-3xl lg:max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="w-full max-w-full md:max-w-3xl lg:max-w-4xl mx-auto bg-card dark:bg-dark-card rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold mb-6 text-center text-foreground dark:text-dark-foreground">Auto Loan Calculator</h2>
       <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="autoPrice">Auto Price</label>
-          <input id="autoPrice" type="number" min={0} value={autoPrice === '' ? '' : autoPrice} onChange={e => setAutoPrice(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="autoPrice" type="number" min={0} value={autoPrice === '' ? '' : autoPrice} onChange={e => setAutoPrice(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="loanTermMonths">Loan Term</label>
-          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-gray-500 dark:text-gray-400">months</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="interestRate">Interest Rate</label>
-          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="cashIncentives">Cash Incentives</label>
-          <input id="cashIncentives" type="number" min={0} value={cashIncentives === '' ? '' : cashIncentives} onChange={e => setCashIncentives(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="cashIncentives" type="number" min={0} value={cashIncentives === '' ? '' : cashIncentives} onChange={e => setCashIncentives(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="downPayment">Down Payment</label>
-          <input id="downPayment" type="number" min={0} value={downPayment === '' ? '' : downPayment} onChange={e => setDownPayment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="downPayment" type="number" min={0} value={downPayment === '' ? '' : downPayment} onChange={e => setDownPayment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="tradeInValue">Trade-In Value</label>
-          <input id="tradeInValue" type="number" min={0} value={tradeInValue === '' ? '' : tradeInValue} onChange={e => setTradeInValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="tradeInValue" type="number" min={0} value={tradeInValue === '' ? '' : tradeInValue} onChange={e => setTradeInValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="amountOwedOnTradeIn">Amount Owed on Trade-In</label>
-          <input id="amountOwedOnTradeIn" type="number" min={0} value={amountOwedOnTradeIn === '' ? '' : amountOwedOnTradeIn} onChange={e => setAmountOwedOnTradeIn(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="amountOwedOnTradeIn" type="number" min={0} value={amountOwedOnTradeIn === '' ? '' : amountOwedOnTradeIn} onChange={e => setAmountOwedOnTradeIn(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="salesTax">Sales Tax</label>
-          <input id="salesTax" type="number" min={0} step={0.01} value={salesTax === '' ? '' : salesTax} onChange={e => setSalesTax(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="salesTax" type="number" min={0} step={0.01} value={salesTax === '' ? '' : salesTax} onChange={e => setSalesTax(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="titleFees">Title Fees</label>
-          <input id="titleFees" type="number" min={0} value={titleFees === '' ? '' : titleFees} onChange={e => setTitleFees(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="titleFees" type="number" min={0} value={titleFees === '' ? '' : titleFees} onChange={e => setTitleFees(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div className="flex items-center">
           <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2 h-4 w-4 text-primary dark:text-dark-primary focus:ring-primary dark:focus:ring-dark-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700" />
@@ -107,7 +107,7 @@ export function AutoLoanCalculator() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="state">State</label>
-          <input id="state" type="text" value={state} onChange={e => setState(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-white dark:bg-gray-700 text-foreground dark:text-dark-foreground p-2" />
+          <input id="state" type="text" value={state} onChange={e => setState(e.target.value)} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
       </form>
       {/* Results summary goes here */}
@@ -233,7 +233,7 @@ function AmortizationSchedule({ principal, interestRate, months, monthlyPayment 
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700">
+            <tr className="bg-table-header dark:bg-dark-table-header">
               <th className="px-4 py-2 text-left text-foreground dark:text-dark-foreground">Period</th>
               <th className="px-4 py-2 text-left text-foreground dark:text-dark-foreground">Payment</th>
               <th className="px-4 py-2 text-left text-foreground dark:text-dark-foreground">Principal</th>
@@ -243,7 +243,7 @@ function AmortizationSchedule({ principal, interestRate, months, monthlyPayment 
           </thead>
           <tbody>
             {schedule.map((row, index) => (
-              <tr key={index} className={index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-750' : 'bg-white dark:bg-gray-800'}>
+              <tr key={index} className={index % 2 === 0 ? 'bg-table-row-even dark:bg-dark-table-row-even' : 'bg-table-row-odd dark:bg-dark-table-row-odd'}>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.period}</td>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.interestPaid + row.principalPaid}</td>
                 <td className="px-4 py-2 text-foreground dark:text-dark-foreground">{row.principalPaid}</td>
@@ -303,22 +303,22 @@ function AmortizationLineChart({ principal, interestRate, months, monthlyPayment
     {
       label: 'Interest Paid',
       data: interestPaid,
-      backgroundColor: isDark ? 'rgba(255, 122, 122, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-      borderColor: isDark ? '#FF7A7A' : '#EF4444',
+      backgroundColor: isDark ? 'var(--dark-chart-danger-transparent)' : 'var(--chart-danger-transparent)',
+      borderColor: isDark ? 'var(--dark-chart-danger)' : 'var(--chart-danger)',
       fill: false
     },
     {
       label: 'Principal Paid',
       data: principalPaid,
-      backgroundColor: isDark ? 'rgba(31, 227, 184, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-      borderColor: isDark ? '#1FE3B8' : '#10B981',
+      backgroundColor: isDark ? 'var(--dark-chart-success-transparent)' : 'var(--chart-success-transparent)',
+      borderColor: isDark ? 'var(--dark-chart-success)' : 'var(--chart-success)',
       fill: false
     },
     {
       label: 'Ending Balance',
       data: endingBalance,
-      backgroundColor: isDark ? 'rgba(139, 112, 255, 0.2)' : 'rgba(116, 88, 255, 0.2)',
-      borderColor: isDark ? '#8B70FF' : '#7458FF',
+      backgroundColor: isDark ? 'var(--dark-chart-primary-transparent)' : 'var(--chart-primary-transparent)',
+      borderColor: isDark ? 'var(--dark-chart-primary)' : 'var(--chart-primary)',
       fill: false
     }
   ];

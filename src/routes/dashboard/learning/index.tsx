@@ -195,10 +195,8 @@ export function UnifiedLearningPage() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-br from-background dark:from-dark-background via-white dark:via-gray-900 to-background dark:to-dark-background"
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
+      className="min-h-screen"
+   
     >
       {/* Modern Hero Section with Stats */}
       <motion.section 
@@ -257,56 +255,66 @@ export function UnifiedLearningPage() {
               </motion.div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 gap-4 lg:w-auto">
-              <motion.div 
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <FontAwesomeIcon icon={faFire} className="h-5 w-5 text-white" />
+            {/* Compact Metrics Bar */}
+            <motion.div 
+              className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-lg"
+              variants={itemVariants}
+            >
+              <div className="flex items-center justify-between gap-6 overflow-x-auto">
+                {/* Streak Metric */}
+                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center shadow-md">
+                    <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.streak}</span>
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.streak}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Day Streak</span>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Day Streak</p>
-              </motion.div>
 
-              <motion.div 
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalXP}</span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total XP</p>
-              </motion.div>
+                {/* Divider */}
+                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
 
-              <motion.div 
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-white" />
+                {/* XP Metric */}
+                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center shadow-md">
+                    <FontAwesomeIcon icon={faTrophy} className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalCourses}</span>
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalXP}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Total XP</span>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Courses</p>
-              </motion.div>
 
-              <motion.div 
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-lg"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <FontAwesomeIcon icon={faChartLine} className="h-5 w-5 text-white" />
+                {/* Divider */}
+                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
+
+                {/* Courses Metric */}
+                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-md">
+                    <FontAwesomeIcon icon={faBookOpen} className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-3xl font-bold text-foreground dark:text-dark-foreground">{learningStats.completedLessons}</span>
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalCourses}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Courses</span>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Lessons Done</p>
-              </motion.div>
-            </div>
+
+                {/* Divider */}
+                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
+
+                {/* Lessons Metric */}
+                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center shadow-md">
+                    <FontAwesomeIcon icon={faChartLine} className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.completedLessons}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Lessons Done</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </motion.section>

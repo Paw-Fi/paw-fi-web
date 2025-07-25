@@ -511,13 +511,7 @@ export default function ModernCourseDetailPage() {
                       transition={{ delay: index * 0.1 }}
                       className="relative"
                     >
-                      {/* Connection Line */}
-                      {index < course.lessons.length - 1 && (
-                        <div className={`
-                          absolute left-8 top-20 w-0.5 h-16 
-                          ${isCompleted ? 'bg-green-400 dark:bg-green-500' : 'bg-gray-200 dark:bg-gray-600'}
-                        `} />
-                      )}
+                     
 
                       <Link
                         to={isUnlocked ? `/dashboard/learning/${courseId}/lesson/${lesson.lesson_id}` : '#'}

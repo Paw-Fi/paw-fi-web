@@ -492,7 +492,7 @@ function DashboardHome() {
       >
            {/* Hero Header with Level Progression */}
            <motion.div
-        className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 dark:from-purple-800 dark:via-purple-700 dark:to-indigo-800 p-8 shadow-2xl"
+        className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600 dark:from-purple-800 dark:via-purple-700 dark:to-indigo-800 p-8 shadow-2xl"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
       >

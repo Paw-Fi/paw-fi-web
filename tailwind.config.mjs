@@ -66,7 +66,52 @@ export default {
         'accent-pink': '#EC4899',
         'accent-indigo': '#6366F1',
         'dark-accent-pink': '#F472B6',
-        'dark-accent-indigo': '#818CF8'
+        'dark-accent-indigo': '#818CF8',
+
+        // Component-specific colors
+        'card': '#FFFFFF',
+        'dark-card': '#111827', // A bit darker than dark-background
+        'card-foreground': '#1F2937',
+        'dark-card-foreground': '#F1F5F9',
+
+        'input': '#FFFFFF',
+        'dark-input': '#1F2937',
+        'input-disabled': '#F3F4F6',
+        'dark-input-disabled': '#374151',
+
+        'muted-foreground': '#6B7280',
+        'dark-muted-foreground': '#9CA3AF',
+
+        'subtle-border': '#E5E7EB',
+        'dark-subtle-border': '#374151',
+
+        // Subtle backgrounds for things like results sections
+        'subtle-background': '#F9FAFB', // Very light gray
+        'dark-subtle-background': '#1F2937', // A bit lighter than card
+
+        // Table-specific colors
+        'table-header': '#F3F4F6',
+        'dark-table-header': '#374151',
+        'table-row-odd': '#FFFFFF',
+        'dark-table-row-odd': '#1F2937',
+        'table-row-even': '#F9FAFB',
+        'dark-table-row-even': '#212b3b',
+
+        // Chart-specific colors
+        'chart-primary': '#7458FF',
+        'dark-chart-primary': '#8B70FF',
+        'chart-primary-transparent': 'rgba(116, 88, 255, 0.2)',
+        'dark-chart-primary-transparent': 'rgba(139, 112, 255, 0.2)',
+
+        'chart-success': '#10B981',
+        'dark-chart-success': '#1FE3B8',
+        'chart-success-transparent': 'rgba(16, 185, 129, 0.2)',
+        'dark-chart-success-transparent': 'rgba(31, 227, 184, 0.2)',
+
+        'chart-danger': '#EF4444',
+        'dark-chart-danger': '#FF7A7A',
+        'chart-danger-transparent': 'rgba(239, 68, 68, 0.2)',
+        'dark-chart-danger-transparent': 'rgba(255, 122, 122, 0.2)'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',

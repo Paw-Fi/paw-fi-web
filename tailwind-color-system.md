@@ -364,9 +364,7 @@ Add the new color to the appropriate table above with:
 ## 🔧 Configuration Files
 
 ### Core Files
-- **`tailwind.config.mjs`** - Tailwind configuration with semantic colors and dark variants
-- **`src/styles/globals.css`** - Basic Tailwind imports and custom utilities
-- **`tailwind-color-system.md`** - This documentation file
+- **`tailwind.config.mjs`** - Tailwind configuration with semantic colors and dark variantse
 
 ### Integration
 Colors are automatically available throughout the application. The system supports:
