@@ -20,30 +20,36 @@ interface TooltipItem {
 }
 
 export function PieChart({ labels, data, title }: PieChartProps) {
+  // Get CSS custom properties for consistent colors
+  const isDark = document.documentElement.classList.contains('dark');
+  const getChartColor = (colorName: string) => {
+    const customProp = isDark ? `--tw-color-dark-chart-${colorName}` : `--tw-color-chart-${colorName}`;
+    return getComputedStyle(document.documentElement).getPropertyValue(customProp)?.trim() ||
+           getComputedStyle(document.documentElement).getPropertyValue(`--tw-color-${isDark ? 'dark-' : ''}${colorName}`)?.trim();
+  };
+
   const chartData = {
     labels,
     datasets: [
       {
         data,
-        backgroundColor: document.documentElement.classList.contains('dark') ? [
-          '#8B70FF', // dark-primary
-          '#16CDA2', // dark-success
-          '#FFCD29', // dark-warning
-          '#FF6B6B', // dark-danger
-          '#1DD1F3', // dark-info
-          '#9333EA', // dark-accent-purple
-        ] : [
-          '#7458FF', // primary
-          '#10B981', // success
-          '#F59E0B', // warning
-          '#EF4444', // danger
-          '#06B6D4', // info
-          '#8B5CF6', // accent-purple
-        ],
+        backgroundColor: [
+          getChartColor('primary') || (isDark ? '#8B70FF' : '#7458FF'),
+          getChartColor('success') || (isDark ? '#1FE3B8' : '#16CDA2'),
+          '#FFCD29', // warning - keeping as fallback since we don't have chart-specific warning
+          '#FF7A7A', // danger - using dark-danger variant
+          '#60A5FA', // info - blue variant
+          '#A855F7', // purple variant
+        ].slice(0, data.length), // Only use as many colors as we have data points
         borderWidth: 0,
       },
     ],
   };
+
+  // Get consistent text colors
+  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
+                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
+                          (isDark ? '#F1F5F9' : '#1F2937');
 
   const options = {
     responsive: true,
@@ -51,7 +57,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
+          color: foregroundColor,
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -68,7 +74,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
         ? {
             display: true,
             text: title,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
+            color: foregroundColor,
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,

@@ -176,3 +176,56 @@ export interface Course {
   icon?: string;
   lessons: Lesson[];
 }
+
+// Community Course Types
+export interface CommunityAuthor {
+  name: string;
+  avatar: string;
+  level: number;
+  expertise: string;
+  verified: boolean;
+}
+
+export interface CommunityStats {
+  students: number;
+  rating: number;
+  likes: number;
+  views: number;
+  comments: number;
+}
+
+export interface CommunityMetadata {
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  duration: string;
+  lessons: number;
+  category: string;
+  tags: string[];
+  language: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityPreview {
+  thumbnail: string;
+  color: string;
+}
+
+export interface CommunityCourse {
+  id: string;
+  title: string;
+  description: string;
+  author: CommunityAuthor;
+  stats: CommunityStats;
+  metadata: CommunityMetadata;
+  preview: CommunityPreview;
+  featured: boolean;
+  trending: boolean;
+}
+
+export type SortOption = 'trending' | 'recent' | 'popular' | 'highest-rated' | 'most-views' | 'most-likes';
+
+export interface SortOptionConfig {
+  value: SortOption;
+  label: string;
+  icon: any; // FontAwesome icon
+}

@@ -1,3 +1,24 @@
+import { FaqSection } from '@/components/ui/faq-section';
+
+const investmentFaqData = [
+  {
+    question: "How accurate are investment projections?",
+    answer: "Investment projections are estimates based on assumptions about future returns, contributions, and time periods. While they can be useful planning tools, actual results will vary due to market fluctuations, economic conditions, and other factors that cannot be precisely predicted."
+  },
+  {
+    question: "What rate of return should I use for my projections?",
+    answer: "Historical average returns vary by asset class: stocks have averaged around 7-10% annually over long periods, bonds 3-5%, and cash 1-2%. However, past performance doesn't guarantee future results. Consider using conservative estimates based on your asset allocation and time horizon."
+  },
+  {
+    question: "How often should I review my investment projections?",
+    answer: "Review your projections at least annually or when significant life events occur (job change, marriage, children). Regular reviews help you adjust your strategy based on actual performance, changing goals, or shifts in your financial situation."
+  },
+  {
+    question: "Should I account for inflation in my projections?",
+    answer: "Yes, inflation reduces the purchasing power of your money over time. For realistic projections, either use inflation-adjusted (real) returns in your calculations or factor in an inflation rate (typically 2-3%) when determining if your future savings will meet your goals."
+  }
+];
+
 export const InvestmentCalculatorSEOContent = () => {
   return (
     <section className="max-w-5xl mx-auto mt-16 mb-20 px-4 md:px-6 text-gray-800 dark:text-gray-200 font-sans">
@@ -170,38 +191,7 @@ export const InvestmentCalculatorSEOContent = () => {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-2xl font-bold mb-6 text-foreground dark:text-dark-foreground">Frequently Asked Questions</h3>
-        
-        <div className="space-y-6">
-          {[
-            {
-              question: "How accurate are investment projections?",
-              answer: "Investment projections are estimates based on assumptions about future returns, contributions, and time periods. While they can be useful planning tools, actual results will vary due to market fluctuations, economic conditions, and other factors that cannot be precisely predicted."
-            },
-            {
-              question: "What rate of return should I use for my projections?",
-              answer: "Historical average returns vary by asset class: stocks have averaged around 7-10% annually over long periods, bonds 3-5%, and cash 1-2%. However, past performance doesn't guarantee future results. Consider using conservative estimates based on your asset allocation and time horizon."
-            },
-            {
-              question: "How often should I review my investment projections?",
-              answer: "Review your projections at least annually or when significant life events occur (job change, marriage, children). Regular reviews help you adjust your strategy based on actual performance, changing goals, or shifts in your financial situation."
-            },
-            {
-              question: "Should I account for inflation in my projections?",
-              answer: "Yes, inflation reduces the purchasing power of your money over time. For realistic projections, either use inflation-adjusted (real) returns in your calculations or factor in an inflation rate (typically 2-3%) when determining if your future savings will meet your goals."
-            }
-          ].map((item, index) => (
-            <div key={index} className="bg-white dark:bg-gray-750 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-              <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground flex items-center">
-                <span className="w-6 h-6 rounded-full bg-secondary dark:bg-dark-secondary text-white text-xs flex items-center justify-center mr-3">{index + 1}</span>
-                {item.question}
-              </h4>
-              <p className="text-gray-700 dark:text-gray-300 pl-9">{item.answer}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <FaqSection faqData={investmentFaqData} />
 
       {/* CTA Section */}
       <div className="mt-12 text-center">

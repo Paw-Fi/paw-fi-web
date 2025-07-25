@@ -461,35 +461,35 @@ export const MortgageCalculator = () => {
             </div>
           </div>
           
-          <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Loan Summary</h3>
+          <div className="mt-6 bg-subtle-background dark:bg-dark-subtle-background p-4 rounded-lg border border-subtle-border dark:border-dark-subtle-border">
+            <h3 className="text-lg font-semibold text-foreground dark:text-dark-foreground mb-4">Loan Summary</h3>
             
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Loan Amount</span>
-                <span className="font-semibold">{formatCurrency(loanAmount)}</span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Total Loan Amount</span>
+                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatCurrency(loanAmount)}</span>
               </div>
               
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Interest Paid</span>
-                <span className="font-semibold text-red-600">{formatCurrency(mortgageDetails.totalInterestPaid)}</span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Total Interest Paid</span>
+                <span className="font-semibold text-danger dark:text-dark-danger">{formatCurrency(mortgageDetails.totalInterestPaid)}</span>
               </div>
               
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Cost of Loan</span>
-                <span className="font-semibold">{formatCurrency(mortgageDetails.totalCostOfLoan)}</span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Total Cost of Loan</span>
+                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatCurrency(mortgageDetails.totalCostOfLoan)}</span>
               </div>
               
               <div className="flex justify-between">
-                <span className="text-gray-600">Loan Payoff Date</span>
-                <span className="font-semibold">{formatDate(startDate, loanTerm * 12)}</span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Loan Payoff Date</span>
+                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatDate(startDate, loanTerm * 12)}</span>
               </div>
             </div>
           </div>
           
           {/* Total Payment Distribution Pie Chart */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-3">Total Payment Distribution</h3>
+            <h3 className="text-lg font-semibold mb-3 text-foreground dark:text-dark-foreground">Total Payment Distribution</h3>
             <PieChart
               labels={["Principal", "Interest"]}
               data={[loanAmount, mortgageDetails.totalInterestPaid]}
@@ -497,10 +497,12 @@ export const MortgageCalculator = () => {
             />
             <div className="flex justify-between mt-2 text-sm">
               <div className="flex items-center">
-                <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span> Principal
+                <span className="w-3 h-3 bg-chart-primary dark:bg-dark-chart-primary rounded-full mr-2"></span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Principal</span>
               </div>
               <div className="flex items-center">
-                <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span> Interest
+                <span className="w-3 h-3 bg-chart-danger dark:bg-dark-chart-danger rounded-full mr-2"></span>
+                <span className="text-muted-foreground dark:text-dark-muted-foreground">Interest</span>
               </div>
             </div>
           </div>
@@ -510,59 +512,59 @@ export const MortgageCalculator = () => {
       {/* Amortization Schedule Toggle */}
       <div className="mt-6">
         <button
-          className="px-4 py-2 rounded bg-blue-100 text-blue-700 font-semibold mr-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="px-4 py-2 rounded-lg bg-primary/10 dark:bg-dark-primary/10 text-primary dark:text-dark-primary hover:bg-primary/20 dark:hover:bg-dark-primary/20 font-semibold mr-2 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-dark-primary/50 transition-colors duration-200"
           onClick={() => setShowAmortizationTable((v) => !v)}
         >
           {showAmortizationTable ? 'Hide' : 'Show'} Amortization Schedule
         </button>
         
         {showAmortizationTable && (
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="mt-4 overflow-x-auto rounded-lg border border-subtle-border dark:border-dark-subtle-border">
+            <table className="min-w-full divide-y divide-subtle-border dark:divide-dark-subtle-border">
+              <thead className="bg-table-header dark:bg-dark-table-header">
                 <tr>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     #
                   </th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     Date
                   </th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     Payment
                   </th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     Principal
                   </th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     Interest
                   </th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-dark-muted-foreground uppercase tracking-wider">
                     Balance
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card dark:bg-dark-card divide-y divide-subtle-border dark:divide-dark-subtle-border">
                 {/* Only show first year, then every 12th payment */}
                 {mortgageDetails.amortizationSchedule
                   .filter(row => row.paymentNumber <= 12 || row.paymentNumber % 12 === 0 || row.paymentNumber === loanTerm * 12)
                   .map((row) => (
-                    <tr key={row.paymentNumber} className={row.paymentNumber % 12 === 0 ? 'bg-gray-50' : ''}>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                    <tr key={row.paymentNumber} className={row.paymentNumber % 12 === 0 ? 'bg-table-row-even dark:bg-dark-table-row-even' : 'bg-table-row-odd dark:bg-dark-table-row-odd'}>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground dark:text-dark-muted-foreground">
                         {row.paymentNumber}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground dark:text-dark-muted-foreground">
                         {formatDate(startDate, row.paymentNumber - 1)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-foreground dark:text-dark-foreground">
                         {formatCurrency(row.paymentAmount)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-blue-600">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-chart-primary dark:text-dark-chart-primary">
                         {formatCurrency(row.principalPaid)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-red-600">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-chart-danger dark:text-dark-chart-danger">
                         {formatCurrency(row.interestPaid)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-foreground dark:text-dark-foreground">
                         {formatCurrency(row.remainingBalance)}
                       </td>
                     </tr>

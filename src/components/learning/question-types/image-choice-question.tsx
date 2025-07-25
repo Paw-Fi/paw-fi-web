@@ -65,7 +65,8 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
                 <MermaidRenderer 
                   id={question.id} 
                   content={option.imagePrompt} 
-                  caption={option.caption} 
+                  caption={option.caption}
+                  imageOptionId={option.id}
                 />
               </div>
             ) : null}

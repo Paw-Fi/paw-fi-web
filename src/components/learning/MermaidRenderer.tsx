@@ -25,12 +25,13 @@ interface MermaidRendererProps {
   id: string;
   content: string;
   caption?: string;
+  imageOptionId?: string;
 }
 
 // Track fix attempts per content to prevent infinite loops
 const fixAttempts = new Map<string, boolean>();
 
-export default function MermaidRenderer({ id, content, caption }: MermaidRendererProps) {
+export default function MermaidRenderer({ id, content, caption, imageOptionId }: MermaidRendererProps) {
   const questionId = id;
   const diagramRef = useRef<HTMLDivElement>(null);
   const [renderState, setRenderState] = useState<'idle' | 'rendering' | 'fixing' | 'error'>('idle');
@@ -134,7 +135,8 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
       const { data, error } = await supabase.functions.invoke('fix-mermaid-code', {
         body: { 
           mermaidCode: malformedCode,
-          questionId: questionId
+          questionId: questionId,
+          imageOptionId: imageOptionId
         }
       });
 

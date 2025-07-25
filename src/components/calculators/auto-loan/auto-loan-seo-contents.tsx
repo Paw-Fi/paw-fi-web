@@ -1,3 +1,24 @@
+import { FaqSection } from '@/components/ui/faq-section';
+
+const autoLoanFaqData = [
+  {
+    question: "How does my credit score affect my auto loan?",
+    answer: "Your credit score significantly impacts your interest rate and loan approval. Higher scores typically qualify for lower rates, potentially saving you thousands over the life of the loan."
+  },
+  {
+    question: "Should I accept dealer financing?",
+    answer: "Dealer financing can be convenient, but it's not always the best deal. Compare offers from banks, credit unions, and online lenders before visiting the dealership to ensure you get the most competitive rate."
+  },
+  {
+    question: "Can I refinance my auto loan?",
+    answer: "Yes, refinancing is possible if interest rates drop or your credit improves. Refinancing can lower your monthly payment or reduce the total interest paid over the life of the loan."
+  },
+  {
+    question: "What happens if I miss payments?",
+    answer: "Missing payments can result in late fees, negative credit reporting, and eventually repossession of your vehicle. Contact your lender immediately if you're having trouble making payments."
+  }
+];
+
 export const AutoLoanCalculatorSEOContent = () => {
   return (
     <section className="max-w-5xl mx-auto mt-16 mb-20 px-4 md:px-6 text-gray-800 dark:text-gray-200 font-sans">
@@ -136,38 +157,7 @@ export const AutoLoanCalculatorSEOContent = () => {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-2xl font-bold mb-6 text-foreground dark:text-dark-foreground">Frequently Asked Questions</h3>
-        
-        <div className="space-y-6">
-          {[
-            {
-              question: "How does my credit score affect my auto loan?",
-              answer: "Your credit score significantly impacts your interest rate and loan approval. Higher scores typically qualify for lower rates, potentially saving you thousands over the life of the loan."
-            },
-            {
-              question: "Should I accept dealer financing?",
-              answer: "Dealer financing can be convenient, but it's not always the best deal. Compare offers from banks, credit unions, and online lenders before visiting the dealership to ensure you get the most competitive rate."
-            },
-            {
-              question: "Can I refinance my auto loan?",
-              answer: "Yes, refinancing is possible if interest rates drop or your credit improves. Refinancing can lower your monthly payment or reduce the total interest paid over the life of the loan."
-            },
-            {
-              question: "What happens if I miss payments?",
-              answer: "Missing payments can result in late fees, negative credit reporting, and eventually repossession of your vehicle. Contact your lender immediately if you're having trouble making payments."
-            }
-          ].map((item, index) => (
-            <div key={index} className="bg-white dark:bg-gray-750 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-              <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground flex items-center">
-                <span className="w-6 h-6 rounded-full bg-secondary dark:bg-dark-secondary text-white text-xs flex items-center justify-center mr-3">{index + 1}</span>
-                {item.question}
-              </h4>
-              <p className="text-gray-700 dark:text-gray-300 pl-9">{item.answer}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <FaqSection faqData={autoLoanFaqData} />
 
       {/* CTA Section */}
       <div className="mt-12 text-center">

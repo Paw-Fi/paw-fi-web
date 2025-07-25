@@ -20,15 +20,15 @@ export function InvestmentCalculator() {
   const [activeTab, setActiveTab] = useState<string>(TABS[0].key);
 
   return (
-    <section className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 md:p-8 mt-8 transition-all duration-300">
+    <section className="w-full max-w-4xl mx-auto bg-card dark:bg-dark-card rounded-2xl shadow-lg p-5 md:p-8 mt-8 transition-all duration-300 border border-subtle-border dark:border-dark-subtle-border">
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-3 text-foreground dark:text-dark-foreground">Investment Calculator</h1>
-        <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+        <p className="text-muted-foreground dark:text-dark-muted-foreground max-w-2xl">
           Plan your financial future by calculating investment growth, required contributions, rates of return, and more.
         </p>
       </header>
       
-      <nav className="flex overflow-x-auto pb-2 mb-8 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600" aria-label="Calculator modes">
+      <nav className="flex overflow-x-auto pb-2 mb-8 scrollbar-thin scrollbar-thumb-muted-foreground dark:scrollbar-thumb-dark-muted-foreground" aria-label="Calculator modes">
         <div className="flex gap-2 md:gap-3 w-full">
           {TABS.map((tab) => (
             <button
@@ -36,7 +36,7 @@ export function InvestmentCalculator() {
               className={`px-4 py-3 rounded-xl font-medium text-sm md:text-base flex items-center gap-2 transition-all duration-200 ${
                 activeTab === tab.key
                   ? "bg-primary dark:bg-dark-primary text-white shadow-md transform scale-105"
-                  : "bg-gray-100 dark:bg-gray-700 text-foreground dark:text-dark-foreground hover:bg-gray-200 dark:hover:bg-gray-600"
+                  : "bg-subtle-background dark:bg-dark-subtle-background text-foreground dark:text-dark-foreground hover:bg-subtle-background/80 dark:hover:bg-dark-subtle-background/80"
               } flex-shrink-0`}
               onClick={() => setActiveTab(tab.key)}
               aria-current={activeTab === tab.key ? "page" : undefined}
@@ -65,7 +65,7 @@ function InvestmentTabContent({ tab }: { tab: string }) {
       {tab === "starting-amount" && <StartingAmountTab />}
       {tab === "investment-length" && <InvestmentLengthTab />}
       {!TABS.some(t => t.key === tab) && (
-        <div className="text-center text-gray-500 dark:text-gray-400 py-12 rounded-xl bg-gray-50 dark:bg-gray-700">
+        <div className="text-center text-muted-foreground dark:text-dark-muted-foreground py-12 rounded-xl bg-subtle-background dark:bg-dark-subtle-background">
           <span className="italic">{tab.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())} mode coming soon...</span>
         </div>
       )}
@@ -135,7 +135,7 @@ function ReturnRateTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredRate), [inputs, requiredRate]);
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="bg-card dark:bg-dark-card rounded-lg shadow-md p-6 border border-subtle-border dark:border-dark-subtle-border">
       <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Return Rate</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
@@ -150,7 +150,7 @@ function ReturnRateTab() {
           <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
             <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Return Rate</div>
             <div className="text-2xl font-bold text-primary dark:text-dark-primary">{requiredRate.toFixed(2)}%</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">per year to reach your goal</div>
+            <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mt-1">per year to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -214,7 +214,7 @@ function StartingAmountTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredStart), [inputs, requiredStart]);
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="bg-card dark:bg-dark-card rounded-lg shadow-md p-6 border border-subtle-border dark:border-dark-subtle-border">
       <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Starting Amount</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
@@ -229,7 +229,7 @@ function StartingAmountTab() {
           <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
             <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Starting Amount</div>
             <div className="text-2xl font-bold text-primary dark:text-dark-primary">${requiredStart.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">needed to reach your goal</div>
+            <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mt-1">needed to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -295,7 +295,7 @@ function InvestmentLengthTab() {
   }
   const schedule = React.useMemo(() => buildSchedule(requiredYears), [inputs, requiredYears]);
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="bg-card dark:bg-dark-card rounded-lg shadow-md p-6 border border-subtle-border dark:border-dark-subtle-border">
       <h2 className="text-xl font-semibold mb-2 text-foreground dark:text-dark-foreground">Required Investment Length</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-3">
@@ -310,7 +310,7 @@ function InvestmentLengthTab() {
           <div className="bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-4 w-full text-center mb-4">
             <div className="text-lg font-semibold mb-1 text-foreground dark:text-dark-foreground">Required Investment Length</div>
             <div className="text-2xl font-bold text-primary dark:text-dark-primary">{requiredYears.toFixed(2)} years</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">needed to reach your goal</div>
+            <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mt-1">needed to reach your goal</div>
           </div>
           <div className="w-full mt-2">
             <LineChart
@@ -335,7 +335,7 @@ function InvestmentLengthTab() {
 // --- SEO/Educational Section ---
 export function InvestmentCalculatorSEOContent() {
   return (
-    <section className="max-w-4xl mx-auto mt-12 px-4 md:px-0 text-gray-800 dark:text-gray-200" aria-labelledby="investment-education-title">
+    <section className="max-w-4xl mx-auto mt-12 px-4 md:px-0 text-foreground dark:text-dark-foreground" aria-labelledby="investment-education-title">
       <h2 id="investment-education-title" className="text-2xl font-bold mb-4 text-foreground dark:text-dark-foreground">Investment Calculator Guide &amp; FAQs</h2>
       <article className="prose prose-blue max-w-none">
         <h3>How Do Investment Calculators Work?</h3>
@@ -623,15 +623,15 @@ function EndAmountTab() {
 
   return (
     <div className="animate-fadeIn">
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 rounded-xl p-6 mb-8 shadow-sm">
-        <h2 id="end-amount-form-title" className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Investment Growth Calculator</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">See how your investments will grow over time with compound interest and regular contributions.</p>
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-dark-primary/5 dark:to-dark-primary/10 rounded-xl p-6 mb-8 shadow-sm border border-subtle-border dark:border-dark-subtle-border">
+        <h2 id="end-amount-form-title" className="text-xl font-semibold mb-4 text-foreground dark:text-dark-foreground">Investment Growth Calculator</h2>
+        <p className="text-muted-foreground dark:text-dark-muted-foreground mb-6">See how your investments will grow over time with compound interest and regular contributions.</p>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column - Basic inputs */}
           <div className="space-y-5 lg:col-span-1">
-            <div className="bg-white dark:bg-gray-750 rounded-lg p-5 shadow-sm">
-              <h3 className="text-md font-medium mb-4 text-gray-800 dark:text-gray-200">Initial Investment</h3>
+            <div className="bg-card dark:bg-dark-card rounded-lg p-5 shadow-sm border border-subtle-border dark:border-dark-subtle-border">
+              <h3 className="text-md font-medium mb-4 text-foreground dark:text-dark-foreground">Initial Investment</h3>
               <div className="space-y-4">
                 <InputField
                   label="Starting Amount"
@@ -660,8 +660,8 @@ function EndAmountTab() {
           
           {/* Middle column - Return details */}
           <div className="space-y-5 lg:col-span-1">
-            <div className="bg-white dark:bg-gray-750 rounded-lg p-5 shadow-sm">
-              <h3 className="text-md font-medium mb-4 text-gray-800 dark:text-gray-200">Return Details</h3>
+            <div className="bg-card dark:bg-dark-card rounded-lg p-5 shadow-sm border border-subtle-border dark:border-dark-subtle-border">
+              <h3 className="text-md font-medium mb-4 text-foreground dark:text-dark-foreground">Return Details</h3>
               <div className="space-y-4">
                 <InputField
                   label="Annual Return Rate"
@@ -692,8 +692,8 @@ function EndAmountTab() {
           
           {/* Right column - Contribution details */}
           <div className="space-y-5 lg:col-span-1">
-            <div className="bg-white dark:bg-gray-750 rounded-lg p-5 shadow-sm">
-              <h3 className="text-md font-medium mb-4 text-gray-800 dark:text-gray-200">Regular Contributions</h3>
+            <div className="bg-card dark:bg-dark-card rounded-lg p-5 shadow-sm border border-subtle-border dark:border-dark-subtle-border">
+              <h3 className="text-md font-medium mb-4 text-foreground dark:text-dark-foreground">Regular Contributions</h3>
               <div className="space-y-4">
                 <InputField
                   label="Contribution Amount"
@@ -769,21 +769,21 @@ function InputField({ label, type, value, min, max, step, prefix, suffix, onChan
   const id = React.useId();
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="font-medium text-gray-800 dark:text-gray-200">
+      <label htmlFor={id} className="font-medium text-foreground dark:text-dark-foreground">
         {label}
       </label>
       {description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">{description}</p>
+        <p className="text-xs text-muted-foreground dark:text-dark-muted-foreground -mt-1">{description}</p>
       )}
       <div className="relative">
         {prefix && (
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <span className="text-gray-500 dark:text-gray-400">{prefix}</span>
+            <span className="text-muted-foreground dark:text-dark-muted-foreground">{prefix}</span>
           </div>
         )}
         <input
           id={id}
-          className={`w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-7' : 'pr-3'}`}
+          className={`w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border bg-card dark:bg-dark-card text-foreground dark:text-dark-foreground focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-7' : 'pr-3'}`}
           type={type}
           value={value}
           min={min}
@@ -793,7 +793,7 @@ function InputField({ label, type, value, min, max, step, prefix, suffix, onChan
         />
         {suffix && (
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <span className="text-gray-500 dark:text-gray-400">{suffix}</span>
+            <span className="text-muted-foreground dark:text-dark-muted-foreground">{suffix}</span>
           </div>
         )}
       </div>
@@ -812,16 +812,16 @@ function SelectField({ label, value, options, onChange, description }: SelectFie
   const id = React.useId();
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="font-medium text-gray-800 dark:text-gray-200">
+      <label htmlFor={id} className="font-medium text-foreground dark:text-dark-foreground">
         {label}
       </label>
       {description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">{description}</p>
+        <p className="text-xs text-muted-foreground dark:text-dark-muted-foreground -mt-1">{description}</p>
       )}
       <div className="relative">
         <select
           id={id}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 pl-3 pr-10 appearance-none"
+          className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border bg-card dark:bg-dark-card text-foreground dark:text-dark-foreground focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-all duration-200 py-2.5 pl-3 pr-10 appearance-none"
           value={value}
           onChange={e => onChange(e.target.value)}
         >
@@ -830,7 +830,7 @@ function SelectField({ label, value, options, onChange, description }: SelectFie
           ))}
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-4 h-4 text-muted-foreground dark:text-dark-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
@@ -850,15 +850,15 @@ function RadioGroup({ label, options, value, onChange, description }: RadioGroup
   const groupName = React.useId();
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="font-medium text-gray-800 dark:text-gray-200 mb-1">{label}</legend>
+      <legend className="font-medium text-foreground dark:text-dark-foreground mb-1">{label}</legend>
       {description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1 mb-1">{description}</p>
+        <p className="text-xs text-muted-foreground dark:text-dark-muted-foreground -mt-1 mb-1">{description}</p>
       )}
       <div className="flex flex-wrap gap-3">
         {options.map(opt => {
           const id = `${groupName}-${opt.value}`;
           return (
-            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-primary/10 dark:bg-dark-primary/10 border-primary dark:border-dark-primary text-primary dark:text-dark-primary' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-primary/10 dark:bg-dark-primary/10 border-primary dark:border-dark-primary text-primary dark:text-dark-primary' : 'border-subtle-border dark:border-dark-subtle-border hover:bg-subtle-background/50 dark:hover:bg-dark-subtle-background/50'}`}
               <input
                 id={id}
                 type="radio"
@@ -939,47 +939,47 @@ function EndAmountResults({ endBalance, startingAmount, totalContributions, tota
   const roi = ((endBalance - totalInvested) / totalInvested) * 100;
   
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 shadow-sm">
-      <h3 className="font-semibold text-xl mb-4 text-gray-900 dark:text-white">Investment Summary</h3>
+    <div className="bg-gradient-to-r from-primary/5 to-primary/10 dark:from-dark-primary/5 dark:to-dark-primary/10 rounded-xl p-6 shadow-sm border border-subtle-border dark:border-dark-subtle-border">
+      <h3 className="font-semibold text-xl mb-4 text-foreground dark:text-dark-foreground">Investment Summary</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Final Balance</div>
+        <div className="bg-card dark:bg-dark-card rounded-lg p-4 shadow-sm transition-all hover:shadow-md border border-subtle-border dark:border-dark-subtle-border">
+          <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mb-1">Final Balance</div>
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             ${endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">After {Math.round(totalContributions / startingAmount * 10) / 10}x your initial investment</div>
+          <div className="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">After {Math.round(totalContributions / startingAmount * 10) / 10}x your initial investment</div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Invested</div>
+        <div className="bg-card dark:bg-dark-card rounded-lg p-4 shadow-sm transition-all hover:shadow-md border border-subtle-border dark:border-dark-subtle-border">
+          <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mb-1">Total Invested</div>
           <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
             ${totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Principal + Contributions</div>
+          <div className="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">Principal + Contributions</div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Interest Earned</div>
+        <div className="bg-card dark:bg-dark-card rounded-lg p-4 shadow-sm transition-all hover:shadow-md border border-subtle-border dark:border-dark-subtle-border">
+          <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mb-1">Interest Earned</div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             ${totalInterest.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">From compound growth</div>
+          <div className="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">From compound growth</div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Return on Investment</div>
+        <div className="bg-card dark:bg-dark-card rounded-lg p-4 shadow-sm transition-all hover:shadow-md border border-subtle-border dark:border-dark-subtle-border">
+          <div className="text-sm text-muted-foreground dark:text-dark-muted-foreground mb-1">Return on Investment</div>
           <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
             {roi.toFixed(1)}%
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total ROI over period</div>
+          <div className="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">Total ROI over period</div>
         </div>
       </div>
       
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div className="mt-4 pt-4 border-t border-subtle-border dark:border-dark-subtle-border grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
         <div>
-          <span className="text-gray-500 dark:text-gray-400">Starting Amount:</span> 
-          <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">${startingAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-muted-foreground dark:text-dark-muted-foreground">Starting Amount:</span> 
+          <span className="ml-2 font-medium text-foreground dark:text-dark-foreground">${startingAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
         </div>
         <div>
           <span className="text-gray-500 dark:text-gray-400">Total Contributions:</span> 

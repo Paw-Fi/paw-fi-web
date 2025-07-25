@@ -69,12 +69,12 @@ export function AutoLoanCalculator() {
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="loanTermMonths">Loan Term</label>
           <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
-          <span className="text-xs text-gray-500 dark:text-gray-400">months</span>
+          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">months</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="interestRate">Interest Rate</label>
           <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
-          <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
+          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="cashIncentives">Cash Incentives</label>
@@ -95,14 +95,14 @@ export function AutoLoanCalculator() {
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="salesTax">Sales Tax</label>
           <input id="salesTax" type="number" min={0} step={0.01} value={salesTax === '' ? '' : salesTax} onChange={e => setSalesTax(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
-          <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
+          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">%</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="titleFees">Title Fees</label>
           <input id="titleFees" type="number" min={0} value={titleFees === '' ? '' : titleFees} onChange={e => setTitleFees(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
         </div>
         <div className="flex items-center">
-          <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2 h-4 w-4 text-primary dark:text-dark-primary focus:ring-primary dark:focus:ring-dark-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700" />
+          <input id="includeFeesInLoan" type="checkbox" checked={includeFeesInLoan} onChange={e => setIncludeFeesInLoan(e.target.checked)} className="mr-2 h-4 w-4 text-primary dark:text-dark-primary focus:ring-primary dark:focus:ring-dark-primary border-subtle-border dark:border-dark-subtle-border rounded bg-card dark:bg-dark-card" />
           <label htmlFor="includeFeesInLoan" className="text-sm text-foreground dark:text-dark-foreground">Include taxes and fees in loan</label>
         </div>
         <div>
@@ -231,7 +231,7 @@ function AmortizationSchedule({ principal, interestRate, months, monthlyPayment 
     <div>
       <h3 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground">Amortization Schedule</h3>
       <div className="overflow-x-auto">
-        <table className="min-w-full">
+        <table className="min-w-full border border-subtle-border dark:border-dark-subtle-border rounded-lg overflow-hidden">
           <thead>
             <tr className="bg-table-header dark:bg-dark-table-header">
               <th className="px-4 py-2 text-left text-foreground dark:text-dark-foreground">Period</th>

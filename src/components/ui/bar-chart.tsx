@@ -39,13 +39,23 @@ export function BarChart({ labels, datasets, title, stacked = true }: BarChartPr
     datasets,
   };
 
+  // Get CSS custom properties for consistent colors
+  const isDark = document.documentElement.classList.contains('dark');
+  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
+                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
+                          (isDark ? '#F1F5F9' : '#1F2937');
+  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-muted-foreground')?.trim() ||
+                     (isDark ? '#9CA3AF' : '#6B7280');
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-subtle-border')?.trim() ||
+                    (isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)');
+
   const options = {
     responsive: true,
     plugins: {
       legend: {
         position: 'top' as const,
         labels: {
-          color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
+          color: foregroundColor,
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -53,7 +63,7 @@ export function BarChart({ labels, datasets, title, stacked = true }: BarChartPr
         ? {
             display: true,
             text: title,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937'),
+            color: foregroundColor,
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,
@@ -62,23 +72,23 @@ export function BarChart({ labels, datasets, title, stacked = true }: BarChartPr
       ? {
           x: { 
             stacked: true, 
-            grid: { color: 'rgba(156, 163, 175, 0.3)' },
-            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+            grid: { color: gridColor },
+            ticks: { color: mutedColor, font: { size: 12 } }
           },
           y: { 
             stacked: true, 
-            grid: { color: 'rgba(156, 163, 175, 0.3)' },
-            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+            grid: { color: gridColor },
+            ticks: { color: mutedColor, font: { size: 12 } }
           },
         }
       : {
           x: { 
-            grid: { color: 'rgba(156, 163, 175, 0.3)' },
-            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+            grid: { color: gridColor },
+            ticks: { color: mutedColor, font: { size: 12 } }
           },
           y: { 
-            grid: { color: 'rgba(156, 163, 175, 0.3)' },
-            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--foreground') || (document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1F2937') }
+            grid: { color: gridColor },
+            ticks: { color: mutedColor, font: { size: 12 } }
           },
         },
   };

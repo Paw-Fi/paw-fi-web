@@ -1,3 +1,24 @@
+import { FaqSection } from '@/components/ui/faq-section';
+
+const compoundInterestFaqData = [
+  {
+    question: "How is compound interest different from simple interest?",
+    answer: "Simple interest is calculated only on the original principal, while compound interest is calculated on both the principal and the accumulated interest. This means compound interest grows your money much faster over time."
+  },
+  {
+    question: "What investments typically offer compound interest?",
+    answer: "Many investments offer compound interest, including savings accounts, certificates of deposit (CDs), bonds, dividend-paying stocks (when dividends are reinvested), and mutual funds. The rate and compounding frequency vary by investment type."
+  },
+  {
+    question: "How does compounding frequency affect my returns?",
+    answer: "The more frequently interest compounds, the faster your money grows. For example, daily compounding will yield more than annual compounding at the same interest rate because interest is calculated and added to your principal more often."
+  },
+  {
+    question: "Can compound interest work against me?",
+    answer: "Yes, compound interest works against you with debt, especially high-interest debt like credit cards. The interest compounds on your outstanding balance, making the debt grow exponentially if not paid off."
+  }
+];
+
 export const CompoundCalculatorSEOContent = () => {
   return (
     <section className="max-w-5xl mx-auto mt-16 mb-20 px-4 md:px-6 text-gray-800 dark:text-gray-200 font-sans">
@@ -170,38 +191,7 @@ export const CompoundCalculatorSEOContent = () => {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750 rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-2xl font-bold mb-6 text-foreground dark:text-dark-foreground">Frequently Asked Questions</h3>
-        
-        <div className="space-y-6">
-          {[
-            {
-              question: "How is compound interest different from simple interest?",
-              answer: "Simple interest is calculated only on the original principal, while compound interest is calculated on both the principal and the accumulated interest. This means compound interest grows your money much faster over time."
-            },
-            {
-              question: "What investments typically offer compound interest?",
-              answer: "Many investments offer compound interest, including savings accounts, certificates of deposit (CDs), bonds, dividend-paying stocks (when dividends are reinvested), and mutual funds. The rate and compounding frequency vary by investment type."
-            },
-            {
-              question: "How does compounding frequency affect my returns?",
-              answer: "The more frequently interest compounds, the faster your money grows. For example, daily compounding will yield more than annual compounding at the same interest rate because interest is calculated and added to your principal more often."
-            },
-            {
-              question: "Can compound interest work against me?",
-              answer: "Yes, compound interest works against you with debt, especially high-interest debt like credit cards. The interest compounds on your outstanding balance, making the debt grow exponentially if not paid off."
-            }
-          ].map((item, index) => (
-            <div key={index} className="bg-white dark:bg-gray-750 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-              <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground flex items-center">
-                <span className="w-6 h-6 rounded-full bg-secondary dark:bg-dark-secondary text-white text-xs flex items-center justify-center mr-3">{index + 1}</span>
-                {item.question}
-              </h4>
-              <p className="text-gray-700 dark:text-gray-300 pl-9">{item.answer}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <FaqSection faqData={compoundInterestFaqData} />
 
       {/* CTA Section */}
       <div className="mt-12 text-center">
