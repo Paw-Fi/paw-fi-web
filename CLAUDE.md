@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Paw-Fi (Moneko)** is a personal finance education and budgeting platform built with TanStack Start, React 19, TypeScript, and Supabase. The application provides financial calculators, interactive learning experiences, AI chat functionality, and comprehensive dashboard tools.
+**Moneko (Moneko)** is a personal finance education and budgeting platform built with TanStack Start, React 19, TypeScript, and Supabase. The application provides financial calculators, interactive learning experiences, AI chat functionality, and comprehensive dashboard tools.
 
 ## Development Commands
 
@@ -52,7 +52,7 @@ The project uses extensive TypeScript path aliases defined in `tsconfig.json`:
 1. **Financial Calculators** - Compound, mortgage, retirement, auto-loan, investment, saving goals
 2. **Learning Platform** - Courses and lessons with progress tracking
 3. **Dashboard** - Customizable widgets with drag-and-drop functionality
-4. **AI Chat Interface** - Financial advisor and educator powered by OpenAI
+4. **AI Chat Interface** - Financial advisor and educator powered by Google Gemini
 5. **Blog System** - SEO-optimized content management
 6. **User Authentication** - Supabase auth with subscription management
 7. **Payment Processing** - Stripe integration for premium features

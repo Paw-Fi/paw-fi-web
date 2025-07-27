@@ -3,9 +3,9 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useSearch } from "@tanstack/react-router";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faGraduationCap, 
@@ -36,6 +36,14 @@ import { useGamification } from "@/hooks/use-gamification";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      topic: (search.topic as string) || '',
+      source: (search.source as string) || '',
+      action: (search.action as string) || '',
+      question: (search.question as string) || ''
+    };
+  },
   head: () => {
     const pageUrl = "https://moneko.io/learning/";
     const meta = seo({
@@ -62,6 +70,7 @@ export const Route = createFileRoute("/dashboard/learning/")({
 
 export function UnifiedLearningPage() {
   const { user } = useAuth();
+  const { topic, source, action, question } = useSearch({ from: '/dashboard/learning/' });
   const [activeTab, setActiveTab] = useState<'all' | 'personalized' | 'essentials'>('all');
   const [showAICoach, setShowAICoach] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
@@ -156,6 +165,21 @@ export function UnifiedLearningPage() {
     }))
   ];
 
+  // Handle AI recommendations
+  useEffect(() => {
+    if (source === 'ai_recommendation') {
+      if (action === 'create_course' && topic) {
+        // Auto-trigger AI course creation with topic
+        setSelectedPrompt(`Create a course about ${topic}`);
+        setShowAICoach(true);
+      } else if (question) {
+        // Auto-fill AI chat with question
+        setSelectedPrompt(`Help me understand: ${question}`);
+        setShowAICoach(true);
+      }
+    }
+  }, [source, action, topic, question]);
+
   const filteredCourses = activeTab === 'all' 
     ? allCourses 
     : allCourses.filter(course => 
@@ -198,6 +222,22 @@ export function UnifiedLearningPage() {
       className="min-h-screen"
    
     >
+      {/* AI Recommendation Context */}
+      {source === 'ai_recommendation' && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-green-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">
+                Your AI coach recommended learning about <strong>{topic}</strong> to help with your financial goals.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modern Hero Section with Stats */}
       <motion.section 
         className="relative px-4 py-8 mb-8 overflow-hidden"
