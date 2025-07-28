@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AIPortfolioDisplay } from '@/components/portfolio/AIPortfolioDisplay';
+import { PortfolioPerformanceChart } from '@/components/portfolio/PortfolioPerformanceChart';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/lib/supabase';
@@ -258,43 +259,13 @@ function GoalDetailPage() {
         />
       )}
 
-      {/* Performance Chart Placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
-            Performance History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            {goal.current_amount > 0 ? (
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500">
-                  Performance chart coming soon - tracking your progress
-                </p>
-              </div>
-            ) : (
-              <div className="h-64 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center border-2 border-dashed border-blue-200">
-                <div className="text-center">
-                  <FontAwesomeIcon icon={faChartLine} className="w-8 h-8 text-blue-400 mb-2" />
-                  <p className="text-blue-600 font-medium">Start tracking your progress</p>
-                  <p className="text-blue-500 text-sm">Make your first contribution to see performance data</p>
-                  <Button 
-                    className="mt-3"
-                    onClick={() => router.navigate({ 
-                      to: '/portfolio/contribute', 
-                      search: { goalId } 
-                    })}
-                  >
-                    Add Contribution
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Real Portfolio Performance Chart */}
+      <PortfolioPerformanceChart 
+        userId={user.id}
+        goalId={goalId}
+        goalAmount={goal.current_amount}
+        targetAmount={goal.target_amount}
+      />
     </div>
   );
 }
@@ -364,10 +335,59 @@ function GoalOverviewSection({
         <CardContent>
           <div className="space-y-4">
             <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">
-                {Math.ceil(timeRemaining / 365)}
-              </p>
-              <p className="text-sm text-gray-600">years remaining</p>
+              {(() => {
+                // Smart time formatting function
+                const formatTimeRemaining = (days: number) => {
+                  if (days <= 0) {
+                    return { value: 'Overdue', unit: '' };
+                  }
+                  
+                  const years = days / 365;
+                  const hours = days * 24;
+                  const minutes = hours * 60;
+                  
+                  if (days >= 365) {
+                    // Show years if >= 1 year
+                    return { 
+                      value: Math.ceil(years), 
+                      unit: Math.ceil(years) === 1 ? 'year remaining' : 'years remaining' 
+                    };
+                  } else if (days >= 1) {
+                    // Show days if >= 1 day
+                    return { 
+                      value: Math.ceil(days), 
+                      unit: Math.ceil(days) === 1 ? 'day remaining' : 'days remaining' 
+                    };
+                  } else if (hours >= 1) {
+                    // Show hours if >= 1 hour
+                    return { 
+                      value: Math.ceil(hours), 
+                      unit: Math.ceil(hours) === 1 ? 'hour remaining' : 'hours remaining' 
+                    };
+                  } else {
+                    // Show minutes for anything less than 1 hour
+                    return { 
+                      value: Math.max(1, Math.ceil(minutes)), 
+                      unit: Math.ceil(minutes) === 1 ? 'minute remaining' : 'minutes remaining' 
+                    };
+                  }
+                };
+                
+                const timeDisplay = formatTimeRemaining(timeRemaining);
+                
+                return (
+                  <>
+                    <p className={`text-3xl font-bold ${
+                      timeRemaining <= 0 ? 'text-red-600' : 
+                      timeRemaining < 30 ? 'text-orange-600' : 
+                      'text-blue-600'
+                    }`}>
+                      {timeDisplay.value}
+                    </p>
+                    <p className="text-sm text-gray-600">{timeDisplay.unit}</p>
+                  </>
+                );
+              })()}
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">

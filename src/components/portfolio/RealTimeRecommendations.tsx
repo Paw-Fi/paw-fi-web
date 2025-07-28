@@ -49,6 +49,9 @@ interface PortfolioRecommendation {
     market_data?: any;
     performance_impact?: number;
     risk_change?: number;
+    lesson_id?: string;
+    lesson_url?: string;
+    estimated_time?: string;
   };
   created_at: string;
 }
@@ -63,6 +66,20 @@ export function RealTimeRecommendations({ userId, goalId, userTier }: RealTimeRe
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [executingId, setExecutingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Fetch user's completed lessons to avoid recommending completed content
+  const { data: completedLessons } = useQuery({
+    queryKey: ['completed-lessons', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('get-user-completed-lessons', {
+        body: { userId }
+      });
+      if (error) throw error;
+      return data?.completed_lessons || [];
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   // Query options
   const recommendationsQueryOptions = {
@@ -86,14 +103,18 @@ export function RealTimeRecommendations({ userId, goalId, userTier }: RealTimeRe
     enabled: !!goalId,
     retry: RETRY_COUNT,
     staleTime: 1000 * 60 * 10, // 10 minutes
-    cacheTime: 1000 * 60 * 30, // 30 minutes
-    onError: (error: Error) => {
-      console.error('Failed to fetch recommendations:', error);
-    }
+    gcTime: 1000 * 60 * 30, // 30 minutes
   };
 
   // Fetch real-time recommendations
   const { data: recommendations, isLoading, error, refetch } = useQuery(recommendationsQueryOptions);
+
+  // Handle errors with useEffect
+  useEffect(() => {
+    if (error) {
+      console.error('Failed to fetch recommendations:', error);
+    }
+  }, [error]);
 
   // Execute recommendation action
   const executeRecommendationMutation = useMutation({
@@ -490,7 +511,17 @@ function RecommendationCard({
             {formatDistanceToNow(new Date(recommendation.created_at))}
           </div>
           <div className="flex gap-2">
-            {canExecute ? (
+            {/* Handle lesson recommendations differently */}
+            {recommendation.data?.lesson_url ? (
+              <Button 
+                size="sm"
+                onClick={() => window.location.href = recommendation.data.lesson_url!}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <FontAwesomeIcon icon={faRocket} className="w-4 h-4 mr-2" />
+                Start Learning
+              </Button>
+            ) : canExecute ? (
               <Button 
                 size="sm"
                 onClick={onExecute}

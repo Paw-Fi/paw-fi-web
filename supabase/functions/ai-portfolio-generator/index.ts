@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 import { corsHeaders } from '../shared/cors.ts';
+import { logUserActivity } from '../shared/activity-logger.ts';
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -63,6 +64,8 @@ interface AIPortfolioResponse {
 }
 
 serve(async (req) => {
+  const startTime = Date.now(); // Track request start time for activity logging
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -133,27 +136,28 @@ serve(async (req) => {
     }
 
     // Build complete request with user profile
-    const completeRequest: PortfolioRequest = {
+    const portfolioRequest: PortfolioRequest = {
       goalId: requestData.goalId,
       userId: requestData.userId,
       goalType: goal.goal_type,
       targetAmount: goal.target_amount,
       timeline: Math.round((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 365)),
-      riskTolerance: goal.risk_tolerance,
+      riskTolerance: goal.risk_tolerance || 'moderate',
       userProfile: {
-        age: profile.age,
-        income: profile.income_range,
-        investmentExperience: profile.investment_experience,
+        age: profile.age || 35,
+        income: profile.income_range || '50k_75k',
+        investmentExperience: profile.investment_experience || 'beginner',
         existingInvestments: [],
         esgPreferences: profile.esg_preferences || false,
-        taxSituation: {}
+        taxSituation: profile.tax_situation || {}
       },
-      currentAmount: goal.current_amount,
+      // Use current_amount from goal data (now properly extracted from user responses)
+      currentAmount: goal.current_amount || requestData.currentAmount || 0,
       monthlyContribution: goal.monthly_contribution
     };
 
     // Generate AI portfolio analysis
-    const portfolioAnalysis = await generateAIPortfolio(completeRequest);
+    const portfolioAnalysis = await generateAIPortfolio(portfolioRequest);
 
     // Store AI-generated portfolio
     const { data: portfolio, error: portfolioError } = await supabase
@@ -184,6 +188,30 @@ serve(async (req) => {
     await createInitialMilestones(supabase, requestData.goalId, requestData.targetAmount);
 
     console.log('Portfolio successfully generated:', portfolio.id);
+
+    // Log user activity for portfolio generation
+    await logUserActivity(
+      supabase,
+      requestData.userId,
+      'portfolio_generation',
+      'generated',
+      {
+        portfolio_id: portfolio.id,
+        goal_id: requestData.goalId,
+        goal_type: goal.goal_type,
+        target_amount: requestData.targetAmount,
+        current_amount: requestData.currentAmount,
+        risk_score: portfolioAnalysis.riskScore,
+        expected_return: portfolioAnalysis.expectedReturn,
+        confidence_score: portfolioAnalysis.confidenceScore,
+        asset_allocation: portfolioAnalysis.allocation,
+        holdings_count: portfolioAnalysis.holdings?.length || 0,
+        generation_time_ms: Date.now() - startTime,
+        ai_model_used: 'gemini-2.5-flash',
+        portfolio_version: 1
+      },
+      'ai-portfolio-generator'
+    );
 
     // Prepare the portfolio response with proper structure for frontend
     const portfolioResponse = {

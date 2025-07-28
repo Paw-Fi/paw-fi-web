@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 import { corsHeaders } from '../shared/cors.ts';
+import { logUserActivity } from '../shared/activity-logger.ts';
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -41,6 +42,8 @@ interface AssessmentAnalysis {
 }
 
 serve(async (req) => {
+  const startTime = Date.now(); // Track request start time for activity logging
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -67,6 +70,9 @@ serve(async (req) => {
     // Create or update user investment profile
     await upsertUserProfile(supabase, assessmentData.userId, analysis.userProfile);
 
+    // Extract current amount from user responses
+    const currentAmount = extractCurrentAmount(assessmentData.goalType, assessmentData.responses);
+    
     // Create the financial goal
     const { data: goal, error: goalError } = await supabase
       .from('financial_goals')
@@ -77,7 +83,7 @@ serve(async (req) => {
         description: generateGoalDescription(assessmentData.goalType, analysis.goalDetails),
         target_amount: analysis.goalDetails.targetAmount,
         target_date: analysis.goalDetails.targetDate,
-        current_amount: 0,
+        current_amount: currentAmount,
         monthly_contribution: analysis.goalDetails.monthlyContribution,
         risk_tolerance: analysis.goalDetails.riskTolerance,
         priority: analysis.goalDetails.priority,
@@ -111,6 +117,29 @@ serve(async (req) => {
       });
 
     console.log('Goal created successfully:', goal.id);
+
+    // Log user activity for goal assessment completion
+    await logUserActivity(
+      supabase,
+      assessmentData.userId,
+      'goal_assessment',
+      'completed',
+      {
+        goal_id: goal.id,
+        goal_type: assessmentData.goalType,
+        target_amount: analysis.goalDetails.targetAmount,
+        current_amount: currentAmount,
+        monthly_contribution: analysis.goalDetails.monthlyContribution,
+        risk_tolerance: analysis.goalDetails.riskTolerance,
+        time_horizon: analysis.goalDetails.targetDate,
+        priority: analysis.goalDetails.priority,
+        confidence_level: analysis.confidenceLevel,
+        assessment_duration_ms: Date.now() - startTime,
+        ai_model_used: 'gemini-2.5-flash',
+        response_count: Object.keys(assessmentData.responses).length
+      },
+      'goal-assessment'
+    );
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -410,6 +439,34 @@ function generateGoalTitle(goalType: string, goalDetails: any): string {
   };
   
   return titles[goalType] || `${goalType} Goal`;
+}
+
+// Extract current amount from assessment responses based on goal type
+function extractCurrentAmount(goalType: string, responses: Record<string, any>): number {
+  // Different goal types use different field names for current amount
+  const currentAmountFields = {
+    'retirement': ['current_savings', 'current_amount'],
+    'home_purchase': ['current_savings', 'current_amount', 'down_payment_saved'],
+    'education': ['current_savings', 'current_amount', 'education_savings'],
+    'wealth_building': ['current_amount', 'current_savings', 'investment_amount'],
+    'emergency_fund': ['current_amount', 'current_savings', 'emergency_savings'],
+    'custom': ['current_amount', 'current_savings', 'starting_amount']
+  };
+  
+  const fieldsToCheck = currentAmountFields[goalType] || ['current_amount', 'current_savings'];
+  
+  for (const field of fieldsToCheck) {
+    if (responses[field] !== undefined && responses[field] !== null) {
+      const value = Number(responses[field]);
+      if (!isNaN(value) && value >= 0) {
+        console.log(`Extracted current amount: $${value} from field: ${field}`);
+        return value;
+      }
+    }
+  }
+  
+  console.log('No valid current amount found in responses, defaulting to 0');
+  return 0;
 }
 
 function generateGoalDescription(goalType: string, goalDetails: any): string {

@@ -124,7 +124,7 @@ export function AIPortfolioDisplay({ userId, goalId, userTier }: AIPortfolioDisp
     },
     enabled: !!goalId,
     staleTime: QUERY_STALE_TIME,
-    cacheTime: QUERY_CACHE_TIME,
+    gcTime: QUERY_CACHE_TIME,
     retry: 2,
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000)
   };
@@ -147,7 +147,7 @@ export function AIPortfolioDisplay({ userId, goalId, userTier }: AIPortfolioDisp
     },
     enabled: !!goalId,
     staleTime: QUERY_STALE_TIME,
-    cacheTime: QUERY_CACHE_TIME
+    gcTime: QUERY_CACHE_TIME
   };
 
   // Fetch goal milestones
@@ -169,7 +169,7 @@ export function AIPortfolioDisplay({ userId, goalId, userTier }: AIPortfolioDisp
     },
     enabled: !!goalId,
     staleTime: QUERY_STALE_TIME,
-    cacheTime: QUERY_CACHE_TIME
+    gcTime: QUERY_CACHE_TIME
   };
 
   // Fetch portfolio performance data
