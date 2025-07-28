@@ -48,7 +48,7 @@ function formatDistanceToNow(date: Date): string {
 interface AICoachingInterfaceProps {
   userId: string;
   goalId: string;
-  userTier: 'free' | 'premium' | 'premium_pro';
+  userTier: 'free' | 'premium' | 'plus';
 }
 
 interface CoachingSession {
@@ -224,22 +224,48 @@ export function AICoachingInterface({ userId, goalId, userTier }: AICoachingInte
       return { data, userMessage, loadingMessage };
     },
     onSuccess: ({ data, loadingMessage }) => {
+      // Create a comprehensive response from the API data
+      let responseContent = '';
+      
+      if (data.insights?.personalizedMessage) {
+        responseContent = data.insights.personalizedMessage;
+      } else if (data.insights?.summary) {
+        responseContent = data.insights.summary;
+      } else {
+        responseContent = 'Thank you for your message! I\'ve noted this for your coaching plan.';
+      }
+      
+      // Add next steps or recommendations if available
+      if (data.insights?.nextSteps && data.insights.nextSteps.length > 0) {
+        responseContent += `\n\n📋 Here are some next steps for you:\n${data.insights.nextSteps.map((step: string, i: number) => `${i + 1}. ${step}`).join('\n')}`;
+      }
+      
+      // Add engagement questions if available
+      if (data.insights?.engagementQuestions && data.insights.engagementQuestions.length > 0) {
+        responseContent += `\n\n💭 I'd love to know: ${data.insights.engagementQuestions[0]}`;
+      }
+      
       // Replace loading message with actual response
       setChatMessages(prev => 
         prev.map(msg => 
           msg.id === loadingMessage.id 
             ? {
                 ...msg,
-                content: data.insights?.personalizedMessage || 'Thank you for your message! I\'ve noted this for your coaching plan.',
+                content: responseContent,
                 isLoading: false
               }
             : msg
         )
       );
       
+      // Refresh coaching session data and portfolio data for real-time updates
       queryClient.invalidateQueries({ queryKey: ['coaching-session', userId, goalId] });
+      queryClient.invalidateQueries({ queryKey: ['ai-portfolio', goalId] });
+      queryClient.invalidateQueries({ queryKey: ['goal-milestones', goalId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-performance', goalId] });
+      
       setConversationMessage('');
-      toast.success('💬 Message sent to your AI coach!');
+      toast.success('💬 AI coach updated your portfolio insights!');
     },
     onError: (error, _message, context: { userMessage: ChatMessage; loadingMessage: ChatMessage } | undefined) => {
       // Remove loading message on error
@@ -464,9 +490,16 @@ export function AICoachingInterface({ userId, goalId, userTier }: AICoachingInte
       {/* AI Insights & Observations */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-yellow-500" />
-            AI Insights & Observations
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-yellow-500" />
+              AI Insights & Observations
+            </div>
+            {insights.confidenceScore && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                {Math.round(insights.confidenceScore * 100)}% confidence
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Personalized insights based on your progress and market conditions
@@ -478,6 +511,21 @@ export function AICoachingInterface({ userId, goalId, userTier }: AICoachingInte
               <AIInsightCard key={index} insight={observation} />
             ))}
           </div>
+          
+          {/* Personalized Message */}
+          {insights.personalizedMessage && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon icon={faRobot} className="w-5 h-5 text-blue-500 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Personal Message</h4>
+                  <p className="text-blue-800 text-sm leading-relaxed">
+                    {insights.personalizedMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -524,6 +572,33 @@ export function AICoachingInterface({ userId, goalId, userTier }: AICoachingInte
             <p className="text-gray-700 leading-relaxed">
               {insights.marketCommentary}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Next Steps */}
+      {insights.nextSteps && insights.nextSteps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faArrowRight} className="w-5 h-5 text-green-500" />
+              Next Steps
+            </CardTitle>
+            <CardDescription>
+              Your personalized action plan to reach your financial goals
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {insights.nextSteps.map((step: string, index: number) => (
+                <div key={index} className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex-shrink-0 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
+                    {index + 1}
+                  </div>
+                  <p className="text-green-800 font-medium">{step}</p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -591,7 +666,7 @@ export function AICoachingInterface({ userId, goalId, userTier }: AICoachingInte
       )}
 
       {/* AI Conversation Mode - Premium Pro */}
-      {userTier === 'premium_pro' ? (
+      {userTier === 'plus' ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

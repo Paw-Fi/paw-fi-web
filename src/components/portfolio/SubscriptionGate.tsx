@@ -22,7 +22,7 @@ interface SubscriptionGateProps {
   feature: string;
   title: string;
   description: string;
-  requiredTier: 'premium' | 'premium_pro';
+  requiredTier: 'premium' | 'plus';
   children: React.ReactNode;
   className?: string;
 }
@@ -142,15 +142,15 @@ export function FeatureShowcase() {
       tier: 'free',
       name: 'Free',
       price: '$0',
-      description: 'Get started with basic portfolio management',
+      description: 'Get started with basic investment education',
       features: [
-        '1 financial goal',
-        'Basic portfolio (3 ETFs shown)',
-        'Monthly AI check-ins',
-        'Simple progress tracking',
-        'Educational content'
+        '1 educational goal scenario',
+        'Sample portfolio analysis (3 ETFs)',
+        'Monthly educational insights',
+        'Basic investment concepts',
+        'Implementation guidance'
       ],
-      icon: Shield,
+      icon: faShield,
       color: 'from-gray-400 to-gray-600'
     },
     {
@@ -158,17 +158,17 @@ export function FeatureShowcase() {
       name: 'Premium',
       price: '$19.99',
       period: '/month',
-      description: 'Advanced AI analysis and portfolio insights',
+      description: 'Advanced investment education and analysis',
       features: [
-        '3 simultaneous goals',
-        'Full portfolio transparency',
-        'Weekly AI analysis',
-        'Tax optimization',
-        'Rebalancing alerts',
-        'Scenario analysis',
-        'Life event planning'
+        '3 educational goal scenarios',
+        'Complete portfolio analysis',
+        'Weekly educational insights',
+        'Tax optimization education',
+        'Rebalancing strategy lessons',
+        'Risk scenario analysis',
+        'Life event financial planning'
       ],
-      icon: Star,
+      icon: faStar,
       color: 'from-blue-500 to-purple-600',
       popular: true
     },
@@ -177,18 +177,18 @@ export function FeatureShowcase() {
       name: 'Premium Pro',
       price: '$49.99',
       period: '/month',
-      description: 'Complete portfolio analysis with AI conversation',
+      description: 'Professional-level financial education with AI tutoring',
       features: [
-        'Unlimited goals',
-        'AI conversation mode',
-        'Predictive life planning',
-        'API access',
-        'Priority support',
-        'Custom strategies',
-        'Family account management',
-        'Advanced analytics'
+        'Unlimited educational scenarios',
+        'AI tutoring conversations',
+        'Advanced financial planning education',
+        'Educational API access',
+        'Priority learning support',
+        'Custom strategy education',
+        'Family financial education',
+        'Advanced portfolio analytics'
       ],
-      icon: Crown,
+      icon: faCrown,
       color: 'from-yellow-500 to-orange-600'
     }
   ];

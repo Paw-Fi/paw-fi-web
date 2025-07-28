@@ -9,6 +9,7 @@ import { AIPortfolioDisplay } from '@/components/portfolio/AIPortfolioDisplay';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faArrowLeft, 
@@ -196,9 +197,11 @@ function GoalDetailPage() {
                   url: window.location.href
                 });
               } else {
-                navigator.clipboard.writeText(window.location.href);
-                // Note: In a real app, you'd want to show a toast notification here
-                alert('Goal link copied to clipboard!');
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                  toast.success('📋 Goal link copied to clipboard!');
+                }).catch(() => {
+                  toast.error('Failed to copy link to clipboard');
+                });
               }
             }}
           >
