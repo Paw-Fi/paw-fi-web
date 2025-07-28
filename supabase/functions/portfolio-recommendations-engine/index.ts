@@ -22,6 +22,20 @@ interface PortfolioRecommendation {
     risk_change?: number;
   };
   created_at: string;
+  // Enhanced transparency features
+  transparency?: {
+    reasoning_id?: string;
+    confidence_score: number;
+    data_sources: string[];
+    alternative_options: any[];
+    expected_outcomes: any;
+    educational_content?: {
+      simple_explanation: string;
+      detailed_explanation: string;
+      key_concepts: string[];
+      learning_opportunities: string[];
+    };
+  };
 }
 
 interface RequestBody {
@@ -68,6 +82,80 @@ function getRiskToleranceScore(riskTolerance: string): number {
     case 'moderate': return 0.6;
     case 'aggressive': return 0.9;
     default: return 0.6;
+  }
+}
+
+// Helper function to generate transparent reasoning using AI decision reasoning engine
+async function generateTransparentReasoning(
+  supabaseClient: any,
+  userId: string,
+  goalId: string,
+  decisionType: string,
+  decisionData: any
+): Promise<{
+  reasoning_id?: string;
+  confidence_score: number;
+  data_sources: string[];
+  alternative_options: any[];
+  expected_outcomes: any;
+  educational_content?: {
+    simple_explanation: string;
+    detailed_explanation: string;
+    key_concepts: string[];
+    learning_opportunities: string[];
+  };
+}> {
+  try {
+    // Call the AI decision reasoning engine
+    const { data: reasoningResponse, error } = await supabaseClient.functions.invoke(
+      'ai-decision-reasoning-engine',
+      {
+        body: {
+          userId,
+          goalId,
+          decisionType,
+          decisionData,
+          explanationLevel: 'detailed'
+        }
+      }
+    );
+
+    if (error || !reasoningResponse?.success) {
+      console.warn('Failed to generate transparent reasoning:', error);
+      // Return basic transparency info if AI reasoning fails
+      return {
+        confidence_score: 0.7,
+        data_sources: ['portfolio_analysis', 'market_data'],
+        alternative_options: [],
+        expected_outcomes: { estimated_improvement: 'moderate' }
+      };
+    }
+
+    const reasoning = reasoningResponse.reasoning;
+    
+    return {
+      reasoning_id: reasoning.reasoningId,
+      confidence_score: reasoning.transparency.confidenceScore,
+      data_sources: reasoning.transparency.dataSources,
+      alternative_options: reasoning.transparency.alternativeOptions,
+      expected_outcomes: reasoning.expectedOutcomes,
+      educational_content: {
+        simple_explanation: reasoning.explanations.simple,
+        detailed_explanation: reasoning.explanations.detailed,
+        key_concepts: ['Portfolio Rebalancing', 'Risk Management', 'Asset Allocation'],
+        learning_opportunities: reasoning.userGuidance.learningOpportunities
+      }
+    };
+
+  } catch (error) {
+    console.error('Error generating transparent reasoning:', error);
+    // Return fallback transparency info
+    return {
+      confidence_score: 0.6,
+      data_sources: ['portfolio_analysis'],
+      alternative_options: [],
+      expected_outcomes: { estimated_improvement: 'unknown' }
+    };
   }
 }
 
@@ -217,6 +305,20 @@ serve(async (req) => {
         const priority = drift > 15 ? 'high' : drift > 10 ? 'medium' : 'low';
         const impactScore = Math.min(10, Math.round(drift / 2));
         
+        // Generate transparent reasoning for this recommendation
+        const transparency = await generateTransparentReasoning(
+          supabaseClient,
+          userId,
+          goalId,
+          'rebalance',
+          {
+            currentAllocation: simulatedCurrentAllocation,
+            proposedAllocation: targetAllocation,
+            marketConditions: marketData,
+            triggerEvent: 'allocation_drift_detected'
+          }
+        );
+        
         recommendations.push({
           id: generateRecommendationId(),
           type: 'rebalance',
@@ -234,6 +336,7 @@ serve(async (req) => {
             suggested_allocation: targetAllocation,
             performance_impact: Math.round(drift * 0.3 * 100) / 100, // Estimated impact
           },
+          transparency,
           created_at: currentTime
         });
       }

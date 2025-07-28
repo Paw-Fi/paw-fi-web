@@ -40,6 +40,8 @@ import {
   faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import IntelligentPortfolioDashboard from '@/components/portfolio/IntelligentPortfolioDashboard';
+import TransparentDecisionInterface from '@/components/portfolio/TransparentDecisionInterface';
 
 interface FinancialGoal {
   id: string;
@@ -125,7 +127,7 @@ function ModernPortfolioDashboard() {
   }, [goals, activeGoalId]);
 
   const activeGoal = useMemo(() => 
-    goals?.find(goal => goal.id === activeGoalId), 
+    goals?.find(goal => goal.id === activeGoalId) || null, 
     [goals, activeGoalId]
   );
 
@@ -185,6 +187,17 @@ function ModernPortfolioDashboard() {
   const handleAddNewGoal = () => {
     router.navigate({ to: '/portfolio', search: { new: 'true' } });
   };
+
+  // If user has goals, show the intelligent dashboard
+  if (activeGoal) {
+    return (
+      <IntelligentPortfolioDashboard 
+        goalId={activeGoal.id}
+        layout="adaptive"
+        personalizeLayout={true}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
