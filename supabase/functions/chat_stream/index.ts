@@ -3,12 +3,12 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
-import { tryExtractCourseJson } from "./utils.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
+import { prompt as FA_PROMPT } from "./fa-prompt.ts";
+import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-console.log("AI_PROMPT", AI_PROMPT.substring(0, 100));
 if (!GEMINI_API_KEY) {
   console.error(
     "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
@@ -54,129 +54,267 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
-    const { message, history } = requestData;
+    const { message, userProfile, userId, conversationId, model: chatModel } = requestData;
+    let history = requestData.history;
     console.log("requestData", requestData)
+    
+    // Initialize Supabase client with service role for database operations
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Missing Supabase credentials");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    if (userProfile) {
+      console.log("User profile provided for personalized response");
+    }
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    let currentConversationId = conversationId;
+    
+    // Handle session creation/retrieval for both authenticated users and guests
+    if (!currentConversationId) {
+      // Create new chat session if none provided
+      const { data: newSession, error: createError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: userId || null, // null for guests, user_id for authenticated users
+          model: chatModel || 'financial_educator' // Default to financial_educator
+        })
+        .select()
+        .single();
+        
+      if (createError) {
+        console.error('Error creating chat session:', createError);
+        return new Response(JSON.stringify({ error: "Failed to create chat session" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      currentConversationId = newSession.id;
+      console.log(`Created new chat session: ${currentConversationId} for ${userId ? 'authenticated user' : 'guest'}`);
+    }
+    
+    // Fetch recent conversation history (sliding window - last 20 messages)
+    // Also verify the session has the correct model to prevent cross-contamination
+    const { data: recentMessages, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('content, role, chat_sessions!inner(model)')
+      .eq('chat_session_id', currentConversationId)
+      .eq('chat_sessions.model', chatModel)
+      .order('timestamp', { ascending: true })
+      .limit(20);
+      
+    if (fetchError) {
+      console.error('Error fetching conversation history:', fetchError);
+      // Continue with empty history rather than failing
+    }
+    
+    // Use recent messages as history instead of passed history
+    history = recentMessages || [];
+    console.log(`Using sliding window of ${history.length} recent messages for session ${currentConversationId}`);
+    
+    // Note: User message will be saved to database after AI response is generated
 
-    // Format conversation history for Gemini: support both {role, parts} and {role, content}
-    const formattedHistory = (history || [])
-      .filter((msg: any) => {
-        // Accept only messages with valid text
-        if (
-          msg.parts &&
-          Array.isArray(msg.parts) &&
-          typeof msg.parts[0]?.text === "string" &&
-          msg.parts[0].text.trim() !== ""
-        )
-          return true;
-        if (typeof msg.content === "string" && msg.content.trim() !== "")
-          return true;
-        return false;
-      })
-      .map((msg: any) => {
-        if (
-          msg.parts &&
-          Array.isArray(msg.parts) &&
-          typeof msg.parts[0]?.text === "string"
-        ) {
-          // Already Gemini format, just fix role if needed
+    let aiResponse: string;
+
+    let userActivities=null;
+
+    if(userId)
+    {
+      const { data: userActivitiesData, error: activitiesError } = await supabase.functions.invoke(
+        `user-activities?user_id=${userId}`,
+        {
+          method: "GET",
+        },
+      );
+      if (activitiesError) {
+        console.error('Error fetching user activities:', activitiesError);
+      }else
+      userActivities = userActivitiesData?.activities;
+    }
+  
+    
+    // Check if user is authenticated but has no profile
+    if (userId && !userProfile) {
+      // Check if this is the first message by looking at conversation history
+      const isFirstMessage = !history || history.length <=1;
+      
+      if (isFirstMessage) {
+        // First message - welcome message
+        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+        {
+          
+          aiResponse = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+        }
+        else
+        {
+          aiResponse = "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking the QUESTIONNAIRE button below. This will help me create a personalized learning plan to boost your financial literacy.";
+        }
+      } else {
+        // Has conversation history - encourage completing assessment
+        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+          {
+
+            aiResponse = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+          }
+          else
+          {
+            aiResponse = " I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click the ``QUESTIONNAIRE`` button below to begin!";
+          }
+        
+      }
+    } else {
+      // User has profile, generate AI response using Gemini
+      
+      // Format conversation history for Gemini: support both {role, parts} and {role, content}
+      const formattedHistory = (history || [])
+        .filter((msg: any) => {
+          // Accept only messages with valid text
+          if (
+            msg.parts &&
+            Array.isArray(msg.parts) &&
+            typeof msg.parts[0]?.text === "string" &&
+            msg.parts[0].text.trim() !== ""
+          )
+            return true;
+          if (typeof msg.content === "string" && msg.content.trim() !== "")
+            return true;
+          return false;
+        })
+        .map((msg: any) => {
+          if (
+            msg.parts &&
+            Array.isArray(msg.parts) &&
+            typeof msg.parts[0]?.text === "string"
+          ) {
+            // Already Gemini format, just fix role if needed
+            return {
+              role: msg.role === "assistant" ? "model" : msg.role,
+              parts: msg.parts,
+            };
+          }
+          // Legacy: convert from { role, content }
           return {
             role: msg.role === "assistant" ? "model" : msg.role,
-            parts: msg.parts,
+            parts: [{ text: msg.content }],
           };
-        }
-        // Legacy: convert from { role, content }
-        return {
-          role: msg.role === "assistant" ? "model" : msg.role,
-          parts: [{ text: msg.content }],
-        };
-      });
-    // Append the current user message
-    const contents = [
-      ...formattedHistory,
-      {
-        role: "user",
-        parts: [{ text: message }],
-      },
-    ];
-    // Log the final contents sent to Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const generationConfig = {
-      responseMimeType: "text/plain",
-      maxOutputTokens: 4000,
-    };
-    // Helper function to check if JSON is complete
-    function isJsonComplete(text: string): boolean {
-      // If we find ```json but don't find a closing ```, it's incomplete
-      const jsonStart = text.indexOf("```json");
-      if (jsonStart === -1) return true; // No JSON code block found, considered complete
-
-      // Look for closing ``` after the start of ```json
-      const jsonEnd = text.indexOf("```", jsonStart + 7);
-      return jsonEnd !== -1;
-    }
-
-    // Initial generation
-    let result = await model.generateContent(
-      {
-        contents,
-        systemInstruction: AI_PROMPT,
-      },
-      generationConfig,
-    );
-
-    let responseText = result.response.text();
-    let attempts = 0;
-    const MAX_ATTEMPTS = 5;
-
-    // If JSON is incomplete, keep requesting more content
-    while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
-      attempts++;
-      console.log(`JSON incomplete, attempt ${attempts} to get more content`);
-
-      // Add the current response to history and ask for continuation
-      const continuationContents = [
-        ...contents,
-        {
-          role: "model",
-          parts: [{ text: responseText }],
-        },
+        });
+        
+      // Append the current user message
+      const contents = [
+        ...formattedHistory,
         {
           role: "user",
-          parts: [
-            {
-              text: "Please continue and send the rest of the JSON code block without any additional text.",
-            },
-          ],
+          parts: [{ text: message }],
         },
       ];
+      
+      // Log the final contents sent to Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const generationConfig = {
+        responseMimeType: "text/plain",
+        maxOutputTokens: 4000,
+      };
+      
+      // Helper function to check if JSON is complete
+      function isJsonComplete(text: string): boolean {
+        // If we find ```json but don't find a closing ```, it's incomplete
+        const jsonStart = text.indexOf("```json");
+        if (jsonStart === -1) return true; // No JSON code block found, considered complete
 
-      // Generate continuation
-      const continuationResult = await model.generateContent(
+        // Look for closing ``` after the start of ```json
+        const jsonEnd = text.indexOf("```", jsonStart + 7);
+        return jsonEnd !== -1;
+      }
+
+      // Select appropriate prompt based on model
+      let basePrompt = AI_PROMPT; // Default to financial educator prompt
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
+        basePrompt = FA_PROMPT;
+      }
+      
+      // Construct system instruction with user profile if available
+      let systemInstruction = basePrompt;
+      if (userProfile) {
+        systemInstruction = `${basePrompt}\n\n${userProfile}`;
+      }
+      if(userActivities){
+        systemInstruction = `${systemInstruction}\n\nMost recent activities of this user: ${userActivities}`;
+      }
+
+      // Initial generation
+      let result = await model.generateContent(
         {
-          contents: continuationContents,
-          systemInstruction: AI_PROMPT,
+          contents,
+          systemInstruction: systemInstruction,
         },
         generationConfig,
       );
 
-      // Append continuation to response
-      const continuationText = continuationResult.response.text();
-      responseText += "\n" + continuationText;
+      let responseText = result.response.text();
+      let attempts = 0;
+      const MAX_ATTEMPTS = 5;
 
-      // If the combined response now has complete JSON, or we've reached max attempts, exit
-      if (isJsonComplete(responseText) || attempts >= MAX_ATTEMPTS) {
-        break;
+      // If JSON is incomplete, keep requesting more content
+      while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
+        attempts++;
+        console.log(`JSON incomplete, attempt ${attempts} to get more content`);
+
+        // Add the current response to history and ask for continuation
+        const continuationContents = [
+          ...contents,
+          {
+            role: "model",
+            parts: [{ text: responseText }],
+          },
+          {
+            role: "user",
+            parts: [
+              {
+                text: "Please continue and send the rest of the JSON code block without any additional text.",
+              },
+            ],
+          },
+        ];
+
+        // Generate continuation
+        const continuationResult = await model.generateContent(
+          {
+            contents: continuationContents,
+            systemInstruction: systemInstruction,
+          },
+          generationConfig,
+        );
+
+        // Append continuation to response
+        const continuationText = continuationResult.response.text();
+        responseText += "\n" + continuationText;
+
+        // If the combined response now has complete JSON, or we've reached max attempts, exit
+        if (isJsonComplete(responseText) || attempts >= MAX_ATTEMPTS) {
+          break;
+        }
       }
+      
+      aiResponse = responseText;
     }
 
     // Clean up the response - if we have multiple ```json markers from continuations, fix it
-    let cleanedResponse = responseText;
+    let cleanedResponse = aiResponse;
     const jsonStartMarker = "```json";
     const firstJsonStart = cleanedResponse.indexOf(jsonStartMarker);
 
@@ -211,12 +349,15 @@ serve(async (req: Request): Promise<Response> => {
       trimmedCleanedResponse.startsWith("{") &&
       trimmedCleanedResponse.endsWith("}");
 
-    // If it doesn't look like JSON at all, just return the response as-is
+    // If it doesn't look like JSON at all, treat it as simple text response
+    let finalResponse = cleanedResponse;
+    let extractedCourse = null;
+    let course_id = null;
+    
     if (!hasJsonMarkdown && !looksLikeRawJson) {
-      return new Response(JSON.stringify({ response: cleanedResponse }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      // Simple text response (like profile prompts)
+      finalResponse = cleanedResponse;
+    } else {
 
     // Extract JSON content if markdown fences are present
     let stringToParseForJson = cleanedResponse; // Start with the full cleaned response
@@ -260,50 +401,50 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     try {
+
       // Only try to parse if it looks like JSON
       const parsedJsonObject = parse(stringToParseForJson);
 
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
       console.log("wellFormedJsonString", wellFormedJsonString);
-      // --- Course Extraction & Async Storage ---
+      // --- Course Extraction & Storage ---
       // Attempt to extract a valid course object using Zod
       const extractedCourse = wellFormedJsonString
       if (extractedCourse) {
-        // Fire-and-forget async storage
-        (async () => {
+        // Await course storage to get course_id (works for both authenticated and guest users)
+        try {
+          // For guest users, use the session ID as user identifier; for authenticated users, use user_id
+          const user_id = requestData.userId || currentConversationId;
+          
+          // Ensure course is an object, not a string
+          let parsedCourse;
           try {
-            // Replace with actual user_id extraction if available
-            const user_id = requestData.userId || null;
-            if (!user_id) {
-              console.error("No user_id provided for course storage.");
-              return;
-            }
-            // Ensure course is an object, not a string
-            let parsedCourse;
-            try {
-              parsedCourse = typeof extractedCourse === "string" ? JSON.parse(extractedCourse) : extractedCourse;
-            } catch (err) {
-              console.error("Failed to parse extractedCourse as JSON", err);
-              return;
-            }
-            const client = createClient(
-              Deno.env.get("SUPABASE_URL")!,
-              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            );
-            const { error } = await client.functions.invoke(
+            parsedCourse = typeof extractedCourse === "string" ? JSON.parse(extractedCourse) : extractedCourse;
+          } catch (err) {
+            console.error("Failed to parse extractedCourse as JSON", err);
+          }
+          
+          if (parsedCourse && user_id) {
+            const { error, data } = await supabase.functions.invoke(
               "store-course-from-ai",
               {
-                body: { user_id, course: parsedCourse },
+                body: { 
+                  user_id: requestData.userId || null, // null for guests
+                  session_id: requestData.userId ? null : currentConversationId, // session_id for guests
+                  course: parsedCourse 
+                },
               },
             );
             if (error) {
               console.error("Error invoking store-course-from-ai:", error);
+            } else if (data?.course_id) {
+              course_id = data.course_id;
             }
-          } catch (err) {
-            console.error("Async course storage error:", err);
           }
-        })();
+        } catch (err) {
+          console.error("Course storage error:", err);
+        }
       } else {
         console.log("No valid course JSON detected in AI response.");
       }
@@ -353,46 +494,72 @@ ${simpleJsonString}
 ${markdownSuffix}`,
         epilogue,
       ].filter(Boolean);
-      const finalContentForClientResponse = fullMessageParts.join("\n\n");
-      return new Response(
-        JSON.stringify({ response: finalContentForClientResponse }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    } catch (parseError) {
-      const errorMessage =
-        parseError instanceof Error
-          ? parseError.message
-          : "Unknown parsing error";
-      console.error(
-        "Failed to parse JSON string with partial-json. Error:",
-        errorMessage,
-      );
-      if (parseError instanceof Error && parseError.stack) {
-        console.error("Stack trace:", parseError.stack);
+      finalResponse = fullMessageParts.join("\n\n");
+      } catch (parseError) {
+        const errorMessage =
+          parseError instanceof Error
+            ? parseError.message
+            : "Unknown parsing error";
+        console.error(
+          "Failed to parse JSON string with partial-json. Error:",
+          errorMessage,
+        );
+        if (parseError instanceof Error && parseError.stack) {
+          console.error("Stack trace:", parseError.stack);
+        }
+        console.error(
+          "Original cleanedResponse from AI (multi-turn, pre-stripping):",
+          cleanedResponse,
+        );
+        console.error(
+          "String attempted for parsing (after stripping fences):",
+          `"${stringToParseForJson}"`,
+        );
+        // For parse errors, use the original response
+        finalResponse = cleanedResponse;
       }
-      console.error(
-        "Original cleanedResponse from AI (multi-turn, pre-stripping):",
-        cleanedResponse,
-      );
-      console.error(
-        "String attempted for parsing (after stripping fences):",
-        `"${stringToParseForJson}"`,
-      );
-      return new Response(
-        JSON.stringify({
-          error: "Failed to process or parse JSON content from AI response",
-          details: errorMessage,
-          attemptedJsonStringAfterStripping: stringToParseForJson,
-          rawAiResponse: cleanedResponse,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
     }
+    
+    // Save both user and AI messages to database in a single batch for all users (authenticated and guests)
+    if (currentConversationId) {
+      const messagesToInsert = [
+        {
+          chat_session_id: currentConversationId,
+          content: message,
+          role: 'user',
+          metadata: null,
+          timestamp: new Date().toISOString()
+        },
+        {
+          chat_session_id: currentConversationId,
+          content: finalResponse,
+          role: 'assistant',
+          metadata: extractedCourse ? { courseRecommendation: extractedCourse } : null,
+          timestamp: new Date().toISOString()
+        }
+      ];
+      
+      const { error: batchInsertError } = await supabase
+        .from('chat_messages')
+        .insert(messagesToInsert);
+        
+      if (batchInsertError) {
+        console.error('Error saving messages:', batchInsertError);
+        // Continue anyway - don't fail the response
+      }
+    }
+    
+    return new Response(
+      JSON.stringify({ 
+        response: finalResponse,
+        conversationId: currentConversationId,
+        generatedLessons: extractedCourse,
+        course_id
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown internal server error";

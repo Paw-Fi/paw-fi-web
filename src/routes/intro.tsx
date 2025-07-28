@@ -96,7 +96,7 @@ function IntroPage() {
         "Retirement planning tools",
         "Investment growth projections"
       ],
-      linkTo: "/dashboard/calculators",
+      linkTo: "/calculators",
       color: "from-green-500 to-emerald-500"
     },
     {

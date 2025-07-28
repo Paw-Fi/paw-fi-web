@@ -8,6 +8,7 @@ export interface IBaseWidget {
   column_span: 1 | 2; // Layout hint: 1 for single column, 2 for double column width (Mandatory)
   row_span?: 1 | 2 | 3 | 4;    // Layout hint: 1, 2, 3, or 4 rows height (Optional, defaults to 1 if not set)
   controls?: ReactNode; // Optional React components for widget controls in header
+  order?: number; // Optional order for widget placement
 }
 
 export type IMetricTrend = 'up' | 'down' | 'neutral' | 'stable';
@@ -387,6 +388,23 @@ export interface IChecklistWidget extends IBaseWidget {
 }
 // Removed 'IMultipleChecklistsWidget' as it is no longer a distinct widget type.
 
+// Interactive Calculator Widgets (no data needed - self-contained)
+export interface IDailyHabitCalculatorWidget extends IBaseWidget {
+  type: 'dailyHabitCalculator';
+}
+
+export interface IPensionHeadStartWidget extends IBaseWidget {
+  type: 'pensionHeadStart';
+}
+
+export interface IMortgageDepositTimelineWidget extends IBaseWidget {
+  type: 'mortgageDepositTimeline';
+}
+
+export interface ISalarySlicerWidget extends IBaseWidget {
+  type: 'salarySlicer';
+}
+
 // Discriminated Union for all possible widget types
 export interface IPieChartWidget extends IBaseWidget {
   type: 'pieChart';
@@ -409,4 +427,8 @@ export type Widget =
   | IRetirementReadinessWidget
   | IEnhancedSavingsGoalsWidget
   | IInsuranceCoverageWidget
-  | IChecklistWidget;
+  | IChecklistWidget
+  | IDailyHabitCalculatorWidget
+  | IPensionHeadStartWidget
+  | IMortgageDepositTimelineWidget
+  | ISalarySlicerWidget;

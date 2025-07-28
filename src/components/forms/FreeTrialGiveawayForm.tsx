@@ -14,7 +14,7 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { useCookie } from "@/utils/use-cookie";
 import { useAuth } from "@/contexts/auth-context";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 
 
@@ -121,7 +121,6 @@ export function FreeTrialGiveawayForm() {
   const handleMultiSelectChange = (
     value: string, 
     field: 'financialGoals' | 'interestedFeatures', 
-    maxSelections: number = 2
   ) => {
     setFormData((prev) => {
       const currentArray = prev[field];
@@ -129,11 +128,8 @@ export function FreeTrialGiveawayForm() {
       
       if (currentArray.includes(value)) {
         newArray = currentArray.filter((item) => item !== value);
-      } else if (currentArray.length < maxSelections) {
-        newArray = [...currentArray, value];
-      } else {
-        return prev; // Don't allow more than max selections
-      }
+      }else {
+        newArray = [...currentArray, value];      }
       
       return { ...prev, [field]: newArray };
     });
@@ -351,9 +347,7 @@ export function FreeTrialGiveawayForm() {
                   selectedValues={formData.financialGoals}
                   onChange={(value) => handleMultiSelectChange(value, 'financialGoals', 2)}
                   placeholder="Select your financial goals"
-                  maxSelections={2}
                   label="What are your top financial goals right now?"
-                  helperText="(Select up to 2)"
                 />
               </div>
 
@@ -364,9 +358,7 @@ export function FreeTrialGiveawayForm() {
                   selectedValues={formData.interestedFeatures}
                   onChange={(value) => handleMultiSelectChange(value, 'interestedFeatures', 2)}
                   placeholder="Select features you're excited about"
-                  maxSelections={2}
                   label="Which Moneko features are you most excited about?"
-                  helperText="(Select up to 2)"
                 />
               </div>
 
@@ -400,7 +392,7 @@ export function FreeTrialGiveawayForm() {
                     </>
                   ) : hasClaimed ? (
                     <>
-                      ✅ Already Claimed
+                       Claimed Successfully
                       <FontAwesomeIcon icon={faCheckCircle} className="ml-2" />
                     </>
                   ) : (
@@ -427,7 +419,7 @@ export function FreeTrialGiveawayForm() {
                     <span className="font-semibold text-green-800">Check Your Inbox</span>
                   </div>
                   <p className="text-sm text-green-700">
-                    We've sent you an email with detailed instructions on how to claim your free trial.
+                    We've sent you the promo code in the email and can use it to checkout at the <Link to="/pricing" className="font-medium underline hover:text-green-800">pricing page</Link>.
                   </p>
                 </div>
               </div>

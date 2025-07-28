@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
 import { corsHeaders } from '../shared/cors.ts';
+import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -61,6 +62,7 @@ serve(async (req: Request) => {
       .from("user_lessons")
       .select("*")
       .eq("course_id", courseId)
+      .order("position", { ascending: true });
 
     if (lessonError) {
       console.error("[unlock-next-lesson] Error fetching lessons:", lessonError);
@@ -119,6 +121,28 @@ serve(async (req: Request) => {
     }
 
     console.log(`[unlock-next-lesson] Successfully unlocked next lesson: ${nextLesson.title}`);
+
+    // 8. Trigger reward system for completing the current lesson
+    try {
+      const { error: rewardError, data: rewardData } = await supabase.functions.invoke(
+        "verify-and-reward",
+        {
+          body: {
+            action: RewardActions.COMPLETED_LESSON,
+            lessonId: lessonId,
+            userId: userId
+          },
+        },
+      );
+
+      if (rewardError) {
+        console.warn(`[unlock-next-lesson] Reward system failed:`, rewardError);
+      } else {
+        console.log(`[unlock-next-lesson] Reward awarded:`, rewardData);
+      }
+    } catch (rewardError) {
+      console.warn(`[unlock-next-lesson] Error calling reward system:`, rewardError);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

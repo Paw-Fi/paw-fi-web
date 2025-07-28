@@ -36,6 +36,10 @@ import {
   faChartLine,
   faShieldAlt,
   faQuestionCircle,
+  faUmbrellaBeach,
+  faCalculator,
+  faArrowTrendUp,
+  faArrowTrendDown,
 } from "@fortawesome/free-solid-svg-icons"; // Added more icons
 
 // Helper to get styles based on financial status
@@ -139,26 +143,74 @@ function getFinancialStatusStyles(status?: FinancialStatus): StatusStyles {
   }
 }
 
-// Helper function to get color class for status text display
+// Helper function to get color class for status text display - more encouraging colors
 function getStatusColorClass(status?: string): string {
   const s = status?.toLowerCase();
   switch (s) {
     case "excellent":
       return "text-emerald-600 dark:text-emerald-400";
     case "good":
-      return "text-emerald-600 dark:text-emerald-400";
+      return "text-blue-600 dark:text-blue-400";
     case "fair":
       return "text-amber-600 dark:text-amber-400";
     case "needs attention":
     case "needs improvement":
     case "needs work":
-      return "text-orange-600 dark:text-orange-400";
+      return "text-purple-600 dark:text-purple-400";
     case "poor":
     case "at risk":
-      return "text-red-600 dark:text-red-500";
+      return "text-orange-600 dark:text-orange-400";
     default:
       return "text-slate-600 dark:text-slate-400";
   }
+}
+
+// Helper function to get encouraging message based on score
+function getEncouragingMessage(score: number, status: string): string {
+  if (score >= 75) {
+    return "Great work! You're on the right track.";
+  } else if (score >= 50) {
+    return "You're making progress! Let's keep building.";
+  } else if (score >= 25) {
+    return "Every expert was once a beginner. Let's get you on track.";
+  } else {
+    return "Your financial journey starts now. We're here to help.";
+  }
+}
+
+// Helper function to get next action message based on score and lowest performing area
+function getNextActionMessage(score: number, items: any[]): string {
+  if (!items || items.length === 0) {
+    return "Let's start building your financial foundation!";
+  }
+  
+  // Find the lowest scoring category to focus on
+  const lowestItem = items.reduce((lowest, current) => 
+    current.score < lowest.score ? current : lowest
+  );
+  
+  if (score >= 75) {
+    return "You're doing great! Consider exploring advanced investment strategies.";
+  } else if (score >= 50) {
+    if (lowestItem.category === "Savings") {
+      return "Try increasing your savings rate by 1% this month.";
+    } else if (lowestItem.category === "Emergency Fund") {
+      return "Add $50 weekly to your emergency fund to reach 3-6 months.";
+    } else if (lowestItem.category === "Risk Management") {
+      return "Review your insurance coverage to protect your progress.";
+    }
+  } else {
+    // Score below 50 - very encouraging and specific
+    if (lowestItem.category === "Savings") {
+      return "Start small: save just $1 a day - that's $365 this year!";
+    } else if (lowestItem.category === "Emergency Fund") {
+      return "Build confidence with a $100 starter emergency fund.";
+    } else if (lowestItem.category === "Risk Management") {
+      return "Protect your future with basic health insurance.";
+    }
+  }
+  
+  return "Every financial expert started where you are now. Let's take the next step!";
 }
 
 // Framer Motion Variants
@@ -407,7 +459,7 @@ export function calculateFinancialHealthScore(
   // Cap the score at 100
   savingsScore = Math.min(100, savingsScore);
 
-  // 2. Calculate Emergency Fund Score (30% of total)
+  // 2. Calculate Emergency Fund Score (30% of total) - Fixed consistency
   let emergencyFundScore = 0;
   if (emergencyFundMonths >= 6) {
     emergencyFundScore = 100;
@@ -498,13 +550,13 @@ export function calculateFinancialHealthScore(
     savingsScore * 0.4 + emergencyFundScore * 0.3 + riskManagementScore * 0.3,
   );
 
-  // Determine status based on score
+  // Determine status based on score - aligned with component scoring
   let status: "Excellent" | "Good" | "Fair" | "Needs Attention";
   if (overallScore >= 90) {
     status = "Excellent";
   } else if (overallScore >= 75) {
     status = "Good";
-  } else if (overallScore >= 60) {
+  } else if (overallScore >= 50) {  // Lowered threshold to match component scoring
     status = "Fair";
   } else {
     status = "Needs Attention";
@@ -538,8 +590,10 @@ export function calculateFinancialHealthScore(
       status: getScoreStatus(emergencyFundScore),
       explanation:
         emergencyFundScore >= 75
-          ? `Your emergency fund covers ${emergencyFundMonths} months of expenses.`
-          : `Your emergency fund covers ${emergencyFundMonths} months. Work towards 3-6 months coverage.`,
+          ? `Your emergency fund covers ${emergencyFundMonths} months of expenses - excellent!`
+          : emergencyFundMonths >= 1
+            ? `Your emergency fund covers ${emergencyFundMonths} months. Building towards 3-6 months.`
+            : `Start building your emergency fund - aim for 1 month of expenses first.`,
     },
     {
       id: "risk-management",
@@ -721,13 +775,13 @@ export function calculateFinancialHealthScore(
   };
 }
 
-// Helper function to get status based on score
+// Helper function to get status based on score - aligned with overall scoring
 function getScoreStatus(
   score: number,
 ): "Excellent" | "Good" | "Fair" | "Needs Attention" {
   if (score >= 90) return "Excellent";
   if (score >= 75) return "Good";
-  if (score >= 60) return "Fair";
+  if (score >= 50) return "Fair";  // Lowered threshold to be more encouraging
   return "Needs Attention";
 }
 
@@ -803,59 +857,100 @@ export function FinancialHealthScorecardWidget({
           variants={itemVariants}
           className="flex flex-col items-center justify-center space-y-4 text-center sm:flex-row sm:justify-start sm:space-x-6 sm:space-y-0 sm:text-left"
         >
-          <div className="relative h-20 w-20 shrink-0 md:h-20 md:w-20">
-            <svg className="h-full w-full" viewBox="0 0 100 100">
-              {/* Adjusted viewBox for easier calculations */}
-              {/* Background Circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r={radius}
-                fill="none"
-                strokeWidth="8"
-                stroke="rgba(200, 200, 200, 0.5)"
-              />
-              {/* Foreground Progress Circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r={radius}
-                fill="none"
-                strokeWidth="8"
-                strokeLinecap="round"
-                stroke={getStatusColorValue(calculatedData.overallStatus)}
-                strokeDasharray={circumference}
-                strokeDashoffset={
-                  circumference - (overallScoreNormalized / 100) * circumference
-                }
-                style={{
-                  transform: "rotate(-90deg)",
-                  transformOrigin: "50% 50%",
-                }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className={`text-xl font-bold md:text-2xl ${overallStatusStyles.textColor}`}
-              >
-                {Math.round(overallScoreNormalized)}
-              </span>
-             
-            </div>
+          {/* Progress Visualization with Plant Metaphor for Low Scores */}
+          <div className="relative h-24 w-24 shrink-0">
+            {overallScoreNormalized < 50 ? (
+              // Plant growing visualization for low scores
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/30 dark:to-emerald-800/30">
+                <div className="text-center">
+                  <div className="text-2xl">🌱</div>
+                  <div className="text-xs font-bold text-green-700 dark:text-green-300">
+                    {Math.round(overallScoreNormalized)}/100
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Traditional progress circle for higher scores
+              <>
+                <svg className="h-full w-full" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={radius}
+                    fill="none"
+                    strokeWidth="8"
+                    stroke="rgba(200, 200, 200, 0.5)"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={radius}
+                    fill="none"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    stroke={getStatusColorValue(calculatedData.overallStatus)}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={
+                      circumference - (overallScoreNormalized / 100) * circumference
+                    }
+                    style={{
+                      transform: "rotate(-90deg)",
+                      transformOrigin: "50% 50%",
+                    }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span
+                    className={`text-xl font-bold md:text-2xl ${overallStatusStyles.textColor}`}
+                  >
+                    {Math.round(overallScoreNormalized)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
+          
           <div className="flex-grow">
+            {/* Encouraging Status Message */}
             <motion.h3
               variants={itemVariants}
-              className={`text-xl font-semibold md:text-2xl ${overallStatusStyles.textColor}`}
+              className="text-xl font-semibold md:text-2xl text-slate-800 dark:text-slate-100"
             >
-              {calculatedData.overallStatus || "Not Evaluated"}
+              {getEncouragingMessage(overallScoreNormalized, calculatedData.overallStatus || "")}
             </motion.h3>
+            
+            {/* Progress acknowledgment for low scores */}
+            {overallScoreNormalized < 50 && (
+              <motion.p
+                variants={itemVariants}
+                className="mt-1 text-sm text-slate-600 dark:text-slate-400"
+              >
+                🌱 Your financial health is growing stronger every day
+              </motion.p>
+            )}
+            
+            {/* Next Action Message */}
+            <motion.div
+              variants={itemVariants}
+              className="mt-2 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20"
+            >
+              <div className="flex items-start space-x-2">
+                <FontAwesomeIcon 
+                  icon={faArrowRight} 
+                  className="mt-0.5 h-3 w-3 text-blue-600 dark:text-blue-400" 
+                />
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Next Step: {getNextActionMessage(overallScoreNormalized, calculatedData.items || [])}
+                </p>
+              </div>
+            </motion.div>
+            
+            {/* Score Details */}
             <motion.p
               variants={itemVariants}
-              className="mt-1 text-sm text-slate-600 dark:text-slate-400"
+              className="mt-2 text-xs text-slate-500 dark:text-slate-400"
             >
-              Your overall financial health score is{" "}
-              {Math.round(overallScoreNormalized)} out of 100.
+              Financial Health Score: {Math.round(overallScoreNormalized)}/100
             </motion.p>
           </div>
         </motion.div>
@@ -875,12 +970,25 @@ export function FinancialHealthScorecardWidget({
                     item.status,
                   );
                   
-                  // Extract savings percentage from explanation if available
-                  const savingsMatch = item.explanation?.match(/saving (\d+\.?\d*)%/);
-                  const savingsPercentage = savingsMatch ? savingsMatch[1] : "100.0";
+                  // Create simplified explanation based on category
+                  let simplifiedExplanation = "";
                   
-                  // Simplified explanation for display
-                  const simplifiedExplanation = `You're saving ${savingsPercentage}%`;
+                  if (item.category === "Savings") {
+                    const savingsMatch = item.explanation?.match(/saving (\d+\.?\d*)%/);
+                    const savingsPercentage = savingsMatch ? savingsMatch[1] : "0";
+                    simplifiedExplanation = `Saving ${savingsPercentage}% of income`;
+                  } else if (item.category === "Emergency Fund") {
+                    const monthsMatch = item.explanation?.match(/(\d+) months/);
+                    const months = monthsMatch ? monthsMatch[1] : "0";
+                    simplifiedExplanation = `${months} months of expenses saved`;
+                  } else if (item.category === "Risk Management") {
+                    const statusText = item.status === "Excellent" ? "Well protected" : 
+                                     item.status === "Good" ? "Adequately protected" :
+                                     "Building protection";
+                    simplifiedExplanation = statusText;
+                  } else {
+                    simplifiedExplanation = "Making progress";
+                  }
                   
                   return (
                     <motion.div
@@ -1209,11 +1317,11 @@ export function DebtVisualizerWidget({
             icon={faCircleCheck}
             className="mb-4 text-4xl text-emerald-500 dark:text-emerald-400"
           />
-          <h4 className="mb-1 text-lg font-semibold text-slate-700 dark:text-slate-200">
-            No Debts to Display!
+          <h4 className="mb-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+            🎉 Congratulations - You're Debt Free!
           </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Looks like you're debt-free or haven't added any debts yet.
+            This is a huge financial achievement. You're ready to focus on building wealth!
           </p>
         </div>
       </Widget>
@@ -1280,7 +1388,7 @@ export function DebtVisualizerWidget({
         >
           <div className="mb-3 flex items-start justify-between">
             <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-              {title || "Debt Overview"}
+              {title || "Path to Debt Freedom"}
             </h3>
             <div
               className={`flex items-center rounded-full px-3 py-1 text-xs font-medium ${strategyBg} ${strategyColor}`}
@@ -1304,11 +1412,16 @@ export function DebtVisualizerWidget({
               {/* Adjusted color */}
               <div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  Total Current Debt
+                  Debt to Conquer
                 </div>
                 <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                   ${totalCurrentBalance.toLocaleString()}
                 </div>
+                {totalPaid > 0 && (
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                    👏 Already paid off ${totalPaid.toLocaleString()}!
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-3 sm:justify-end">
@@ -1318,10 +1431,15 @@ export function DebtVisualizerWidget({
               />
               <div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  Overall Progress
+                  Freedom Progress
                 </div>
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {overallProgressPercentage.toFixed(1)}%
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                  {overallProgressPercentage < 25 ? '🌱 Every payment counts!' : 
+                   overallProgressPercentage < 50 ? '📈 Building momentum!' :
+                   overallProgressPercentage < 75 ? '🎯 Getting closer!' : '🎆 Almost free!'}
                 </div>
               </div>
             </div>
@@ -1381,7 +1499,7 @@ export function DebtVisualizerWidget({
                         icon={strategyIcon}
                         className={`mr-1 h-2.5 w-2.5 ${strategyColor}`}
                       />
-                      Focus Target
+                      🎯 Priority Focus
                     </span>
                   )}
                 </div>
@@ -1488,30 +1606,66 @@ export function RetirementReadinessWidget({
     return scenario;
   }, [retirementData.scenarios, selectedScenarioId, calculatedProjections]);
 
-  // Dynamically calculate retirement status from raw data
-  const getRetirementStatus = useMemo(() => {
+  // Get dynamic styles based on retirement status - more encouraging approach
+  const getRetirementStatusStyles = useMemo(() => {
     if (!currentScenario)
       return {
         text: "Not Available",
-        color: "text-gray-500 dark:text-gray-400",
+        textColor: "text-gray-600 dark:text-gray-400",
+        bgColor: "bg-gray-50 dark:bg-gray-800",
+        borderColor: "border-gray-200 dark:border-gray-700",
+        progressColor: "#6b7280",
+        iconColor: "text-gray-500 dark:text-gray-400",
+        icon: faInfoCircle,
+        trend: null,
       };
 
     const percentage = currentScenario.progressPercentage || 0;
 
     if (percentage >= 90)
-      return { text: "On Target", color: "text-green-500 dark:text-green-400" };
+      return {
+        text: "Excellent",
+        textColor: "text-green-700 dark:text-green-400",
+        bgColor: "bg-green-50 dark:bg-green-900/20",
+        borderColor: "border-green-200 dark:border-green-800",
+        progressColor: "#10b981",
+        iconColor: "text-green-600 dark:text-green-400",
+        icon: faArrowTrendUp,
+        trend: "exceeding",
+      };
     if (percentage >= 75)
-      return { text: "On Track", color: "text-blue-500 dark:text-blue-400" };
-    if (percentage >= 50)
-      return { text: "Behind", color: "text-yellow-500 dark:text-yellow-400" };
-    return { text: "At Risk", color: "text-red-500 dark:text-red-400" };
+      return {
+        text: "On Track",
+        textColor: "text-blue-700 dark:text-blue-400",
+        bgColor: "bg-blue-50 dark:bg-blue-900/20",
+        borderColor: "border-blue-200 dark:border-blue-800",
+        progressColor: "#3b82f6",
+        iconColor: "text-blue-600 dark:text-blue-400",
+        icon: faArrowTrendUp,
+        trend: "meeting",
+      };
+    if (percentage >= 25)
+      return {
+        text: "Building Up",
+        textColor: "text-purple-700 dark:text-purple-400",
+        bgColor: "bg-purple-50 dark:bg-purple-900/20",
+        borderColor: "border-purple-200 dark:border-purple-800",
+        progressColor: "#8b5cf6",
+        iconColor: "text-purple-600 dark:text-purple-400",
+        icon: faCalculator,
+        trend: "building",
+      };
+    return {
+      text: "Getting Started",
+      textColor: "text-amber-700 dark:text-amber-400",
+      bgColor: "bg-amber-50 dark:bg-amber-900/20",
+      borderColor: "border-amber-200 dark:border-amber-800",
+      progressColor: "#f59e0b",
+      iconColor: "text-amber-600 dark:text-amber-400",
+      icon: faArrowTrendUp, // Changed from down to up arrow
+      trend: "starting",
+    };
   }, [currentScenario]);
-
-  // Calculate SVG attributes for progress circle
-  const circleSize = 150;
-  const strokeWidth = 12;
-  const radius = (circleSize - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
 
   if (
     !retirementData ||
@@ -1537,23 +1691,23 @@ export function RetirementReadinessWidget({
     );
   }
 
-  // Calculate current savings based on raw data - using futureValue from portfolio projection
-  // This ensures consistency with the calculation results
+  // Calculate financial figures
   const projectionAmount = currentScenario.projectionAmount || 
     (calculatedProjections?.projectedRetirementFund || 0);
-    
-  const currentSavings = projectionAmount
-    ? `$${(projectionAmount / 1000).toFixed(0)}k`
-    : "$0";
-  const currentSavingsPerYear =
-    retirementData.quizAnswers?.["annual-contribution"] || 3000;
+  const targetAmount = retirementData.quizAnswers?.["target-retirement"] || 1500000;
+  const gap = targetAmount - projectionAmount;
+  const retirementAge = retirementData.quizAnswers?.['retirement-age'] || 65;
+  const currentAge = retirementData.quizAnswers?.['current-age'] || 30;
+  const yearsToRetirement = retirementAge - currentAge;
+  const currentSavingsPerYear = retirementData.quizAnswers?.["annual-contribution"] || 3000;
   const returnRate = retirementData.quizAnswers?.["return-rate"] || 6.8;
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-4">
+      <div className="p-5 space-y-5">
+        {/* Scenario Selector */}
         {retirementData.scenarios.length > 1 && (
-          <div className="mb-4 border-b border-slate-200 pb-2 dark:border-slate-700">
+          <div className="border-b border-slate-200 pb-4 dark:border-slate-700">
             <label htmlFor={`${widget.id}-scenario-select`} className="sr-only">
               Select Scenario
             </label>
@@ -1561,7 +1715,7 @@ export function RetirementReadinessWidget({
               id={`${widget.id}-scenario-select`}
               value={selectedScenarioId}
               onChange={(e) => setSelectedScenarioId(e.target.value)}
-              className="focus:ring-primary-500 focus:border-primary-500 w-full rounded-md border border-slate-300 bg-slate-50 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
             >
               {retirementData.scenarios.map((scenario) => (
                 <option key={scenario.id} value={scenario.id}>
@@ -1572,69 +1726,129 @@ export function RetirementReadinessWidget({
           </div>
         )}
 
-        {/* Circle Progress and Status */}
-        <div className="mb-4 flex items-center">
-          {/* Progress Circle */}
-          <div className="relative mr-4 flex-shrink-0">
-            <svg width="110" height="110" viewBox="0 0 110 110">
-              {/* Background circle */}
-              <circle
-                cx="55"
-                cy="55"
-                r="45"
-                fill="none"
-                strokeWidth="10"
-                className="text-slate-200 dark:text-slate-800"
-                stroke="currentColor"
-              />
-              {/* Foreground progress circle */}
-              <circle
-                cx="55"
-                cy="55"
-                r="45"
-                fill="none"
-                strokeWidth="10"
-                stroke="#ff3b30"
-                strokeDasharray={`${2 * Math.PI * 45}`}
-                strokeDashoffset={`${2 * Math.PI * 45 * (1 - currentScenario.progressPercentage / 100)}`}
-                strokeLinecap="round"
-                transform="rotate(-90 55 55)"
-              />
-              {/* Score text */}
-              <text
-                x="55"
-                y="55"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="fill-slate-800 text-3xl font-bold dark:fill-slate-100"
-              >
-                {currentScenario.progressPercentage}
-              </text>
-            </svg>
-          </div>
-
-          {/* Status Information */}
-          <div>
-            <h4 className="text-2xl font-bold text-red-500">
-              {getRetirementStatus.text}
-            </h4>
-            <p className="text-slate-600 dark:text-slate-400">
-              Projected:{" "}
-              <span className="font-semibold">
-                ${(projectionAmount || 0).toLocaleString()}
-              </span>{" "}
-              by Age {currentScenario.projectionDate || retirementData.quizAnswers?.['retirement-age'] || 65}
-            </p>
+        {/* Status Header */}
+        <div className={`rounded-lg border p-4 ${getRetirementStatusStyles.bgColor} ${getRetirementStatusStyles.borderColor}`}>
+          <div className="flex items-center gap-3">
+            <FontAwesomeIcon 
+              icon={getRetirementStatusStyles.icon} 
+              className={`text-xl ${getRetirementStatusStyles.iconColor}`} 
+            />
+            <div>
+              <h3 className={`text-lg font-semibold ${getRetirementStatusStyles.textColor}`}>
+                {getRetirementStatusStyles.text}
+              </h3>
+              <p className={`text-sm ${getRetirementStatusStyles.textColor}`}>
+                {getRetirementStatusStyles.trend === "exceeding" && "You're exceeding your retirement goals - fantastic!"}
+                {getRetirementStatusStyles.trend === "meeting" && "You're on track to meet your retirement goals"}
+                {getRetirementStatusStyles.trend === "building" && "You're building your retirement foundation steadily"}
+                {getRetirementStatusStyles.trend === "starting" && "Every retirement expert started here - you're on the right path!"}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Additional Context */}
-        <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-          <p>Assumes {returnRate}% return annually</p>
-          <p>
-            Based on your current savings: $
-            {currentSavingsPerYear.toLocaleString()}/yr
-          </p>
+        {/* Progress Visualization */}
+        <div className="flex items-center gap-6">
+          {/* Progress Circle */}
+          <div className="relative flex-shrink-0">
+            <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
+              {/* Background circle */}
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                strokeWidth="12"
+                className="text-slate-200 dark:text-slate-700"
+                stroke="currentColor"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                strokeWidth="12"
+                stroke={getRetirementStatusStyles.progressColor}
+                strokeDasharray={`${2 * Math.PI * 50}`}
+                strokeDashoffset={`${2 * Math.PI * 50 * (1 - (currentScenario.progressPercentage || 0) / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            {/* Center content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-2xl font-bold ${getRetirementStatusStyles.textColor}`}>
+                {currentScenario.progressPercentage || 0}%
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {(currentScenario.progressPercentage || 0) < 25 ? '🌱 Growing' : 'of goal'}
+              </span>
+            </div>
+          </div>
+
+          {/* Key Metrics */}
+          <div className="flex-1 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">Your Goal</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                ${targetAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">Projected</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                ${projectionAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">
+                {gap > 0 ? "Gap" : "Surplus"}
+              </span>
+              <span className={`font-semibold ${gap > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {gap > 0 ? '-' : '+'}${Math.abs(gap).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Gap Analysis - encouraging approach */}
+        {gap > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+              <FontAwesomeIcon icon={faCalculator} className="text-blue-600" />
+              Path to Your Goal 🎯
+            </h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-blue-600 dark:text-blue-400">Boost your savings by:</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                  ${Math.round(gap / (yearsToRetirement * 12)).toLocaleString()}/month
+                </p>
+                <p className="text-xs text-blue-500 dark:text-blue-300 mt-1">That's just ${Math.round(gap / (yearsToRetirement * 12 * 30))}/day!</p>
+              </div>
+              <div>
+                <p className="text-blue-600 dark:text-blue-400">Time on your side:</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                  {yearsToRetirement} years
+                </p>
+                <p className="text-xs text-blue-500 dark:text-blue-300 mt-1">Compound interest will help!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assumptions */}
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+            <FontAwesomeIcon icon={faInfoCircle} className="text-slate-500" />
+            Assumptions
+          </h4>
+          <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+            <p>• Annual return: {returnRate}%</p>
+            <p>• Current annual savings: ${currentSavingsPerYear.toLocaleString()}</p>
+            <p>• Retirement age: {retirementAge}</p>
+          </div>
         </div>
       </div>
     </Widget>
@@ -1653,11 +1867,13 @@ export function EnhancedSavingsGoalsWidget({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Ahead":
-        return "text-green-500";
+        return "text-emerald-500";
       case "On Track":
         return "text-blue-500";
+      case "Behind":
+        return "text-purple-500"; // Changed from yellow to purple (more encouraging)
       default:
-        return "text-yellow-500";
+        return "text-slate-500";
     }
   };
 
@@ -1691,7 +1907,7 @@ export function EnhancedSavingsGoalsWidget({
           <span
             className={`text-xs font-medium ${getStatusColor(goal.status)}`}
           >
-            {goal.status}
+            {goal.status === "Behind" ? "🌱 Building" : goal.status === "On Track" ? "🎯 On Track" : "🎆 Ahead"}
           </span>
         </div>
 
@@ -1707,7 +1923,7 @@ export function EnhancedSavingsGoalsWidget({
           <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
             <div
               className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
-                goal.status === "Behind" ? "bg-yellow-500" : "bg-primary"
+                goal.status === "Behind" ? "bg-purple-500" : goal.status === "On Track" ? "bg-blue-500" : "bg-emerald-500"
               }`}
               style={{ width: `${progress}%` }}
             ></div>
@@ -1742,10 +1958,10 @@ export function EnhancedSavingsGoalsWidget({
               className="mb-3 h-10 w-10 text-slate-400 dark:text-slate-500"
             />
             <p className="font-medium text-slate-600 dark:text-slate-300">
-              No savings goals found.
+              🎯 Ready to Set Your First Goal?
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Add your savings goals to see them here.
+              Every financial journey starts with a goal. Add yours to begin building wealth!
             </p>
           </div>
         )}

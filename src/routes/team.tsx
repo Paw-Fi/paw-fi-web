@@ -5,7 +5,6 @@ import { motion, Variants } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLinkedin, faTwitter } from "@fortawesome/free-brands-svg-icons";
 import Sabina from "@assets/images/team/sabina.jpeg"
-import Roe from "@assets/images/team/roe.jpg"
 import Yifan from "@assets/images/team/yifan.jpg"
 
 
@@ -33,16 +32,6 @@ const teamMembers = [
       twitter: "",
     },
     bio: "Product designer and founder with 8+ years building fintech and marketing tools. Led UX and design of consumer-first tools across fintech and marketing. Combines creative execution with business clarity to build products that resonate and scale.",
-  },
-  {
-    name: "Roe Luo – COO",
-    role: "Finance & Strategy",
-    imageUrl: Roe,
-    social: {
-      linkedin: "",
-      twitter: "",
-    },
-    bio: "CFA, MBA, and former equity research analyst with 10+ years in finance. Led financial modeling, investment analysis, and curriculum development for non-experts. Deeply focused on making investing more inclusive and understandable.",
   },
   { 
     name: "Yifan Lim –CTO",

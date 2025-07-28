@@ -67,7 +67,7 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
             caption={question.caption}
           />
         )}
-        {question.options.map((option) => (
+        {question.options?.map((option) => (
           <div
             key={option.id}
             onClick={() => handleOptionSelect(option.id)}

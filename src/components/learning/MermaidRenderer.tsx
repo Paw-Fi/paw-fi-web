@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
+import { supabase } from '@/lib/supabase';
 import './mermaid-styles.css';
 
 // Initialize mermaid with stable configuration
@@ -24,37 +25,46 @@ interface MermaidRendererProps {
   id: string;
   content: string;
   caption?: string;
+  imageOptionId?: string;
 }
 
-export default function MermaidRenderer({ id, content, caption }: MermaidRendererProps) {
-  const diagramRef = useRef<HTMLDivElement>(null);
+// Track fix attempts per content to prevent infinite loops
+const fixAttempts = new Map<string, boolean>();
 
-  // Render the mermaid diagram
-  const renderMermaid = async (source: string, elementId: string) => {
-    try {
-      // Check if syntax is valid
-      const parseResult = await mermaid.parse(source, { suppressErrors: true });
-      if (!parseResult) {
-        // Try with trimmed content
-        const lines = source.split('\n');
-        if (lines.length > 2) {
-          const trimmedSource = lines.slice(0, -2).join('\n');
-          const parseResult2 = await mermaid.parse(trimmedSource, { suppressErrors: true });
-          if (parseResult2) {
-            return await mermaid.render(elementId, trimmedSource);
-          }
-        }
-        throw new Error('Invalid mermaid syntax');
-      }
-      return await mermaid.render(elementId, source);
-    } catch (error) {
-      console.error('Mermaid rendering error:', error);
-      throw error;
+export default function MermaidRenderer({ id, content, caption, imageOptionId }: MermaidRendererProps) {
+  const questionId = id;
+  const diagramRef = useRef<HTMLDivElement>(null);
+  const [renderState, setRenderState] = useState<'idle' | 'rendering' | 'fixing' | 'error'>('idle');
+  const [displayContent, setDisplayContent] = useState(content);
+  const [isRendered, setIsRendered] = useState(false);
+  const fixingRef = useRef(false);
+  const contentHashRef = useRef<string>('');
+
+  // Create a simple hash of content for tracking
+  const getContentHash = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
     }
+    return hash.toString();
   };
-  
+
+  // Reset when props content changes
+  useEffect(() => {
+    const newHash = getContentHash(content);
+    if (contentHashRef.current !== newHash) {
+      contentHashRef.current = newHash;
+      setDisplayContent(content);
+      setRenderState('idle');
+      setIsRendered(false);
+      fixingRef.current = false;
+    }
+  }, [content]);
+
   // Helper function to make SVG fit the container
-  const makeSvgResponsive = (container: HTMLDivElement) => {
+  const makeSvgResponsive = useCallback((container: HTMLDivElement) => {
     const svg = container.querySelector('svg');
     if (svg) {
       // Add responsive attributes
@@ -65,7 +75,7 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
       // Apply styles directly for better fit
       svg.style.display = 'block';
       svg.style.maxWidth = '100%';
-      svg.style.maxHeight = '100%';
+      svg.style.maxHeight = '30rem';
       svg.style.margin = '0 auto';
       
       // Special handling for pie charts
@@ -102,59 +112,171 @@ export default function MermaidRenderer({ id, content, caption }: MermaidRendere
         }
       }
     }
-  };
+  }, []);
 
-  // Render main diagram when component mounts or content changes
-  useEffect(() => {
-    if (!diagramRef.current) return;
+  // Function to fix malformed mermaid code
+  const fixMalformedCode = useCallback(async (malformedCode: string) => {
+    const contentKey = getContentHash(malformedCode);
+    
+    // Check if we already tried to fix this content
+    if (fixAttempts.has(contentKey)) {
+      console.log('Already attempted to fix this content, skipping...');
+      setRenderState('error');
+      return;
+    }
 
+    // Mark this content as being fixed
+    fixAttempts.set(contentKey, true);
+    
+    try {
+      console.log('Fixing malformed mermaid code...');
+      setRenderState('fixing');
+      
+      const { data, error } = await supabase.functions.invoke('fix-mermaid-code', {
+        body: { 
+          mermaidCode: malformedCode,
+          questionId: questionId,
+          imageOptionId: imageOptionId
+        }
+      });
+
+      if (error) {
+        console.error('Error fixing mermaid code:', error);
+        setRenderState('error');
+        return;
+      }
+
+      if (data?.success && data?.fixedCode) {
+        console.log('Successfully fixed mermaid code');
+        // Update content and reset state for re-render
+        setDisplayContent(data.fixedCode);
+        setRenderState('idle');
+        setIsRendered(false);
+      } else {
+        setRenderState('error');
+      }
+    } catch (error) {
+      console.error('Error in fixMalformedCode:', error);
+      setRenderState('error');
+    } finally {
+      fixingRef.current = false;
+    }
+  }, [questionId]);
+
+  // Render the mermaid diagram
+  const renderDiagram = useCallback(async () => {
+    if (!diagramRef.current || renderState === 'fixing') return;
+    
     const diagramId = `mermaid-${id}-${Math.random().toString(36).substring(2, 9)}`;
-
-    const renderDiagram = async () => {
-      if (!diagramRef.current) return;
-
-      try {
-        // Clear previous content
-        diagramRef.current.innerHTML = '';
-
-        // Render new diagram
-        const { svg, bindFunctions } = await renderMermaid(content, diagramId);
-
-        if (diagramRef.current) {
-          diagramRef.current.innerHTML = svg;
-          bindFunctions?.(diagramRef.current);
-          // Make the SVG responsive to fit the container
-          makeSvgResponsive(diagramRef.current);
+    
+    try {
+      setRenderState('rendering');
+      
+      // Clear any existing content
+      diagramRef.current.innerHTML = '';
+      
+      // First, validate the syntax
+      const parseResult = await mermaid.parse(displayContent, { suppressErrors: true });
+      
+      if (!parseResult) {
+        // Try with trimmed content
+        const lines = displayContent.split('\n');
+        if (lines.length > 2) {
+          const trimmedContent = lines.slice(0, -2).join('\n');
+          const parseResult2 = await mermaid.parse(trimmedContent, { suppressErrors: true });
+          if (parseResult2) {
+            // Use trimmed content if it's valid
+            const { svg, bindFunctions } = await mermaid.render(diagramId, trimmedContent);
+            if (diagramRef.current) {
+              diagramRef.current.innerHTML = svg;
+              bindFunctions?.(diagramRef.current);
+              makeSvgResponsive(diagramRef.current);
+              setRenderState('idle');
+              setIsRendered(true);
+              return;
+            }
+          }
         }
-      } catch (error) {
-        if (diagramRef.current) {
-          diagramRef.current.innerHTML = '<div class="text-red-500">Failed to render diagram</div>';
+        
+        // If parsing failed and we haven't tried fixing yet
+        if (questionId && !fixingRef.current) {
+          fixingRef.current = true;
+          await fixMalformedCode(displayContent);
+          return;
         }
+        
+        throw new Error('Invalid mermaid syntax');
       }
-    };
-
-    renderDiagram();
-
-    return () => {
+      
+      // Render the diagram
+      const { svg, bindFunctions } = await mermaid.render(diagramId, displayContent);
+      
       if (diagramRef.current) {
-        diagramRef.current.innerHTML = '';
+        diagramRef.current.innerHTML = svg;
+        bindFunctions?.(diagramRef.current);
+        makeSvgResponsive(diagramRef.current);
+        setRenderState('idle');
+        setIsRendered(true);
       }
-    };
-  }, [id, content]);
+    } catch (error) {
+      console.error('Mermaid rendering error:', error);
+      
+      // If we haven't tried fixing and have a questionId
+      if (questionId && !fixingRef.current && renderState !== 'error') {
+        fixingRef.current = true;
+        await fixMalformedCode(displayContent);
+      } else {
+        setRenderState('error');
+      }
+    }
+  }, [displayContent, id, questionId, makeSvgResponsive, fixMalformedCode]);
 
-  // No hover handlers or modal functionality
+  // Main effect to trigger rendering
+  useEffect(() => {
+    if (renderState === 'idle' && !isRendered) {
+      renderDiagram();
+    }
+  }, [renderState, isRendered, renderDiagram]);
+
+  // Clean up fix attempts on unmount
+  useEffect(() => {
+    return () => {
+      const contentKey = getContentHash(content);
+      fixAttempts.delete(contentKey);
+    };
+  }, [content]);
 
   // Detect if this is likely a pie chart based on content
-  const isPieChart = content.includes('pie title') || content.includes('pie ') || content.includes(' : '); 
+  const isPieChart = displayContent.includes('pie title') || displayContent.includes('pie ') || displayContent.includes(' : ');
+  
+  // Render appropriate UI based on state
+  const renderContent = () => {
+    switch (renderState) {
+      case 'fixing':
+        return (
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="text-red-500 text-center p-4">Failed to render diagram</div>
+        );
+      default:
+        return (
+          <div 
+            ref={diagramRef} 
+            className={`w-full flex items-center justify-center overflow-hidden ${isPieChart ? 'min-h-48 md:min-h-56' : 'min-h-32 md:min-h-40'}`}
+          />
+        );
+    }
+  };
   
   return (
     <div className="relative">
       {/* Main diagram container */}
       <div className="bg-white p-2 rounded-lg overflow-hidden shadow-sm mermaid-diagram">
-        <div 
-          ref={diagramRef} 
-          className={`w-full flex items-center justify-center overflow-hidden ${isPieChart ? 'min-h-72 md:min-h-80' : 'min-h-56 md:min-h-64'}`}
-        />
+        {renderContent()}
       </div>
       
       {/* Caption if provided */}

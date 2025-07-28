@@ -81,6 +81,7 @@ export interface CalculationResults {
     savingsRatePercent: number;
     income: number;
     expenses: number;
+    emergencyFundMonths: number;
   };
   debtStatus: {
     debtFree: boolean;
@@ -108,59 +109,340 @@ export interface QuizAnswers {
   [key: string]: any;
 }
 
+// Interface for debt detail
+export interface DebtDetail {
+  id: string;
+  type: string;
+  amount: number;
+  interestRate: number;
+}
+
+// Risk profile with numerical scoring
+export interface RiskProfile {
+  score: number; // 0-100
+  label: string;
+  description: string;
+  assetAllocation: {
+    equityPercentage: number;
+    bondPercentage: number;
+  };
+  expectedReturn: number; // Annual expected return percentage
+}
+
+// Risk profiles mapping
+export const RISK_PROFILES: Record<string, RiskProfile> = {
+  'conservative': {
+    score: 20,
+    label: 'Conservative',
+    description: 'Focus: Capital Preservation',
+    assetAllocation: { equityPercentage: 20, bondPercentage: 80 },
+    expectedReturn: 3.5
+  },
+  'cautious': {
+    score: 40,
+    label: 'Cautious',
+    description: 'Focus: Income & some growth',
+    assetAllocation: { equityPercentage: 40, bondPercentage: 60 },
+    expectedReturn: 4.5
+  },
+  'balanced': {
+    score: 60,
+    label: 'Balanced',
+    description: 'Focus: A mix of growth and income',
+    assetAllocation: { equityPercentage: 60, bondPercentage: 40 },
+    expectedReturn: 5.5
+  },
+  'growth': {
+    score: 80,
+    label: 'Growth',
+    description: 'Focus: Long-term growth',
+    assetAllocation: { equityPercentage: 80, bondPercentage: 20 },
+    expectedReturn: 6.5
+  },
+  'aggressive': {
+    score: 100,
+    label: 'Aggressive',
+    description: 'Focus: Maximising long-term growth',
+    assetAllocation: { equityPercentage: 90, bondPercentage: 10 },
+    expectedReturn: 7.5
+  }
+};
+
+/**
+ * Map Quick Look answers to detailed quiz format for calculations
+ */
+export function mapQuickLookAnswers(answers: QuizAnswers): QuizAnswers {
+  const mappedAnswers: QuizAnswers = { ...answers };
+  
+  // Map Quick Look fields to detailed quiz fields
+  if (answers['estimated-monthly-income']) {
+    mappedAnswers['net-monthly-income'] = answers['estimated-monthly-income'];
+    mappedAnswers['gross-monthly-income'] = Number(answers['estimated-monthly-income']) * 1.25; // Estimate gross as 25% higher
+  }
+  
+  if (answers['estimated-monthly-expenses']) {
+    mappedAnswers['fixed-monthly-expenses'] = Number(answers['estimated-monthly-expenses']) * 0.6; // Estimate 60% fixed
+    mappedAnswers['variable-monthly-expenses'] = Number(answers['estimated-monthly-expenses']) * 0.4; // Estimate 40% variable
+  }
+  
+  if (answers['retirement-savings']) {
+    mappedAnswers['pension-value'] = answers['retirement-savings'];
+    mappedAnswers['cash-savings'] = Number(answers['retirement-savings']) * 0.2; // Estimate some cash savings
+  }
+  
+  // Map debt situation to debt details
+  if (answers['debt-situation']) {
+    const debtSituation = answers['debt-situation'];
+    if (debtSituation === 'debt-free') {
+      mappedAnswers['debt-details'] = [];
+    } else if (debtSituation === 'manageable') {
+      mappedAnswers['debt-details'] = [{
+        id: 'estimated-1',
+        type: 'credit-card',
+        amount: 5000,
+        interestRate: 18
+      }];
+    } else if (debtSituation === 'high-debt') {
+      mappedAnswers['debt-details'] = [{
+        id: 'estimated-1',
+        type: 'credit-card',
+        amount: 15000,
+        interestRate: 22
+      }];
+    } else if (debtSituation === 'overwhelming') {
+      mappedAnswers['debt-details'] = [{
+        id: 'estimated-1',
+        type: 'credit-card',
+        amount: 30000,
+        interestRate: 25
+      }];
+    }
+  }
+  
+  // Map risk comfort to detailed risk questions
+  if (answers['risk-comfort']) {
+    const riskComfort = answers['risk-comfort'];
+    if (riskComfort === 'very-conservative') {
+      mappedAnswers['market-downturn'] = 'sell';
+      mappedAnswers['high-risk-preference'] = 'no';
+      mappedAnswers['risky-investments'] = 'no';
+      mappedAnswers['investment-knowledge'] = 'beginner';
+    } else if (riskComfort === 'conservative') {
+      mappedAnswers['market-downturn'] = 'worried';
+      mappedAnswers['high-risk-preference'] = 'no';
+      mappedAnswers['risky-investments'] = 'no';
+      mappedAnswers['investment-knowledge'] = 'beginner';
+    } else if (riskComfort === 'moderate') {
+      mappedAnswers['market-downturn'] = 'wait';
+      mappedAnswers['high-risk-preference'] = 'no';
+      mappedAnswers['risky-investments'] = 'no';
+      mappedAnswers['investment-knowledge'] = 'intermediate';
+    } else if (riskComfort === 'aggressive') {
+      mappedAnswers['market-downturn'] = 'buy-more';
+      mappedAnswers['high-risk-preference'] = 'yes';
+      mappedAnswers['risky-investments'] = 'yes';
+      mappedAnswers['investment-knowledge'] = 'advanced';
+    }
+  }
+  
+  // Map investment timeline to time horizon
+  if (answers['investment-timeline']) {
+    const timeline = answers['investment-timeline'];
+    if (timeline === 'soon') {
+      mappedAnswers['time-horizon'] = 'short';
+    } else if (timeline === 'medium') {
+      mappedAnswers['time-horizon'] = 'medium';
+    } else if (timeline === 'long') {
+      mappedAnswers['time-horizon'] = 'long';
+    }
+  }
+  
+  // Set default values for missing fields
+  mappedAnswers['predictable-income'] = 'yes'; // Default assumption
+  mappedAnswers['liquidity-importance'] = 'somewhat-important'; // Default assumption
+  mappedAnswers['number-of-dependents'] = 0; // Default assumption
+  mappedAnswers['target-retirement'] = 1000000; // Default $1M target
+  mappedAnswers['monthly-pension-contribution'] = Math.max(0, (Number(answers['estimated-monthly-income']) || 0) - (Number(answers['estimated-monthly-expenses']) || 0)) * 0.5; // Estimate half of savings goes to retirement
+  mappedAnswers['other-investments'] = 0; // Default assumption
+  
+  return mappedAnswers;
+}
+
+/**
+ * Calculate numerical risk score based on quiz answers (0-100)
+ */
+export function calculateRiskScore(answers: QuizAnswers): number {
+  let score = 0;
+  
+  // Market downturn reaction (high impact on risk tolerance)
+  if (answers['market-downturn'] === 'buy-more') score += 20;
+  else if (answers['market-downturn'] === 'wait') score += 10;
+  else if (answers['market-downturn'] === 'worried') score += 5;
+  else if (answers['market-downturn'] === 'sell') score -= 10;
+  
+  // Investment knowledge (affects risk capacity)
+  if (answers['investment-knowledge'] === 'expert') score += 15;
+  else if (answers['investment-knowledge'] === 'advanced') score += 10;
+  else if (answers['investment-knowledge'] === 'intermediate') score += 5;
+  else if (answers['investment-knowledge'] === 'beginner') score += 0;
+  
+  // Time horizon (longer = more risk capacity)
+  if (answers['time-horizon'] === 'long') score += 15;
+  else if (answers['time-horizon'] === 'medium') score += 10;
+  else if (answers['time-horizon'] === 'short') score += 0;
+  
+  // High risk preference (direct risk tolerance indicator)
+  if (answers['high-risk-preference'] === 'yes') score += 15;
+  else if (answers['high-risk-preference'] === 'no') score -= 5;
+  
+  // Risky investment experience (past behavior indicator)
+  if (answers['risky-investments'] === 'yes') score += 10;
+  else if (answers['risky-investments'] === 'no') score -= 5;
+  
+  // Predictable income (affects risk capacity)
+  if (answers['predictable-income'] === 'yes') score += 10;
+  else if (answers['predictable-income'] === 'no') score -= 5;
+  
+  // Liquidity importance (affects suitable investments)
+  if (answers['liquidity-importance'] === 'not-important') score += 10;
+  else if (answers['liquidity-importance'] === 'somewhat-important') score += 5;
+  else if (answers['liquidity-importance'] === 'important') score += 0;
+  else if (answers['liquidity-importance'] === 'very-important') score -= 5;
+  
+  // Age factor (younger = more risk capacity)
+  const age = Number(answers['current-age']) || 30;
+  if (age < 30) score += 10;
+  else if (age < 40) score += 5;
+  else if (age < 50) score += 0;
+  else if (age < 60) score -= 5;
+  else score -= 10;
+  
+  // Dependents (more dependents = less risk capacity)
+  const dependents = Number(answers['number-of-dependents']) || 0;
+  if (dependents === 0) score += 5;
+  else if (dependents >= 3) score -= 10;
+  else score -= 5;
+  
+  // Ensure score is within 0-100 range
+  return Math.max(0, Math.min(100, score + 50)); // +50 to center around 50
+}
+
+/**
+ * Get risk profile based on numerical score
+ */
+export function getRiskProfile(score: number): RiskProfile {
+  if (score <= 20) return RISK_PROFILES['conservative'];
+  if (score <= 40) return RISK_PROFILES['cautious'];
+  if (score <= 60) return RISK_PROFILES['balanced'];
+  if (score <= 80) return RISK_PROFILES['growth'];
+  return RISK_PROFILES['aggressive'];
+}
+
 /**
  * Calculate financial results based on quiz answers
  */
 export function calculateResults(answers: QuizAnswers): CalculationResults {
-  // Calculate portfolio projection
-  const currentAge = answers['current-age'];
-  const retirementAge = answers['retirement-age'];
-  const annualContribution = answers['annual-contribution'];
-  const currentAssets = answers['current-assets'];
-  const targetRetirement = answers['target-retirement'];
+  // Calculate risk score and profile
+  const riskScore = calculateRiskScore(answers);
+  const riskProfile = getRiskProfile(riskScore);
   
-  // Calculate portfolio allocation based on risk profile questions
-  const portfolioAllocation = calculatePortfolioAllocation(answers);
-  const returnRate = answers['return-rate'] / 100; // Convert percentage to decimal
-
+  // Get financial data from new question structure (convert empty strings to 0)
+  const currentAge = Number(answers['current-age']) || 30;
+  const retirementAge = Number(answers['retirement-age']) || 65;
+  const grossMonthlyIncome = Number(answers['gross-monthly-income']) || 0;
+  const netMonthlyIncome = Number(answers['net-monthly-income']) || 0;
+  const totalMonthlyExpenses = Number(answers['total-monthly-expenses']) || 0;
+  const cashSavings = Number(answers['cash-savings']) || 0;
+  const pensionValue = Number(answers['pension-value']) || 0;
+  const otherInvestments = Number(answers['other-investments']) || 0;
+  const monthlyPensionContribution = Number(answers['monthly-pension-contribution']) || 0;
+  const targetRetirement = Number(answers['target-retirement']) || 1000000;
+  const emergencyFund = Number(answers['emergency-fund']) || 0;
+  const totalDebtAmount = Number(answers['total-debt-amount']) || 0;
+  const averageDebtInterest = answers['average-debt-interest'] || 'none';
+  
+  // Convert average debt interest to numerical rate
+  const getDebtInterestRate = (category: string): number => {
+    switch (category) {
+      case 'none': return 0;
+      case 'low': return 5; // 5% average for low interest
+      case 'medium': return 12; // 12% average for medium interest  
+      case 'high': return 20; // 20% average for high interest
+      default: return 0;
+    }
+  };
+  
+  const debtInterestRate = getDebtInterestRate(averageDebtInterest);
+  
+  // Create simplified debt details for compatibility
+  const debtDetails: DebtDetail[] = totalDebtAmount > 0 ? [{
+    id: 'simplified-debt',
+    type: 'mixed',
+    amount: totalDebtAmount,
+    interestRate: debtInterestRate
+  }] : [];
+  
+  // Calculate total current assets (investable assets)
+  const currentAssets = cashSavings + pensionValue + otherInvestments;
+  
+  // Calculate cash flow
+  const monthlySavings = netMonthlyIncome - totalMonthlyExpenses;
+  const savingsRatePercent = netMonthlyIncome > 0 ? Math.round((monthlySavings / netMonthlyIncome) * 100) : 0;
+  
+  // Calculate annual contribution (from monthly savings + pension contributions)
+  // Only count positive monthly savings towards retirement contributions
+  const positiveMonthlyContribution = Math.max(0, monthlySavings) + monthlyPensionContribution;
+  const annualContribution = positiveMonthlyContribution * 12;
+  
+  // Use system-assigned expected return based on risk profile
+  const returnRate = riskProfile.expectedReturn / 100;
+  
   const timePeriodsInYears = retirementAge - currentAge;
-
+  
   // Calculate future value using formula: FV = PV × (1 + r)^N + PMT × [((1 + r)^N – 1) / r]
-  const futureValue = currentAssets * Math.pow(1 + returnRate, timePeriodsInYears) +
-                      annualContribution * ((Math.pow(1 + returnRate, timePeriodsInYears) - 1) / returnRate);
+  let futureValue = 0;
+  
+  // Present value component (existing savings growth)
+  const presentValueGrowth = currentAssets * Math.pow(1 + returnRate, timePeriodsInYears);
+  
+  // Annuity component (future value of annual contributions)
+  let annuityValue = 0;
+  if (returnRate > 0 && annualContribution > 0) {
+    // Standard formula for future value of annuity
+    annuityValue = annualContribution * ((Math.pow(1 + returnRate, timePeriodsInYears) - 1) / returnRate);
+  } else if (returnRate === 0 && annualContribution > 0) {
+    // If no return, just multiply contributions by years
+    annuityValue = annualContribution * timePeriodsInYears;
+  }
+  
+  futureValue = presentValueGrowth + annuityValue;
+  
+  
+  // Ensure we don't have NaN or negative values
+  if (isNaN(futureValue) || futureValue < 0) {
+    futureValue = 0;
+  }
 
-  // Calculate progress percentage - ensure it doesn't result in NaN or Infinity
+  // Calculate progress percentage
   let progressPercentage = 0;
   if (targetRetirement && targetRetirement > 0) {
-    // Use current assets as the numerator for the progress bar
-    // since we want to show current progress, not future projection
     progressPercentage = Math.min(100, Math.round((currentAssets / targetRetirement) * 100));
   }
   const onTrack = futureValue >= targetRetirement;
 
-  // Financial health score calculation has been moved to the widget
-  // This function now focuses on other calculations and preserves the raw quiz answers
-  const debtTypes = answers['debt-types'] || [];
-
-  // Calculate cash flow
-  const monthlyIncome = answers['monthly-income'] || 0;
-  const monthlyExpenses = answers['monthly-expenses'] || 0;
-  const monthlySavings = monthlyIncome - monthlyExpenses;
-  const savingsRatePercent = monthlyIncome > 0 ? Math.round((monthlySavings / monthlyIncome) * 100) : 0;
-
-  // Determine debt status
-  const debtFree = debtTypes.length === 1 && debtTypes[0] === 'none';
+  // Process debt details
+  const debtFree = debtDetails.length === 0;
+  const debtTypes = debtDetails.map(debt => debt.type);
 
   // Determine investing guidance based on risk profile and time horizon
-  const riskProfile = answers['risk-profile'] || 'moderate';
   const timeHorizon = answers['time-horizon'] || 'medium';
   const investingGuidance: string[] = [];
 
-  if (riskProfile === 'conservative' || timeHorizon === 'short') {
+  if (riskProfile.label === 'Conservative' || timeHorizon === 'short') {
     investingGuidance.push('Diversification across asset classes');
     investingGuidance.push('Bond laddering for stable income');
     investingGuidance.push('Focus on capital preservation');
-  } else if (riskProfile === 'aggressive' || timeHorizon === 'long') {
+  } else if (riskProfile.label === 'Aggressive' || timeHorizon === 'long') {
     investingGuidance.push('Dollar-cost averaging for long-term growth');
     investingGuidance.push('Regular portfolio rebalancing');
     investingGuidance.push('Strategic tax-loss harvesting');
@@ -170,25 +452,28 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     investingGuidance.push('Periodic portfolio review');
   }
 
-  // Asset allocation recommendations
+  // Asset allocation recommendations (legacy format for backwards compatibility)
   let assetAllocation = {
     conservative: 0,
     balanced: 0,
     aggressive: 0
   };
 
-  if (riskProfile === 'conservative') {
+  if (riskProfile.label === 'Conservative') {
     assetAllocation = { conservative: 80, balanced: 50, aggressive: 20 };
-  } else if (riskProfile === 'aggressive') {
+  } else if (riskProfile.label === 'Aggressive') {
     assetAllocation = { conservative: 20, balanced: 50, aggressive: 80 };
   } else {
     assetAllocation = { conservative: 40, balanced: 50, aggressive: 60 };
   }
 
-  // Next steps recommendations - passing just basic data since financialHealth score is calculated in widget
+  // Next steps recommendations with improved logic
   const nextSteps = determineNextSteps(answers, {
     debtFree,
-    progressPercentage
+    progressPercentage,
+    debtDetails,
+    savingsRatePercent,
+    emergencyFund: answers['emergency-fund'] || 0
   });
 
   return {
@@ -204,8 +489,9 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     cashFlow: {
       monthlySavings,
       savingsRatePercent,
-      income: monthlyIncome,
-      expenses: monthlyExpenses
+      income: netMonthlyIncome,
+      expenses: totalMonthlyExpenses,
+      emergencyFundMonths: totalMonthlyExpenses > 0 ? emergencyFund / totalMonthlyExpenses : 0,
     },
     debtStatus: {
       debtFree,
@@ -213,44 +499,70 @@ export function calculateResults(answers: QuizAnswers): CalculationResults {
     },
     investingGuidance,
     assetAllocation,
-    portfolioAllocation,
+    portfolioAllocation: {
+      equityPercentage: riskProfile.assetAllocation.equityPercentage,
+      bondPercentage: riskProfile.assetAllocation.bondPercentage,
+      riskScore: riskScore
+    },
     nextSteps,
     quizAnswers: answers
   };
 }
 
 /**
- * Determine next action steps based on assessment results
+ * Determine next action steps based on assessment results with hierarchical priority system
  * @param answers - Raw quiz answers
- * @param params - Basic parameters for determining next steps
+ * @param params - Parameters for determining next steps
  */
-function determineNextSteps(answers: QuizAnswers, params: { debtFree: boolean, progressPercentage: number }): string[] {
+function determineNextSteps(answers: QuizAnswers, params: { 
+  debtFree: boolean, 
+  progressPercentage: number,
+  debtDetails: DebtDetail[],
+  savingsRatePercent: number,
+  emergencyFund: number
+}): string[] {
   const nextSteps: string[] = [];
 
-  // Check emergency fund based directly on answers
-  const emergencyFund = answers['emergency-fund'] || 'none';
-  if (emergencyFund !== 'more-than-6' && emergencyFund !== '3-6') {
-    nextSteps.push('Build an emergency fund covering 3-6 months of expenses');
+  // PRIORITY 1: Emergency Fund (below 3 months)
+  if (params.emergencyFund < 3) {
+    nextSteps.push('Build an emergency fund covering 3 months of essential expenses');
   }
-  
-  // Check debt status
-  if (!params.debtFree) {
-    nextSteps.push('Create a debt repayment strategy focusing on high-interest debt first');
+
+  // PRIORITY 2: High-Interest Debt (APR > 8%)
+  const highInterestDebt = params.debtDetails.filter(debt => debt.interestRate > 8);
+  if (highInterestDebt.length > 0) {
+    const highestRate = Math.max(...highInterestDebt.map(debt => debt.interestRate));
+    nextSteps.push(`Aggressively pay down your high-interest debt, starting with the ${highestRate.toFixed(1)}% APR debt`);
   }
+
+  // PRIORITY 3: Pension/Employer Match (if applicable)
+  const monthlyPensionContrib = Number(answers['monthly-pension-contribution']) || 0;
+  const grossMonthlyIncome = Number(answers['gross-monthly-income']) || 0;
+  const pensionRatePercent = grossMonthlyIncome > 0 ? (monthlyPensionContrib / grossMonthlyIncome) * 100 : 0;
   
-  // Check savings rate directly from answers
-  const savingsRate = answers['savings-rate'] || 0;
-  if (savingsRate < 15) {
-    nextSteps.push('Increase monthly savings rate to at least 15% of income');
+  if (pensionRatePercent < 5) { // Assuming 5% is a reasonable minimum for employer match
+    nextSteps.push('Ensure you are contributing enough to your pension to get the full employer match');
   }
-  
-  // Check retirement progress
-  if (params.progressPercentage < 70) {
+
+  // PRIORITY 4: Savings Rate (if priorities 1-3 are met)
+  if (params.emergencyFund >= 3 && highInterestDebt.length === 0) {
+    if (params.savingsRatePercent < 15) {
+      nextSteps.push('Increase monthly savings rate to at least 15% of income');
+    }
+  }
+
+  // PRIORITY 5: Retirement Progress (if other priorities are met)
+  if (params.progressPercentage < 70 && params.emergencyFund >= 3 && highInterestDebt.length === 0) {
     nextSteps.push('Increase retirement contributions to stay on track with goals');
   }
-  
-  nextSteps.push('Review your asset allocation annually');
-  nextSteps.push('Ensure adequate insurance coverage for your needs');
+
+  // PRIORITY 6: General recommendations (always include some)
+  if (nextSteps.length < 3) {
+    nextSteps.push('Review your asset allocation annually');
+  }
+  if (nextSteps.length < 4) {
+    nextSteps.push('Ensure adequate insurance coverage for your needs');
+  }
 
   return nextSteps.slice(0, 4);
 }
@@ -261,8 +573,7 @@ function determineNextSteps(answers: QuizAnswers, params: { debtFree: boolean, p
 export function generateDashboardWidgets(results: CalculationResults): Widget[] {
   const widgets: Widget[] = [];
 
-
-  // 1. Progress Bar for Retirement Goal
+  // 4. Progress Bar for Retirement Goal
   widgets.push({
     id: uuidv4(),
     type: 'progressBarList',
@@ -283,7 +594,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         }
       ],
       showPercentages: true
-    }
+    },
+    order:0
   });
  
 
@@ -300,6 +612,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         quizAnswers: results.quizAnswers,
         showIndividualScores: true
       },
+      order:1
     });
 
  // 3. Retirement Readiness Widget
@@ -330,6 +643,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
     ],
     currentScenarioId: 'current-path'
   },
+  order:2
 });
 
 
@@ -345,7 +659,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       inflows: [{ id: uuidv4(), title: 'Total Income', value: results.cashFlow.income, category: 'Income', frequency: 'monthly', displayOrder: 1 }],
       outflows: [{ id: uuidv4(), title: 'Total Expenses', value: results.cashFlow.expenses, category: 'Expenses', frequency: 'monthly', displayOrder: 1 }],
       projectedPeriod: 'Monthly'
-    }
+    },
+    order:3
   });
 
   // 5. Next Best Action Widget
@@ -363,7 +678,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       priority: index === 0 ? 'high' : (index === 1 ? 'medium' : 'low'),
       category: 'Financial Improvement',
       displayOrder: index + 1
-    }))
+    })),
+    order:4
   });
 
     // 6. Metric Card for Savings Rate
@@ -394,7 +710,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             displayOrder: 2
           }
         ]
-      }
+      },
+      order:5
     });
 
     // 7. Portfolio Allocation Pie Chart
@@ -404,7 +721,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       title: 'Suggested Allocation',
       icon: 'fas fa-chart-pie',
       column_span: 2,
-      row_span: 4,
+      row_span: 2,
       data: {
         dataPoints: [
           {
@@ -424,7 +741,8 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         ],
         title: 'Asset Allocation',
         showLegend: true
-      }
+      },
+      order:6
     });
 
   // 8. Tips Card Widget with lesson links
@@ -588,9 +906,55 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
         ],
         currentTipIndex: 0,
         autoRotate: true
-      }
+      },
+      order:7
     });
   }
+
+    // 1. Daily Habit Future Value Calculator
+    widgets.push({
+      id: uuidv4(),
+      type: 'dailyHabitCalculator',
+      title: 'Could Your Habit Make You Rich?',
+      icon: 'fas fa-coffee',
+      column_span: 2,
+      row_span: 4,
+      data:{},
+      order:8
+    });
+
+    widgets.push({
+      id: uuidv4(),
+      type: 'salarySlicer',
+      title: 'Salary Slicer',
+      icon: 'fas fa-dollar-sign',
+      column_span: 2,
+      row_span: 4,
+      data:{},
+      order:9
+    });
+  
+    // // 2. 401(k) Head Start Visualizer
+    // widgets.push({
+    //   id: uuidv4(),
+    //   type: 'pensionHeadStart',
+    //   title: '401(k) Head Start Visualizer',
+    //   icon: 'fas fa-graduation-cap',
+    //   column_span: 2,
+    //   row_span: 4,
+    //   data:{}
+    // });
+  
+    // // 3. Down Payment Timeline
+    // widgets.push({
+    //   id: uuidv4(),
+    //   type: 'mortgageDepositTimeline',
+    //   title: 'Down Payment Timeline',
+    //   icon: 'fas fa-home',
+    //   column_span: 2,
+    //   row_span: 2,
+    //   data:{}
+    // });
 
   return widgets;
 }
@@ -615,52 +979,70 @@ function getProgressColor(percentage: number): string {
 }
 
 /**
- * Calculate portfolio allocation based on risk profile questions
- * Formula:
- * 1. If yes count > no count, 60% Equity, 40% Bond
- * 2. If yes count < no count, 40% Equity, 60% Bond
- * 3. If yes count = no count, 50% Equity, 50% Bond
+ * Calculate weighted financial health score (0-100)
+ * This provides a comprehensive assessment of financial wellness
  */
-function calculatePortfolioAllocation(answers: QuizAnswers) {
-  // Questions to consider for risk profile
-  const riskProfileQuestions = [
-    'paid-all-debt',
-    'expect-lump-sum',
-    'long-term-goal',
-    'predictable-income',
-    'high-risk-preference',
-    'risky-investments',
-    'extreme-sports'
-  ];
+export function calculateFinancialHealthScore(answers: QuizAnswers): number {
+  let score = 0;
   
-  // Count yes answers
-  let yesCount = 0;
-  let noCount = 0;
+  // Emergency Fund (30 points max)
+  const emergencyFund = Number(answers['emergency-fund']) || 0;
+  const emergencyScore = Math.min(30, (emergencyFund / 6) * 30);
+  score += emergencyScore;
   
-  for (const question of riskProfileQuestions) {
-    if (answers[question] === 'yes') {
-      yesCount++;
-    } else if (answers[question] === 'no') {
-      noCount++;
+  // Savings Rate (30 points max)
+  const netIncome = Number(answers['net-monthly-income']) || 0;
+  const fixedExpenses = Number(answers['fixed-monthly-expenses']) || 0;
+  const variableExpenses = Number(answers['variable-monthly-expenses']) || 0;
+  const monthlySavings = netIncome - fixedExpenses - variableExpenses;
+  const savingsRate = netIncome > 0 ? (monthlySavings / netIncome) * 100 : 0;
+  const savingsScore = Math.min(30, (savingsRate / 20) * 30);
+  score += savingsScore;
+  
+  // Debt Health (20 points max)
+  const debtDetails = answers['debt-details'] as DebtDetail[] || [];
+  const grossIncome = Number(answers['gross-monthly-income']) || 0;
+  let debtScore = 20;
+  
+  if (debtDetails.length > 0) {
+    const totalDebt = debtDetails.reduce((sum, debt) => sum + debt.amount, 0);
+    const monthlyDebtPayments = debtDetails.reduce((sum, debt) => {
+      // Estimate monthly payment as 2% of total debt amount
+      return sum + (debt.amount * 0.02);
+    }, 0);
+    
+    const debtToIncomeRatio = grossIncome > 0 ? (monthlyDebtPayments / grossIncome) : 0;
+    const goodDebt = debtDetails.filter(debt => debt.interestRate <= 8);
+    const badDebt = debtDetails.filter(debt => debt.interestRate > 8);
+    
+    // Penalize high debt-to-income ratio
+    if (debtToIncomeRatio > 0.45) debtScore -= 15;
+    else if (debtToIncomeRatio > 0.30) debtScore -= 10;
+    else if (debtToIncomeRatio > 0.15) debtScore -= 5;
+    
+    // Penalize bad debt more heavily
+    if (badDebt.length > 0) {
+      const badDebtTotal = badDebt.reduce((sum, debt) => sum + debt.amount, 0);
+      const badDebtRatio = totalDebt > 0 ? badDebtTotal / totalDebt : 0;
+      debtScore -= Math.min(10, badDebtRatio * 20);
     }
   }
   
-  let equityPercentage = 50; // Default balanced allocation
-  let bondPercentage = 50;
+  score += Math.max(0, debtScore);
   
-  // Apply allocation formula
-  if (yesCount > noCount) {
-    equityPercentage = 60;
-    bondPercentage = 40;
-  } else if (yesCount < noCount) {
-    equityPercentage = 40;
-    bondPercentage = 60;
-  }
-  // else keep 50/50 split
+  // Retirement Progress (20 points max)
+  const currentAge = Number(answers['current-age']) || 30;
+  const retirementAge = Number(answers['retirement-age']) || 65;
+  const totalAssets = (Number(answers['cash-savings']) || 0) + (Number(answers['pension-value']) || 0) + (Number(answers['other-investments']) || 0);
+  const targetRetirement = Number(answers['target-retirement']) || 1000000;
   
-  return {
-    equityPercentage,
-    bondPercentage,
-    riskScore: yesCount, // Store the risk score (number of yes answers)
-  };
+  const yearsToRetirement = retirementAge - currentAge;
+  const expectedProgress = yearsToRetirement > 0 ? (1 - (yearsToRetirement / 35)) : 1; // Assuming 35-year career
+  const actualProgress = targetRetirement > 0 ? totalAssets / targetRetirement : 0;
+  const progressRatio = expectedProgress > 0 ? actualProgress / expectedProgress : 0;
+  
+  const retirementScore = Math.min(20, progressRatio * 20);
+  score += retirementScore;
+  
+  return Math.max(0, Math.min(100, score));
 }

@@ -14,6 +14,7 @@ export const HomeHeader=()=>{
         {to:"/dashboard/essentials",label:"Learning"},
         {to:"/blogs",label:"Blogs"},
         {to:"/pricing",label:"Pricing"},
+        {to:"/calculators",label:"Calculators"},
 
     ]
 
@@ -24,7 +25,7 @@ export const HomeHeader=()=>{
           alt="Moneko Logo"
           className="size-10"               
         />
-        <span className="text-xl font-semibold text-slate-800">
+        <span className="text-xl font-semibold text-foreground dark:text-dark-foreground">
           Moneko
         </span>
       </Link>
@@ -35,10 +36,10 @@ export const HomeHeader=()=>{
                     <Link
                     key={index}
                     to={route.to}
-                    className={classNames("text-sm transition-colors hover:text-primary",
+                    className={classNames("text-sm transition-colors hover:text-primary dark:hover:text-dark-primary",
                         {
-                            "text-primary font-bold":location.pathname===route.to,
-                            "text-slate-700 font-medium ":location.pathname!==route.to
+                            "text-primary dark:text-dark-primary font-bold":location.pathname===route.to,
+                            "text-gray-700 dark:text-gray-300 font-medium ":location.pathname!==route.to
                         }
                     )}
                     >
@@ -50,26 +51,28 @@ export const HomeHeader=()=>{
         <a
           href={DISCORD_URL}
           target="_blank"
-          className="text-sm font-medium text-slate-700 transition-colors hover:text-purple-600"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:text-primary dark:hover:text-dark-primary"
         >
           Community
         </a>
       </div>
     <div className="flex items-center gap-x-5">
       <Link
-        to="/dashboard/essentials"
-        className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-purple-600 md:block"
+        to="/dashboard/learning"
+        className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:text-primary dark:hover:text-dark-primary md:block"
       >
         Explore Tools
       </Link>
       <Link
         to="/dashboard"
-        className="font-medium text-primary hover:secondary"
+        className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
       >
-        <Button className="bg-primary hover:bg-secondary">
-         Build Portfolio <FontAwesomeIcon icon={faArrowRight}  className="ml-2"/>
+        <Button>
+          Build Portfolio <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
         </Button>
       </Link>
-    </div>
   </div>
-}
+  </div>
+  
+};

@@ -1,0 +1,73 @@
+import { InvestmentCalculator, InvestmentCalculatorSEOContent } from '@/components/calculators/investment/investment-calculator';
+import { createFileRoute } from '@tanstack/react-router';
+
+import { seo } from '@/utils/seo';
+import { useNavigate } from '@tanstack/react-router';
+import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
+import { HomeHeader } from '@/components/index/header';
+import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
+
+export const Route = createFileRoute('/calculators/investment-calculator')({
+  component: InvestmentCalculatorPage,
+  head: () => {
+    const pageUrl = 'https://moneko.io/calculators/investment-calculator';
+    const meta = seo({
+      title: 'Investment Growth Calculator | Moneko',
+      description: "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
+      keywords: 'investment calculator, investment growth, portfolio projection, wealth building, financial goals, Moneko',
+      image: 'https://moneko.io/og-img.png',
+      url: pageUrl,
+    });
+    
+    // Add structured data for investment calculator page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      "name": "Investment Growth Calculator",
+      "description": "Project your investment growth over time. See how regular contributions and returns can build your wealth with Moneko's investment calculator.",
+      "url": pageUrl,
+      "provider": {
+        "@type": "Organization",
+        "name": "Moneko",
+        "url": "https://moneko.io/"
+      },
+      "category": "Investment"
+    };
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
+});
+
+function InvestmentCalculatorPage() {
+  const navigate = useNavigate();
+  return (
+   <AmbientHaloLayout>
+     <div className="container mx-auto px-4 py-4">
+     <HomeHeader/>
+      <div className="mt-4 mb-8">
+      <BreadCrumbsHeader/>
+      </div>
+      <h1 className="mb-8 text-3xl font-bold text-center text-foreground dark:text-dark-foreground">Investment Calculator</h1>
+      <p className="mb-6 text-lg text-center text-gray-700 dark:text-gray-300">
+        Explore how your investments can grow over time and compare different scenarios. Calculate future value, required contributions, return rates, starting amounts, and investment durations.
+      </p>
+      <InvestmentCalculator />
+      <InvestmentCalculatorSEOContent />
+    </div>
+    </AmbientHaloLayout>
+  );
+}

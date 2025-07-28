@@ -32,7 +32,7 @@ serve(async (req) => {
     }
 
     // Parse the request body
-    const { plan, billingInterval, successUrl, cancelUrl, userId } = await req.json()
+    const { plan, billingInterval, successUrl, cancelUrl, userId, isTrial = false } = await req.json()
     
     // Validate userId is a valid UUID
     if (!userId || !validateUuid(userId)) {
@@ -73,21 +73,49 @@ serve(async (req) => {
     console.log('Stripe API Key available:', !!Deno.env.get('STRIPE_SECRET_KEY'));
     
     try {
-      // Create a checkout session
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
+      let sessionConfig;
+      
+      if (isTrial) {
+        // For free trial, create subscription directly with no payment method required
+        sessionConfig = {
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+            },
+          ],
+          mode: 'subscription',
+          success_url: successUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
+          client_reference_id: userId,
+          allow_promotion_codes: true,
+          payment_method_collection: 'if_required', // Don't require payment method for trials
+          subscription_data: {
+            payment_behavior: 'allow_incomplete', // Create subscription with incomplete status
+            trial_period_days: 30, // 30-day free trial
           },
-        ],
-        mode: 'subscription',
-        success_url: successUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
-        client_reference_id: userId, // Store user ID for reference (already validated as UUID)
-        allow_promotion_codes: true, // Enable promotion code field in checkout
-      });
+        };
+      } else {
+        // Regular subscription checkout
+        sessionConfig = {
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+            },
+          ],
+          mode: 'subscription',
+          success_url: successUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl || `${req.headers.get('origin') || 'https://moneko.io'}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
+          client_reference_id: userId,
+          allow_promotion_codes: true,
+        };
+      }
+      
+      // Create a checkout session
+      const session = await stripe.checkout.sessions.create(sessionConfig);
       
       console.log('Stripe session created:', {
         id: session.id,
