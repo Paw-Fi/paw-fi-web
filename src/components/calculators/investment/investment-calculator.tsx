@@ -858,7 +858,7 @@ function RadioGroup({ label, options, value, onChange, description }: RadioGroup
         {options.map(opt => {
           const id = `${groupName}-${opt.value}`;
           return (
-            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-primary/10 dark:bg-dark-primary/10 border-primary dark:border-dark-primary text-primary dark:text-dark-primary' : 'border-subtle-border dark:border-dark-subtle-border hover:bg-subtle-background/50 dark:hover:bg-dark-subtle-background/50'}`}
+            <label key={opt.value} htmlFor={id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${value === opt.value ? 'bg-primary/10 dark:bg-dark-primary/10 border-primary dark:border-dark-primary text-primary dark:text-dark-primary' : 'border-subtle-border dark:border-dark-subtle-border hover:bg-subtle-background/50 dark:hover:bg-dark-subtle-background/50'}`}>
               <input
                 id={id}
                 type="radio"
