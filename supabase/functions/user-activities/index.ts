@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
 import { corsHeaders } from '../shared/cors.ts';
+import { fetchUserActivitiesFromDB, insertUserActivityToDB, type ActivityData } from '../shared/activity-logger.ts';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -29,15 +30,11 @@ serve(async (req: Request) => {
                 });
             }
 
-            // Fetch user activities
-            const { data: activities, error } = await supabase
-                .from('user_activities')
-                .select('*')
-                .eq('user_id', user_id)
-                .order('created_at', { ascending: false });
+            // Fetch user activities using shared helper
+            const result = await fetchUserActivitiesFromDB(supabase, user_id);
 
-            if (error) {
-                console.error("[user-activities] Error fetching activities:", error);
+            if (!result.success) {
+                console.error("[user-activities] Error fetching activities:", result.error);
                 return new Response(JSON.stringify({ 
                     error: "Failed to fetch activities" 
                 }), {
@@ -48,7 +45,7 @@ serve(async (req: Request) => {
 
             return new Response(JSON.stringify({ 
                 success: true,
-                activities: activities
+                activities: result.activities
             }), {
                 status: 200,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,20 +63,11 @@ serve(async (req: Request) => {
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
             }
-            console.log("[user-activities] Inserting activity:", activity);
+            // Insert activity record using shared helper
+            const insertResult = await insertUserActivityToDB(supabase, user_id, activity as ActivityData);
 
-            // Insert activity record
-            const { data, error } = await supabase
-                .from('user_activities')
-                .insert({
-                    user_id: user_id,
-                    activity: activity
-                })
-                .select()
-                .single();
-
-            if (error) {
-                console.error("[user-activities] Error inserting activity:", error);
+            if (!insertResult.success) {
+                console.error("[user-activities] Error inserting activity:", insertResult.error);
                 return new Response(JSON.stringify({ 
                     error: "Failed to log activity" 
                 }), {
@@ -90,7 +78,7 @@ serve(async (req: Request) => {
 
             return new Response(JSON.stringify({ 
                 success: true,
-                activity_id: data.id
+                activity_id: insertResult.activity_id
             }), {
                 status: 200,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },

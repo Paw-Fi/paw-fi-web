@@ -411,6 +411,72 @@ export interface IPieChartWidget extends IBaseWidget {
   data: IChartData;
 }
 
+// =============================================================================
+// GOAL TRACKER WIDGETS
+// =============================================================================
+
+// Goal Tracker Summary Widget - Shows overview of all goals
+export interface IGoalTrackerSummaryData {
+  totalGoals: number;
+  activeGoals: number;
+  completedGoals: number;
+  totalProgress: number;
+  onTrackGoals: number;
+  upcomingMilestones: number;
+  recentAchievements: number;
+}
+
+export interface IGoalTrackerSummaryWidget extends IBaseWidget {
+  type: 'goalTrackerSummary';
+  data: IGoalTrackerSummaryData;
+}
+
+// Individual Goal Progress Widget - Shows single goal details
+export interface IGoalProgressData {
+  goalId: string;
+  title: string;
+  goalType: string;
+  targetAmount: number;
+  currentAmount: number;
+  progressPercentage: number;
+  targetDate: string;
+  isOnTrack: boolean;
+  status: string;
+  upcomingMilestones: Array<{
+    id: string;
+    title: string;
+    dueDate: string;
+    targetAmount?: number;
+  }>;
+}
+
+export interface IGoalProgressWidget extends IBaseWidget {
+  type: 'goalProgress';
+  data: IGoalProgressData;
+}
+
+// Goals Grid Widget - Shows multiple goals in compact view
+export interface IGoalsGridData {
+  goals: Array<{
+    id: string;
+    title: string;
+    goalType: string;
+    progressPercentage: number;
+    targetAmount: number;
+    currentAmount: number;
+    isOnTrack: boolean;
+    status: string;
+  }>;
+  maxDisplayItems: number;
+  showCompleted: boolean;
+  sortBy: 'progress' | 'target_date' | 'created_at';
+}
+
+export interface IGoalsGridWidget extends IBaseWidget {
+  type: 'goalsGrid';
+  data: IGoalsGridData;
+}
+
 export type Widget =
   | IMetricCardWidget
   | IProgressBarListWidget
@@ -431,4 +497,7 @@ export type Widget =
   | IDailyHabitCalculatorWidget
   | IPensionHeadStartWidget
   | IMortgageDepositTimelineWidget
-  | ISalarySlicerWidget;
+  | ISalarySlicerWidget
+  | IGoalTrackerSummaryWidget
+  | IGoalProgressWidget
+  | IGoalsGridWidget;

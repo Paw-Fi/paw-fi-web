@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
 import { corsHeaders } from '../shared/cors.ts';
 import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
+import { logUserActivity, ActivityPayload } from "../shared/activity-logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -74,23 +75,17 @@ serve(async (req: Request) => {
                         headers: { ...corsHeaders, "Content-Type": "application/json" },
                     });
                 }
-console.log("[verify-and-reward] Inserting activity:", lesson)
-                const { error: activityError, data: activityData } = await supabase.functions.invoke(
-                    "user-activities",
-                    {
-                      body: { 
-                        user_id:userId,
-                        activity:{
-                            action:RewardActions.COMPLETED_LESSON,
-                            lesson_id:lessonId,
-                            lesson_title:lesson.title,
-                            xp:lesson.xp,
-                        }
-
-
-                      },
-                    },
-                  );
+                const activityPayload: ActivityPayload = {
+                  type: 'lesson_completion',
+                  action: RewardActions.COMPLETED_LESSON,
+                  source: 'verify-and-reward',
+                  metadata: {
+                    lesson_id: lessonId,
+                    lesson_title: lesson.title,
+                    xp_rewarded: lesson.xp,
+                  }
+                };
+                const activityError = await logUserActivity(supabase, userId, activityPayload);
 
                 if (activityError) {
                     console.error("[verify-and-reward] Error logging activity:", activityError);

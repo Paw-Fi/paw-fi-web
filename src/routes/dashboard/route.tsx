@@ -5,17 +5,14 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBookOpen,
-  faCalculator,
   faChessKnight,
   faCog,
-  faComments,
   faUser,
   faSignInAlt,
   faSignOut,
@@ -23,15 +20,14 @@ import {
   faTimes,
   faLightbulb,
   faHandHoldingDollar,
-  faFire,
   faHouseChimney,
   faHome,
+  faChartBar,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
 
 import { toast } from "react-toastify";
-import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -109,12 +105,12 @@ export function Dashboard() {
     user?.id ?? "",
     { enabled: !!user },
   );
-  const { isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
   const { gamificationData } = useGamification();
-
+const isActive=true
   const showGuide = () => {
     setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
     setIsGuideHidden(false);
@@ -153,6 +149,8 @@ export function Dashboard() {
 
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
+    { id: "tracker", label: "Tracker", icon: faChartBar, path: "/dashboard/tracker"},
+
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
       id: "learning",

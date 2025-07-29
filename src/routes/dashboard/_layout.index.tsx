@@ -4,53 +4,70 @@ import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faRocket,
-  faChartLine,
-  faGraduationCap,
-  faCalculator,
-  faComments,
   faArrowRight,
-  faPlus,
-  faBookOpen,
-  faLightbulb,
-  faBullseye,
-  faClock,
   faAward,
-  faFire,
+  faBook,
+  faBookOpen,
+  faBolt,
+  faBrain,
+  faBullseye,
+  faCalculator,
+  faCalendarAlt,
+  faChartBar,
+  faChartLine,
+  faCheckCircle,
+  faChevronDown,
+  faChevronRight,
+  faClock,
+  faCog,
+  faCommentDots,
+  faComments,
+  faCreditCard,
+  faDollarSign,
+  faDumbbell,
+  faEdit,
+  faEnvelope,
+  faExclamationTriangle,
   faEye,
+  faFileAlt,
+  faFileInvoiceDollar,
+  faFire,
+  faFlagCheckered,
+  faGift,
+  faGraduationCap,
+  faHeart,
+  faHeartbeat,
+  faHistory,
   faHome,
+  faInfoCircle,
+  faKey,
+  faLeaf,
+  faLightbulb,
+  faLock,
   faMoneyBillWave,
   faPercent,
   faPiggyBank,
-  faCreditCard,
-  faExclamationTriangle,
-  faCheckCircle,
-  faTimesCircle,
-  faDollarSign,
-  faCalendarAlt,
-  faUser,
+  faPlus,
+  faQuestionCircle,
+  faRocket,
   faShieldAlt,
-  faTrophy,
-  faHistory,
+  faSignOutAlt,
   faSpinner,
-  faChevronRight,
-  faBolt,
-  faChartBar,
-  faHeartbeat,
-  faWallet,
-  faGift,
-  faLock,
+  faStar,
+  faTasks,
   faTimes,
+  faTimesCircle,
+  faTrophy,
   faUnlock,
+  faUser,
+  faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useUserCourses } from "@/services/course-service";
 import { useSubscription } from "@/hooks/use-subscription";
-import { useUserActivities } from "@/hooks/useUserActivities";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
-import { useCompletedLessons } from "@/hooks/useCompletedLessons";
+import { ActivityList } from '@/components/shared/ActivityList';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { getConversations } from "@/services/conversation-service";
@@ -60,6 +77,9 @@ import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
 import { useGamification } from "@/hooks/use-gamification";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useCompletedLessons } from "@/hooks/useCompletedLessons";
+import { Activity, useUserActivities } from "@/hooks/useUserActivities";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -206,7 +226,7 @@ function DashboardHome() {
   };
 
   // Subscribe to user activities
-  const { activities, loading: isActivitiesLoading, error: activitiesError } = useUserActivities(user?.id);
+  const { activities, isLoading: isActivitiesLoading, error: activitiesError } = useUserActivities();
 
   // Calculate real learning progress from actual course data using consistent logic
   const learningInsights = useMemo(() => {
@@ -732,8 +752,8 @@ function DashboardHome() {
                   variants={cardHoverVariants}
                   initial="rest"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)]"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2),transparent_50%)]"></div>
                   <div className="relative p-8 text-center">
                     <div className="mb-6 mx-auto w-20 h-20 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center shadow-lg">
                       <FontAwesomeIcon icon={faUser} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
@@ -842,7 +862,7 @@ function DashboardHome() {
                             >
                               Continue
                             </Link>
-                        </div>
+                          </div>
                         </motion.div>
                       )}
 
@@ -850,81 +870,7 @@ function DashboardHome() {
                         <div className="p-4 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl">
                           <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Activity</h4>
                           
-                          {/* Loading State */}
-                          {isActivitiesLoading && (
-                            <div className="space-y-3">
-                              {[1, 2, 3].map((i) => (
-                                <div key={i} className="animate-pulse">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                                    <div className="flex-1">
-                                      <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-1"></div>
-                                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                                    </div>
-                                    <div className="w-12 h-5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Empty State */}
-                          {!isActivitiesLoading && activities.length === 0 && (
-                            <div className="text-center py-6">
-                              <div className="mb-3 mx-auto w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                                <FontAwesomeIcon icon={faHistory} className="h-6 w-6 text-gray-400 dark:text-gray-500" />
-                              </div>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
-                            </div>
-                          )}
-
-                          {/* Activities List */}
-                          {!isActivitiesLoading && activities.length > 0 && (
-                            <div className="space-y-3 max-h-48 overflow-y-auto">
-                              {activities.slice(0, 5).map((activity) => (
-                                <div key={activity.id} className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                                  <FontAwesomeIcon 
-                                    icon={
-                                      activity.activity.action === 'completed_lesson' ? faCheckCircle :
-                                      activity.activity.action === 'completed_qotd' ? faLightbulb :
-                                      faAward
-                                    } 
-                                    className={`h-4 w-4 mr-2 ${
-                                      activity.activity.action === 'completed_lesson' ? 'text-green-500' :
-                                      activity.activity.action === 'completed_qotd' ? 'text-yellow-500' :
-                                      'text-purple-500'
-                                    }`} 
-                                  />
-                                  <div className="flex-1">
-                                    <div className="text-gray-900 dark:text-gray-100">
-                                      {activity.activity.action === 'completed_lesson' && 
-                                        `Completed: ${activity.activity.lesson_title || 'Lesson'}`
-                                      }
-                                      {activity.activity.action === 'completed_qotd' && 
-                                        'Completed daily challenge'
-                                      }
-                                      {activity.activity.action === 'ask_for_new_lesson' && 
-                                        'Requested new lesson'
-                                      }
-                                    </div>
-                                    <div className="text-xs text-gray-400 dark:text-gray-500">
-                                      {new Date(activity.created_at).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </div>
-                                  </div>
-                                  {activity.activity.xp && (
-                                    <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                                      +{activity.activity.xp} XP
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <ActivityList activities={activities} isLoading={isActivitiesLoading} limit={5} />
 
                           {/* Error State */}
                           {activitiesError && (
