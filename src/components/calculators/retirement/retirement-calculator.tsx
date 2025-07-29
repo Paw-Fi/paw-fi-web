@@ -60,28 +60,28 @@ function RetirementProjectionTable({
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-2 text-foreground dark:text-dark-foreground">Year-by-Year Projection</h3>
-      <div className="overflow-x-auto rounded-lg border border-subtle-border dark:border-dark-subtle-border">
-        <table className="min-w-full text-sm">
-          <thead className="bg-table-header dark:bg-dark-table-header">
+      <h3 className="text-lg font-semibold mb-2">Year-by-Year Projection</h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm border border-gray-200">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border">Year</th>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border">Age</th>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border text-right">Start Balance</th>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border text-right">Contribution</th>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border text-right">Growth</th>
-              <th className="px-2 py-2 font-medium text-muted-foreground dark:text-dark-muted-foreground border-b border-subtle-border dark:border-dark-subtle-border text-right">End Balance</th>
+              <th className="px-2 py-2 font-medium border-b">Year</th>
+              <th className="px-2 py-2 font-medium border-b">Age</th>
+              <th className="px-2 py-2 font-medium border-b text-right">Start Balance</th>
+              <th className="px-2 py-2 font-medium border-b text-right">Contribution</th>
+              <th className="px-2 py-2 font-medium border-b text-right">Growth</th>
+              <th className="px-2 py-2 font-medium border-b text-right">End Balance</th>
             </tr>
           </thead>
-          <tbody className="bg-card dark:bg-dark-card">
+          <tbody>
             {data.map((row) => (
-              <tr key={row.year} className="even:bg-table-row-even dark:even:bg-dark-table-row-even">
-                <td className="px-2 py-1 text-center text-foreground dark:text-dark-foreground">{row.year}</td>
-                <td className="px-2 py-1 text-center text-foreground dark:text-dark-foreground">{row.age}</td>
-                <td className="px-2 py-1 text-right text-foreground dark:text-dark-foreground">${row.startBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                <td className="px-2 py-1 text-right text-foreground dark:text-dark-foreground">${row.contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                <td className="px-2 py-1 text-right text-foreground dark:text-dark-foreground">${row.growth.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                <td className="px-2 py-1 text-right text-foreground dark:text-dark-foreground">${row.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <tr key={row.year} className="even:bg-gray-50">
+                <td className="px-2 py-1 text-center">{row.year}</td>
+                <td className="px-2 py-1 text-center">{row.age}</td>
+                <td className="px-2 py-1 text-right">${row.startBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                <td className="px-2 py-1 text-right">${row.contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                <td className="px-2 py-1 text-right">${row.growth.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                <td className="px-2 py-1 text-right">${row.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
               </tr>
             ))}
           </tbody>
@@ -138,35 +138,35 @@ function RetirementResults({
   const status = safeWithdrawal * 12 + otherIncome * 12 >= retirementIncomeNeeded ? 'On Track' : 'Shortfall';
 
   return (
-    <div className="mt-8 bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-6 border border-primary/20 dark:border-dark-primary/20">
-      <h3 className="text-xl font-semibold mb-4 text-foreground dark:text-dark-foreground">Results Summary</h3>
+    <div className="mt-8 bg-blue-50 rounded-lg p-6">
+      <h3 className="text-xl font-semibold mb-4">Results Summary</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div className="flex justify-between mb-2">
-            <span className="font-medium text-foreground dark:text-dark-foreground">Years to Retirement:</span>
-            <span className="text-foreground dark:text-dark-foreground">{yearsToRetirement}</span>
+            <span className="font-medium">Years to Retirement:</span>
+            <span>{yearsToRetirement}</span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground dark:text-dark-muted-foreground">Years in Retirement:</span>
-            <span className="text-foreground dark:text-dark-foreground">{yearsInRetirement}</span>
+            <span>Years in Retirement:</span>
+            <span>{yearsInRetirement}</span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground dark:text-dark-muted-foreground">Annual Income Needed at Retirement:</span>
-            <span className="text-foreground dark:text-dark-foreground">${retirementIncomeNeeded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span>Annual Income Needed at Retirement:</span>
+            <span>${retirementIncomeNeeded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </div>
         </div>
         <div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground dark:text-dark-muted-foreground">Projected Savings at Retirement:</span>
-            <span className="text-foreground dark:text-dark-foreground">${projectedSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span>Projected Savings at Retirement:</span>
+            <span>${projectedSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground dark:text-dark-muted-foreground">Estimated Safe Monthly Withdrawal:</span>
-            <span className="text-foreground dark:text-dark-foreground">${safeWithdrawal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span>Estimated Safe Monthly Withdrawal:</span>
+            <span>${safeWithdrawal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground dark:text-dark-muted-foreground">Status:</span>
-            <span className={status === 'On Track' ? 'text-success dark:text-dark-success font-semibold' : 'text-danger dark:text-dark-danger font-semibold'}>{status}</span>
+            <span>Status:</span>
+            <span className={status === 'On Track' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{status}</span>
           </div>
         </div>
       </div>
@@ -204,64 +204,64 @@ export function RetirementCalculator() {
       {
         label: 'Projected Savings',
         data: data.map((item) => item.endBalance),
-        borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-        backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
+        borderColor: '#3b82f6',
+        backgroundColor: '#3b82f620',
       },
     ],
   };
 
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-card dark:bg-dark-card rounded-lg shadow-md border border-subtle-border dark:border-dark-subtle-border">
-      <h2 className="text-2xl font-bold mb-6 text-center text-foreground dark:text-dark-foreground">Retirement Calculator</h2>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">Retirement Calculator</h2>
       <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="currentAge">Your current age</label>
-          <input id="currentAge" type="number" min={0} value={currentAge === '' ? '' : currentAge} onChange={e => setCurrentAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
+          <label className="block text-sm font-medium mb-1" htmlFor="currentAge">Your current age</label>
+          <input id="currentAge" type="number" min={0} value={currentAge === '' ? '' : currentAge} onChange={e => setCurrentAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="retirementAge">Your planned retirement age</label>
-          <input id="retirementAge" type="number" min={0} value={retirementAge === '' ? '' : retirementAge} onChange={e => setRetirementAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
+          <label className="block text-sm font-medium mb-1" htmlFor="retirementAge">Your planned retirement age</label>
+          <input id="retirementAge" type="number" min={0} value={retirementAge === '' ? '' : retirementAge} onChange={e => setRetirementAge(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="lifeExpectancy">Your life expectancy</label>
-          <input id="lifeExpectancy" type="number" min={0} value={lifeExpectancy === '' ? '' : lifeExpectancy} onChange={e => setLifeExpectancy(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
+          <label className="block text-sm font-medium mb-1" htmlFor="lifeExpectancy">Your life expectancy</label>
+          <input id="lifeExpectancy" type="number" min={0} value={lifeExpectancy === '' ? '' : lifeExpectancy} onChange={e => setLifeExpectancy(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="currentIncome">Your current pre-tax income</label>
-          <input id="currentIncome" type="number" min={0} value={currentIncome === '' ? '' : currentIncome} onChange={e => setCurrentIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">/year</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="currentIncome">Your current pre-tax income</label>
+          <input id="currentIncome" type="number" min={0} value={currentIncome === '' ? '' : currentIncome} onChange={e => setCurrentIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">/year</span>
         </div>
         {/* Assumptions */}
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="incomeIncrease">Your current income increase</label>
-          <input id="incomeIncrease" type="number" min={0} value={incomeIncrease === '' ? '' : incomeIncrease} onChange={e => setIncomeIncrease(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">%/year</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="incomeIncrease">Your current income increase</label>
+          <input id="incomeIncrease" type="number" min={0} value={incomeIncrease === '' ? '' : incomeIncrease} onChange={e => setIncomeIncrease(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">%/year</span>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="incomeNeededPct">Income needed after retirement</label>
-          <input id="incomeNeededPct" type="number" min={0} value={incomeNeededPct === '' ? '' : incomeNeededPct} onChange={e => setIncomeNeededPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">% of income</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="incomeNeededPct">Income needed after retirement</label>
+          <input id="incomeNeededPct" type="number" min={0} value={incomeNeededPct === '' ? '' : incomeNeededPct} onChange={e => setIncomeNeededPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">% of income</span>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="investmentReturn">Average investment return</label>
-          <input id="investmentReturn" type="number" min={0} value={investmentReturn === '' ? '' : investmentReturn} onChange={e => setInvestmentReturn(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">%/year</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="investmentReturn">Average investment return</label>
+          <input id="investmentReturn" type="number" min={0} value={investmentReturn === '' ? '' : investmentReturn} onChange={e => setInvestmentReturn(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">%/year</span>
         </div>
         {/* Optional inputs */}
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="otherIncome">Other income sources</label>
-          <input id="otherIncome" type="number" min={0} value={otherIncome === '' ? '' : otherIncome} onChange={e => setOtherIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">/year</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="otherIncome">Other income sources</label>
+          <input id="otherIncome" type="number" min={0} value={otherIncome === '' ? '' : otherIncome} onChange={e => setOtherIncome(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">/year</span>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="retirementSavings">Current retirement savings</label>
-          <input id="retirementSavings" type="number" min={0} value={retirementSavings === '' ? '' : retirementSavings} onChange={e => setRetirementSavings(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
+          <label className="block text-sm font-medium mb-1" htmlFor="retirementSavings">Current retirement savings</label>
+          <input id="retirementSavings" type="number" min={0} value={retirementSavings === '' ? '' : retirementSavings} onChange={e => setRetirementSavings(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground" htmlFor="futureSavingsPct">Future savings percentage</label>
-          <input id="futureSavingsPct" type="number" min={0} value={futureSavingsPct === '' ? '' : futureSavingsPct} onChange={e => setFutureSavingsPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-foreground dark:text-dark-foreground bg-card dark:bg-dark-card rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary" />
-          <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">% of income</span>
+          <label className="block text-sm font-medium mb-1" htmlFor="futureSavingsPct">Future savings percentage</label>
+          <input id="futureSavingsPct" type="number" min={0} value={futureSavingsPct === '' ? '' : futureSavingsPct} onChange={e => setFutureSavingsPct(e.target.value === '' ? '' : Number(e.target.value))} className="block w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          <span className="text-xs text-gray-500">% of income</span>
         </div>
       </form>
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, Variants } from "framer-motion";
 import { seo } from "@/utils/seo";
@@ -184,11 +184,6 @@ export const Route = createFileRoute("/budgeting-app/")({
 });
 
 function BudgetingApp() {
-
-  useEffect(() => {
-    window.location.href = "/budgeting-app/students-investing";
-  }, []);
-
   return (
     <AmbientHaloLayout>
       <HomeHeader />

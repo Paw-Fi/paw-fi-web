@@ -43,8 +43,7 @@ serve(async (req: Request) => {
     const { data: lessons, error: lessonError } = await supabase
       .from("user_lessons")
       .select("*")
-      .in("course_id", courseIds)
-      .order("position", { ascending: true });
+      .in("course_id", courseIds);
 
     if (lessonError) throw lessonError;
 

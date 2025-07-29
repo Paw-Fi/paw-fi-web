@@ -1,7 +1,6 @@
 {
   "short_name": "Moneko",
-  "name": "Moneko - Personal Finance Education",
-  "description": "Learn personal finance with comprehensive budgeting tools, calculators, and educational resources",
+  "name": "Moneko",
   "icons": [
     {
       "src": "favicon.ico",
@@ -11,22 +10,11 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     }
   ],
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
-  "theme_color": "#8b5cf6",
-  "background_color": "#f0f0ff",
-  "orientation": "portrait-primary",
-  "scope": "/",
-  "lang": "en-US",
-  "categories": ["finance", "education", "productivity"]
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
 }

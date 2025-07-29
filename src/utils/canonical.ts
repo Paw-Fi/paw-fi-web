@@ -25,34 +25,13 @@ export function getCanonicalUrl(path: string): string {
  * @returns The canonical path to use
  */
 export function getCanonicalPath(routePath: string): string {
-  // Normalize path - remove trailing slash except for root
-  let normalizedPath = routePath.replace(/\/$/, '') || '/';
+  // Default behavior - use the same path
+  // Override specific cases below as needed
   
-  // Remove query parameters and fragments for canonical URL
-  normalizedPath = normalizedPath.split('?')[0].split('#')[0];
+  // Example: if you want calculators to appear without the dashboard prefix
+  // if (routePath.startsWith('/dashboard/calculators')) {
+  //   return routePath.replace('/dashboard/calculators', '/calculators');
+  // }
   
-  // Convert common variations to canonical form
-  if (normalizedPath === '/index' || normalizedPath === '/home') {
-    return '/';
-  }
-  
-  // Remove common unnecessary path segments
-  if (normalizedPath.startsWith('/calculators')) {
-    return normalizedPath.replace('/calculators', '/calculators');
-  }
-  
-  return normalizedPath;
-}
-
-/**
- * Creates a redirect map for URL canonicalization
- * @returns Object mapping non-canonical URLs to canonical ones
- */
-export function getRedirectMap(): Record<string, string> {
-  return {
-    '/index': '/',
-    '/home': '/',
-    '/index.html': '/',
-    '/home.html': '/',
-  };
+  return routePath;
 }

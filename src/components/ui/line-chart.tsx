@@ -45,23 +45,13 @@ export function LineChart({ labels, datasets, title }: LineChartProps) {
     })),
   };
 
-  // Get CSS custom properties for consistent colors
-  const isDark = document.documentElement.classList.contains('dark');
-  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
-                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
-                          (isDark ? '#F1F5F9' : '#1F2937');
-  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-muted-foreground')?.trim() ||
-                     (isDark ? '#9CA3AF' : '#6B7280');
-  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-subtle-border')?.trim() ||
-                    (isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)');
-
   const options = {
     responsive: true,
     plugins: {
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: foregroundColor,
+          color: '#374151',
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -78,30 +68,23 @@ export function LineChart({ labels, datasets, title }: LineChartProps) {
         ? {
             display: true,
             text: title,
-            color: foregroundColor,
+            color: '#111827',
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,
     },
     scales: {
       x: {
-        ticks: { 
-          color: mutedColor, 
-          font: { size: 12 } 
-        },
-        grid: { 
-          color: gridColor 
-        },
+        ticks: { color: '#6B7280', font: { size: 12 } },
+        grid: { color: '#E5E7EB' },
       },
       y: {
         ticks: {
-          color: mutedColor,
+          color: '#6B7280',
           font: { size: 12 },
           callback: (v: number | string) => `$${Number(v) / 1000}k`,
         },
-        grid: { 
-          color: gridColor 
-        },
+        grid: { color: '#E5E7EB' },
       },
     },
   };

@@ -8,9 +8,9 @@
   }
   
   /* Only scale the mermaid diagram on hover, not the container */
-  /* .image-choice-question-container:hover .mermaid-diagram {
+  .image-choice-question-container:hover .mermaid-diagram {
     transform: scale(2.5);
     z-index: 999;
     position: relative;
   }
-  */
+ 

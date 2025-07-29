@@ -147,7 +147,7 @@ function BlogDetailPage() {
       >
         <button
           onClick={() => navigate({ to: "/blogs", resetScroll: false })}
-          className="mb-8 flex items-center gap-2 text-primary dark:text-dark-primary transition-colors hover:text-secondary dark:hover:text-dark-secondary"
+          className="mb-8 flex items-center gap-2 text-purple-600 transition-colors hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" aria-hidden="true" />
           <span>Back to blogs</span>
@@ -158,7 +158,7 @@ function BlogDetailPage() {
             <Link
               key={tag.id}
               to="/blogs"
-              className="inline-flex items-center rounded-full bg-primary/10 dark:bg-dark-primary/10 px-3 py-1 text-sm font-medium text-primary dark:text-dark-primary transition-colors hover:bg-primary/20 dark:hover:bg-dark-primary/20"
+              className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 transition-colors hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:hover:bg-purple-800"
             >
               <FontAwesomeIcon icon={faTag} className="mr-1.5 h-3 w-3" aria-hidden="true" />
               {tag.name}
@@ -166,7 +166,7 @@ function BlogDetailPage() {
           ))}
         </div>
 
-        <h1 className="mb-6 text-3xl font-bold leading-tight text-foreground dark:text-dark-foreground md:text-4xl lg:text-5xl">
+        <h1 className="mb-6 text-3xl font-bold leading-tight text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
           {blog.title}
         </h1>
 
@@ -178,7 +178,7 @@ function BlogDetailPage() {
               className="h-12 w-12 rounded-full"
             />
             <div>
-              <p className="font-medium text-foreground dark:text-dark-foreground">{blog.author.name}</p>
+              <p className="font-medium text-gray-900 dark:text-white">{blog.author.name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{blog.author.title}</p>
             </div>
           </div>
@@ -198,12 +198,12 @@ function BlogDetailPage() {
             alt={`Cover image for ${blog.title}`}
             className="h-full w-full object-cover"
           />
-          <a href={blog.coverImage} target="_blank" rel="noopener noreferrer" className="absolute bottom-2 right-2 rounded-sm bg-black bg-opacity-50 px-1 py-0.5 text-xs text-white">
+          <a href={blog.coverImage} target="_blank" className="absolute bottom-2 right-2 rounded-sm bg-black bg-opacity-50 px-1 py-0.5 text-xs text-white">
             Image from Unsplash
           </a>
         </div>
 
-        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg prose-headings:text-foreground dark:prose-headings:text-dark-foreground prose-p:text-foreground dark:prose-p:text-dark-foreground prose-li:text-foreground dark:prose-li:text-dark-foreground prose-strong:text-foreground dark:prose-strong:text-dark-foreground prose-a:text-primary dark:prose-a:text-dark-primary hover:prose-a:text-secondary dark:hover:prose-a:text-dark-secondary">
+        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">
           <ReactMarkdown remarkPlugins={[remarkGfm]} >{blog.content}</ReactMarkdown>
         </article>
 
@@ -215,13 +215,13 @@ function BlogDetailPage() {
               className="h-16 w-16 rounded-full"
             />
             <div>
-              <p className="font-medium text-foreground dark:text-dark-foreground">{blog.author.name}</p>
+              <p className="font-medium text-gray-900 dark:text-white">{blog.author.name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{blog.author.bio}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground dark:text-dark-foreground">Share:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Share:</span>
             <button
               onClick={shareOnTwitter}
               aria-label="Share on Twitter"
@@ -249,7 +249,7 @@ function BlogDetailPage() {
 
       {relatedBlogs.length > 0 && (
         <div className="mt-16">
-          <h2 className="mb-6 text-2xl font-bold text-foreground dark:text-dark-foreground">Related Articles</h2>
+          <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Related Articles</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {relatedBlogs.map((relatedBlog, index) => (
               <motion.div
@@ -272,7 +272,7 @@ function BlogDetailPage() {
                     />
                   </div>
                   <div className="p-4">
-                    <h3 className="mb-2 line-clamp-2 text-lg font-bold text-foreground dark:text-dark-foreground transition-colors group-hover:text-primary dark:group-hover:text-dark-primary">
+                    <h3 className="mb-2 line-clamp-2 text-lg font-bold text-gray-900 transition-colors group-hover:text-purple-600 dark:text-white dark:group-hover:text-purple-400">
                       {relatedBlog.title}
                     </h3>
                     <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-300">

@@ -114,6 +114,11 @@
   transform: translate(-50%, -50%);
 }
 
+/* Hover Modal Styles */
+.fixed {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
 /* Full-screen modal diagram */
 .mermaid-diagram-zoomed svg {
   max-width: 100%;

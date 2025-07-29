@@ -20,7 +20,6 @@ type CheckoutSearchParams = {
   promo?: string; // Promo code
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
-  trial?: string; // Whether this is a trial subscription
 };
 
 // Add the route to FileRoutesByPath for TypeScript
@@ -47,7 +46,7 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
-  const { plan = "plus", billing = "yearly", promo, status, session_id, trial } = useSearch({ strict: false });
+  const { plan = "plus", billing = "yearly", promo, status, session_id } = useSearch({ strict: false });
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
@@ -160,8 +159,6 @@ function CheckoutPage() {
             cancelUrl: `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
             // Pass the user ID to the server
             userId: user.id,
-            // Pass the trial parameter
-            isTrial: trial === "true",
           },
         });
 
@@ -330,16 +327,8 @@ function CheckoutPage() {
               Complete Your Purchase
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              {trial === "true" 
-                ? `You're starting a 30-day free trial of the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-                : `You're subscribing to the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-              }
+              You're subscribing to the {plan.charAt(0).toUpperCase() + plan.slice(1)} plan
             </p>
-            {trial === "true" && (
-              <div className="mt-4 inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                🎉 30-day free trial - no credit card required
-              </div>
-            )}
             {promo && (
               <div className="mt-4 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/20 dark:text-green-400">
                 ✓ Promo code "{promo}" applied

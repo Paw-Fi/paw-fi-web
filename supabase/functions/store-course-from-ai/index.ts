@@ -107,13 +107,12 @@ serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  const { user_id, session_id, course } = await req.json();
+  const { user_id, course } = await req.json();
   console.log("[store-course-from-ai] Parsed user_id:", user_id);
-  console.log("[store-course-from-ai] Parsed session_id:", session_id);
   console.log("[store-course-from-ai] Parsed course:", course);
-  if (!course) {
+  if (!user_id || !course) {
     return new Response(
-      JSON.stringify({ error: "Missing course" }),
+      JSON.stringify({ error: "Missing user_id or course" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
@@ -132,17 +131,15 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
-  // Insert course - handle both authenticated users and guests
-  const courseInsertData = {
-    course_id: sanitized.id,
-    title: sanitized.title,
-    description: sanitized.description,
-    ...(user_id ? { user_id } : { session_id })
-  };
-  
+  // Insert course
   const { data: courseRow, error: courseErr } = await supabase
     .from("user_courses")
-    .insert(courseInsertData)
+    .insert({
+      user_id,
+      course_id: sanitized.id,
+      title: sanitized.title,
+      description: sanitized.description,
+    })
     .select("id")
     .single();
   if (courseErr || !courseRow?.id) {
@@ -281,7 +278,7 @@ serve(async (req) => {
       );
     }
   }
-  return new Response(JSON.stringify({ status: "success",course_id }), {
+  return new Response(JSON.stringify({ status: "success" }), {
     headers: { "Content-Type": "application/json" },
   });
 });

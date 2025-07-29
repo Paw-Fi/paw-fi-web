@@ -4,14 +4,8 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
-import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
-import { useEffect } from "react";
-import { iconContainer } from "./chat-conversation-display";
-import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
-import { useNavigate } from "@tanstack/react-router";
+import { faUser, faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { iconContainer } from "./chat-interface";
 
 interface Message {
   content: string;
@@ -23,35 +17,20 @@ interface Message {
 
 interface ChatMessageItemProps {
   message: Message;
-  onOpenQuizModal?: () => void;
-  formatTime?: (timestamp: number) => string;
+  formatTime: (timestamp: number) => string;
+  extractFirstJson: (text: string) => { json: any; start: number; end: number } | null;
+  navigate: (opts: { to: string }) => void;
 }
-
-
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
-  onOpenQuizModal,
-  formatTime: formatTimeProp,
+  formatTime,
+  extractFirstJson,
+  navigate,
 }) => {
   const isUser = message.role === "user";
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  // Check if user has completed the financial assessment
-  const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
   const found = extractFirstJson(message.content);
-  
-  // Watch for quiz completion messages and refetch profile
-  useEffect(() => {
-    if (isUser && message.content.toLowerCase().includes("completed the questionnaire") && user?.id) {
-      // Add a small delay then refetch profile to ensure it's been created
-      setTimeout(() => {
-        refetchProfile();
-      }, 1000);
-    }
-  }, [message.content, isUser, user?.id, refetchProfile]);
 
   const Avatar = () => (
     <div
@@ -77,24 +56,16 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
-        {(formatTimeProp || defaultFormatTime)(message.timestamp)}
-        {message.metadata?.isStreaming && !isUser && (
-          <span className="ml-2 inline-flex items-center">
-            <div className="animate-pulse w-2 h-2 bg-emerald-400 rounded-full"></div>
-          </span>
-        )}
+        {formatTime(message.timestamp)}
       </div>
     </div>
   );
 
   const renderMessageContent = () => {
-    // Check if message contains QUESTIONNAIRE keyword
-    const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
-    
     if (found) {
       const { json, start, end } = found;
-      const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
-      const outro = message.content.slice(end).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
+      const intro = message.content.slice(0, start).trim();
+      const outro = message.content.slice(end).trim();
       return (
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}  >
           {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
@@ -104,42 +75,16 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
               icon={json.icon || ""}
               description={json.description || ""}
               lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: `/dashboard/learning/${json.id}` })}
+              onClick={() => navigate({ to: "/dashboard/learning" })}
             />
           </div>
           {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
         </div>
       );
     }
-    
-    if (hasQuestionnaireKeyword && !isUser) {
-      // Replace the QUESTIONNAIRE keyword with a button for assistant messages
-      const messageText = message.content.replace(/``QUESTIONNAIRE``/g, '').replace("{{username}}", user?.user_metadata?.full_name|| "");
-      
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.trim()}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => !hasProfile && onOpenQuizModal?.()}
-              disabled={hasProfile}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                hasProfile
-                  ? "bg-green-500 text-white cursor-default"
-                  : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
-              }`}
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
-              {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    
     return (
       <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-        <ReactMarkdown>{message.content.trim().replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
+        <ReactMarkdown>{message.content.trim()}</ReactMarkdown>
       </div>
     );
   };

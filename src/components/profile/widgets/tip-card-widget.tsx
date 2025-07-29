@@ -90,11 +90,11 @@ export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
               initial="hidden"
               animate="visible" 
               exit="exit"
-              className="flex flex-col flex-grow bg-gray-50 dark:bg-gray-800 rounded-xl px-6 py-4 cursor-pointer"
+              className="flex flex-col flex-grow bg-gray-50 rounded-xl px-6 py-4 cursor-pointer"
               onClick={() =>window.open(currentTip.link || '#', '_blank')}
             >
               {/* Tip title */}
-              <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">
+              <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
                 {currentTip.title}
               </h4>
               
@@ -113,10 +113,10 @@ export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
                    
                     className="flex items-center"
                   >
-                     <p className="text-sm font-medium text-primary dark:text-dark-primary">Start Lessons</p>
+                     <p className="text-sm font-medium text-primary">Start Lessons</p>
                     <FontAwesomeIcon 
                       icon={faArrowRight} 
-                      className="h-4 w-4 text-primary dark:text-dark-primary ml-2" 
+                      className="h-4 w-4 text-primary ml-2" 
                     />
                   </div>
                 </div>
@@ -133,7 +133,7 @@ export function TipCardWidget({ widget }: { widget: ITipCardWidget }) {
                 <button
                   key={tip.id}
                   onClick={() => setCurrentTipIndex(index)}
-                  className={`size-3 rounded-full transition-all duration-300 ${index === currentTipIndex ? 'bg-primary dark:bg-dark-primary' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
+                  className={`size-3 rounded-full transition-all duration-300 ${index === currentTipIndex ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'}`}
                   aria-label={`Go to tip ${index + 1}`}
                   aria-current={index === currentTipIndex ? 'true' : 'false'}
                 />

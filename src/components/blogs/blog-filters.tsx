@@ -34,7 +34,7 @@ export function BlogFilters({ tags, selectedTags, onTagSelect, onSearch }: BlogF
             placeholder="Search articles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-full border-0 bg-white dark:bg-gray-800 px-4 py-3 pl-12 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-gray-700 focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary text-foreground dark:text-dark-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400"
+            className="w-full rounded-full border-0 bg-white px-4 py-3 pl-12 shadow-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-purple-500 dark:bg-gray-800 dark:ring-gray-700 dark:focus:ring-purple-500"
           />
           <FontAwesomeIcon 
             icon={faSearch} 
@@ -45,12 +45,12 @@ export function BlogFilters({ tags, selectedTags, onTagSelect, onSearch }: BlogF
 
         <button
           onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-          className="flex items-center gap-2 rounded-full bg-primary/10 dark:bg-dark-primary/10 px-4 py-2 font-medium text-primary dark:text-dark-primary transition-colors hover:bg-primary/20 dark:hover:bg-dark-primary/20 md:ml-4"
+          className="flex items-center gap-2 rounded-full bg-purple-100 px-4 py-2 font-medium text-purple-800 transition-colors hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800 md:ml-4"
         >
           <FontAwesomeIcon icon={faFilter} className="h-4 w-4" aria-hidden="true" />
           <span>Filter</span>
           {selectedTags.length > 0 && (
-            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary dark:bg-dark-primary text-xs text-white">
+            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-500 text-xs text-white">
               {selectedTags.length}
             </span>
           )}
@@ -63,14 +63,14 @@ export function BlogFilters({ tags, selectedTags, onTagSelect, onSearch }: BlogF
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="mt-4 overflow-hidden rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-200 dark:border-gray-700"
+          className="mt-4 overflow-hidden rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800"
         >
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-foreground dark:text-dark-foreground">Filter by tags</h3>
+            <h3 className="text-lg font-medium">Filter by tags</h3>
             {selectedTags.length > 0 && (
               <button
                 onClick={() => selectedTags.forEach(tag => onTagSelect(tag))}
-                className="text-sm text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
+                className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
               >
                 Clear all
               </button>
@@ -83,8 +83,8 @@ export function BlogFilters({ tags, selectedTags, onTagSelect, onSearch }: BlogF
                 onClick={() => onTagSelect(tag.id)}
                 className={`flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                   selectedTags.includes(tag.id)
-                    ? "bg-primary dark:bg-dark-primary text-white hover:bg-secondary dark:hover:bg-dark-secondary"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    ? "bg-purple-500 text-white hover:bg-purple-600"
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                 }`}
               >
                 {tag.name}

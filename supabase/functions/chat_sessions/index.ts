@@ -7,13 +7,24 @@ console.log(`Function "chat_sessions" up and running!`);
 // Define types for our conversation data
 interface Message {
   id?: string;
-  chat_session_id?: string;
+  conversation_id?: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: number;
   created_at?: string;
   updated_at?: string;
   metadata?: Record<string, unknown>;
+}
+
+interface ChatSession {
+  id: string;
+  user_id: string;
+  session_id: string;
+  model: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  messages?: Message[];
 }
 
 interface ErrorResponse {
@@ -96,30 +107,15 @@ async function handleGetSessions(
   supabase: SupabaseClient,
   userId: string,
   sessionId: string | undefined,
-  headers: Record<string, string>,
-  url: URL
+  headers: Record<string, string>
 ): Promise<Response> {
   try {
-    // Get model parameter from query string
-    const model = url.searchParams.get('model');
-    let _sessionId=sessionId
-    if(!sessionId){
+    if (sessionId) {
+      // Get a specific chat session
       const { data: chatSession, error: chatSessionError } = await supabase
         .from('chat_sessions')
         .select('*')
-        .eq('user_id', userId)
-        .eq('model', model)
-        .order('updated_at', { ascending: false })
-        .single();
-      if (chatSessionError) {
-        return createErrorResponse(404, 'Chat session not found', chatSessionError);
-      }
-      _sessionId=chatSession.id
-    }
-      const { data: chatSession, error: chatSessionError } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .eq('id', _sessionId)
+        .eq('id', sessionId)
         .eq('user_id', userId)
         .single();
 
@@ -131,7 +127,7 @@ async function handleGetSessions(
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('chat_session_id', _sessionId)
+        .eq('conversation_id', sessionId)
         .order('timestamp', { ascending: true });
 
       if (messagesError) {
@@ -146,8 +142,23 @@ async function handleGetSessions(
         }),
         { status: 200, headers }
       );
-    
+    }
 
+    // Get all chat sessions for the user
+    const { data: chatSessions, error: chatSessionsError } = await supabase
+      .from('chat_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (chatSessionsError) {
+      return createErrorResponse(500, 'Failed to fetch chat sessions', chatSessionsError);
+    }
+
+    return new Response(
+      JSON.stringify(chatSessions || []),
+      { status: 200, headers }
+    );
   } catch (error) {
     console.error('Error in handleGetSessions:', error);
     return createErrorResponse(500, 'Failed to get chat session', error instanceof Error ? error.message : 'Unknown error');
@@ -178,14 +189,6 @@ async function handleCreateSession(
     const sessionId = requestData?.session_id || crypto.randomUUID();
     const model = requestData?.model || 'gemini-pro';
     const now = new Date().toISOString();
-    
-    // Debug logging
-    console.log('Creating chat session with:', {
-      sessionId,
-      model,
-      receivedModel: requestData?.model,
-      userId
-    });
 
     // Create the chat session
     const { data: newChatSession, error: sessionInsertError } = await supabase
@@ -210,7 +213,7 @@ async function handleCreateSession(
     // Insert messages into the chat session
     if (requestData?.messages) {
       const messagesToInsert = requestData.messages.map((msg: Message) => ({
-        chat_session_id: newChatSession.id,
+        conversation_id: newChatSession.id,
         content: msg.content,
         role: msg.role,
         timestamp: msg.timestamp || Date.now()
@@ -286,7 +289,7 @@ async function handleUpdateSession(
     // Insert messages into the chat session if provided
     if (requestData.messages && requestData.messages.length > 0) {
       const messagesToInsert = requestData.messages.map((msg: Message) => ({
-        chat_session_id: sessionId,
+        conversation_id: sessionId,
         content: msg.content,
         role: msg.role,
         timestamp: msg.timestamp || Date.now(),
@@ -337,7 +340,7 @@ async function handleDeleteSession(
     const { error: deleteMessagesError } = await supabase
       .from('chat_messages')
       .delete()
-      .eq('chat_session_id', sessionId);
+      .eq('conversation_id', sessionId);
 
     if (deleteMessagesError) {
       console.error('Error deleting messages:', deleteMessagesError);
@@ -408,7 +411,7 @@ Deno.serve(async (req: Request) => {
     // Route the request based on HTTP method and path
     switch (req.method) {
       case 'GET':
-        return handleGetSessions(supabase, userId, sessionId, headers, url);
+        return handleGetSessions(supabase, userId, sessionId, headers);
       case 'POST':
         return handleCreateSession(supabase, userId, req, headers);
       case 'PUT':

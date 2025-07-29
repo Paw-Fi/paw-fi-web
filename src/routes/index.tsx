@@ -151,7 +151,7 @@ function BasicLessonCard({
   // Assuming fadeInUp and elasticScale variants are defined elsewhere in the file or imported
   return (
     <div>
-      <div className="flex h-full flex-col rounded-3xl border border-gray-200/30 bg-white/60 dark:border-gray-700/30 dark:bg-gray-800/60 p-8 shadow-2xl shadow-gray-900/20 dark:shadow-black/30 backdrop-blur-xl transition-all duration-300 ease-in-out">
+      <div className="flex h-full flex-col rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30">
         <Link to={linkTo} className="group flex h-full flex-col">
           <div className="flex-grow">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40 transition-transform duration-200">
@@ -159,14 +159,14 @@ function BasicLessonCard({
                 {icon}
               </span>
             </div>
-            <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
+            <h3 className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200 dark:text-white">
               {title}
             </h3>
-            <p className="mb-8 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <p className="mb-8 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
               {description}
             </p>
           </div>
-          <div className="mt-auto text-primary dark:text-dark-primary">
+          <div className="mt-auto text-purple-600">
             Start Lesson
             <span className="ml-2 transition-transform duration-200 ease-in-out">
               <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
@@ -211,7 +211,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background dark:bg-dark-background">
+    <div className="relative min-h-screen bg-[#f5f3ff]">
       {/* Enhanced ambient halo background with scroll animations */}
       <AmbientHalo />
 
@@ -228,10 +228,10 @@ export default function HomePage() {
 
       <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto max-w-4xl">
-           {/* Heading */}
+          {/* Heading */}
           <div className="mb-8 sm:mb-12 text-center">
-           <motion.h2
-              className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground dark:text-dark-foreground"
+            <motion.h2
+              className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -240,7 +240,7 @@ export default function HomePage() {
               Build Your First Portfolio
             </motion.h2>
             <motion.h3
-              className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-foreground dark:text-dark-foreground"
+              className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -249,7 +249,7 @@ export default function HomePage() {
               from 0 to 1
             </motion.h3>
             <motion.p
-              className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4 sm:px-0"
+              className="text-base sm:text-lg md:text-xl text-gray-600 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -289,7 +289,7 @@ export default function HomePage() {
                 nextSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="flex flex-col items-center justify-center p-2 sm:p-4 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 cursor-pointer"
+            className="flex flex-col items-center justify-center p-2 sm:p-4 text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -395,7 +395,7 @@ export default function HomePage() {
 
         <div className="relative z-10 mx-auto max-w-7xl">
           <motion.h2
-            className="mb-6 text-center text-3xl font-bold text-foreground dark:text-dark-foreground md:text-4xl"
+            className="mb-6 text-center text-3xl font-bold text-slate-800 md:text-4xl"
             variants={fadeInDown}
             initial="hidden"
             whileInView="visible"
@@ -404,7 +404,7 @@ export default function HomePage() {
             Dive Deeper with Expert-Led Lessons
           </motion.h2>
           <motion.p
-            className="mb-12 text-center text-lg text-gray-600 dark:text-gray-300 md:mx-auto md:max-w-2xl"
+            className="mb-12 text-center text-lg text-slate-600 md:mx-auto md:max-w-2xl"
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
@@ -434,7 +434,7 @@ export default function HomePage() {
             {/* Explore More Card */}
             {basicLessonsData.lessons.length > 2 && (
               <div>
-                <div className="h-full rounded-3xl border border-gray-200/30 bg-white/60 dark:border-gray-700/30 dark:bg-gray-800/60 p-8 shadow-2xl shadow-gray-900/20 dark:shadow-black/30 backdrop-blur-xl">
+                <div className="h-full rounded-3xl border border-slate-300/30 bg-slate-50/60 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/60 dark:shadow-black/30">
                   <Link
                     to={`dashboard/essentials/${basicLessonsData.course_id}`}
                     role="button"
@@ -448,10 +448,10 @@ export default function HomePage() {
                           aria-hidden="true"
                         />
                       </div>
-                      <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
+                      <h3 className="mb-3 text-xl font-bold text-slate-900 transition-colors duration-200 dark:text-white">
                         Explore All Lessons
                       </h3>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="text-sm text-slate-700 dark:text-slate-300">
                         View all {basicLessonsData.lessons.length} foundational
                         courses.
                       </p>
@@ -469,7 +469,7 @@ export default function HomePage() {
 
 
       {/* Footer */}
-      <footer className="relative overflow-hidden bg-gray-900/70 dark:bg-gray-950/80 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">
+      <footer className="relative overflow-hidden bg-gray-900/70 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">
         {/* Subtle gradient overlay */}
 
         <motion.div
@@ -540,7 +540,7 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.6}>
                 <Link
-                  to="/calculators"
+                  to="/dashboard/calculators"
                   className="text-gray-400 hover:text-white"
                 >
                   Financial Calculators

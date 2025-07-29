@@ -2,9 +2,8 @@ import { faClipboardQuestion, faLightbulb, faArrowLeft, faArrowRight } from "@fo
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import quizCompletedImage from "@/assets/images/lessons/quiz-completed.jpeg";
+import quizCardImage from "@/assets/images/lessons/jury-voting.png";
 import { LessonCardTitle } from "./lesson-card-title";
-import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 
 export // Content display component for flashcard-style content
 function ContentDisplay({
@@ -93,9 +92,7 @@ function ContentDisplay({
             {/* Content blocks */}
             <div className="space-y-4">
               {!isQuizTransition &&
-                content.content&&        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} >{content.content}</ReactMarkdown>
-              </article>
+                content.content&&<ReactMarkdown>{content.content}</ReactMarkdown>
               }
             </div>
 
@@ -126,7 +123,7 @@ function ContentDisplay({
       {/* Quiz transition section with purple background */}
       {isQuizTransition && (
         <motion.div 
-          className="mb-8 rounded-xl  p-6"
+          className="mb-8 rounded-xl bg-primary/10 p-6"
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ 
@@ -146,7 +143,7 @@ function ContentDisplay({
           <div className="my-6 flex items-center justify-center">
             <div className="relative mx-auto w-80">
               <img
-                src={quizCompletedImage}
+                src={quizCardImage}
                 alt="Quiz card"
                 className="h-auto w-full rounded-lg object-contain"
               />

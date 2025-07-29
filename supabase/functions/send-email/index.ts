@@ -284,7 +284,7 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
               <code style="color: #6d28d9; font-size: 28px; font-weight: bold; letter-spacing: 3px;">MONEKO25</code>
             </div>
             <p style="color: #333333; margin: 10px 0 0; font-size: 16px;">
-              Use this code at checkout to get your <a href="https://moneko.io/pricing" style="color: #6d28d9; text-decoration: none;"><strong style="color: #6d28d9;">FREE premium trial</strong></a>
+              Use this code at checkout to get your <strong style="color: #6d28d9;">FREE premium trial</strong>
             </p>
           </div>
           

@@ -159,7 +159,7 @@ export function useSubscription(userId: string | undefined) {
 
 
   // Check if user has an active subscription
-  const isActive = subscriptionData && (subscriptionData.status === "active" || subscriptionData.status === "trialing");
+  const isActive = subscriptionData && subscriptionData.status === "active";
   
   // Check if user's subscription is expired
   const isExpired = subscriptionData && subscriptionData.status === "canceled";

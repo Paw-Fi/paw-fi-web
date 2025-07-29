@@ -8,7 +8,10 @@ import { motion } from 'framer-motion';
  */
 const AmbientHalo = () => {
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-halo-bg dark:bg-dark-halo-bg">
+    <div 
+      className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none"
+      style={{ backgroundColor: '#f0f0ff' }}
+    >
       {/* Primary Ambient Halo - Light Purple */}
       <motion.div
         className="absolute inset-0"
@@ -28,8 +31,18 @@ const AmbientHalo = () => {
         }}
       >
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-[900px] h-[900px] rounded-full blur-3xl bg-gradient-radial from-halo-purple via-halo-purple-mid to-halo-purple-outer dark:from-dark-halo-purple dark:via-dark-halo-purple-mid dark:to-dark-halo-purple-outer" />
-          <div className="absolute inset-8 w-[550px] h-[550px] rounded-full blur-2xl bg-gradient-radial from-halo-purple via-halo-purple-mid to-transparent dark:from-dark-halo-purple dark:via-dark-halo-purple-mid dark:to-transparent" />
+          <div 
+            className="w-[900px] h-[900px] rounded-full blur-3xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(207, 195, 245, 0.9) 0%, rgba(195, 180, 235, 0.85) 50%, rgba(215, 205, 250, 0.6) 80%, rgba(240, 240, 255, 0) 100%)'
+            }} 
+          />
+          <div 
+            className="absolute inset-8 w-[550px] h-[550px] rounded-full blur-2xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(207, 195, 245, 0.95) 0%, rgba(190, 175, 230, 0.85) 50%, rgba(207, 195, 245, 0.7) 80%, rgba(207, 195, 245, 0) 100%)'
+            }} 
+          />
         </div>
       </motion.div>
 
@@ -53,8 +66,18 @@ const AmbientHalo = () => {
         }}
       >
         <div className="absolute top-1/3 left-2/3 transform -translate-x-1/2 -translate-y-1/3">
-          <div className="w-[750px] h-[750px] rounded-full blur-3xl bg-gradient-radial from-halo-pink via-halo-pink-mid to-halo-pink-outer dark:from-dark-halo-pink dark:via-dark-halo-pink-mid dark:to-dark-halo-pink-outer" />
-          <div className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl bg-gradient-radial from-halo-pink via-halo-pink-mid to-transparent dark:from-dark-halo-pink dark:via-dark-halo-pink-mid dark:to-transparent" />
+          <div 
+            className="w-[750px] h-[750px] rounded-full blur-3xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(243, 221, 247, 0.85) 0%, rgba(235, 210, 240, 0.8) 40%, rgba(245, 225, 250, 0.6) 70%, rgba(250, 240, 252, 0) 100%)'
+            }} 
+          />
+          <div 
+            className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(243, 221, 247, 0.9) 0%, rgba(240, 215, 245, 0.85) 50%, rgba(243, 221, 247, 0.7) 85%, rgba(243, 221, 247, 0) 100%)'
+            }} 
+          />
         </div>
       </motion.div>
       
@@ -78,8 +101,18 @@ const AmbientHalo = () => {
         }}
       >
         <div className="absolute top-1/3 left-2/3 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-[700px] h-[700px] rounded-full blur-3xl bg-gradient-radial from-halo-blue via-halo-blue-mid to-halo-blue-outer dark:from-dark-halo-blue dark:via-dark-halo-blue-mid dark:to-dark-halo-blue-outer" />
-          <div className="absolute inset-8 w-[450px] h-[450px] rounded-full blur-2xl bg-gradient-radial from-halo-blue via-halo-blue-mid to-transparent dark:from-dark-halo-blue dark:via-dark-halo-blue-mid dark:to-transparent" />
+          <div 
+            className="w-[700px] h-[700px] rounded-full blur-3xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(162, 212, 244, 0.85) 0%, rgba(150, 200, 235, 0.8) 40%, rgba(170, 220, 250, 0.65) 70%, rgba(200, 235, 255, 0) 100%)'
+            }} 
+          />
+          <div 
+            className="absolute inset-8 w-[450px] h-[450px] rounded-full blur-2xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(162, 212, 244, 0.9) 0%, rgba(145, 195, 235, 0.85) 50%, rgba(162, 212, 244, 0.7) 85%, rgba(162, 212, 244, 0) 100%)'
+            }} 
+          />
         </div>
       </motion.div>
 
@@ -103,8 +136,18 @@ const AmbientHalo = () => {
         }}
       >
         <div className="absolute top-2/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-[750px] h-[750px] rounded-full blur-3xl bg-gradient-radial from-halo-light-blue via-halo-light-blue-mid to-halo-light-blue-outer dark:from-dark-halo-light-blue dark:via-dark-halo-light-blue-mid dark:to-dark-halo-light-blue-outer" />
-          <div className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl bg-gradient-radial from-halo-light-blue via-halo-light-blue-mid to-transparent dark:from-dark-halo-light-blue dark:via-dark-halo-light-blue-mid dark:to-transparent" />
+          <div 
+            className="w-[750px] h-[750px] rounded-full blur-3xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(215, 236, 250, 0.8) 0%, rgba(205, 225, 245, 0.75) 40%, rgba(220, 240, 252, 0.55) 70%, rgba(235, 245, 255, 0) 100%)'
+            }} 
+          />
+          <div 
+            className="absolute inset-8 w-[500px] h-[500px] rounded-full blur-2xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(215, 236, 250, 0.85) 0%, rgba(200, 225, 245, 0.8) 50%, rgba(215, 236, 250, 0.65) 85%, rgba(215, 236, 250, 0) 100%)'
+            }} 
+          />
         </div>
       </motion.div>
 
@@ -128,7 +171,12 @@ const AmbientHalo = () => {
         }}
       >
         <div className="absolute top-3/4 left-3/4 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-[600px] h-[600px] rounded-full blur-3xl bg-gradient-radial from-halo-purple via-halo-pink to-halo-purple-outer dark:from-dark-halo-purple dark:via-dark-halo-pink dark:to-dark-halo-purple-outer" />
+          <div 
+            className="w-[600px] h-[600px] rounded-full blur-3xl" 
+            style={{ 
+              background: 'radial-gradient(circle, rgba(207, 195, 245, 0.75) 0%, rgba(243, 221, 247, 0.7) 50%, rgba(200, 185, 240, 0.5) 75%, rgba(220, 205, 250, 0) 100%)'
+            }} 
+          />
         </div>
       </motion.div>
     </div>

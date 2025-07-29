@@ -90,59 +90,59 @@ export function SavingGoalsCalculator() {
 
   return (
     <div className="py-8 px-4 md:px-0">
-    <section className="w-full max-w-3xl mx-auto bg-card dark:bg-dark-card p-6 md:p-8 rounded-xl shadow-xl border border-subtle-border dark:border-dark-subtle-border">
+    <section className="w-full max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-xl">
       <form className="space-y-6" onSubmit={handleSubmit} aria-label="Savings Goal Calculator Form">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground dark:text-dark-foreground text-center mb-8">Savings Goal Calculator</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">Savings Goal Calculator</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Target Amount ($)
-            <input type="number" name="targetAmount" value={inputs.targetAmount === '' ? '' : inputs.targetAmount} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm" required />
+            <input type="number" name="targetAmount" value={inputs.targetAmount === '' ? '' : inputs.targetAmount} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Current Savings ($)
-            <input type="number" name="currentSavings" value={inputs.currentSavings === '' ? '' : inputs.currentSavings} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm" required />
+            <input type="number" name="currentSavings" value={inputs.currentSavings === '' ? '' : inputs.currentSavings} min={0} step={100} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Time Horizon (years)
-            <input type="number" name="years" value={inputs.years === '' ? '' : inputs.years} min={1} step={1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm" required />
+            <input type="number" name="years" value={inputs.years === '' ? '' : inputs.years} min={1} step={1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Expected Return Rate (%)
-            <input type="number" name="returnRate" value={inputs.returnRate === '' ? '' : inputs.returnRate} min={0} step={0.1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm" required />
+            <input type="number" name="returnRate" value={inputs.returnRate === '' ? '' : inputs.returnRate} min={0} step={0.1} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" required />
           </label>
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Compounding
-            <select name="compound" value={inputs.compound} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm">
+            <select name="compound" value={inputs.compound} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
               <option value="annually">Annually</option>
               <option value="quarterly">Quarterly</option>
               <option value="monthly">Monthly</option>
               <option value="daily">Daily</option>
             </select>
           </label>
-          <label className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Contribution Frequency
-            <select name="contributionFrequency" value={inputs.contributionFrequency} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-card dark:bg-dark-card border border-subtle-border dark:border-dark-subtle-border text-foreground dark:text-dark-foreground rounded-md shadow-sm focus:outline-none focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary sm:text-sm">
+            <select name="contributionFrequency" value={inputs.contributionFrequency} onChange={handleChange} className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
               <option value="month">Monthly</option>
               <option value="year">Yearly</option>
             </select>
           </label>
         </div>
-        <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white dark:text-dark-background bg-primary dark:bg-dark-primary hover:bg-primary/80 dark:hover:bg-dark-primary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-dark-primary transition-colors duration-150 ease-in-out mt-8">Calculate</button>
-        {hasError && <p className="text-danger dark:text-dark-danger text-sm mt-2 text-center">Please ensure all fields have valid positive values.</p>}
+        <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-150 ease-in-out mt-8">Calculate</button>
+        {hasError && <p className="text-red-500 text-sm mt-2 text-center">Please ensure all fields have valid positive values.</p>}
       </form>
 
       {result && (
-        <div className="mt-10 bg-primary/10 dark:bg-dark-primary/10 rounded-lg p-6 shadow-md border border-primary/20 dark:border-dark-primary/20">
-          <h3 className="text-xl font-semibold text-foreground dark:text-dark-foreground mb-4 text-center">Your Savings Plan</h3>
-          <p className="text-center text-foreground dark:text-dark-foreground mb-6">To reach your goal of <strong className="text-primary dark:text-dark-primary">${inputs.targetAmount.toLocaleString()}</strong> in <strong className="text-primary dark:text-dark-primary">{inputs.years} {inputs.years === 1 ? 'year' : 'years'}</strong>, you need to save <strong className="text-primary dark:text-dark-primary">${result.requiredContribution.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</strong> per {inputs.contributionFrequency}.</p>
+        <div className="mt-10 bg-purple-50 rounded-lg p-6 shadow-md">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Your Savings Plan</h3>
+          <p className="text-center text-gray-700 mb-6">To reach your goal of <strong className="text-purple-700">${inputs.targetAmount.toLocaleString()}</strong> in <strong className="text-purple-700">{inputs.years} {inputs.years === 1 ? 'year' : 'years'}</strong>, you need to save <strong className="text-purple-700">${result.requiredContribution.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</strong> per {inputs.contributionFrequency}.</p>
           <div className="w-full mt-4">
             <LineChart
               labels={[...Array(result.schedule.length).keys()].map(i => (i === 0 ? 'Now' : i === result.schedule.length - 1 ? 'Goal' : i.toString()))}
               datasets={[{
                 label: 'Projected Savings',
                 data: result.schedule,
-                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.15)' : 'rgba(116,88,255,0.15)',
+                borderColor: '#8B5CF6',
+                backgroundColor: 'rgba(139,92,246,0.15)',
                 fill: true,
               }]}
             />
@@ -151,22 +151,22 @@ export function SavingGoalsCalculator() {
       )}
 
       </section>
-    <aside className="mt-12 w-full max-w-3xl mx-auto bg-subtle-background dark:bg-dark-subtle-background p-6 md:p-8 rounded-xl shadow-xl border border-subtle-border dark:border-dark-subtle-border">
-        <h2 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-6 text-center">Understanding Your Savings Goal</h2>
-        <p className="text-muted-foreground dark:text-dark-muted-foreground leading-relaxed mb-4">Setting a savings goal is a powerful way to build wealth and prepare for future expenses. This calculator helps you determine the regular contributions needed to reach your target, considering the impact of compound interest.</p>
+    <aside className="mt-12 w-full max-w-3xl mx-auto bg-gray-50 p-6 md:p-8 rounded-xl shadow-xl">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Understanding Your Savings Goal</h2>
+        <p className="text-gray-600 leading-relaxed mb-4">Setting a savings goal is a powerful way to build wealth and prepare for future expenses. This calculator helps you determine the regular contributions needed to reach your target, considering the impact of compound interest.</p>
         <ul>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">Target Amount:</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">The total amount of money you aim to save.</span></li>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">Current Savings:</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">The amount you have already saved towards this goal.</span></li>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">Time Horizon:</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">The number of years you plan to save for.</span></li>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">Return Rate:</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">The anticipated annual percentage growth of your savings or investments.</span></li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">Target Amount:</strong> The total amount of money you aim to save.</li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">Current Savings:</strong> The amount you have already saved towards this goal.</li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">Time Horizon:</strong> The number of years you plan to save for.</li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">Return Rate:</strong> The anticipated annual percentage growth of your savings or investments.</li>
         </ul>
-        <p className="text-muted-foreground dark:text-dark-muted-foreground leading-relaxed mt-4 mb-4">Consistent contributions combined with the power of compounding interest can significantly accelerate your progress. It's wise to review your savings plan periodically and make adjustments as your financial situation or goals change.</p>
-        <h3 className="text-xl font-semibold text-foreground dark:text-dark-foreground mt-6 mb-3">Frequently Asked Questions</h3>
+        <p className="text-gray-600 leading-relaxed mt-4 mb-4">Consistent contributions combined with the power of compounding interest can significantly accelerate your progress. It's wise to review your savings plan periodically and make adjustments as your financial situation or goals change.</p>
+        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Frequently Asked Questions</h3>
         <ul>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">What if my return rate is 0%?</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">The calculator will still determine the necessary contributions, but without factoring in any growth from interest.</span></li>
-          <li className="mb-1"><strong className="font-semibold text-foreground dark:text-dark-foreground">How often should I contribute?</strong> <span className="text-muted-foreground dark:text-dark-muted-foreground">You can choose to make contributions monthly or yearly. Monthly contributions often align better with typical income schedules.</span></li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">What if my return rate is 0%?</strong> The calculator will still determine the necessary contributions, but without factoring in any growth from interest.</li>
+          <li className="mb-1"><strong className="font-semibold text-gray-700">How often should I contribute?</strong> You can choose to make contributions monthly or yearly. Monthly contributions often align better with typical income schedules.</li>
         </ul>
-        <p className="text-muted-foreground dark:text-dark-muted-foreground leading-relaxed mt-6">Explore more financial planning tools in our <a href="/calculators" className="text-primary dark:text-dark-primary hover:text-primary/80 dark:hover:text-dark-primary/80 font-semibold underline">Financial Calculators Hub</a>.</p>
+        <p className="text-gray-600 leading-relaxed mt-6">Explore more financial planning tools in our <a href="/calculators" className="text-purple-600 hover:text-purple-700 font-semibold underline">Financial Calculators Hub</a>.</p>
       </aside>
     </div>
   );

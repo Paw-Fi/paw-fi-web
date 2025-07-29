@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import { VitePluginRadar } from 'vite-plugin-radar';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import  compression  from 'vite-plugin-compression'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,18 +13,8 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   build: {
     rollupOptions: {
-      treeshake: false,
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
-    cssMinify: true,
-    target: 'es2020',
-    chunkSizeWarningLimit: 1000,
+      treeshake: false
+    }
   },
   server: {
     port: 3000,
@@ -44,18 +33,6 @@ export default defineConfig({
       customViteReactPlugin: true
     }),
     react(),
-    compression({
-      algorithm: 'gzip',
-      ext: '.gz',
-      threshold: 1024,
-      deleteOriginFile: false,
-    }),
-    compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-      threshold: 1024,
-      deleteOriginFile: false,
-    }),
   ],
   resolve: {
     alias: {

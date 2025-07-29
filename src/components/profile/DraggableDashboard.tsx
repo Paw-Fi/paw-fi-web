@@ -271,7 +271,7 @@ export function DraggableDashboard({
           </SortableContext>}
           
           {/* Add widget button in edit mode */}
-          {/* {isEditMode && (
+          {isEditMode && (
             <div 
               className="bg-white/80 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors min-h-[14rem] md:min-h-full"
               onClick={() => setIsAddWidgetModalOpen(true)}
@@ -290,7 +290,7 @@ export function DraggableDashboard({
                 <p className="text-sm text-gray-500 dark:text-gray-400">Click to add a new widget to your dashboard</p>
               </div>
             </div>
-          )} */}
+          )}
         </div>
         
         <DragOverlay dropAnimation={null}>

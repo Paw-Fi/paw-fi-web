@@ -81,7 +81,6 @@ export type Tutorial={
 
 // A fully flexible Question type to accommodate JSON data
 export interface Question {
-  id: string;
   question_id: string;
   type: QuestionType;
   question: string;
@@ -154,7 +153,7 @@ export function isImageChoiceQuestion(question: Question): question is Question 
 
 // Lesson structure
 export interface Lesson {
-  id: string;
+  id: string | null | undefined;
   lesson_id: string;
   title: string;
   description: string;
@@ -175,57 +174,4 @@ export interface Course {
   description: string;
   icon?: string;
   lessons: Lesson[];
-}
-
-// Community Course Types
-export interface CommunityAuthor {
-  name: string;
-  avatar: string;
-  level: number;
-  expertise: string;
-  verified: boolean;
-}
-
-export interface CommunityStats {
-  students: number;
-  rating: number;
-  likes: number;
-  views: number;
-  comments: number;
-}
-
-export interface CommunityMetadata {
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  duration: string;
-  lessons: number;
-  category: string;
-  tags: string[];
-  language: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CommunityPreview {
-  thumbnail: string;
-  color: string;
-}
-
-export interface CommunityCourse {
-  id: string;
-  title: string;
-  description: string;
-  author: CommunityAuthor;
-  stats: CommunityStats;
-  metadata: CommunityMetadata;
-  preview: CommunityPreview;
-  featured: boolean;
-  trending: boolean;
-}
-
-export type SortOption = 'trending' | 'recent' | 'popular' | 'highest-rated' | 'most-views' | 'most-likes';
-
-export interface SortOptionConfig {
-  value: SortOption;
-  label: string;
-  icon: any; // FontAwesome icon
 }

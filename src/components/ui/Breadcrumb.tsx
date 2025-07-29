@@ -74,17 +74,17 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
   }, [items]);
 
   return (
-    <nav aria-label="Breadcrumb" className={`${className} flex items-center bg-white/70 dark:bg-gray-800/70 rounded-xl shadow-sm border border-gray-100/80 dark:border-gray-700/80 px-4 py-3`}>
+    <nav aria-label="Breadcrumb" className={`${className} flex items-center bg-white/70 rounded-xl shadow-sm border border-gray-100/80 px-4 py-3`}>
       <button 
         onClick={handleGoBack}
-        className="mr-4 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-dark-primary transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center"
+        className="mr-4 text-gray-600 hover:text-primary transition-colors rounded-full hover:bg-gray-100 flex items-center justify-center"
         aria-label="Go back"
         title="Go back"
       >
         <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
       </button>
       <ol 
-        className="flex flex-wrap items-center text-sm gap-1 text-gray-600 dark:text-gray-400"
+        className="flex flex-wrap items-center text-sm gap-1 text-gray-600"
         itemScope 
         itemType="https://schema.org/BreadcrumbList"
       >
@@ -102,7 +102,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
               {index === 0 && (
                 <FontAwesomeIcon 
                   icon={faHome} 
-                  className="mr-1 text-primary dark:text-dark-primary" 
+                  className="mr-1 text-primary" 
                   aria-hidden="true" 
                 />
               )}
@@ -110,7 +110,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
               {isLast ? (
                 <span 
                   aria-current="page" 
-                  className="font-medium text-primary dark:text-dark-primary truncate max-w-[200px] md:max-w-xs"
+                  className="font-medium text-primary truncate max-w-[200px] md:max-w-xs"
                   itemProp="name"
                   title={item.label}
                 >
@@ -120,7 +120,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
                 <>
                   <Link 
                     to={item.href} 
-                    className="hover:text-primary dark:hover:text-dark-primary transition-colors hover:underline truncate max-w-[120px] md:max-w-[160px]"
+                    className="hover:text-primary transition-colors hover:underline truncate max-w-[120px] md:max-w-[160px]"
                     itemProp="item"
                     title={item.label}
                   >

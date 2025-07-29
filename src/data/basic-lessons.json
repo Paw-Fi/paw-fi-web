@@ -5,7 +5,6 @@
   "icon": "🚀",
   "lessons": [
     {
-      "id":"760623f2-f26e-41b8-ad2e-ccfe24cae714",
       "lesson_id": "invest-L1",
       "title": "Beginner's Guide to Investing: Key Concepts Explained",
       "description": "Learn the fundamental differences between saving and investing, understand risk, and discover how financial markets work.",
@@ -203,7 +202,6 @@
       ]
     },
     {
-      "id":"37d06908-0f0b-4705-8266-cc32c802e65c",
       "lesson_id": "behavfin-L2",
       "title": "Behavioral Finance: How Emotions Affect Investment Choices",
       "description": "Explore common psychological biases like loss aversion, confirmation bias, and overconfidence, and learn how they can impact your investment decisions.",
@@ -400,7 +398,6 @@
       ]
     },
     {
-      "id":"cb25b043-8a19-4c5e-9c8a-3fcb2386a968",
       "lesson_id": "moneymarket-L3",
       "title": "Money Market Explained: T-Bills, Repos, and CDs",
       "description": "Understand key short-term debt instruments like Treasury Bills, Repurchase Agreements, Commercial Paper, and Negotiable CDs, and their role in finance.",
@@ -558,7 +555,6 @@
       ]
     },
     {
-      "id":"79aa764a-434e-4d99-95af-29144c4da81b",
       "lesson_id": "bondmarket-L4",
       "title": "Bond Market Explained: Credit, Yields, and Investment Strategies",
       "description": "Dive into the world of bonds. Learn what they represent, how credit ratings work, the difference between various bond types, and key market pricing concepts.",
@@ -737,7 +733,6 @@
       ]
     },
     {
-      "id":"104089bc-6e98-4cd8-8eb8-5ee1efbbebba",
       "lesson_id": "equitymarket-L5",
       "title": "Equity Market Overview: Stocks, IPOs, and Investor Rights",
       "description": "Learn about common and preferred equity, dividends, how companies raise money, IPOs, order types, and stock market indexes.",
@@ -927,7 +922,6 @@
       ]
     },
     {
-      "id":"50a1c4ec-8e95-438a-b065-78ccba8c4244",
       "lesson_id": "derivatives-L6",
       "title": "Derivatives Market: Futures, Options, and Swaps Made Simple",
       "description": "Explore financial derivatives like futures, forwards, options, and swaps, and understand how their value is derived from underlying assets.",
@@ -1106,7 +1100,6 @@
       ]
     },
     {
-      "id":"edd5df39-e0e6-4031-8949-3fc5d31a5152",
       "lesson_id": "tvm-L7",
       "title": "Time Value of Money: How Interest and Value Change Over Time",
       "description": "Understand the core concepts of time value of money, including interest rates, simple vs. compound interest, present and future value, annuities, and APR vs. EAR.",
@@ -1286,7 +1279,6 @@
       ]
     },
     {
-      "id":"2af00aa5-ac5a-4f5b-a904-b7e5fa415042",
       "lesson_id": "stats-L8",
       "title": "Statistics for Investors: Mean, Variance, and Data Pitfalls",
       "description": "Grasp essential statistical concepts for investing, including mean, variance, correlation, normal distribution, and common data interpretation biases.",
@@ -1465,7 +1457,6 @@
       ]
     },
     {
-      "id":"0c4031a6-4982-447e-9105-c7ab61609125",
       "lesson_id": "econbasics-L9",
       "title": "Economics Basics for Investors: GDP, Inflation, and Scarcity",
       "description": "Learn fundamental economic concepts like scarcity, opportunity cost, supply & demand, GDP, economic indicators, and inflation, and their relevance to investing.",
@@ -1644,7 +1635,6 @@
       ]
     },
     {
-      "id":"a0bf3560-1bb9-49d2-a878-1ada5046e4fb",
       "lesson_id": "finstatements-L10",
       "title": "Financial Statement Analysis: Understanding the Numbers Behind Businesses",
       "description": "Learn about the double-entry accounting system, the main financial statements (Income Statement, Balance Sheet, Cash Flow), the accounting equation, EPS, inventory, and operating cash flow.",

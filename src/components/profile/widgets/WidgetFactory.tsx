@@ -23,12 +23,6 @@ import {
 
 import { IChecklistWidget } from "../types/dashboard-data.typings"; // Added import
 import { TipCardWidget } from "./tip-card-widget";
-import { 
-  DailyHabitCalculatorWidget, 
-  PensionHeadStartWidget, 
-  MortgageDepositTimelineWidget, 
-  SalarySlicerWidget
-} from "./PlaygroundWidgets";
 
 interface WidgetFactoryProps {
   widget: IBaseWidget;
@@ -81,18 +75,11 @@ export function WidgetFactory({ widget, controls }: WidgetFactoryProps) {
       return renderWidget(InsuranceCoverageWidget);
     case 'checklist':
       return renderWidget(ChecklistWidget);
-    case 'dailyHabitCalculator':
-      return renderWidget(DailyHabitCalculatorWidget);
-    case 'salarySlicer':
-      return renderWidget(SalarySlicerWidget);
-    case 'pensionHeadStart':
-      return renderWidget(PensionHeadStartWidget);
-    case 'mortgageDepositTimeline':
-      return renderWidget(MortgageDepositTimelineWidget);
+              ;
     default:
       return (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-700">
-          <p className="text-red-600 dark:text-red-400">Unknown widget type: {widgetType}</p>
+        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+          <p className="text-red-600">Unknown widget type: {widgetType}</p>
         </div>
       );
   }

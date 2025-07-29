@@ -20,36 +20,23 @@ interface TooltipItem {
 }
 
 export function PieChart({ labels, data, title }: PieChartProps) {
-  // Get CSS custom properties for consistent colors
-  const isDark = document.documentElement.classList.contains('dark');
-  const getChartColor = (colorName: string) => {
-    const customProp = isDark ? `--tw-color-dark-chart-${colorName}` : `--tw-color-chart-${colorName}`;
-    return getComputedStyle(document.documentElement).getPropertyValue(customProp)?.trim() ||
-           getComputedStyle(document.documentElement).getPropertyValue(`--tw-color-${isDark ? 'dark-' : ''}${colorName}`)?.trim();
-  };
-
   const chartData = {
     labels,
     datasets: [
       {
         data,
         backgroundColor: [
-          getChartColor('primary') || (isDark ? '#8B70FF' : '#7458FF'),
-          getChartColor('success') || (isDark ? '#1FE3B8' : '#16CDA2'),
-          '#FFCD29', // warning - keeping as fallback since we don't have chart-specific warning
-          '#FF7A7A', // danger - using dark-danger variant
-          '#60A5FA', // info - blue variant
-          '#A855F7', // purple variant
-        ].slice(0, data.length), // Only use as many colors as we have data points
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+          'rgba(255, 159, 64, 0.8)',
+        ],
         borderWidth: 0,
       },
     ],
   };
-
-  // Get consistent text colors
-  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
-                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
-                          (isDark ? '#F1F5F9' : '#1F2937');
 
   const options = {
     responsive: true,
@@ -57,7 +44,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: foregroundColor,
+          color: '#374151',
           font: { size: 14, family: 'inherit' },
         },
       },
@@ -74,7 +61,7 @@ export function PieChart({ labels, data, title }: PieChartProps) {
         ? {
             display: true,
             text: title,
-            color: foregroundColor,
+            color: '#111827',
             font: { size: 16, fontWeight: 'bold' as const, family: 'inherit' },
           }
         : undefined,

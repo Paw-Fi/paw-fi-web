@@ -63,13 +63,13 @@ const staticRoutes: StaticRoute[] = [
   { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/stats-L8', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
   { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/econbasics-L9', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
   { path: '/dashboard/essentials/your-2025-guide-to-investing/lesson/finstatements-L10', priority: 0.8, changefreq: 'weekly', lastmod: '2025-05-30' },
-  { path: '/calculators', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/auto-loan-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/compound-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/investment-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/mortgage-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/retirement-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
-  { path: '/calculators/saving-goals-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/auto-loan-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/compound-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/investment-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/mortgage-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/retirement-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
+  { path: '/dashboard/calculators/saving-goals-calculator', priority: 0.7, changefreq: 'monthly', lastmod: '2025-05-30' },
 ];
 
 // Generate the sitemap XML
