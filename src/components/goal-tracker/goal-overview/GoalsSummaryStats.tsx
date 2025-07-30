@@ -86,7 +86,7 @@ export function GoalsSummaryStats({ metrics }: GoalsSummaryStatsProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4">
       {stats.map((stat, index) => {
         const trendIcon = getTrendIcon(stat.trend);
         const trendColor = getTrendColor(stat.trend);
@@ -94,53 +94,74 @@ export function GoalsSummaryStats({ metrics }: GoalsSummaryStatsProps) {
         return (
           <motion.div
             key={stat.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-100 dark:border-gray-700"
+            transition={{ 
+              delay: index * 0.05,
+              duration: 0.4,
+              ease: [0.4, 0, 0.2, 1]
+            }}
+            className="group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-5 border border-gray-200/30 dark:border-gray-700/30 hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-300 hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                <FontAwesomeIcon icon={stat.icon} className={`w-5 h-5 ${stat.color}`} />
+            {/* Background Gradient Accent */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${
+              stat.id === 'total' ? 'from-blue-500/5 to-indigo-500/5' :
+              stat.id === 'active' ? 'from-green-500/5 to-emerald-500/5' :
+              stat.id === 'completed' ? 'from-purple-500/5 to-violet-500/5' :
+              'from-orange-500/5 to-amber-500/5'
+            } rounded-2xl `}></div>
+            
+            <div className="relative">
+              {/* Header with Icon and Trend */}
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-9 h-9 ${stat.bgColor} rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+                  <FontAwesomeIcon icon={stat.icon} className={`w-4 h-4 ${stat.color}`} />
+                </div>
+                
+                {trendIcon && (
+                  <div className="flex items-center space-x-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                    <FontAwesomeIcon 
+                      icon={trendIcon} 
+                      className={`w-3 h-3 ${trendColor}`} 
+                    />
+                  </div>
+                )}
               </div>
               
-              {trendIcon && (
-                <div className="flex items-center space-x-1">
-                  <FontAwesomeIcon 
-                    icon={trendIcon} 
-                    className={`w-3 h-3 ${trendColor}`} 
-                  />
+              {/* Value and Label */}
+              <div>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white mb-1 tracking-tight">
+                  {stat.value}
+                </p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  {stat.label}
+                </p>
+              </div>
+              
+              {/* Progress Bar for Progress Card */}
+              {stat.id === 'progress' && metrics.activeGoals > 0 && (
+                <div className="mt-4 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {metrics.goalsOnTrack} of {metrics.activeGoals} on track
+                    </p>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {Math.round((metrics.goalsOnTrack / metrics.activeGoals) * 100)}%
+                    </p>
+                  </div>
+                  <div className="w-full bg-gray-200/60 dark:bg-gray-600/60 rounded-full h-1.5">
+                    <motion.div 
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full shadow-sm"
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: `${(metrics.goalsOnTrack / metrics.activeGoals) * 100}%` 
+                      }}
+                      transition={{ duration: 1.2, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
-            
-            <div>
-              <p className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-1">
-                {stat.value}
-              </p>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {stat.label}
-              </p>
-            </div>
-            
-            {/* Additional context for progress */}
-            {stat.id === 'progress' && metrics.activeGoals > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {metrics.goalsOnTrack} of {metrics.activeGoals} goals on track
-                </p>
-                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1 mt-1">
-                  <motion.div 
-                    className="bg-green-500 h-1 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ 
-                      width: `${(metrics.goalsOnTrack / metrics.activeGoals) * 100}%` 
-                    }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                  />
-                </div>
-              </div>
-            )}
           </motion.div>
         );
       })}
@@ -150,16 +171,16 @@ export function GoalsSummaryStats({ metrics }: GoalsSummaryStatsProps) {
 
 function GoalsSummaryStatsSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div key={i} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-5 border border-gray-200/30 dark:border-gray-700/30 animate-pulse">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+            <div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
           </div>
           <div>
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-1"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
           </div>
         </div>
       ))}

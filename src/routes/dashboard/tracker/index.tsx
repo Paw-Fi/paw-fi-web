@@ -86,94 +86,78 @@ function GoalsTracker() {
   const hasGoals = goals && goals.length > 0;
 
   return (
-    <main className="p-4 sm:p-6 space-y-6" role="main" aria-label="Goal Tracker Dashboard">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50/50 to-blue-50/30 dark:from-gray-950 dark:to-blue-950/20" role="main" aria-label="Goal Tracker Dashboard">
       {/* Skip to main content link for keyboard navigation */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50">
         Skip to main content
       </a>
       
-      {/* Page Header */}
+      {/* Modern Compact Header */}
       <motion.header
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: ANIMATION_DURATION.normal }}
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50"
       >
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground dark:text-dark-foreground">
-            Goal Tracker
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base">
-            Track your financial goals with AI-powered insights
-          </p>
-        </div>
-        
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="flex-shrink-0"
-        >
-          <Link to="/dashboard/tracker/create">
-            <Button 
-              className={`bg-primary hover:bg-primary-dark text-white shadow-lg ${TOUCH_TARGET_SIZE} px-4 py-2 sm:px-6 sm:py-3`}
-              aria-label="Create a new financial goal"
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                  Goals
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 -mt-0.5">
+                  {hasGoals ? `${goals.length} active goals` : 'Start your journey'}
+                </p>
+              </div>
+            </div>
+            
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" aria-hidden="true" />
-              <span>Create Goal</span>
-            </Button>
-          </Link>
-        </motion.div>
+              <Link to="/dashboard/tracker/create">
+                <Button 
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm border-0 font-medium text-sm rounded-lg transition-all duration-200"
+                  aria-label="Create a new financial goal"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="size-4 mr-2" />
+                  New Goal
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </div>
       </motion.header>
 
-      <div id="main-content" tabIndex={-1}>
+      <div id="main-content" className="max-w-7xl mx-auto px-6 py-6" tabIndex={-1}>
         {hasGoals ? (
           <>
-            {/* Summary Statistics */}
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: ANIMATION_DURATION.normal, delay: STAGGER_DELAY }}
-              aria-labelledby="stats-heading"
-            >
-              <h2 id="stats-heading" className="sr-only">Goal Statistics Overview</h2>
-              <GoalsSummaryStats metrics={metrics} />
-            </motion.section>
-            
-            {/* Quick Actions */}
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: ANIMATION_DURATION.normal, delay: STAGGER_DELAY * 2 }}
-              aria-labelledby="quick-actions-heading"
-            >
-              <h2 id="quick-actions-heading" className="sr-only">Quick Actions</h2>
-              <QuickActions goals={goals} />
-            </motion.section>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-              {/* Main Goals Grid */}
-              <motion.section
-                className="lg:col-span-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: ANIMATION_DURATION.normal, delay: STAGGER_DELAY * 3 }}
-                aria-labelledby="goals-grid-heading"
+            {/* Redesigned Layout - More Compact and Sophisticated */}
+            <div className="space-y-6">
+              {/* Top Row: Stats + Quick Actions Combined */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="grid grid-cols-1 xl:grid-cols-5 gap-6"
               >
-                <h2 id="goals-grid-heading" className="sr-only">Your Financial Goals</h2>
-                <GoalsGrid goals={goals} onGoalUpdate={refetch} />
-              </motion.section>
-              
-              {/* Recent Activity Sidebar */}
-              <motion.aside
-                className="lg:col-span-1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: ANIMATION_DURATION.normal, delay: STAGGER_DELAY * 4 }}
-                aria-labelledby="recent-activity-heading"
-              >
-                <h2 id="recent-activity-heading" className="sr-only">Recent Activity</h2>
+                {/* Stats take up 3 columns */}
+                <div className="xl:col-span-3">
+                  <GoalsSummaryStats metrics={metrics} />
+                </div>
+                
+                {/* Quick Actions take up 2 columns */}
+                <div className="xl:col-span-2">
                 <RecentActivity />
-              </motion.aside>
+                </div>
+              </motion.div>
+              
+              
+                  <GoalsGrid goals={goals} onGoalUpdate={refetch} />                
+               
+
             </div>
           </>
         ) : (
@@ -187,69 +171,71 @@ function GoalsTracker() {
 const EmptyGoalsState = memo(function EmptyGoalsState() {
   return (
     <motion.section
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: ANIMATION_DURATION.normal }}
-      className="flex flex-col items-center justify-center py-8 sm:py-16 px-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+      className="flex flex-col items-center justify-center py-16 px-4"
       role="region"
       aria-labelledby="empty-state-heading"
     >
-      <div className="max-w-md text-center">
-        {/* Icon */}
-        <div className="relative mb-6 sm:mb-8">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-full flex items-center justify-center">
-            <FontAwesomeIcon 
-              icon={faBullseye} 
-              className="w-10 h-10 sm:w-12 sm:h-12 text-primary"
-              aria-hidden="true"
-            />
+      <div className="max-w-lg text-center">
+        {/* Modern Icon Design */}
+        <div className="relative mb-8">
+          <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-3xl flex items-center justify-center shadow-inner">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+              <FontAwesomeIcon 
+                icon={faBullseye} 
+                className="w-8 h-8 text-white"
+                aria-hidden="true"
+              />
+            </div>
           </div>
-          <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-purple-500 rounded-full flex items-center justify-center">
+          <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
             <FontAwesomeIcon 
               icon={faPlus} 
-              className="w-3 h-3 sm:w-4 sm:h-4 text-white"
+              className="w-4 h-4 text-white"
               aria-hidden="true"
             />
           </div>
         </div>
 
         {/* Content */}
-        <h2 id="empty-state-heading" className="text-xl sm:text-2xl font-bold text-foreground dark:text-dark-foreground mb-4 text-center">
+        <h2 id="empty-state-heading" className="text-2xl font-semibold text-gray-900 dark:text-white mb-3 tracking-tight">
           Start Your Financial Journey
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6 sm:mb-8 leading-relaxed text-center text-sm sm:text-base">
-          Set your first financial goal and let our AI create a personalized strategy with smart milestones to help you succeed.
+        <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed text-base max-w-md mx-auto">
+          Set your first financial goal and let our AI create a personalized strategy with smart milestones.
         </p>
 
-        {/* Benefits */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8" role="list" aria-label="Goal tracker benefits">
+        {/* Modern Benefits Grid */}
+        <div className="grid grid-cols-3 gap-6 mb-10" role="list" aria-label="Goal tracker benefits">
           <div className="text-center" role="listitem">
-            <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-2">
+            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl flex items-center justify-center mb-3">
               <FontAwesomeIcon icon={faChartLine} className="w-6 h-6 text-blue-600 dark:text-blue-400" aria-hidden="true" />
             </div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Strategy</p>
           </div>
           <div className="text-center" role="listitem">
-            <div className="w-12 h-12 mx-auto bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-2">
+            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl flex items-center justify-center mb-3">
               <FontAwesomeIcon icon={faBullseye} className="w-6 h-6 text-green-600 dark:text-green-400" aria-hidden="true" />
             </div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Smart Milestones</p>
           </div>
           <div className="text-center" role="listitem">
-            <div className="w-12 h-12 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-2">
+            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl flex items-center justify-center mb-3">
               <FontAwesomeIcon icon={faTrophy} className="w-6 h-6 text-purple-600 dark:text-purple-400" aria-hidden="true" />
             </div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Track Progress</p>
           </div>
         </div>
 
-        {/* Call to Action */}
+        {/* Modern CTA */}
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           <Link to="/dashboard/tracker/create" aria-describedby="empty-state-heading">
-            <Button className={`bg-primary hover:bg-primary-dark text-white px-6 sm:px-8 py-3 text-base sm:text-lg shadow-lg ${TOUCH_TARGET_SIZE}`} aria-label="Create your first financial goal">
+            <Button className="h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg border-0 font-medium text-base rounded-xl transition-all duration-200" aria-label="Create your first financial goal">
               <FontAwesomeIcon icon={faPlus} className="mr-2" aria-hidden="true" />
               Create Your First Goal
             </Button>
@@ -262,43 +248,59 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
 
 const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
   return (
-    <main className="p-4 sm:p-6 space-y-6" role="main" aria-label="Loading goal tracker data">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50/50 to-blue-50/30 dark:from-gray-950 dark:to-blue-950/20" role="main" aria-label="Loading goal tracker data">
       <div aria-live="polite" aria-label="Loading your goals">
         <span className="sr-only">Loading your financial goals, please wait...</span>
       </div>
       
       {/* Header Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-40 sm:w-48 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48 sm:w-64 animate-pulse"></div>
-        </div>
-        <div className="h-10 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-      </div>
-
-      {/* Stats Skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 sm:w-20 mb-2 animate-pulse"></div>
-            <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-12 sm:w-16 mb-1 animate-pulse"></div>
-            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20 sm:w-24 animate-pulse"></div>
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-2 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+              <div className="space-y-2">
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+              </div>
+            </div>
+            <div className="h-9 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* Quick Actions Skeleton */}
-      <div className="h-12 sm:h-16 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse"></div>
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        {/* Top Row Skeleton */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+          {/* Stats Skeleton */}
+          <div className="xl:col-span-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-5 border border-gray-200/30 dark:border-gray-700/30">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-3 animate-pulse"></div>
+                  <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-12 mb-2 animate-pulse"></div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Content Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-28 sm:h-32 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse"></div>
-          ))}
+          {/* Quick Actions Skeleton */}
+          <div className="xl:col-span-2">
+            <div className="h-32 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/30 dark:border-gray-700/30 animate-pulse"></div>
+          </div>
         </div>
-        <div className="space-y-4">
-          <div className="h-48 sm:h-64 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse"></div>
+
+        {/* Main Content Skeleton */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:col-span-3 space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-24 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/30 dark:border-gray-700/30 animate-pulse"></div>
+            ))}
+          </div>
+          <div className="xl:col-span-1">
+            <div className="h-64 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/30 dark:border-gray-700/30 animate-pulse"></div>
+          </div>
         </div>
       </div>
     </main>
@@ -311,31 +313,30 @@ const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; on
   }, [onRetry]);
 
   return (
-    <main className="p-4 sm:p-6" role="main">
-      <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-        <div className="max-w-md text-center">
-          <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-8 h-8 text-red-600 dark:text-red-400" aria-hidden="true" />
+    <main className="min-h-screen bg-gradient-to-br from-slate-50/50 to-blue-50/30 dark:from-gray-950 dark:to-blue-950/20 flex items-center justify-center" role="main">
+      <div className="max-w-md text-center px-6">
+        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-white" aria-hidden="true" />
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-foreground dark:text-dark-foreground mb-4">
-            Failed to Load Goals
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base leading-relaxed">
-            {error?.message || 'Something went wrong while loading your goals. Please try again.'}
-          </p>
-          <div role="alert" aria-live="polite" className="sr-only">
-            Error loading goals: {error?.message || 'Unknown error occurred'}
-          </div>
-          <Button 
-            onClick={handleRetry} 
-            variant="outline" 
-            className={`${TOUCH_TARGET_SIZE} px-6 py-3`}
-            aria-label="Retry loading goals"
-          >
-            <FontAwesomeIcon icon={faRefresh} className="mr-2" aria-hidden="true" />
-            Try Again
-          </Button>
         </div>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 tracking-tight">
+          Failed to Load Goals
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed text-sm">
+          {error?.message || 'Something went wrong while loading your goals. Please try again.'}
+        </p>
+        <div role="alert" aria-live="polite" className="sr-only">
+          Error loading goals: {error?.message || 'Unknown error occurred'}
+        </div>
+        <Button 
+          onClick={handleRetry} 
+          className="h-11 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm border-0 font-medium text-sm rounded-xl transition-all duration-200"
+          aria-label="Retry loading goals"
+        >
+          <FontAwesomeIcon icon={faRefresh} className="mr-2 w-4 h-4" aria-hidden="true" />
+          Try Again
+        </Button>
       </div>
     </main>
   );

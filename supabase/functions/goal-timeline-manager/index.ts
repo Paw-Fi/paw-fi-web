@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../shared/cors.ts";
-import { logUserActivity } from "../shared/activity-logger.ts";
+import { logUserActivity, type ActivityData } from "../shared/activity-logger.ts";
+import { actions } from "../shared/update-reward-actions/reward-actions.ts";
 
 // Initialize Supabase client
 const supabaseClient = createClient(
@@ -73,7 +74,7 @@ serve(async (req: Request) => {
     let updateData: GoalUpdateData = {
       updated_at: new Date().toISOString(),
     };
-    let activityAction = '';
+    let activityAction: string = '';
     let activityMetadata: any = {
       goalId,
       goalTitle: currentGoal.title,
@@ -89,7 +90,7 @@ serve(async (req: Request) => {
         }
 
         updateData.target_date = payload.target_date;
-        activityAction = 'goal_timeline_updated';
+        activityAction = actions.GOAL_TIMELINE_UPDATED;
         
         const originalDate = new Date(currentGoal.target_date);
         const newDate = new Date(payload.target_date);
@@ -115,7 +116,7 @@ serve(async (req: Request) => {
         }
 
         updateData.target_date = payload.target_date;
-        activityAction = 'goal_timeline_extended';
+        activityAction = actions.GOAL_TIMELINE_EXTENDED;
         
         const extensionDays = Math.ceil((new Date(payload.target_date).getTime() - new Date(currentGoal.target_date).getTime()) / (1000 * 60 * 60 * 24));
         
@@ -140,7 +141,7 @@ serve(async (req: Request) => {
           Object.assign(updateData, payload.metadata);
         }
 
-        activityAction = 'goal_target_adjusted';
+        activityAction = actions.GOAL_TARGET_ADJUSTED;
         activityMetadata = {
           ...activityMetadata,
           originalTargetDate: currentGoal.target_date,
@@ -177,16 +178,15 @@ serve(async (req: Request) => {
     }
 
     // Log the activity
-    const activityResult = await logUserActivity(
-      supabaseClient,
-      userId,
-      {
-        type: 'goal_management',
-        action: activityAction,
-        source: 'goal-timeline-manager',
-        metadata: activityMetadata,
-      }
-    );
+    const activityData: ActivityData = {
+      type: 'goal_management',
+      action: activityAction,
+      source: 'goal-timeline-manager',
+      metadata: activityMetadata,
+      timestamp: new Date().toISOString(),
+    };
+    
+    const activityResult = await logUserActivity(supabaseClient, userId, activityData);
 
     if (!activityResult.success) {
       console.error('Failed to log activity:', activityResult.error);

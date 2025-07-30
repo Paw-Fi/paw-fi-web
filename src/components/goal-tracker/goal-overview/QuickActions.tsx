@@ -81,69 +81,99 @@ export function QuickActions({ goals }: QuickActionsProps) {
   const visibleActions = actions.filter(action => action.show);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-foreground dark:text-dark-foreground">
-          Quick Actions
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Take action on your goals
-        </p>
+    <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/30 dark:border-gray-700/30 overflow-hidden">
+      {/* Compact Header */}
+      <div className="px-6 py-4 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-700/30 dark:to-transparent border-b border-gray-200/30 dark:border-gray-700/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              Quick Actions
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Take action on your goals
+            </p>
+          </div>
+          {visibleActions.some(action => action.urgent) && (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-red-600 dark:text-red-400">Urgent</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Modern Action Items */}
+      <div className="p-4">
+        <div className="space-y-2">
           {visibleActions.map((action, index) => (
             <Link to={action.href} key={action.id}>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`
-                relative p-4 rounded-lg border-2 transition-all cursor-pointer group
-                ${action.urgent 
-                  ? 'border-red-200 dark:border-red-700 hover:border-red-300 dark:hover:border-red-600' 
-                  : 'border-gray-100 dark:border-gray-700 hover:border-primary/20 dark:hover:border-primary/40'
-                }
-                hover:shadow-md
-              `}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {action.urgent && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              )}
-              
-              <div className="flex items-start justify-between mb-3">
-                <div className={`w-10 h-10 ${action.bgColor} rounded-lg flex items-center justify-center`}>
-                  <FontAwesomeIcon icon={action.icon} className={`w-5 h-5 ${action.color}`} />
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ 
+                  delay: index * 0.05,
+                  duration: 0.3,
+                  ease: [0.4, 0, 0.2, 1]
+                }}
+                className={`
+                  group relative flex items-center p-3 rounded-xl transition-all duration-200
+                  ${action.urgent 
+                    ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200/50 dark:border-red-800/50' 
+                    : 'bg-gray-50/50 dark:bg-gray-700/30 hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50'
+                  }
+                  hover:shadow-sm cursor-pointer
+                `}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                {/* Icon */}
+                <div className={`w-8 h-8 ${action.bgColor} rounded-lg flex items-center justify-center mr-3 group-hover:scale-110 transition-transform duration-200`}>
+                  <FontAwesomeIcon icon={action.icon} className={`w-3.5 h-3.5 ${action.color}`} />
                 </div>
                 
-                <FontAwesomeIcon 
-                  icon={faArrowRight} 
-                  className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" 
-                />
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-semibold text-foreground dark:text-dark-foreground mb-1">
-                  {action.title}
-                </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {action.description}
-                </p>
-              </div>
-            </motion.div>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                      {action.title}
+                    </h3>
+                    <FontAwesomeIcon 
+                      icon={faArrowRight} 
+                      className="w-3 h-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 group-hover:translate-x-0.5 transition-all duration-200" 
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                    {action.description}
+                  </p>
+                </div>
+
+                {/* Urgent indicator */}
+                {action.urgent && (
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                )}
+              </motion.div>
             </Link>
           ))}
         </div>
 
-        {visibleActions.length === 1 && (
-          <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              🎉 Great job! Your goals are well-managed. Consider creating new objectives to continue growing.
+        {/* Success state when only create action is visible */}
+        {visibleActions.length === 1 && visibleActions[0].id === 'create' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 p-3 rounded-xl bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200/30 dark:border-green-800/30 text-center"
+          >
+            <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <span className="text-white text-sm">✓</span>
+            </div>
+            <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+              Great job! Your goals are well-managed.
             </p>
-          </div>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              Consider creating new objectives to continue growing.
+            </p>
+          </motion.div>
         )}
       </div>
     </div>

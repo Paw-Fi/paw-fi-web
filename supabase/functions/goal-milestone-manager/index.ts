@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../shared/cors.ts";
+import { logUserActivity, type ActivityData } from "../shared/activity-logger.ts";
+import { actions } from "../shared/update-reward-actions/reward-actions.ts";
 
 // Initialize Supabase client
 const supabaseClient = createClient(
@@ -58,13 +60,52 @@ serve(async (req: Request) => {
         break;
 
       case 'update':
-                        const { user_id: uId, ...updateData } = payload;
+        const { user_id: uId, ...updateData } = payload;
+        
+        // Get the current milestone data before updating (for activity logging)
+        let currentMilestone = null;
+        if (updateData.status) {
+          const { data: currentData, error: currentError } = await supabaseClient
+            .from('goal_milestones')
+            .select('*, financial_goals(title)')
+            .eq('id', payload.id)
+            .single();
+            
+          if (!currentError) {
+            currentMilestone = currentData;
+          }
+        }
+        
         ({ data, error } = await supabaseClient
           .from('goal_milestones')
           .update(updateData)
           .eq('id', payload.id)
-          .select()
+          .select('*, financial_goals(title)')
           .single());
+          
+        // Log activity if milestone was completed
+        if (data && currentMilestone && updateData.status === 'completed' && currentMilestone.status !== 'completed') {
+          const activityData: ActivityData = {
+            type: 'milestone',
+            action: actions.MILESTONE_COMPLETED,
+            source: 'goal-milestone-manager',
+            metadata: {
+              milestoneId: data.id,
+              goalId: data.goal_id,
+              goalTitle: data.financial_goals?.title || 'Goal',
+              milestoneTitle: data.title,
+              milestonePriority: data.priority,
+              milestoneType: data.milestone_type,
+              targetAmount: data.target_amount,
+            },
+            timestamp: new Date().toISOString(),
+          };
+          
+          // Log the activity (don't await to avoid blocking the response)
+          logUserActivity(supabaseClient, userId, activityData).catch(error => {
+            console.error('Failed to log milestone completion activity:', error);
+          });
+        }
         break;
 
       case 'delete':

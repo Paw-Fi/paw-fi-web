@@ -1,5 +1,7 @@
 // Core goal interfaces and types for the AI-driven goal tracking system
 
+import { GoalMilestone, ProgressUpdate, GoalInsight, MilestoneType, MilestoneFrequency, MilestonePriority } from '.';
+
 export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'custom';
 
 export type GoalStatus = 'active' | 'paused' | 'completed' | 'cancelled';
