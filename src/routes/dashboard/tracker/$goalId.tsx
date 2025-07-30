@@ -69,7 +69,13 @@ function GoalDetail() {
   const [isAdjustTimelineModalOpen, setAdjustTimelineModalOpen] = useState(false);
   const [showStrategyModal, setShowStrategyModal] = useState(false);
   const [showAllInsightsModal, setShowAllInsightsModal] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -183,6 +189,84 @@ function GoalDetail() {
     }
   };
 
+  const handleEditTitle = () => {
+    setEditedTitle(currentGoal.title);
+    setIsEditingTitle(true);
+    setShowActionsMenu(false);
+    setTimeout(() => titleInputRef.current?.focus(), 50);
+  };
+
+  const handleSaveTitle = async () => {
+    if (editedTitle.trim() === currentGoal.title || !editedTitle.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    // Optimistically update the UI
+    setOptimisticGoal({ title: editedTitle.trim() });
+    
+    try {
+      await updateGoal({ title: editedTitle.trim() });
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error('Failed to update title:', error);
+      // Revert optimistic update by refetching
+      refetch();
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update goal title';
+      console.error('Title update failed:', errorMessage);
+      setIsEditingTitle(false);
+    }
+  };
+
+  const handleCancelEditTitle = () => {
+    setEditedTitle(currentGoal.title);
+    setIsEditingTitle(false);
+  };
+
+  const handleEditDescription = () => {
+    setEditedDescription(currentGoal.description || '');
+    setIsEditingDescription(true);
+    setTimeout(() => descriptionInputRef.current?.focus(), 50);
+  };
+
+  const handleSaveDescription = async () => {
+    const trimmedDescription = editedDescription.trim();
+    if (trimmedDescription === (currentGoal.description || '')) {
+      setIsEditingDescription(false);
+      return;
+    }
+
+    // Optimistically update the UI
+    setOptimisticGoal({ description: trimmedDescription });
+    
+    try {
+      await updateGoal({ description: trimmedDescription });
+      setIsEditingDescription(false);
+    } catch (error) {
+      console.error('Failed to update description:', error);
+      // Revert optimistic update by refetching
+      refetch();
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update goal description';
+      console.error('Description update failed:', errorMessage);
+      setIsEditingDescription(false);
+    }
+  };
+
+  const handleCancelEditDescription = () => {
+    setEditedDescription(currentGoal.description || '');
+    setIsEditingDescription(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, saveHandler: () => void, cancelHandler: () => void) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      saveHandler();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelHandler();
+    }
+  };
+
   // Calculate key metrics
   const progressData = {
     currentAmount: currentGoal.current_amount || 0,
@@ -225,7 +309,40 @@ function GoalDetail() {
           <div className="flex items-center justify-between">
               
               <div className="flex items-center gap-3">              
-                  <h1 className="font-semibold text-gray-900 dark:text-white text-sm">{currentGoal.title}</h1>
+                  {isEditingTitle ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={titleInputRef}
+                        type="text"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, handleSaveTitle, handleCancelEditTitle)}
+                        onBlur={handleSaveTitle}
+                        className="font-semibold text-gray-900 dark:text-white text-sm bg-transparent border-b border-blue-500 focus:outline-none min-w-0 flex-1"
+                        placeholder="Goal title"
+                      />
+                      <button
+                        onClick={handleSaveTitle}
+                        className="text-green-600 hover:text-green-700 p-1"
+                      >
+                        <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleCancelEditTitle}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <h1 
+                      className="font-semibold text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      onClick={handleEditTitle}
+                      title="Click to edit title"
+                    >
+                      {currentGoal.title}
+                    </h1>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       currentGoal.status === 'active' 
@@ -293,14 +410,18 @@ function GoalDetail() {
                       className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
                     >
                       <button
-                        onClick={() => {
-                          window.location.href = `/dashboard/tracker/${goalId}/edit`;
-                          setShowActionsMenu(false);
-                        }}
+                        onClick={handleEditTitle}
                         className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors"
                       >
                         <FontAwesomeIcon icon={faEdit} className="w-4 h-4 mr-2" />
-                        Edit Goal
+                        Edit Title
+                      </button>
+                      <button
+                        onClick={handleEditDescription}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4 mr-2" />
+                        Edit Description
                       </button>
                       <div className="border-t border-gray-200 dark:border-gray-700" />
                       <button
@@ -336,9 +457,42 @@ function GoalDetail() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                     {currentGoal.goal_type.replace('_', ' ')}
                   </p>
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {currentGoal.description}
-                  </p>
+                  {isEditingDescription ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        ref={descriptionInputRef}
+                        value={editedDescription}
+                        onChange={(e) => setEditedDescription(e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, handleSaveDescription, handleCancelEditDescription)}
+                        onBlur={handleSaveDescription}
+                        className="text-gray-700 dark:text-gray-300 leading-relaxed bg-transparent border border-blue-500 rounded-lg p-2 focus:outline-none resize-none"
+                        placeholder="Goal description"
+                        rows={3}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveDescription}
+                          className="text-green-600 hover:text-green-700 p-1"
+                        >
+                          <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleCancelEditDescription}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p 
+                      className="text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      onClick={handleEditDescription}
+                      title="Click to edit description"
+                    >
+                      {currentGoal.description || 'Click to add a description'}
+                    </p>
+                  )}
                 </div>
                 {isOnTrack ? (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium">
@@ -1250,8 +1404,193 @@ function StrategyModal({
             </Button>
             <Button
               onClick={() => {
-                // TODO: Implement print functionality
-                window.print();
+                // Create a comprehensive print window with goal details
+                const printContent = `
+                  <html>
+                    <head>
+                      <title>${currentGoal.title} - Financial Goal Strategy</title>
+                      <style>
+                        body { 
+                          font-family: Arial, sans-serif; 
+                          max-width: 800px; 
+                          margin: 0 auto; 
+                          padding: 20px; 
+                          line-height: 1.6; 
+                        }
+                        .header { 
+                          border-bottom: 2px solid #e2e8f0; 
+                          padding-bottom: 20px; 
+                          margin-bottom: 30px; 
+                        }
+                        .title { 
+                          font-size: 24px; 
+                          font-weight: bold; 
+                          color: #1a202c; 
+                          margin-bottom: 10px; 
+                        }
+                        .goal-type { 
+                          color: #4a5568; 
+                          text-transform: uppercase; 
+                          font-size: 12px; 
+                          letter-spacing: 1px; 
+                        }
+                        .section { 
+                          margin-bottom: 30px; 
+                        }
+                        .section-title { 
+                          font-size: 18px; 
+                          font-weight: bold; 
+                          color: #2d3748; 
+                          margin-bottom: 15px; 
+                          border-bottom: 1px solid #e2e8f0; 
+                          padding-bottom: 5px; 
+                        }
+                        .metric-grid { 
+                          display: grid; 
+                          grid-template-columns: 1fr 1fr; 
+                          gap: 20px; 
+                          margin-bottom: 20px; 
+                        }
+                        .metric { 
+                          padding: 15px; 
+                          border: 1px solid #e2e8f0; 
+                          border-radius: 8px; 
+                        }
+                        .metric-label { 
+                          font-size: 12px; 
+                          color: #4a5568; 
+                          text-transform: uppercase; 
+                          letter-spacing: 1px; 
+                          margin-bottom: 5px; 
+                        }
+                        .metric-value { 
+                          font-size: 20px; 
+                          font-weight: bold; 
+                          color: #1a202c; 
+                        }
+                        .milestone { 
+                          padding: 10px; 
+                          border-left: 4px solid #4299e1; 
+                          margin-bottom: 10px; 
+                          background-color: #f7fafc; 
+                        }
+                        .milestone-title { 
+                          font-weight: bold; 
+                          margin-bottom: 5px; 
+                        }
+                        .insight { 
+                          padding: 15px; 
+                          border-left: 4px solid #48bb78; 
+                          background-color: #f0fff4; 
+                          margin-bottom: 10px; 
+                        }
+                        .print-date { 
+                          text-align: center; 
+                          color: #4a5568; 
+                          font-size: 12px; 
+                          margin-top: 40px; 
+                          border-top: 1px solid #e2e8f0; 
+                          padding-top: 20px; 
+                        }
+                        @media print {
+                          body { margin: 0; padding: 15px; }
+                          .section { page-break-inside: avoid; }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="header">
+                        <div class="goal-type">${currentGoal.goal_type.replace('_', ' ')}</div>
+                        <div class="title">${currentGoal.title}</div>
+                        <p>${currentGoal.description || 'No description provided'}</p>
+                      </div>
+                      
+                      <div class="section">
+                        <div class="section-title">Goal Overview</div>
+                        <div class="metric-grid">
+                          <div class="metric">
+                            <div class="metric-label">Target Amount</div>
+                            <div class="metric-value">$${(currentGoal.target_amount || 0).toLocaleString()}</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Current Amount</div>
+                            <div class="metric-value">$${(currentGoal.current_amount || 0).toLocaleString()}</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Progress</div>
+                            <div class="metric-value">${progressData.progressPercentage.toFixed(1)}%</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Target Date</div>
+                            <div class="metric-value">${currentGoal.target_date ? new Date(currentGoal.target_date).toLocaleDateString() : 'Not set'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="section">
+                        <div class="section-title">Financial Analysis</div>
+                        <div class="metric-grid">
+                          <div class="metric">
+                            <div class="metric-label">Required Monthly Savings</div>
+                            <div class="metric-value">$${progressData.requiredMonthly.toLocaleString()}</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Days Remaining</div>
+                            <div class="metric-value">${progressData.daysLeft > 0 ? progressData.daysLeft : 'Target date passed'}</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Status</div>
+                            <div class="metric-value">${isOnTrack ? 'On Track ✓' : 'Behind Target ⚠'}</div>
+                          </div>
+                          <div class="metric">
+                            <div class="metric-label">Monthly Capacity</div>
+                            <div class="metric-value">$${progressData.monthlyCapacity.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      ${(currentMilestones || []).length > 0 ? `
+                        <div class="section">
+                          <div class="section-title">Milestones</div>
+                          ${(currentMilestones || []).map(milestone => `
+                            <div class="milestone">
+                              <div class="milestone-title">${milestone.title}</div>
+                              <div>Target: $${(milestone.target_amount || 0).toLocaleString()}</div>
+                              <div>Status: ${milestone.status === 'completed' ? 'Completed ✓' : 'Pending'}</div>
+                              ${milestone.target_date ? `<div>Due: ${new Date(milestone.target_date).toLocaleDateString()}</div>` : ''}
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                      
+                      ${(currentInsights || []).length > 0 ? `
+                        <div class="section">
+                          <div class="section-title">AI Insights & Recommendations</div>
+                          ${(currentInsights || []).slice(0, 5).map(insight => `
+                            <div class="insight">
+                              <strong>${insight.insight_type.replace('_', ' ').toUpperCase()}:</strong> ${insight.insight_text}
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                      
+                      <div class="print-date">
+                        Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+                      </div>
+                    </body>
+                  </html>
+                `;
+                
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                  printWindow.document.write(printContent);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                  }, 250);
+                }
               }}
               className="bg-indigo-600 hover:bg-indigo-700 text-white sm:order-3"
             >

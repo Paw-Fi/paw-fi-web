@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faRocket,
-  faExclamationTriangle,
-  faCheck,
-  faDollarSign,
-  faPercent
+  faExclamationTriangle
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
+import { FormQuestion } from "@/components/ui/form-question";
+import { CategoryProgress } from "@/components/ui/category-progress";
+import { FormNavigation } from "@/components/ui/form-navigation";
 import { useCreateGoalWithAI } from "@/hooks/goal-tracker/use-create-goal";
 import { useSimulatedProgress } from "@/hooks/use-simulated-progress";
 import type { 
@@ -48,6 +48,40 @@ export function QuestionnaireFlow({
       : template.questions, 
     [template.questions]
   );
+
+  // Group questions by category for compact display
+  const questionsByCategory = useMemo(() => {
+    const grouped: Record<string, Question[]> = {
+      'basic': [],
+      'financial': [],
+      'timeline': [],
+      'preferences': []
+    };
+    
+    questions.forEach((question, index) => {
+      // Simple categorization based on question type and content
+      if (index < Math.ceil(questions.length * 0.3)) {
+        grouped.basic.push(question);
+      } else if (index < Math.ceil(questions.length * 0.6)) {
+        grouped.financial.push(question);
+      } else if (index < Math.ceil(questions.length * 0.8)) {
+        grouped.timeline.push(question);
+      } else {
+        grouped.preferences.push(question);
+      }
+    });
+    
+    return grouped;
+  }, [questions]);
+
+  const categories = [
+    { id: 'basic', title: 'Goal Basics', description: 'Tell us about your goal', color: 'bg-blue-100 text-blue-600' },
+    { id: 'financial', title: 'Financial Details', description: 'Money matters and targets', color: 'bg-green-100 text-green-600' },
+    { id: 'timeline', title: 'Timeline & Planning', description: 'When and how you want to achieve this', color: 'bg-purple-100 text-purple-600' },
+    { id: 'preferences', title: 'Your Preferences', description: 'Customize your approach', color: 'bg-orange-100 text-orange-600' }
+  ];
+
+  const [activeCategory, setActiveCategory] = useState('basic');
 
   const validate = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -100,14 +134,42 @@ export function QuestionnaireFlow({
   };
 
   const progress = useMemo(() => {
-    const requiredQuestions = questions.filter(q => q.validation?.required);
-    const answeredCount = requiredQuestions.filter(q => {
-        const value = answers[q.id];
+    const currentCategoryIndex = categories.findIndex(cat => cat.id === activeCategory);
+    return (currentCategoryIndex + 1) / categories.length;
+  }, [activeCategory, categories]);
+
+  const isCategoryComplete = useCallback((categoryId: string) => {
+    const categoryQuestions = questionsByCategory[categoryId] || [];
+    return categoryQuestions.every(q => {
+      const value = answers[q.id];
+      if (q.validation?.required) {
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
-    }).length;
-    if (requiredQuestions.length === 0) return 100;
-    return (answeredCount / requiredQuestions.length) * 100;
-  }, [questions, answers]);
+      }
+      return true;
+    });
+  }, [questionsByCategory, answers]);
+
+  const completedCategories = useMemo(() => {
+    return categories.filter(cat => isCategoryComplete(cat.id)).map(cat => cat.id);
+  }, [categories, isCategoryComplete]);
+
+  const canGoNext = isCategoryComplete(activeCategory);
+  const canGoBack = categories.findIndex(cat => cat.id === activeCategory) > 0;
+  const isLastCategory = categories.findIndex(cat => cat.id === activeCategory) === categories.length - 1;
+
+  const handleNext = () => {
+    const currentIndex = categories.findIndex(cat => cat.id === activeCategory);
+    if (currentIndex < categories.length - 1) {
+      setActiveCategory(categories[currentIndex + 1].id);
+    }
+  };
+
+  const handleBack = () => {
+    const currentIndex = categories.findIndex(cat => cat.id === activeCategory);
+    if (currentIndex > 0) {
+      setActiveCategory(categories[currentIndex - 1].id);
+    }
+  };
 
   if (isLoading) {
     return <GeneratingGoalView progress={simulatedProgress} error={createError?.message} onCancel={onCancel} />;
@@ -118,169 +180,74 @@ export function QuestionnaireFlow({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
+        className="text-center mb-8"
       >
-        <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Tell us about your goal
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Fill out the details below to create your personalized financial plan.
         </p>
       </motion.div>
 
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mb-12">
+      <CategoryProgress
+        categories={categories}
+        activeCategory={activeCategory}
+        completedCategories={completedCategories}
+        progress={progress}
+        onCategoryChange={setActiveCategory}
+      />
+
+      <AnimatePresence mode="wait">
         <motion.div
-          className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5 }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
-        {questions.map(question => (
-          <div 
-            key={question.id} 
-            className={question.layout?.colSpan === 2 ? 'md:col-span-2' : ''}
-          >
-            <QuestionRenderer
-              question={question}
-              value={answers[question.id]}
-              onChange={(value) => handleAnswerChange(question.id, value)}
-              error={errors[question.id]}
-            />
+          key={activeCategory}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {questionsByCategory[activeCategory]?.map(question => (
+              <div 
+                key={question.id} 
+                className={question.layout?.colSpan === 2 ? 'md:col-span-2' : ''}
+              >
+                <FormQuestion
+                  id={question.id}
+                  question={question.question}
+                  description={question.description}
+                  type={question.type}
+                  options={question.options}
+                  value={answers[question.id]}
+                  onChange={(value) => handleAnswerChange(question.id, value)}
+                  error={errors[question.id]}
+                  placeholder={question.placeholder}
+                  validation={question.validation}
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
-      <div className="flex justify-center items-center mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-        <Button onClick={handleSubmit} size="lg" className="px-12 py-7 text-lg" disabled={!isFormComplete}>
-          <FontAwesomeIcon icon={faRocket} className="mr-3" />
-          Create My Goal
-        </Button>
-      </div>
+      <FormNavigation
+        canGoBack={canGoBack}
+        canGoNext={canGoNext}
+        isLastStep={isLastCategory}
+        isFormComplete={isFormComplete}
+        onBack={handleBack}
+        onNext={handleNext}
+        onSubmit={handleSubmit}
+        submitLabel="Create My Goal"
+        submitIcon={faRocket}
+        isSubmitting={isLoading}
+      />
     </div>
   );
 }
 
-function QuestionRenderer({ question, value, onChange, error }: { question: Question, value: any, onChange: (value: any) => void, error?: string }) {
-  const inputClasses = `w-full p-4 text-base border rounded-xl bg-white/50 dark:bg-gray-800/50 transition-all duration-300
-    ${error ? 'border-red-500 focus:ring-red-500/50' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500/50'}
-    focus:ring-2 focus:outline-none`;
-
-  const renderInput = () => {
-    switch (question.type) {
-      case 'text':
-      case 'email':
-        return (
-          <input
-            type={question.type}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={question.placeholder}
-            className={inputClasses}
-          />
-        );
-      case 'number':
-      case 'currency':
-      case 'percentage':
-        return (
-          <div className="relative">
-            {question.type === 'currency' && <FontAwesomeIcon icon={faDollarSign} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />}
-            <input
-              type="number"
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={question.placeholder}
-              min={question.validation?.min}
-              max={question.validation?.max}
-              className={`${inputClasses} ${question.type === 'currency' ? 'pl-10' : ''} ${question.type === 'percentage' ? 'pr-10' : ''}`}
-            />
-            {question.type === 'percentage' && <FontAwesomeIcon icon={faPercent} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />}
-          </div>
-        );
-      case 'date':
-        return (
-          <input
-            type="date"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            className={inputClasses}
-          />
-        );
-      case 'single_choice':
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            {question.options?.map((option: any) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onChange(option.value)}
-                className={`p-4 border rounded-xl text-center transition-all duration-200 ${value === option.value ? 'bg-blue-500 text-white border-blue-500 shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 hover:border-blue-400'}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        );
-      case 'multiple_choice':
-        const selectedValues = Array.isArray(value) ? value : [];
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            {question.options?.map((option: any) => {
-              const isSelected = selectedValues.includes(option.value);
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    const newValues = isSelected
-                      ? selectedValues.filter(v => v !== option.value)
-                      : [...selectedValues, option.value];
-                    onChange(newValues);
-                  }}
-                  className={`p-4 border rounded-xl text-center transition-all duration-200 flex items-center justify-center space-x-2 ${isSelected ? 'bg-blue-500 text-white border-blue-500 shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 hover:border-blue-400'}`}
-                >
-                  <FontAwesomeIcon icon={faCheck} className={`w-4 h-4 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        );
-      default:
-        return <p>Unsupported question type: {question.type}</p>;
-    }
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col"
-    >
-      <label className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
-        {question.question}
-        {question.validation?.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      {question.description && <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">{question.description}</p>}
-      {renderInput()}
-      <AnimatePresence>
-        {error && (
-          <motion.p 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="mt-2 text-sm text-red-500 flex items-center"
-          >
-            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
+// Question renderer component is now replaced by FormQuestion component
 
 function GeneratingGoalView({ progress, error, onCancel }: any) {
   if (error) {
