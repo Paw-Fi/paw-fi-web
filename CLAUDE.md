@@ -94,3 +94,7 @@ The project uses extensive TypeScript path aliases defined in `tsconfig.json`:
 - **Vite dev server** runs on port 3000 with hot reload
 - **TanStack Router and Query devtools** available in development
 - **Firebase hosting** for production deployment
+
+## IMPORTANT
+
+This is a React 19 project. No useCallback or useMemo are needed.

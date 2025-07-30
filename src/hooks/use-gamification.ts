@@ -40,7 +40,7 @@ export function useGamification() {
   const { data: dbXp = 0, isLoading: xpLoading, refetch: refetchXp } = useUserTotalXp(user?.id);
   
   // Use real streak data from activities
-  const { streak: dbStreak, loading: streakLoading } = useUserStreak(user?.id);
+  const { streak: dbStreak, loading: streakLoading } = useUserStreak();
     
 
   // Get storage key for user-specific data

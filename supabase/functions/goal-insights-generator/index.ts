@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../shared/cors.ts";
+import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -292,7 +293,7 @@ function calculateMonthlyProgress(progressUpdates: any[]): number {
 
   const recentUpdates = progressUpdates.filter(update => 
     new Date(update.created_at) >= oneMonthAgo && 
-    update.update_type === 'amount_added'
+    update.update_type === RewardActions.GOAL_PROGRESS_UPDATED
   );
 
   return recentUpdates.reduce((total, update) => total + (update.amount_change || 0), 0);

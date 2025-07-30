@@ -405,6 +405,14 @@ export interface ISalarySlicerWidget extends IBaseWidget {
   type: 'salarySlicer';
 }
 
+export interface IRealReturnsCalculatorWidget extends IBaseWidget {
+  type: 'realReturnsCalculator';
+}
+
+export interface IAfterTaxReturnsWidget extends IBaseWidget {
+  type: 'afterTaxReturns';
+}
+
 // Discriminated Union for all possible widget types
 export interface IPieChartWidget extends IBaseWidget {
   type: 'pieChart';
@@ -498,6 +506,8 @@ export type Widget =
   | IPensionHeadStartWidget
   | IMortgageDepositTimelineWidget
   | ISalarySlicerWidget
+  | IRealReturnsCalculatorWidget
+  | IAfterTaxReturnsWidget
   | IGoalTrackerSummaryWidget
   | IGoalProgressWidget
   | IGoalsGridWidget;

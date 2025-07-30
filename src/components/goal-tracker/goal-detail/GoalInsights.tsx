@@ -201,21 +201,11 @@ export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsights
 
     try {
       // Call the goal-insights-generator function
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/goal-insights-generator`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          goalId,
-          userId: user.id
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate insights');
+      const { data, error } = await supabase.functions.invoke('goal-insights-generator', {
+        body: { goalId, userId: user.id },
+      });    
+      if (error) {
+        throw new Error(error || 'Failed to generate insights');
       }
 
       onInsightUpdate();

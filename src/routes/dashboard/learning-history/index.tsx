@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { useUserActivities } from "@/hooks/useUserActivities";
 import { useState, useMemo } from "react";
+import { ActivityAction } from "@/utils/reward-actions-clone";
 
 export const Route = createFileRoute("/dashboard/learning-history/")({
   component: LearningHistory,
@@ -50,7 +51,7 @@ const itemVariants = {
 // Timeline event types
 interface TimelineEvent {
   id: string;
-  type: "completed_lesson" | "completed_qotd" | "ask_for_new_lesson";
+  type: ActivityAction;
   title: string;
   description?: string;
   date: Date;
@@ -147,7 +148,7 @@ const TimelineSVG = ({ events }: { events: TimelineEvent[] }) => {
           const eventX = isLeft ? centerX - 80 : centerX + 80;
           const lineEndX = isLeft ? centerX - 12 : centerX + 12;
 
-          const getEventColor = (type: string) => {
+          const getEventColor = (type: ActivityAction) => {
             switch (type) {
               case "completed_lesson":
                 return "#10B981"; // Green
@@ -160,7 +161,7 @@ const TimelineSVG = ({ events }: { events: TimelineEvent[] }) => {
             }
           };
 
-          const getEventIcon = (type: string) => {
+          const getEventIcon = (type: ActivityAction) => {
             switch (type) {
               case "completed_lesson":
                 return "✓";
@@ -397,27 +398,27 @@ const TimelineSVG = ({ events }: { events: TimelineEvent[] }) => {
 function LearningHistory() {
   
   const { user } = useAuth();
-  const { activities, loading, error } = useUserActivities(user?.id);
+  const { activities, isLoading, error } = useUserActivities();
 
   // Transform activities into timeline events
   const timelineEvents: TimelineEvent[] = useMemo(() => {
     return activities.map(activity => ({
       id: activity.id,
-      type: activity.activity.action,
-      title: activity.activity.action === 'completed_lesson' 
-        ? activity.activity.lesson_title || 'Lesson Completed'
-        : activity.activity.action === 'completed_qotd'
+      type: activity.action,
+      title: activity.action === 'completed_lesson' 
+        ? activity.metadata?.lesson_title || 'Lesson Completed'
+        : activity.action === 'completed_qotd'
         ? 'Daily Challenge'
         : 'New Lesson Request',
-      description: activity.activity.action === 'completed_lesson'
-        ? `Completed "${activity.activity.lesson_title}"`
-        : activity.activity.action === 'completed_qotd'
+      description: activity.action === 'completed_lesson'
+        ? `Completed "${activity.metadata?.lesson_title}"`
+        : activity.action === 'completed_qotd'
         ? 'Completed daily question of the day'
         : 'Requested a new personalized lesson',
       date: new Date(activity.created_at),
-      xp: activity.activity.xp,
-      lessonId: activity.activity.lesson_id,
-      lessonTitle: activity.activity.lesson_title,
+      xp: activity.metadata?.xp,
+      lessonId: activity.metadata?.lesson_id,
+      lessonTitle: activity.metadata?.lesson_title,
     })).sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [activities]);
 
@@ -556,16 +557,16 @@ function LearningHistory() {
         </div>
 
         <div className="p-6">
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <FontAwesomeIcon icon={faSpinner} className="h-8 w-8 text-purple-500 animate-spin mb-4" />
-              <p className="text-gray-600">Loading your learning journey...</p>
+              <p className="text-gray-600">isLoading your learning journey...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12">
               <FontAwesomeIcon icon={faExclamationTriangle} className="h-8 w-8 text-red-500 mb-4" />
               <p className="text-red-600 mb-2">Failed to load learning history</p>
-              <p className="text-gray-500 text-sm">{error}</p>
+              <p className="text-gray-500 text-sm">{error.message}</p>
             </div>
           ) : timelineEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">

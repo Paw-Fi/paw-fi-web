@@ -149,7 +149,7 @@ const isActive=true
 
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
-    { id: "tracker", label: "Tracker", icon: faChartBar, path: "/dashboard/tracker"},
+    { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
 
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {

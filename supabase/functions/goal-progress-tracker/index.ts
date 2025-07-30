@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../shared/cors.ts";
-import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
+import { Action, RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
 import { logUserActivity, type ActivityData } from "../shared/activity-logger.ts";
 
 // Initialize Supabase client
@@ -13,7 +13,7 @@ const supabaseClient = createClient(
 interface ProgressUpdateRequest {
   goalId: string;
   milestoneId?: string;
-  updateType: 'amount_added' | 'milestone_completed' | 'manual_adjustment' | 'ai_insight';
+  updateType: Action;
   amountChange?: number;
   userNote?: string;
   userId: string;
@@ -79,21 +79,9 @@ serve(async (req: Request): Promise<Response> => {
     let milestoneUpdate: { id: string; status: string; progress_percentage: number; completed_date: string; } | null = null;
 
     // Handle different update types
-    switch (updateType) {
-      case 'amount_added':
-        if (typeof amountChange !== 'number') {
-          return new Response(
-            JSON.stringify({ error: "amountChange is required for amount_added updates" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-        newAmount += amountChange;
-        break;
+    switch (updateType) { 
 
-      case 'milestone_completed':
+      case RewardActions.MILESTONE_COMPLETED:
         if (!milestoneId) {
           return new Response(
             JSON.stringify({ error: "milestoneId is required for milestone_completed updates" }),
@@ -142,19 +130,6 @@ serve(async (req: Request): Promise<Response> => {
         if (amountChange === undefined && remainingAmount > 0) {
           amountChange = remainingAmount;
         }
-        break;
-
-      case 'manual_adjustment':
-        if (typeof amountChange !== 'number') {
-          return new Response(
-            JSON.stringify({ error: "amountChange is required for manual_adjustment updates" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-        newAmount = amountChange; // Direct set for manual adjustments
         break;
 
       default:
@@ -301,15 +276,8 @@ serve(async (req: Request): Promise<Response> => {
       console.log(`Significant progress detected (${progressDelta.toFixed(2)}%), triggering insights generation`);
       
       // Call insights generator function (fire and forget)
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/goal-insights-generator`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({ goalId, userId }),
-      }).catch(error => {
-        console.warn("Failed to trigger insights generation:", error);
+      supabaseClient.functions.invoke('goal-insights-generator', {
+        body: { goalId, userId },
       });
     }
 

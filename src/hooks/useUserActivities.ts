@@ -3,7 +3,7 @@ import { type RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect } from 'react';
-import { Action } from '@/utils/reward-actions-clone';
+import { ActivityAction } from '@/utils/reward-actions-clone';
 
 // Import shared types from the activity logger
 import type { ActivityRecord, ActivityData } from '../../supabase/functions/shared/activity-logger.ts';
@@ -13,7 +13,7 @@ export interface Activity {
   id: string;
   created_at: string;
   type: string;
-  action: Action;
+  action: ActivityAction;
   source: string;
   goalId?: string;
   goalTitle?: string; // Enriched data for UI
@@ -65,7 +65,7 @@ async function fetchUserActivities(userId: string): Promise<Activity[]> {
     id: raw.id,
     created_at: raw.created_at,
     type: raw.activity.type,
-    action: raw.activity.action as Action,
+    action: raw.activity.action as ActivityAction,
     source: raw.activity.source,
     goalId: raw.activity.metadata?.goalId,
     goalTitle: raw.activity.metadata?.goalId ? goalTitleMap.get(raw.activity.metadata.goalId) || 'Untitled Goal' : undefined,

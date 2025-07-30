@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useUserActivities } from './useUserActivities'
 
-export function useUserStreak(userId: string | undefined) {
-  const { activities, loading, error } = useUserActivities(userId)
+export function useUserStreak() {
+  const { activities, isLoading, error } = useUserActivities()
 
   const streak = useMemo(() => {
     if (!activities.length) return 0
@@ -38,7 +38,7 @@ export function useUserStreak(userId: string | undefined) {
 
   return {
     streak,
-    loading,
+    isLoading,
     error
   }
 }
