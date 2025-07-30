@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faChartLine, faBullseye, faTrophy, faExclamationTriangle, faRefresh } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faChartLine, faBullseye, faTrophy, faExclamationTriangle, faRefresh, faCalendarAlt, faDollarSign, faArrowRight, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
 import { GoalsGrid } from "@/components/goal-tracker/goal-overview/GoalsGrid";
@@ -134,30 +134,108 @@ function GoalsTracker() {
       <div id="main-content" className="max-w-7xl mx-auto px-6 py-6" tabIndex={-1}>
         {hasGoals ? (
           <>
-            {/* Redesigned Layout - More Compact and Sophisticated */}
-            <div className="space-y-6">
-              {/* Top Row: Stats + Quick Actions Combined */}
+            {/* Redesigned Layout - Dynamic Priority-Based Design */}
+            <div className="space-y-8">
+              {/* Integrated Header Bar - Consolidated Stats */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="grid grid-cols-1 xl:grid-cols-5 gap-6"
+                className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm"
               >
-                {/* Stats take up 3 columns */}
-                <div className="xl:col-span-3">
-                  <GoalsSummaryStats metrics={metrics} />
-                </div>
-                
-                {/* Quick Actions take up 2 columns */}
-                <div className="xl:col-span-2">
-                <RecentActivity />
+                <div className="px-8 py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Portfolio Overview</h2>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faBullseye} className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Total Goals</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics?.totalGoals || 0}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Active</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics?.activeGoals || 0}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faTrophy} className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics?.completedGoals || 0}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">$</span>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">
+                              ${metrics?.totalTargetAmount?.toLocaleString() || '0'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
-              
-              
-                  <GoalsGrid goals={goals} onGoalUpdate={refetch} />                
-               
 
+              {/* Hero + Secondary Layout */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="grid grid-cols-1 xl:grid-cols-3 gap-8"
+              >
+                {/* Hero Goal Section - Takes 2/3 width */}
+                <div className="xl:col-span-2 space-y-6">
+                  <HeroGoalCard goal={goals[0]} onUpdate={refetch} />
+                  
+                 
+                </div>
+  
+
+                {/* Activity Timeline - Takes 1/3 width */}
+                <div className="xl:col-span-1">
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm h-fit"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      </div>
+                      <RecentActivity />
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+               {/* Secondary Goals Grid */}
+               {goals.length > 1 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Other Goals</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {goals.slice(1).map((goal) => (
+                          <SecondaryGoalCard key={goal.id} goal={goal} onUpdate={refetch} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
             </div>
           </>
         ) : (
@@ -339,5 +417,263 @@ const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; on
         </Button>
       </div>
     </main>
+  );
+});
+
+// Hero Goal Card Component - Pillar 1: Dynamic Layout
+const HeroGoalCard = memo(function HeroGoalCard({ goal, onUpdate }: { goal: any; onUpdate: () => void }) {
+  if (!goal) return null;
+
+  const progress = goal.current_amount && goal.target_amount 
+    ? (goal.current_amount / goal.target_amount) * 100 
+    : 0;
+  
+  const isOnTrack = progress >= 50; // Simple on-track logic
+  const daysUntilTarget = goal.target_date 
+    ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  return (
+    <motion.div
+      whileHover={{ y: -2, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)" }}
+      transition={{ duration: 0.2 }}
+      className="bg-gradient-to-br from-white/80 to-white/60 dark:from-gray-800/80 dark:to-gray-800/60 backdrop-blur-xl rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg overflow-hidden"
+    >
+      <div className="p-8">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${isOnTrack ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`}></div>
+                <span className={`text-sm font-medium ${isOnTrack ? 'text-green-600' : 'text-amber-600'}`}>
+                  {isOnTrack ? 'On Track' : 'Needs Attention'}
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Created {goal.created_at ? new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Target: {goal.target_date ? new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'No deadline'}
+                </p>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
+              {goal.title}
+            </h2>
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                {goal.description || 'Working towards your financial goal'}
+              </p>
+              <div className="text-right ml-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {goal.milestones?.length || 0} milestones
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Last updated {goal.updated_at ? new Date(goal.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'recently'}
+                </p>
+              </div>
+            </div>
+          </div>
+         
+        </div>
+
+        {/* Rich Progress Visualization - Pillar 2 */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ${goal.current_amount?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Target</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ${goal.target_amount?.toLocaleString() || '0'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-primary mb-1">{Math.round(progress)}%</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Complete</p>
+            </div>
+          </div>
+
+          {/* Animated Progress Bar */}
+          <div className="relative h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                isOnTrack 
+                  ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                  : 'bg-gradient-to-r from-amber-400 to-orange-500'
+              }`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+          </div>
+        </div>
+
+        {/* Quick Stats & Actions */}
+        <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-2">
+              <FontAwesomeIcon icon={faCalendarAlt} className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Time Left</p>
+            <p className="font-semibold text-gray-900 dark:text-white">
+              {daysUntilTarget > 0 ? `${daysUntilTarget} days` : 'Past due'}
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-2">
+              <FontAwesomeIcon icon={faDollarSign} className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Remaining</p>
+            <p className="font-semibold text-gray-900 dark:text-white">
+              ${((goal.target_amount || 0) - (goal.current_amount || 0)).toLocaleString()}
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-2">
+              <FontAwesomeIcon icon={faTrophy} className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Priority</p>
+            <p className="font-semibold text-gray-900 dark:text-white capitalize">
+              {goal.priority || 'Medium'}
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Actions - Pillar 3 */}
+        <div className="flex space-x-3">
+        <Link
+            to={`/dashboard/tracker/${goal.id}`}
+            className="flex-1 flex justify-center items-center h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200"
+          >
+            Add Money
+          </Link>
+          <Link
+            to={`/dashboard/tracker/${goal.id}`}
+            className="flex justify-center items-center h-12 px-6 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-all duration-200"
+          >
+            Update Progress
+          </Link>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+// Secondary Goal Card Component - Pillar 1: Compact Design
+const SecondaryGoalCard = memo(function SecondaryGoalCard({ goal, onUpdate }: { goal: any; onUpdate: () => void }) {
+  const progress = goal.current_amount && goal.target_amount 
+    ? (goal.current_amount / goal.target_amount) * 100 
+    : 0;
+  
+  const isOnTrack = progress >= 50;
+  const daysUntilTarget = goal.target_date 
+    ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  return (
+    <motion.div
+      whileHover={{ 
+        y: -4, 
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+        transition: { duration: 0.2 }
+      }}
+      className="group bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm overflow-hidden cursor-pointer"
+    >
+      <Link to={`/dashboard/tracker/${goal.id}`} className="block p-6">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isOnTrack ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                <span className={`text-xs font-medium ${isOnTrack ? 'text-green-600' : 'text-amber-600'}`}>
+                  {isOnTrack ? 'On Track' : 'Behind'}
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-primary">{Math.round(progress)}%</p>
+              </div>
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors mb-1">
+              {goal.title}
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {goal.milestones?.length || 0} milestones
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Due {goal.target_date ? new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : 'No deadline'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Progress Bar */}
+        <div className="mb-4">
+          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                isOnTrack 
+                  ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                  : 'bg-gradient-to-r from-amber-400 to-orange-500'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Essential Info */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">Current</p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                ${goal.current_amount?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-600 dark:text-gray-400">Target</p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                ${goal.target_amount?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Additional timing info */}
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+            <div>
+              <p>Started {goal.created_at ? new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently'}</p>
+            </div>
+            <div className="text-right">
+              <p>
+                {daysUntilTarget > 0 
+                  ? `${daysUntilTarget} days left`
+                  : daysUntilTarget === 0 
+                  ? 'Due today'
+                  : `${Math.abs(daysUntilTarget)} days overdue`
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 });
