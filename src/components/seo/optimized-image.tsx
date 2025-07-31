@@ -36,7 +36,7 @@ export function OptimizedImage({
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isInView, setIsInView] = useState(priority)
-  const imgRef = useRef<HTMLImageElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (priority) return
@@ -54,8 +54,8 @@ export function OptimizedImage({
       }
     )
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current)
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
     }
 
     return () => observer.disconnect()
@@ -80,6 +80,7 @@ export function OptimizedImage({
 
   return (
     <div 
+      ref={containerRef}
       className="relative overflow-hidden"
       style={containerStyle}
     >
@@ -96,7 +97,6 @@ export function OptimizedImage({
       {/* Main image */}
       {isInView && (
         <img
-          ref={imgRef}
           src={src}
           alt={alt}
           width={width}
