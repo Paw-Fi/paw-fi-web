@@ -10,6 +10,7 @@ import {
   sendChatMessage,
 } from "@/services/conversation-service";
 import { supabase } from "@/lib/supabase";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import { AI_ROLES } from "./ai-roles";
 import logo from "@/assets/images/icon.svg";
 
@@ -138,7 +139,7 @@ const currentConversationData = conversationsData
       headerClassName="p-4"
       agentIcon={
         <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-          <img src={logo} alt="Moneko AI" className="size-6" />
+          <OptimizedImage src={logo} alt="Moneko AI" className="size-6" />
         </div>
       }
     />

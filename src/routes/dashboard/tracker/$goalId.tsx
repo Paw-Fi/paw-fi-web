@@ -69,17 +69,76 @@ import { GoalMetrics } from "@/components/goal-tracker/goal-detail/GoalMetrics";
 import { AdjustTimelineModal } from "@/components/goal-tracker/goal-detail/AdjustTimelineModal";
 import { useState, useEffect, useRef, useOptimistic } from "react";
 
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+
 export const Route = createFileRoute("/dashboard/tracker/$goalId")({
   component: GoalDetail,
-  head: ({ params }) => ({
-    meta: [
-      { title: 'Goal Details | Moneko' },
-      { 
-        name: 'description', 
-        content: 'View and manage your financial goal progress, milestones, and AI-powered insights.' 
+  loader: ({ params }) => {
+    const { goalId } = params;
+    // Assuming you have a way to fetch goal details by ID
+    // This is a placeholder, replace with actual data fetching logic if needed
+    const goal = { 
+      id: goalId, 
+      title: "My Financial Goal", 
+      description: "A detailed description of my financial goal.",
+      goal_type: "savings",
+      target_amount: 10000,
+      // Add other relevant goal properties for SEO
+    };
+    return { goal };
+  },
+  head: ({ params, loaderData }) => {
+    const { goal } = loaderData;
+    const pageUrl = getCanonicalUrl(`/dashboard/tracker/${params.goalId}`);
+    const title = `${goal.title} | Goal Tracker | Moneko`;
+    const description = `Track and manage your ${goal.goal_type} goal: ${goal.title}. ${goal.description || 'View progress, milestones, and AI-powered insights.'}`;
+    const keywords = `financial goal, goal tracker, ${goal.goal_type}, ${goal.title}, Moneko, personal finance`;
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image for goals
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "Thing", // Or more specific type if applicable, e.g., "FinancialProduct"
+      "name": goal.title,
+      "description": description,
+      "url": pageUrl,
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": pageUrl
       },
-    ],
-  }),
+      "hasPart": goal.milestones?.map(m => ({
+        "@type": "Action", // Or a more specific type for milestones
+        "name": m.title,
+        "description": m.description,
+        "startTime": m.due_date,
+        "actionStatus": m.status === 'completed' ? 'CompletedActionStatus' : 'ActiveActionStatus'
+      })) || []
+    };
+
+    return {
+      meta,
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 function GoalDetail() {

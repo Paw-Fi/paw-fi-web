@@ -20,8 +20,34 @@ import { Button } from "@/components/ui/button";
 import catCoin from "@/assets/images/icon.svg";
 import AmbientHalo from "../components/ui/ambient-halo";
 
-export const Route = createFileRoute("/intro")({ 
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+
+export const Route = createFileRoute("/intro")({
   component: IntroPage,
+  head: () => {
+    const pageUrl = getCanonicalUrl("/intro");
+    const title = "Moneko: Your Complete Financial Education Platform";
+    const description = "Discover all the powerful features that make Moneko the ultimate destination for financial education, from AI-powered guidance to expert-led courses and professional-grade calculators.";
+    const keywords = "financial education, personal finance, AI financial advisor, financial calculators, investment education, budgeting tools, Moneko";
+    const imageUrl = "https://moneko.io/og-img.png"; // Replace with actual OG image URL
+
+    return {
+      meta: seo({
+        title,
+        description,
+        keywords,
+        image: imageUrl,
+        url: pageUrl,
+      }),
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+    };
+  },
 });
 
 interface FeatureCardProps {
@@ -173,7 +199,7 @@ function IntroPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <img src={catCoin} alt="Moneko Logo" className="h-16 w-16" />
+            <OptimizedImage src={catCoin} alt="Moneko Logo" className="h-16 w-16" />
             <span className="ml-4 text-4xl font-bold text-slate-900">Moneko</span>
           </motion.div>
           

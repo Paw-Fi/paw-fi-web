@@ -6,20 +6,93 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLinkedin, faTwitter } from "@fortawesome/free-brands-svg-icons";
 import Sabina from "@assets/images/team/sabina.jpeg"
 import Yifan from "@assets/images/team/yifan.jpg"
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
 
 export const Route = createFileRoute("/team")({
   component: TeamPage,
-  head: () => ({
-    title: "Our Team | Moneko",
-    meta: [
-      {
-        name: "description",
-        content:
-          "Meet the passionate team of experts at Moneko, dedicated to improving financial literacy for everyone.",
-      },
-    ],
-  }),
+  head: () => {
+    const pageUrl = getCanonicalUrl("/team");
+    const title = "Our Team | Moneko - Meet the Financial Education Experts";
+    const description = "Meet the passionate team of experts at Moneko, dedicated to improving financial literacy for everyone through AI-powered tools and educational content.";
+    const keywords = "Moneko team, financial education experts, personal finance, AI finance, financial literacy, founders, engineers, designers";
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "logo": "https://moneko.io/icon.svg",
+          "sameAs": [
+            "https://www.facebook.com/monekoai/",
+            "https://x.com/moneko_ai",
+            "https://www.instagram.com/moneko_ai/"
+          ]
+        },
+        {
+          "@type": "WebPage",
+          "name": title,
+          "description": description,
+          "url": pageUrl,
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://moneko.io"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Our Team",
+                "item": pageUrl
+              }
+            ]
+          }
+        },
+        ...teamMembers.map(member => ({
+          "@type": "Person",
+          "name": member.name.split(' – ')[0], // Extract name only
+          "jobTitle": member.role,
+          "image": `https://moneko.io${member.imageUrl}`, // Assuming image URLs are relative
+          "sameAs": [
+            member.social.linkedin,
+            member.social.twitter
+          ].filter(Boolean) // Filter out empty strings
+        }))
+      ]
+    };
+
+    return {
+      meta,
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
+    };
+  },
 });
 
 const teamMembers = [

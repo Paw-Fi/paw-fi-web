@@ -1,33 +1,23 @@
-import { motion } from "framer-motion";
+import classNames from "classnames";
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerProps) {
+export function LoadingSpinner({ size = 'lg', className = '' }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
+    sm: 'w-6 h-6',
+    md: 'w-10 h-10',
+    lg: 'w-14 h-14'
   };
 
   return (
-    <motion.div
-      className={`
-        ${sizeClasses[size]} 
-        border-2 border-gray-200 dark:border-gray-700 
-        border-t-primary 
-        rounded-full 
-        ${className}
-      `}
-      animate={{ rotate: 360 }}
-      transition={{ 
-        duration: 1, 
-        repeat: Infinity, 
-        ease: "linear" 
-      }}
-    />
+    <div className={classNames("mb-8 animate-spin rounded-full border-b-4 border-t-4 border-primary",
+      sizeClasses[size],
+      className
+    )}></div>
+
   );
 }
 

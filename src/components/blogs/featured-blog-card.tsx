@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock, faTag } from "@fortawesome/free-solid-svg-icons";
 import { Blog } from "@/components/blogs/blogs.typing";
 import { formatDate } from "@/utils/date-utils";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 interface FeaturedBlogCardProps {
   blog: Blog;
@@ -23,7 +24,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
         className="group grid grid-cols-1 md:grid-cols-2"
       >
         <div className="relative aspect-video md:aspect-auto md:h-full">
-          <img
+          <OptimizedImage
             src={blog.coverImage}
             alt={`Cover image for ${blog.title}`}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -56,7 +57,7 @@ export function FeaturedBlogCard({ blog }: FeaturedBlogCardProps) {
 
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img
+              <OptimizedImage
                 src={blog.author.avatar}
                 alt={blog.author.name}
                 className="h-10 w-10 rounded-full"

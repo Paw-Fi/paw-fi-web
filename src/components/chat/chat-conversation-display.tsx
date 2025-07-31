@@ -6,6 +6,7 @@ import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
 import { ChatInput } from './chat-input';
 import logo from "@/assets/images/icon.svg";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import { getPredictedResponses } from '@/services/conversation-service';
 import { supabase } from '@/lib/supabase';
 import { GoalType } from '../goal-tracker/types';
@@ -61,7 +62,7 @@ interface ChatConversationDisplayProps {
 export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
   return (
     <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-      <img src={iconSrc || logo} alt="AI Assistant" className={size} />
+      <OptimizedImage src={iconSrc || logo} alt="AI Assistant" className={size} />
     </div>
   );
 };

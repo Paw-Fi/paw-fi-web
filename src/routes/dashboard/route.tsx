@@ -40,6 +40,7 @@ import { useGamification } from "@/hooks/use-gamification";
 import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 
 
@@ -113,22 +114,22 @@ export function Dashboard() {
   const { isActive,isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
-  const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
+  const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');
   const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
   const {refetch}=useGoals(user?.id)
   const showGuide = () => {
-    setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
+    setCookie('moneko-guide-hidden', 'false', { days: 365 });
     setIsGuideHidden(false);
   };
 
   // Guest goals migration utility functions
   const getGuestGoalIds = useCallback((): string[] => {
-    const goalIds = getCookie('paw-fi-guest-goals');
+    const goalIds = getCookie('moneko-guest-goals');
     return goalIds ? JSON.parse(goalIds) : [];
   }, [getCookie]);
 
   const clearGuestGoalIds = useCallback(() => {
-    document.cookie = 'paw-fi-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'moneko-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }, []);
 
   // Migrate guest goals to authenticated user
@@ -486,7 +487,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between md:hidden mb-3">
         <Link to="/" className="flex items-center space-x-3">
           <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-            <img src={logo} className="h-6 w-6" />
+            <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
           </div>
           {/* <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground"> */}
         </Link>
@@ -528,7 +529,7 @@ export function Dashboard() {
             <div className="mb-6 ml-4 hidden md:block">
               <Link to="/" className="flex items-center space-x-3 mb-4">
                 <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-                  <img src={logo} className="h-6 w-6" />
+                  <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground">
                   Moneko

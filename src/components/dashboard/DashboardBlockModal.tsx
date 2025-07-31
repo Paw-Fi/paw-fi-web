@@ -16,6 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Link, useLocation } from '@tanstack/react-router';
 import logo from '@assets/images/icon.svg';
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import dashboardHomeImage from '@assets/images/dashboard/dashboard-home.png';
 import dashboardLearningImage from '@assets/images/dashboard/dashboard-learning.png';
 import dashboardEssentialsImage from '@assets/images/dashboard/dashboard-essentials.png';
@@ -133,7 +134,7 @@ export const DashboardBlockModal = () => {
     <div className="relative w-full h-full z-20 flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">                   
-        <img src={config.backgroundImage} alt="Dashboard Background" className="w-full h-full object-cover blur-sm" />                 
+        <OptimizedImage src={config.backgroundImage} alt="Dashboard Background" className="w-full h-full object-cover blur-sm" />                 
       </div>
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-gray-300/30"/>
                            
@@ -153,7 +154,7 @@ export const DashboardBlockModal = () => {
             animate={{ rotateY: 360 }}
             transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
           >
-            <img src={logo} className="size-16" alt="Moneko Logo" />
+            <OptimizedImage src={logo} className="size-16" alt="Moneko Logo" />
           </motion.div>
         </div>
 

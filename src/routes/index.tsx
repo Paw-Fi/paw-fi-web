@@ -155,9 +155,7 @@ function BasicLessonCard({
         <Link to={linkTo} className="group flex h-full flex-col">
           <div className="flex-grow">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40 transition-transform duration-200">
-              <span className="text-3xl text-white" aria-hidden="true">
-                {icon}
-              </span>
+              <OptimizedImage src={icon} alt={title} className="text-3xl text-white" />
             </div>
             <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
               {title}
@@ -190,6 +188,7 @@ import { getRemainingSpots } from "@/lib/early-access";
 import { useCookie } from "@/utils/use-cookie";
 import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
 import { EarlyAccessSection } from "@/components/index/early-access-section";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 
 
@@ -230,7 +229,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-4xl">
            {/* Heading */}
           <div className="mb-8 sm:mb-12 text-center">
-           <motion.h2
+           <motion.h1
               className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground dark:text-dark-foreground"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -238,8 +237,8 @@ export default function HomePage() {
               viewport={{ once: true }}
             >
               Build Your First Portfolio
-            </motion.h2>
-            <motion.h3
+            </motion.h1>
+            <motion.h2
               className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-foreground dark:text-dark-foreground"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -247,7 +246,7 @@ export default function HomePage() {
               viewport={{ once: true }}
             >
               from 0 to 1
-            </motion.h3>
+            </motion.h2>
             <motion.p
               className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}

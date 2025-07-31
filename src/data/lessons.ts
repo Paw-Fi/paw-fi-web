@@ -117,7 +117,7 @@ function transformRawLesson(rawLesson: RawLessonData): Lesson {
   };
 }
 
-export const COURSES_STORAGE_KEY = 'paw-fi-courses';
+export const COURSES_STORAGE_KEY = 'moneko-courses';
 
 export function getCourseById(id: string): Course | undefined {
   if (basicCourseData.id === id) {

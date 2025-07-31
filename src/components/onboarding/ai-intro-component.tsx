@@ -45,7 +45,7 @@ const deleteCookie = (name: string) => {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 };
 
-const GUEST_GOALS_COOKIE = "paw-fi-guest-goals";
+const GUEST_GOALS_COOKIE = "moneko-guest-goals";
 
 // Guest goal management functions
 const getGuestGoalIds = (): string[] => {

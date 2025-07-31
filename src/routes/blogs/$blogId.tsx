@@ -264,7 +264,7 @@ function BlogDetailPage() {
                   className="group block h-full overflow-hidden rounded-xl bg-white shadow-md transition-all hover:shadow-lg dark:bg-gray-800"
                 >
                   <div className="aspect-video overflow-hidden">
-                    <img
+                    <OptimizedImage
                       src={relatedBlog.coverImage}
                       alt={`Cover image for ${relatedBlog.title}`}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

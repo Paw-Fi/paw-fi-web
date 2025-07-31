@@ -14,8 +14,46 @@ import type {
   GoalCreationResult 
 } from '@/components/goal-tracker/types';
 
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+
 export const Route = createFileRoute('/dashboard/tracker/create')({
   component: CreateGoalPage,
+  head: () => {
+    const pageUrl = getCanonicalUrl("/dashboard/tracker/create");
+    const title = "Create New Financial Goal | Moneko Goal Tracker";
+    const description = "Start your financial journey by creating a new personalized goal with Moneko's AI-powered goal tracker. Define your objectives and get a tailored plan.";
+    const keywords = "create financial goal, new goal, financial planning, goal setting, AI goal tracker, Moneko";
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+
+    return {
+      meta: seo({
+        title,
+        description,
+        keywords,
+        image: imageUrl,
+        url: pageUrl,
+      }),
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": title,
+            "description": description,
+            "url": pageUrl,
+          })
+        }
+      ]
+    };
+  },
 });
 
 function CreateGoalPage() {

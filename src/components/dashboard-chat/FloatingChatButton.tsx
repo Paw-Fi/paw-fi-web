@@ -4,6 +4,7 @@ import { faCommentDots, faUser, faTimes } from "@fortawesome/free-solid-svg-icon
 import { ChatPopup } from "./ChatPopup";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import monekoIcon from "@assets/images/icon.svg";
 
 export const FloatingChatButton = () => {
@@ -83,7 +84,7 @@ export const FloatingChatButton = () => {
         
         {/* Small advisor indicator */}
         <div className="absolute -top-1 -right-1 h-5 w-5 bg-white/70 dark:bg-gray-200/70 rounded-full flex items-center justify-center shadow-lg">
-          <img src={monekoIcon} alt="Moneko Icon" className="h-4 w-4" />
+          <OptimizedImage src={monekoIcon} alt="Moneko Icon" className="h-4 w-4" />
         </div>
       </motion.button>
     </div>

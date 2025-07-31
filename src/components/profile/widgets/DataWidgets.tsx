@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRight, faChevronRight, faChevronLeft, faLink, faLightbulb, faQuoteLeft, faQuoteRight } from '@fortawesome/free-solid-svg-icons';
 import { AnimatePresence, motion } from 'framer-motion';
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import { 
   IDataListWidget, 
   IProgressBarListWidget, 
@@ -226,7 +227,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
             <div 
               className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
             >
-              <img 
+              <OptimizedImage 
                 src={currentCountdownItem.image} 
                 alt={displayTitle}
                 className="w-full h-full object-cover"

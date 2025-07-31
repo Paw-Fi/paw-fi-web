@@ -2,6 +2,7 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { Link, useLocation } from "@tanstack/react-router"
 import { Button } from "../ui/button"
+import { OptimizedImage } from "@components/seo/optimized-image";
 import catCoin from "@/assets/images/icon.svg";
 import { DISCORD_URL } from "@/routes";
 import classNames from "classnames";
@@ -20,7 +21,7 @@ export const HomeHeader=()=>{
 
     return   <div className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8">
       <Link to="/" className="flex items-center gap-2">
-        <img
+        <OptimizedImage
           src={catCoin}
           alt="Moneko Logo"
           className="size-10"               

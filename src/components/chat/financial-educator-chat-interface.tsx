@@ -61,8 +61,8 @@ const setGuestCourseId = (courseId: string) => {
   setCookie(GUEST_COURSE_COOKIE, courseId, 365);
 };
 
-const GUEST_SESSION_COOKIE = "paw-fi-guest-session";
-const GUEST_COURSE_COOKIE = "paw-fi-guest-course";
+const GUEST_SESSION_COOKIE = "moneko-guest-session";
+const GUEST_COURSE_COOKIE = "moneko-guest-course";
 const INITIAL_SUGGESTIONS = ["Start"];
 
 type Message = ConversationMessage;

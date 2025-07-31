@@ -1,11 +1,32 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { SignUpForm } from '@/components/auth/sign-up-form';
+import { seo } from '@/utils/seo';
+import { getCanonicalUrl } from '@/utils/canonical';
 
 export const Route = createFileRoute('/register/')({  
   component: Register,
   validateSearch: (search: Record<string, unknown>) => {
     return {
       redirect: (search.redirect as string) || undefined,
+    };
+  },
+  head: () => {
+    const pageUrl = getCanonicalUrl('/register');
+    const meta = seo({
+      title: 'Sign Up | Moneko',
+      description: 'Create a free Moneko account to access personalized financial education, calculators, and AI chat.',
+      keywords: 'sign up, register, create account, Moneko, financial education, free account',
+      url: pageUrl,
+    });
+    
+    return {
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ]
     };
   },
 });

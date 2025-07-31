@@ -63,7 +63,7 @@ export const useLocalProgress = () => {
     
     // For now, we'll check if they've visited the chat page
     // In a real implementation, you'd check the actual conversation history length
-    const chatVisited = getCookie('paw-fi-chat-visited');
+    const chatVisited = getCookie('moneko-chat-visited');
     return chatVisited === 'true';
   };
 
@@ -75,29 +75,29 @@ export const useLocalProgress = () => {
 
   // Check if user has visited essentials page
   const hasVisitedEssentials = () => {
-    const essentialsVisited = getCookie('paw-fi-essentials-visited');
+    const essentialsVisited = getCookie('moneko-essentials-visited');
     return essentialsVisited === 'true';
   };
 
   // Check if user has visited calculators page
   const hasVisitedCalculators = () => {
-    const calculatorsVisited = getCookie('paw-fi-calculators-visited');
+    const calculatorsVisited = getCookie('moneko-calculators-visited');
     return calculatorsVisited === 'true';
   };
 
   // Mark essentials as visited when user clicks on it
   const markEssentialsVisited = useCallback(() => {
-    setCookie('paw-fi-essentials-visited', 'true', { days: 365 });
+    setCookie('moneko-essentials-visited', 'true', { days: 365 });
   }, [setCookie]);
 
   // Mark calculators as visited when user clicks on it
   const markCalculatorsVisited = useCallback(() => {
-    setCookie('paw-fi-calculators-visited', 'true', { days: 365 });
+    setCookie('moneko-calculators-visited', 'true', { days: 365 });
   }, [setCookie]);
 
   // Mark chat as visited when user visits chat page
   const markChatVisited = useCallback(() => {
-    setCookie('paw-fi-chat-visited', 'true', { days: 365 });
+    setCookie('moneko-chat-visited', 'true', { days: 365 });
   }, [setCookie]);
 
   // Update progress steps and stats
@@ -189,7 +189,7 @@ export const useLocalProgress = () => {
 
     // Mark chat as visited when on chat page (only once)
     if (pathname.startsWith('/dashboard/chat') && !hasMarkedChatVisited) {
-      setCookie('paw-fi-chat-visited', 'true', { days: 365 });
+      setCookie('moneko-chat-visited', 'true', { days: 365 });
       setHasMarkedChatVisited(true);
     }
   }, [pathname, userId, hasMarkedChatVisited]);

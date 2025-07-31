@@ -24,6 +24,62 @@ import { ActivityAction } from "@/utils/reward-actions-clone";
 
 export const Route = createFileRoute("/dashboard/learning-history/")({
   component: LearningHistory,
+  head: () => {
+    const pageUrl = getCanonicalUrl("/dashboard/learning-history");
+    const title = "Learning History | Moneko - Track Your Financial Education Progress";
+    const description = "View your complete learning journey, track completed lessons, earned XP, and daily streaks with Moneko's personalized financial education history.";
+    const keywords = "learning history, financial education progress, Moneko, XP tracker, learning streak, completed lessons, financial literacy";
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": title,
+      "description": description,
+      "url": pageUrl,
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Dashboard",
+            "item": getCanonicalUrl("/dashboard")
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Learning History",
+            "item": pageUrl
+          }
+        ]
+      }
+    };
+
+    return {
+      meta,
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 // Animation variants

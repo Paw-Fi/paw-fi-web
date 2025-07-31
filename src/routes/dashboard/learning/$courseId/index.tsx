@@ -41,47 +41,59 @@ import {
   faFacebook
 } from '@fortawesome/free-brands-svg-icons';
 import { createPortal } from 'react-dom';
+import { getCanonicalUrl } from "@/utils/canonical";
+import { supabase } from '@/lib/supabase';
 
 export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   component: ModernCourseDetailPage,
-  head: ({ params }: { params: { courseId: string } }) => {
-    let courseTitle = 'Course Details';
-    let courseDescription = 'Learn more about this course on Moneko.';
-    const siteOgImage = 'https://moneko.io/og-img.png';
-
-    // In a real app, you might fetch this data, but here we use the imported JSON
-    // for the basic course as an example.
-    try {
-      const foundCourse = basicCourse; // Assuming basicCourse matches the required structure
-
-      if (foundCourse) {
-        courseTitle = foundCourse.title || courseTitle;
-        courseDescription = foundCourse.description || courseDescription;
-      }
-    } catch (e) {
-      console.error('Error accessing course data for head tags in /learning/$courseId/:', e);
-    }
-
-    const pageUrl = `https://moneko.io/learning/${params.courseId}`;
-    const keywords = `${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}, financial education, Moneko, online course`;
+  loader: async ({ params }) => {
+   if(params.courseId === basicCourse.course_id){
+    return { course: basicCourse };
+   }
+    const { data: courses, error: courseError } = await supabase
+    .from("user_courses")
+    .select("*")
+    .eq("course_id", params.courseId)
+    .order("created_at", { ascending: false });
+   
+    return { course:courses?.[0] };
+  },
+  head: ({ params, loaderData }) => {
+    console.log("loaderData",loaderData)
+    const { course } = loaderData;
+    const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}`);
+    const title = `${course?.title} | Moneko Learning`;
+    const description = course?.description;
+    const keywords = `${course?.title}, ${course?.category}, financial education, Moneko, online course`;
+    const imageUrl = course?.image || "https://moneko.io/og-img.png"; // Use course image if available
 
     const meta = seo({
-      title: `${courseTitle} | Moneko Learning`,
-      description: `Explore lessons in the ${courseTitle} course. ${courseDescription}`,
-      keywords: keywords,
-      image: siteOgImage,
+      title,
+      description,
+      keywords,
+      image: imageUrl,
       url: pageUrl,
     });
 
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Course",
-      "name": courseTitle,
-      "description": courseDescription,
+      "name": course.title,
+      "description": course.description,
       "provider": {
         "@type": "Organization",
         "name": "Moneko",
-        "url": "https://moneko.io/"
+        "url": "https://moneko.io"
+      },
+      "url": pageUrl,
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "online",
+        "courseWorkload": `PT1H`, // Assuming 1 hour per lesson for simplicity
+        "instructor": {
+          "@type": "Person",
+          "name": "Moneko Experts"
+        }
       }
     };
 
@@ -95,7 +107,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/")({
       ],
       script: [
         {
-          type: 'application/ld+json',
+          type: "application/ld+json",
           children: JSON.stringify(structuredData)
         }
       ]
@@ -111,7 +123,7 @@ export default function ModernCourseDetailPage() {
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [savedCourse, setSavedCourse] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-
+  
   // Determine if this is the essentials course
   const isEssentialsCourse = courseId === basicCourse.course_id;
   const dataSource: CourseDataSource = isEssentialsCourse ? 'local' : 'remote';
@@ -716,7 +728,7 @@ export default function ModernCourseDetailPage() {
                 {/* Copy Link */}
                 <button
                   onClick={() => {
-                    const url = `https://pawfi.app/dashboard/learning/${courseId}`;
+                    const url = `https://moneko.io/dashboard/learning/${courseId}`;
                     navigator.clipboard.writeText(url);
                     toast.success('Link copied to clipboard!');
                   }}
@@ -736,8 +748,8 @@ export default function ModernCourseDetailPage() {
                   {/* Twitter/X */}
                   <button
                     onClick={() => {
-                      const url = `https://pawfi.app/dashboard/learning/${courseId}`;
-                      const text = `Check out this amazing course: ${course?.title} on @PawFiApp! 🚀 #FinancialEducation #Learning`;
+                      const url = `https://moneko.io/dashboard/learning/${courseId}`;
+                      const text = `Check out this amazing course: ${course?.title} on @MonekoApp! 🚀 #FinancialEducation #Learning`;
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
                     }}
                     className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -753,8 +765,8 @@ export default function ModernCourseDetailPage() {
                   {/* LinkedIn */}
                   <button
                     onClick={() => {
-                      const url = `https://pawfi.app/dashboard/learning/${courseId}`;
-                      const title = `${course?.title} - PawFi`;
+                      const url = `https://moneko.io/dashboard/learning/${courseId}`;
+                      const title = `${course?.title} - Moneko`;
                       const summary = course?.description || 'Learn financial concepts with this comprehensive course';
                       window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(summary)}`, '_blank');
                     }}
@@ -771,7 +783,7 @@ export default function ModernCourseDetailPage() {
                   {/* Facebook */}
                   <button
                     onClick={() => {
-                      const url = `https://pawfi.app/dashboard/learning/${courseId}`;
+                      const url = `https://moneko.io/dashboard/learning/${courseId}`;
                       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
                     }}
                     className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -787,7 +799,7 @@ export default function ModernCourseDetailPage() {
                   {/* Reddit */}
                   <button
                     onClick={() => {
-                      const url = `https://pawfi.app/dashboard/learning/${courseId}`;
+                      const url = `https://moneko.io/dashboard/learning/${courseId}`;
                       const title = `${course?.title} - Free Financial Education Course`;
                       window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`, '_blank');
                     }}
@@ -805,8 +817,8 @@ export default function ModernCourseDetailPage() {
                 {/* Discord - Full Width */}
                 <button
                   onClick={() => {
-                    const url = `https://pawfi.app/dashboard/learning/${courseId}`;
-                    const message = `Hey! Check out this course: **${course?.title}** on PawFi! 🎓\n\n${course?.description}\n\n${url}`;
+                    const url = `https://moneko.io/dashboard/learning/${courseId}`;
+                    const message = `Hey! Check out this course: **${course?.title}** on Moneko! 🎓\n\n${course?.description}\n\n${url}`;
                     navigator.clipboard.writeText(message);
                     toast.success('Discord message copied to clipboard!');
                   }}

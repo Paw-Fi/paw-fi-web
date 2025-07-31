@@ -2,6 +2,7 @@ import { faClipboardQuestion, faLightbulb, faArrowLeft, faArrowRight } from "@fo
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import quizCompletedImage from "@/assets/images/lessons/quiz-completed.jpeg";
 import { LessonCardTitle } from "./lesson-card-title";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
@@ -145,7 +146,7 @@ function ContentDisplay({
           </div>
           <div className="my-6 flex items-center justify-center">
             <div className="relative mx-auto w-80">
-              <img
+              <OptimizedImage
                 src={quizCompletedImage}
                 alt="Quiz card"
                 className="h-auto w-full rounded-lg object-contain"

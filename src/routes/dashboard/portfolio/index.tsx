@@ -35,8 +35,67 @@ import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubs
 import { EmptyStatePrompt } from "@/components/ui/empty-state-prompt";
 import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+
 export const Route = createFileRoute("/dashboard/portfolio/")({
   component: Profile,
+  head: () => {
+    const pageUrl = getCanonicalUrl("/dashboard/portfolio");
+    const title = "Financial Portfolio | Moneko - Your Personalized Dashboard";
+    const description = "Manage your financial health with Moneko's personalized portfolio dashboard. Track assets, liabilities, and financial goals in one place.";
+    const keywords = "financial portfolio, personal finance dashboard, asset tracking, liability management, financial goals, Moneko";
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      image: imageUrl,
+      url: pageUrl,
+    });
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": title,
+      "description": description,
+      "url": pageUrl,
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Dashboard",
+            "item": getCanonicalUrl("/dashboard")
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Portfolio",
+            "item": pageUrl
+          }
+        ]
+      }
+    };
+
+    return {
+      meta,
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
 });
 
 function Profile() {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import classnames from "classnames";
 import type { ImageChoiceQuestion as ImageChoiceQuestionType } from "@/types/learning.types";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import MermaidRenderer from "@/components/learning/MermaidRenderer";
 
 interface ImageChoiceQuestionProps {
@@ -52,7 +53,7 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
             <div className="font-medium">{option.content}</div>
 
             {option.imageUrl ? (
-              <img
+              <OptimizedImage
                 src={option.imageUrl}
                 alt={option.content}
                 className="h-full w-full object-cover"

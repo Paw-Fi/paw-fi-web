@@ -2,15 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faChartLine, faBullseye, faTrophy, faExclamationTriangle, faRefresh, faCalendarAlt, faDollarSign, faArrowRight, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faChartLine, faBullseye, faTrophy, faExclamationTriangle, faRefresh, faCalendarAlt, faDollarSign, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
-import { GoalsGrid } from "@/components/goal-tracker/goal-overview/GoalsGrid";
-import { GoalsSummaryStats } from "@/components/goal-tracker/goal-overview/GoalsSummaryStats";
-import { QuickActions } from "@/components/goal-tracker/goal-overview/QuickActions";
 import { RecentActivity } from "@/components/goal-tracker/goal-overview/RecentActivity";
-import { EmptyState } from "@/components/goal-tracker/shared/EmptyState";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { memo, useCallback } from "react";
 
@@ -81,7 +76,6 @@ function GoalsTracker() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50">
         Skip to main content
       </a>
-      
       {/* Modern Compact Header */}
       <motion.header
         initial={{ opacity: 0, y: -12 }}
