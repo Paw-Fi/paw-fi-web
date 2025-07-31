@@ -9,7 +9,7 @@ export interface User extends SupabaseUser {
   uid: string; // Alias for id to maintain compatibility with our conversation service
 }
 
-type AuthContextType = {
+export type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;

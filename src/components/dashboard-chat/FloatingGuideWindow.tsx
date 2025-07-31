@@ -31,7 +31,7 @@ interface FloatingGuideWindowProps {
 export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ className, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { getCookie, setCookie } = useCookie();
-  const [isHidden, setIsHidden] = useState(() => getCookie('paw-fi-guide-hidden') === 'true');
+  const [isHidden, setIsHidden] = useState(() => getCookie('moneko-guide-hidden') === 'true');
   const { steps, stats } = useLocalProgress();
 
   // Get step icons
@@ -60,7 +60,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
 
   const handleHide = () => {
     setIsHidden(true);
-    setCookie('paw-fi-guide-hidden', 'true', { days: 365 });
+    setCookie('moneko-guide-hidden', 'true', { days: 365 });
     onClose?.();
   };
 

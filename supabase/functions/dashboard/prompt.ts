@@ -50,7 +50,7 @@ id: string (unique identifier)
 
 title: string
 
-icon: string (Must be a valid FontAwesome React icon name: "faWandSparkles", "faPiggyBank", "faBriefcase", "faHandshake", "faTrendingUp", "faDollarSign", "faCalendar", "faTarget", "faLightbulb", "faLink", "faWallet", "faReceipt", "faCreditCard", "faBanknote", "faShieldCheck", "faBarChart2", "faLineChartIcon", "faChevronsRight", "faHome", "faCar")
+icon: string (Must be a valid FontAwesome React icon name: "faWandSparkles", "faPiggyBank", "faBriefcase", "faHandshake", "faUpLong", "faDollarSign", "faCalendar", "faBullseye", "faLightbulb", "faLink", "faWallet", "faReceipt", "faCreditCard", "faBanknote", "faShieldCheck", "faBarChart2", "faLineChartIcon", "faChevronsRight", "faHome", "faCar")
 
 column_span: 1 | 2 (Widgets will occupy 1 or 2 columns in a 2-column grid layout on large screens, and always 2 columns on small screens).
 

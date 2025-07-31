@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRight, faChevronRight, faChevronLeft, faLink, faLightbulb, faQuoteLeft, faQuoteRight } from '@fortawesome/free-solid-svg-icons';
 import { AnimatePresence, motion } from 'framer-motion';
+import { OptimizedImage } from "@/components/seo/optimized-image";
 import { 
   IDataListWidget, 
   IProgressBarListWidget, 
@@ -19,7 +20,7 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
   const { data } = widget;
   
   if (!data || !data.items || data.items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
   }
   
   const { items, tip, footerLink, groupByCategory, showTotals } = data;
@@ -64,7 +65,7 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   const { data } = widget;
   const { items = [], showPercentages = true, sortBy = 'custom' } = data;
   if (!items || items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
   }
   
   // Calculate progress percentage for each item
@@ -82,25 +83,28 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
     return Math.min(100, Math.max(0, progress)); // Clamp between 0-100
   };
 
-  // Calculate status based on progress percentage
+  // Calculate status based on progress percentage - more encouraging
   const getStatusText = (progress: number): string => {
-    if (progress >= 80) return "On Track";
-    if (progress >= 50) return "Making Progress";
-    return "Needs Attention";
+    if (progress >= 80) return "🎯 On Track";
+    if (progress >= 50) return "📈 Building Momentum";
+    if (progress >= 25) return "🌱 Getting Started";
+    return "💪 Let's Begin";
   };
 
-  // Generate explanation text based on progress
+  // Generate explanation text based on progress - encouraging approach
   const generateExplanationText = (item: IProgressBarListItem, progress: number): string => {
     // Use item's explanation text if provided
     if (item.explanationText) return item.explanationText;
 
-    // Otherwise, generate text based on the progress
+    // Otherwise, generate encouraging text based on the progress
     if (progress >= 80) {
-      return `You're on track to meet your ${item.label.toLowerCase()} goal based on your current savings, timeline, and expected portfolio growth.`;
+      return `Excellent work! You're on track to meet your ${item.label.toLowerCase()} goal with your current progress.`;
     } else if (progress >= 50) {
-      return `You're making progress toward your ${item.label.toLowerCase()} goal. Consider increasing your contributions to stay on track.`;
+      return `Great momentum! You're making solid progress toward your ${item.label.toLowerCase()} goal. Small increases can help you reach it faster.`;
+    } else if (progress >= 25) {
+      return `You've started your journey to ${item.label.toLowerCase()}! Every contribution brings you closer to your goal.`;
     } else {
-      return `Your ${item.label.toLowerCase()} goal needs attention. Increase your contributions or adjust your timeline to meet your target.`;
+      return `Starting your ${item.label.toLowerCase()} journey is the hardest part - you've got this! Begin with small, consistent steps.`;
     }
   };
   
@@ -127,9 +131,9 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
           return (
             <div key={item.id || index} className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-[#4d5562]">{statusText}</span>
+                <span className="text-lg font-semibold text-slate-600 dark:text-slate-300">{statusText}</span>
                 {showPercentages ? (
-                  <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">
+                  <span className="text-lg font-semibold text-primary dark:text-dark-primary">
                     {progressText}
                   </span>
                 ) : null}
@@ -223,7 +227,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
             <div 
               className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
             >
-              <img 
+              <OptimizedImage 
                 src={currentCountdownItem.image} 
                 alt={displayTitle}
                 className="w-full h-full object-cover"

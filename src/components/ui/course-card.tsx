@@ -1,3 +1,5 @@
+import { OptimizedImage } from "@/components/seo/optimized-image";
+
 interface CardProps {
   title: string;
   description: string;
@@ -19,7 +21,7 @@ export function CourseCard({ title, description, icon, lessonCount, className, o
       onClick={onClick}
     >
       <div className="flex items-start gap-4">
-        {icon && <img src={icon} alt="Course Icon" className="w-12 h-12 flex-shrink-0 rounded-lg" />}
+        {icon && <OptimizedImage src={icon} alt="Course Icon" className="w-12 h-12 flex-shrink-0 rounded-lg" />}
         <div className="flex-grow">
           <div className="flex items-start justify-between">
             <h2 className={`font-semibold mb-1 ${isEmbedded ? 'text-base text-slate-800 dark:text-slate-100' : 'text-lg text-gray-800'}`}>{title}</h2>

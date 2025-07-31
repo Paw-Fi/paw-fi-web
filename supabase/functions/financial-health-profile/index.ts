@@ -138,7 +138,7 @@ Please generate a comprehensive financial profile description based on this data
     console.log("Sending request to Gemini AI...");
 
     // Call Google Gemini AI
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 2000,

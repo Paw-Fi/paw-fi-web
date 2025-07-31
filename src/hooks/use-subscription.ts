@@ -8,7 +8,7 @@ interface Subscription {
   status: string;
   current_period_end: string;
   next_payment_date: string | null;
-  cancel_at_period_end: boolean;
+  cancel_at_period_end: boolean;  
   stripe_subscription_id: string;
   stripe_customer_id: string;
   created_at: string;

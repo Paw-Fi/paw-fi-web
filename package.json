@@ -7,7 +7,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:sitemap": "node scripts/update-sitemap.js",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "deploy:functions:dev": "node scripts/deploy-functions.js dev",
+    "deploy:functions:prod": "node scripts/deploy-functions.js prod"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -36,6 +38,7 @@
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "framer-motion": "^12.15.0",
     "lodash": "^4.17.21",

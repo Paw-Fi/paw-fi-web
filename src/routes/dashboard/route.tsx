@@ -5,17 +5,15 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
+import { supabase } from "@/lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBookOpen,
-  faCalculator,
   faChessKnight,
   faCog,
-  faComments,
   faUser,
   faSignInAlt,
   faSignOut,
@@ -23,12 +21,14 @@ import {
   faTimes,
   faLightbulb,
   faHandHoldingDollar,
+  faHouseChimney,
+  faHome,
+  faChartBar,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
 
 import { toast } from "react-toastify";
-import basicLessonsData from "@/data/basic-lessons.json";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -36,6 +36,12 @@ import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWi
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
 import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
+import { useGamification } from "@/hooks/use-gamification";
+import { useGoals } from "@/hooks/goal-tracker";
+import { logUserActivity } from "@/utils/activity-logger-clone";
+import { ActivityActions } from "@/utils/reward-actions-clone";
+import { OptimizedImage } from "@/components/seo/optimized-image";
+
 
 
 const NON_PROTECTED_ROUTES = [
@@ -82,7 +88,7 @@ export const Route = createFileRoute("/dashboard")({
         },
         {
           name: 'description',
-          content: 'Your personalized financial education portfolio. Access learning materials, calculators, and tools.',
+          content: 'Your personalized financial education portfolio. Access learning materials, and tools.',
         },
       ],
       link: [
@@ -105,15 +111,112 @@ export function Dashboard() {
     user?.id ?? "",
     { enabled: !!user },
   );
-  const { isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
-  const { markEssentialsVisited, markCalculatorsVisited } = useLocalProgress();
+  const { isActive,isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
-  const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
-
+  const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');
+  const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
+  const {refetch}=useGoals(user?.id)
   const showGuide = () => {
-    setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
+    setCookie('moneko-guide-hidden', 'false', { days: 365 });
     setIsGuideHidden(false);
   };
+
+  // Guest goals migration utility functions
+  const getGuestGoalIds = useCallback((): string[] => {
+    const goalIds = getCookie('moneko-guest-goals');
+    return goalIds ? JSON.parse(goalIds) : [];
+  }, [getCookie]);
+
+  const clearGuestGoalIds = useCallback(() => {
+    document.cookie = 'moneko-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }, []);
+
+  // Migrate guest goals to authenticated user
+  const migrateGuestGoals = useCallback(async (userId: string) => {
+    const guestGoalIds = getGuestGoalIds();
+    
+    if (guestGoalIds.length === 0) {
+      return;
+    }
+    
+    try {
+      console.log(`Migrating ${guestGoalIds.length} guest goals to user ${userId}`);
+      
+      // Update each guest goal with the user ID and log activity
+      for (const goalId of guestGoalIds) {
+        // First, get the goal details for activity logging
+        const { data: goalData, error: fetchError } = await supabase
+          .from('financial_goals')
+          .select('*')
+          .eq('id', goalId)
+          .is('user_id', null)
+          .single();
+        
+        if (fetchError) {
+          console.error(`Failed to fetch guest goal ${goalId}:`, fetchError);
+          continue;
+        }
+        
+        if (!goalData) {
+          console.warn(`Guest goal ${goalId} not found or already migrated`);
+          continue;
+        }
+        
+        // Update the goal with user ID
+        const { error: updateError } = await supabase
+          .from('financial_goals')
+          .update({ user_id: userId })
+          .eq('id', goalId)
+          .is('user_id', null);
+        
+        if (updateError) {
+          console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
+          continue;
+        }
+        refetch();
+        
+        // Log the goal creation activity with original creation timestamp
+        try {
+          await logUserActivity(userId, {
+            type: 'goal',
+            action: ActivityActions.GOAL_CREATED,
+            source: 'ai-goal-generator-migration',
+            metadata: {
+              goalId: goalData.id,
+              goalTitle: goalData.title,
+              goalType: goalData.goal_type,
+              targetAmount: goalData.target_amount,
+              targetDate: goalData.target_date,
+              migratedFromGuest: true,
+              originalCreatedAt: goalData.created_at
+            },
+            timestamp: goalData.created_at // Use original creation time
+          });
+          
+          console.log(`Successfully migrated guest goal ${goalId} to user ${userId} with activity log`);
+        } catch (activityError) {
+          console.warn(`Failed to log activity for migrated goal ${goalId}:`, activityError);
+          // Continue even if activity logging fails
+        }
+      }
+      
+      // Clear guest goal IDs after successful migration
+      clearGuestGoalIds();
+      console.log(`Completed migration of ${guestGoalIds.length} guest goals with activity logging`);
+      
+    } catch (error) {
+      console.error('Failed to migrate guest goals:', error);
+    }
+  }, [getGuestGoalIds, clearGuestGoalIds]);
+
+  // Handle guest goal migration on login
+  useEffect(() => {
+    if (user?.id && !hasCheckedGuestGoals) {
+      migrateGuestGoals(user.id);
+      setHasCheckedGuestGoals(true);
+    }
+  }, [user?.id, hasCheckedGuestGoals, migrateGuestGoals]);
 
 
   // Helper function to check if a route is active
@@ -145,93 +248,39 @@ export function Dashboard() {
     return currentPath === path;
   };
 
-  // Generate dynamic learning submenu from courses
-  const learningSubmenu = useMemo<SubMenuItem[]>(() => {
-    // Add courses to submenu if they exist
-    if (courses && courses.length > 0) {
-      const courseItems = courses.map((course) => ({
-        id: course.course_id || course.id || `course-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is always a string
-        label: course.title,
-        path: `/dashboard/learning/${course.course_id || course.id}`,
-      }));
-      return courseItems;
-    }
-
-    return [];
-  }, [courses]);
 
   const menuItems = [
-    { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard"},
-    { id: "chat", label: "AI Chat", icon: faComments, path: "/dashboard/chat" },
+    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
+    { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
+
+    { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
       id: "learning",
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
-      submenu: learningSubmenu,
-    },
-    {
-      id: "essentials",
-      label: "Essentials",
-      icon: faBookOpen,
-      path: `/dashboard/essentials/your-2025-guide-to-investing`,
-      submenu: basicLessonsData.lessons.map((lesson) => ({
-        id: lesson.lesson_id,
-        label: lesson.title,
-        path: `/dashboard/essentials/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`,
-      })),
-    },
-    {
-      id: "calculators",
-      label: "Calculators",
-      icon: faCalculator,
-      path: "/dashboard/calculators",
-      submenu: [
-        {
-          id: "mortgage",
-          label: "Mortgage Calculator",
-          path: "/dashboard/calculators/mortgage-calculator",
-        },
-        {
-          id: "compound",
-          label: "Compound Interest",
-          path: "/dashboard/calculators/compound-calculator",
-        },
-        {
-          id: "investment",
-          label: "Investment Calculator",
-          path: "/dashboard/calculators/investment-calculator",
-        },
-        {
-          id: "retirement",
-          label: "Retirement Calculator",
-          path: "/dashboard/calculators/retirement-calculator",
-        },
-        {
-          id: "auto-loan",
-          label: "Auto Loan Calculator",
-          path: "/dashboard/calculators/auto-loan-calculator",
-        },
-        {
-          id: "saving-goals",
-          label: "Saving Goals Calculator",
-          path: "/dashboard/calculators/saving-goals-calculator",
-        },
-      ],
-    },
+    },    
     // Only show membership and settings if user is logged in
     ...(user ? [
-      {
-        id: "membership",
-        label: "Membership",
-        icon: faUser,
-        path: "/dashboard/membership",
-      },
       {
         id: "user-settings",
         label: "Settings",
         icon: faCog,
         path: "/dashboard/user-settings",
+        submenu: [
+          {
+            id: "profile",
+            label: "Profile",
+            icon: faUser,
+            path: "/dashboard/user-settings/",
+          },
+          {
+            id: "membership",
+            label: "Membership",
+            icon: faUser,
+            path: "/dashboard/user-settings/membership",
+          },
+        ],
       },
     ] : []),
   ];
@@ -432,21 +481,23 @@ export function Dashboard() {
     <>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
-      <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background to-purple-300/30 p-2 sm:p-4 font-sans">
+      <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20 p-2 sm:p-4 font-sans">
         <div className="flex flex-col md:flex-row h-full gap-3 overflow-hidden">
       {/* Mobile Menu Toggle Button - Only visible on mobile */}
       <div className="flex items-center justify-between md:hidden mb-3">
         <Link to="/" className="flex items-center space-x-3">
           <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-            <img src={logo} className="h-6 w-6" />
+            <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-gray-900">Moneko</span>
+          {/* <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground"> */}
         </Link>
         <motion.button 
           onClick={toggleMobileMenu}
           className={classNames(
-            "rounded-lg p-2 text-gray-700 shadow-sm transition-all duration-300",
-            mobileMenuOpen ? "bg-red-100/70" : "bg-white/70"
+            "rounded-lg p-2 shadow-sm transition-all duration-300",
+            mobileMenuOpen 
+              ? "bg-red-100/70 dark:bg-red-900/30 text-red-500 dark:text-red-400" 
+              : "bg-white/70 dark:bg-gray-800/70 text-gray-700 dark:text-gray-300"
           )}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -455,7 +506,7 @@ export function Dashboard() {
             icon={mobileMenuOpen ? faTimes : faBars} 
             className={classNames(
               "h-6 w-6 transition-all duration-300",
-              mobileMenuOpen ? "text-red-500" : "text-gray-700"
+              mobileMenuOpen ? "text-red-500 dark:text-red-400" : "text-gray-700 dark:text-gray-300"
             )} 
           />
         </motion.button>
@@ -472,17 +523,21 @@ export function Dashboard() {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
+        <div className="flex h-full flex-col rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
           <div className="flex-1 py-6">
             {/* Logo Section - Hidden on mobile (shown in top bar) */}
-            <Link to="/" className="mb-8 ml-4 hidden md:flex items-center space-x-3">
-              <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-                <img src={logo} className="h-6 w-6" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-gray-900">
-                Moneko
-              </span>
-            </Link>
+            <div className="mb-6 ml-4 hidden md:block">
+              <Link to="/" className="flex items-center space-x-3 mb-4">
+                <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
+                  <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground">
+                  Moneko
+                </span>
+              </Link>
+              
+           
+            </div>
 
             {/* Navigation Menu */}
             <nav className="flex-1 space-y-2 px-4">
@@ -493,10 +548,8 @@ export function Dashboard() {
                     className="group"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      // Track visits for essentials and calculators
-                      if (item.id === 'essentials') {
-                        markEssentialsVisited();
-                      } else if (item.id === 'calculators') {
+                      // Track visits for calculators
+                      if (item.id === 'calculators') {
                         markCalculatorsVisited();
                       }
                     }}
@@ -504,8 +557,8 @@ export function Dashboard() {
                     <motion.div
                       className={`flex w-full items-center justify-between px-4 py-3 transition-all duration-200 ${
                         isRouteActive(item.path)
-                          ? "border-l-4 border-primary text-primary"
-                          : "border-l-4 border-transparent text-gray-700 hover:bg-gray-50/70 hover:text-gray-900"
+                          ? "border-l-4 border-primary dark:border-dark-primary text-primary dark:text-dark-primary"
+                          : "border-l-4 border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                       }`}
                       whileTap={{ scale: 0.98 }}
                       transition={{
@@ -519,14 +572,14 @@ export function Dashboard() {
                           className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                             isRouteActive(item.path)
                               ? ""
-                              : "group-hover:bg-gray-200"
+                              : "group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
                           }`}
                         >
                           <FontAwesomeIcon
                             className={`size-5 ${
                               isRouteActive(item.path)
-                                ? "text-primary"
-                                : "text-gray-600"
+                                ? "text-primary dark:text-dark-primary"
+                                : "text-gray-600 dark:text-gray-400"
                             }`}
                             icon={item.icon}
                           />
@@ -544,21 +597,21 @@ export function Dashboard() {
                {isGuideHidden && (
                     <motion.div
                       className={
-                        "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 transition-all duration-200 hover:bg-gray-50/70 hover:text-gray-900"
+                        "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                       }
                       onClick={showGuide}
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
                       <div className="flex items-center space-x-3">
                         <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200`}
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
                         >
                           <FontAwesomeIcon
-                            className={`size-5 text-yellow-500`}
+                            className={`size-5 text-yellow-500 dark:text-yellow-400`}
                             icon={faLightbulb}
                           />
                         </div>
-                        <span className="text-md font-medium text-gray-600">
+                        <span className="text-md font-medium text-gray-600 dark:text-gray-400">
                           Show Guide
                         </span>
                       </div>
@@ -570,21 +623,21 @@ export function Dashboard() {
                   
                   <motion.div
                     className={
-                      "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 transition-all duration-200 hover:bg-gray-50/70 hover:text-gray-900"
+                      "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                     }
                     onClick={() => handleSignOut()}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
                     <div className="flex items-center space-x-3">
                       <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200`}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
                       >
                         <FontAwesomeIcon
-                          className={`size-5 text-red-600`}
+                          className={`size-5 text-red-600 dark:text-red-400`}
                           icon={faSignOut}
                         />
                       </div>
-                      <span className="text-md font-medium text-red-600">
+                      <span className="text-md font-medium text-red-600 dark:text-red-400">
                         Logout
                       </span>
                     </div>
@@ -595,13 +648,13 @@ export function Dashboard() {
           </div>
 
           {/* User Profile Section */}
-          <div className="border-t border-gray-100 p-4">
+          <div className="border-t border-gray-100 dark:border-gray-700 p-4">
             {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
-                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600"></div>
                 <div className="flex-1">
-                  <div className="mb-1 h-3 w-24 rounded bg-gray-200"></div>
-                  <div className="h-2 w-32 rounded bg-gray-200"></div>
+                  <div className="mb-1 h-3 w-24 rounded bg-gray-200 dark:bg-gray-600"></div>
+                  <div className="h-2 w-32 rounded bg-gray-200 dark:bg-gray-600"></div>
                 </div>
               </div>
             ) : user ? (
@@ -610,26 +663,26 @@ export function Dashboard() {
                   {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
                     {user.user_metadata?.full_name || "User"}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                 </div>
               </div>
             ) : (
               <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
-                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-gray-50"
+                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                   whileHover={{ x: 3 }}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
                     <FontAwesomeIcon
                       icon={faSignInAlt}
-                      className="h-5 w-5 text-primary"
+                      className="h-5 w-5 text-primary dark:text-dark-primary"
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
                       Sign In
                     </p>
                    
@@ -656,16 +709,16 @@ export function Dashboard() {
               exit={{ x: -64, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
             >
-              <div className="h-full rounded-2xl border border-gray-100 bg-white/70 shadow-sm">
+              <div className="h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
                 <div className="p-6">
                   <div className="mb-6 flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
                       <FontAwesomeIcon
-                        className="h-4 w-4 text-primary"
+                        className="h-4 w-4 text-primary dark:text-dark-primary"
                         icon={expandedMenu?.icon || faHome}
                       />
                     </div>
-                    <h3 className="text-sm font-bold capitalize text-gray-900">
+                    <h3 className="text-sm font-bold capitalize text-foreground dark:text-dark-foreground">
                       {expandedMenu.label}
                     </h3>
                   </div>
@@ -682,8 +735,8 @@ export function Dashboard() {
                           <motion.div
                             className={`block w-full rounded-lg px-4 py-3 text-left text-sm transition-all duration-200 ${
                               isRouteActive(subItem.path)
-                                ? "border-l-3 border-primary bg-purple-50/50 font-medium text-primary"
-                                : "border-l-3 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
+                                ? "border-l-3 border-primary dark:border-dark-primary bg-purple-50/50 dark:bg-purple-900/20 font-medium text-primary dark:text-dark-primary"
+                                : "border-l-3 border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                             }`}
                             transition={{
                               type: "spring",
@@ -709,16 +762,16 @@ export function Dashboard() {
               exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="rounded-xl border border-gray-100 bg-white/90 backdrop-blur-md shadow-md p-3">
+              <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-md p-3">
                 <div className="flex items-center justify-between mb-2 px-2">
                   <div className="flex items-center space-x-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
                       <FontAwesomeIcon
-                        className="h-3 w-3 text-primary"
+                        className="h-3 w-3 text-primary dark:text-dark-primary"
                         icon={expandedMenu?.icon || faHome}
                       />
                     </div>
-                    <h3 className="text-xs font-bold capitalize text-gray-900">
+                    <h3 className="text-xs font-bold capitalize text-foreground dark:text-dark-foreground">
                       {expandedMenu.label}
                     </h3>
                   </div>
@@ -726,7 +779,7 @@ export function Dashboard() {
                   {/* Close submenu button on mobile */}
                   <motion.button
                     onClick={() => setExpandedMenu(null)}
-                    className="rounded-full bg-gray-100/70 p-1 text-gray-500"
+                    className="rounded-full bg-gray-100/70 dark:bg-gray-700/70 p-1 text-gray-500 dark:text-gray-400"
                     whileHover={{ scale: 1.1, backgroundColor: "#f3f4f6" }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -753,8 +806,8 @@ export function Dashboard() {
                             className={classNames(
                               "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
                               isRouteActive(subItem.path) 
-                                ? "bg-gradient-to-r from-primary/10 to-purple-400/10 border-b-2 border-primary font-medium text-primary" 
-                                : "border-b-2 border-transparent text-gray-600 hover:bg-gray-50/70 hover:text-gray-900"
+                                ? "bg-gradient-to-r from-primary/10 dark:from-dark-primary/10 to-purple-400/10 dark:to-purple-600/10 border-b-2 border-primary dark:border-dark-primary font-medium text-primary dark:text-dark-primary" 
+                                : "border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                             )}
                             whileHover={{ y: -2 }}
                             transition={{
@@ -793,7 +846,7 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 bg-white/80 backdrop-blur-md  shadow-md"
+          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-md"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}

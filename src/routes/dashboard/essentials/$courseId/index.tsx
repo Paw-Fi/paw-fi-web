@@ -1,24 +1,55 @@
 import { createFileRoute } from "@tanstack/react-router";
 import CourseDetailPage from "../../learning/$courseId";
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+import allCourses  from "@/data/basic-lessons.json"; // Assuming this is where your course data is
 
 export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
   component: EssentialsCourseDetailPage,
-  head: ({ params }: { params: { courseId: string } }) => {
-    let courseTitle = 'Essential Financial Lessons'; // Default title
-    let courseDescription = 'Master the fundamentals of personal finance with these essential lessons.'; // Default description
-    const siteOgImage = 'https://moneko.io/og-img.png'; // Default site OG image
-
-    const pageUrl = `https://moneko.io/essentials/${params.courseId}`;
-    const keywords = `${courseTitle.replace(/[^a-zA-Z0-9 ]/g, '')}, financial education, Moneko, online course`;
+  loader: ({ params }) => {
+    const course = allCourses.find(c => c.course_id === params.courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+    return { course };
+  },
+  head: ({ params, loaderData }) => {
+    const { course } = loaderData;
+    const pageUrl = getCanonicalUrl(`/dashboard/essentials/${params.courseId}`);
+    const title = `${course.title} | Moneko Learning`;
+    const description = course.description;
+    const keywords = `${course.title}, ${course.category}, financial education, Moneko, online course, ${course.tags.join(", ")}`;
+    const imageUrl = course.image || "https://moneko.io/og-img.png"; // Use course image if available
 
     const meta = seo({
-      title: `${courseTitle} | Moneko Learning`,
-      description: courseDescription,
-      keywords: keywords,
-      image: siteOgImage,
+      title,
+      description,
+      keywords,
+      image: imageUrl,
       url: pageUrl,
     });
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": course.title,
+      "description": course.description,
+      "provider": {
+        "@type": "Organization",
+        "name": "Moneko",
+        "url": "https://moneko.io"
+      },
+      "url": pageUrl,
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "online",
+        "courseWorkload": `PT${course.lessons.length}H`, // Assuming 1 hour per lesson for simplicity
+        "instructor": {
+          "@type": "Person",
+          "name": "Moneko Experts"
+        }
+      }
+    };
 
     return {
       meta,
@@ -26,6 +57,12 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
         {
           rel: 'canonical',
           href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
         }
       ]
     };

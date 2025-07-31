@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details the implementation of programmatic SEO (pSEO) for the Moneko application (formerly PawFi), including the migration from direct database queries to Supabase Edge Functions and the necessary infrastructure changes.
+This document details the implementation of programmatic SEO (pSEO) for the Moneko application, including the migration from direct database queries to Supabase Edge Functions and the necessary infrastructure changes.
 
 **Date**: July 10, 2025  
 **Project**: Moneko Budget App  

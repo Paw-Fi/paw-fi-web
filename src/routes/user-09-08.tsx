@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/auth-context';
-import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { formatProfileForAI, useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import { createFileRoute } from '@tanstack/react-router'
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
@@ -26,7 +26,7 @@ function RouteComponent() {
  return(
     <div>
         <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} >{profile?.profile_description}</ReactMarkdown>
+    <ReactMarkdown remarkPlugins={[remarkGfm]} >{formatProfileForAI(user, profile)}</ReactMarkdown>
   </article>
     </div>
  )

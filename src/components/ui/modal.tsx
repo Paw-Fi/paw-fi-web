@@ -13,7 +13,7 @@ interface ModalProps {
   overlayClassName?: string;
   contentClassName?: string;
   disableOverlayClick?: boolean;
-  width?: "standard" | "wide";
+  width?: "standard" | "wide" | "xwide";
   fullHeight?: boolean;
   title?: string;
   description?: string;
@@ -135,8 +135,12 @@ export function Modal({
           className={classNames(
             "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl ",
             fullHeight ? "h-[90vh]" : "max-h-[90vh]",
-            width === "standard" ? "w-[90vw] lg:w-[40rem]" : "w-[90vw] lg:w-[50rem]",
             contentClassName,
+            {
+              "w-[90vw] lg:w-[70rem]": width === "xwide",
+              "w-[90vw] lg:w-[50rem]": width === "wide",
+              "w-[90vw] lg:w-[40rem]": width === "standard",
+            }
           )}
         >
         {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">

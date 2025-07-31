@@ -4,77 +4,90 @@ import { ActionButtons } from "@/components/learning/action-buttons";
 import { AnswerFeedback } from "@/components/learning/answer-feedback";
 import { CompletionDisplay } from "@/components/learning/completion-display";
 import { useLesson } from "@/components/learning/hooks/use-lesson";
-import { unlockNextLesson, useUnlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
+import { unlockNextLesson } from "@/components/learning/hooks/unlock-next-lesson";
 import { LessonNotFound } from "@/components/learning/lesson-not-found";
 import { LessonProgressBar } from "@/components/learning/lesson-progress-bar";
 import { QuestionContent } from "@/components/learning/question-content";
 import { QuestionHeader } from "@/components/learning/question-header";
-import { areAllAnswersCorrect, isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
+import { isAnswerCorrect, isCurrentQuestionAnswered } from "@/components/learning/lesson-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses, CourseDataSource } from "@/services/course-service";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Course, Lesson, Question, Tutorial } from "@/types/learning.types";
+import type { Course, Lesson } from "@/types/learning.types";
 import { seo } from "@/utils/seo";
 import basicCourse from "@/data/basic-lessons.json"; // Ensure this is imported
-import { createFileRoute, useParams, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
 import catPig from "@/assets/images/lessons/cat-pig.svg";
-import { getLessonById } from "@/data/lessons";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 import { ContentDisplay } from "@/components/learning/lesson/content-display";
 import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
-import { faLightbulb, faArrowLeft, faCheckCircle, faLock } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
 
+import { getCanonicalUrl } from "@/utils/canonical";
+import { supabase } from "@/lib/supabase";
+
 export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$lessonId")({
-  component: () => <LessonPage dataSource="remote" />,
-  head: ({ params }: { params: { courseId: string; lessonId: string } }) => {
-    let lessonTitle = "Lesson";
-    let lessonDescription = "Explore this lesson on Moneko.";
-    let courseTitle = "Financial Learning";
-    const siteOgImage = "https://moneko.io/og-img.png"; // Default site OG image
-
-    try {
-      const lesson = getLessonById(params.lessonId);
-      if (lesson) {
-        lessonTitle = lesson.title || lessonTitle;
-        lessonDescription =
-          lesson.description ||
-          (lesson.content && typeof lesson.content === "string"
-            ? lesson.content.substring(0, 155) + "..."
-            : lessonDescription);
-      }
-    } catch (e) {
-      console.error("Error fetching lesson/course data for meta tags:", e);
+  component: EssentialsLessonPage,
+  loader: async ({ params }) => {
+    const { data: allCourses, error: courseError } = await supabase
+    .from("user_courses")
+    .select("*")
+    .eq("course_id", params.courseId)
+    .order("created_at", { ascending: false });
+    const course = allCourses.find(c => c.course_id === params.courseId);
+    if (!course) {
+      throw new Error("Course not found");
     }
-
-    const pageUrl = `https://moneko.io/learning/${params.courseId}/lesson/${params.lessonId}`;
-    const keywords = `${lessonTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, ${courseTitle.replace(/[^a-zA-Z0-9 ]/g, "")}, financial education, Moneko`;
+    const { data: allLessons, error: lessonError } = await supabase
+    .from("user_lessons")
+    .select("*")
+    .eq("lesson_id", params.lessonId)
+    .order("created_at", { ascending: false });
+    const lesson = allLessons.find(l => l.lesson_id === params.lessonId);
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+    return { course, lesson };
+  },
+  head: ({ params, loaderData }) => {
+    console.log("loaderData",loaderData)
+    const { course, lesson } = loaderData;
+    const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}/lesson/${params.lessonId}`);
+    const title = `${lesson.title} | ${course.title} - Moneko Learning`;
+    const description = lesson.description || `Learn about ${lesson.title} as part of the ${course.title} course on Moneko.`;
+    const keywords = `${lesson.title}, ${course.title}, ${course.category}, financial education, Moneko, online lesson`;
+    const imageUrl = course?.image || "https://moneko.io/og-img.png"; // Use course image if available
 
     const meta = seo({
-      title: `${lessonTitle} | ${courseTitle} - Moneko Learning`,
-      description: lessonDescription,
-      keywords: keywords,
-      image: siteOgImage,
+      title,
+      description,
+      keywords,
+      image: imageUrl,
       url: pageUrl,
     });
 
-    // Add structured data for the lesson
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "LearningResource",
-      name: lessonTitle,
-      description: lessonDescription,
-      provider: {
-        "@type": "Organization",
-        name: "Moneko",
-        url: "https://moneko.io/",
+      "name": lesson.title,
+      "description": description,
+      "url": pageUrl,
+      "isPartOf": {
+        "@type": "Course",
+        "name": course.title,
+        "url": getCanonicalUrl(`/dashboard/learning/${course.course_id}`)
       },
+      "provider": {
+        "@type": "Organization",
+        "name": "Moneko",
+        "url": "https://moneko.io"
+      }
     };
 
     return {
@@ -82,18 +95,23 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
       link: [
         {
           rel: "canonical",
-          href: pageUrl,
-        },
+          href: pageUrl
+        }
       ],
       script: [
         {
           type: "application/ld+json",
-          children: JSON.stringify(structuredData),
-        },
-      ],
+          children: JSON.stringify(structuredData)
+        }
+      ]
     };
   },
 });
+
+function EssentialsLessonPage() {
+  // Pass dataSource='local' to LessonPage
+  return <LessonPage dataSource="remote" />;
+}
 
 const catIcons = [catBottle, catCash, catCoin, catPig];
 
@@ -205,7 +223,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   }
   if (isCoursesError) {
     return (
-      <div className="py-16 text-center text-red-500">
+      <div className="py-16 text-center text-red-500 dark:text-red-400">
         Failed to load course data.
       </div>
     );
@@ -344,7 +362,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     (currentItemIndex / flashcardItems.length) * 100;
 
   return (
-    <div className="flex flex-1 flex-col bg-background px-4 lg:flex-row">
+    <div className="flex flex-1 flex-col bg-background dark:bg-dark-background px-4 lg:flex-row">
       <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
         {/* Secondary Navigation Menu */}
         
@@ -415,7 +433,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-3xl bg-white p-8 shadow-md">
+            <div className="rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-md">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle

@@ -18,6 +18,9 @@ import { faCheck, faRocket } from "@fortawesome/free-solid-svg-icons";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { DISCORD_URL } from ".";
+import { FaqSection } from "@/components/ui/faq-section";
+import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-grid";
+import { SocialProofSection } from "@/components/pricing/social-proof-section";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -162,6 +165,42 @@ function PricingPage() {
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
 
+  // FAQ data for pricing page
+  const faqData = [
+    {
+      question: "Can I upgrade or downgrade my plan later?",
+      answer: "Yes! You can upgrade or downgrade your plan at any time. When you upgrade, you'll be charged the prorated amount for the remainder of your billing cycle. When you downgrade, the change will take effect at your next billing cycle."
+    },
+    {
+      question: "What happens at the end of my free trial?",
+      answer: "Your free trial automatically converts to a paid subscription unless you cancel before it ends. We'll send you email reminders before your trial expires, and you can cancel anytime during the trial with no charges."
+    },
+    {
+      question: "What payment methods do you accept?",
+      answer: "We accept all major credit cards (Visa, MasterCard, American Express, Discover) and PayPal. All payments are processed securely through Stripe with bank-level encryption."
+    },
+    {
+      question: "Is my financial data secure?",
+      answer: "Absolutely. We use bank-level 256-bit SSL encryption and are SOC 2 compliant. We only access your accounts in read-only mode and never store your banking credentials. Your data is protected with the same security standards used by major financial institutions."
+    },
+    {
+      question: "What is your cancellation and refund policy?",
+      answer: "You can cancel your subscription anytime with no cancellation fees. We offer a 30-day money-back guarantee - if you're not satisfied within the first 30 days, we'll provide a full refund. After cancellation, you'll retain access until the end of your current billing period."
+    },
+    {
+      question: "How do the AI-personalized lessons work?",
+      answer: "Our AI analyzes your financial goals, experience level, and learning preferences to create custom lessons just for you. You can chat with the AI about specific topics you want to learn, and it will generate comprehensive, personalized content tailored to your situation."
+    },
+    {
+      question: "Do you offer student or educator discounts?",
+      answer: "Yes! We offer a 50% discount for verified students and educators. Contact us at hello@moneko.io with your .edu email address to get started with your discounted plan."
+    },
+    {
+      question: "Can I connect multiple brokerage accounts?",
+      answer: "With the Investor plan, you can connect 1 brokerage account. Wealth Builder subscribers can connect unlimited accounts from all major brokerages including Fidelity, Charles Schwab, Vanguard, TD Ameritrade, and more."
+    }
+  ];
+
   const handleBillingToggle = (toggled: boolean) => {
     setIsAnnual(toggled);
     setBillingPeriodMessage(
@@ -251,14 +290,13 @@ function PricingPage() {
             className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
             variants={prefersReducedMotion ? undefined : cardVariants} // Re-use card variant for simple entrance
           >
-            Choose Your Path to Financial Freedom
+            Master Your Money with Personalized Financial Education
           </motion.h1>
           <motion.p
             className="mx-auto max-w-2xl text-lg text-gray-700 md:text-xl dark:text-gray-300"
             variants={prefersReducedMotion ? undefined : cardVariants}
           >
-            Simple, transparent pricing. All plans are designed to help you
-            learn, save, and invest smarter with Moneko.
+            From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor.
           </motion.p>
 
           <motion.div
@@ -313,22 +351,41 @@ function PricingPage() {
                     {tier.subtitle}
                   </p>
                 </div>
+ 
+                <div className="mb-6 min-h-[90px] text-center relative">
+                  <div className=" flex items-center justify-center">
+                  <div className="flex-1"></div>
+                  <div className="flex items-center justify-center flex-1">
+                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                      {isAnnual && tier.priceYearly
+                        ? tier.priceYearly.replace("/year", "")
+                        : tier.priceMonthly}
+                    </span>
+                    <span className="text-base font-medium text-gray-500 dark:text-gray-400">
+                      /month
+                    </span>
 
-                <div className="mb-6 min-h-[90px] text-center">
-                  <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                    {isAnnual && tier.priceYearly
-                      ? tier.priceYearly.replace("/year", "")
-                      : tier.priceMonthly}
-                  </span>
-                  <span className="text-base font-medium text-gray-500 dark:text-gray-400">
-                    /month
-                  </span>
-                  {tier.priceYearly && tier.title != "Free Plan" && (
+                  
+                  </div>
+                   <div className="flex-1">
+                  {isAnnual && tier.annualTotal && (
+                   <span className="text-xs text-gray-500 dark:text-gray-400">
+                   (${tier.annualTotal}/year)
+                 </span>
+                  )}
+                 </div>
+                 </div>
+                  
+                 
+                  {tier.priceYearly && tier.title != "Starter" && (
                     <p
                       className={`mt-1 text-xs font-semibold text-purple-600 transition-opacity duration-300 dark:text-purple-400 ${isAnnual ? "opacity-100" : "opacity-0"}`}
                     >
-                      Save {tier.title === "Plus Plan" ? "$50" : "$150"} vs
-                      monthly!
+                      {isAnnual ? (
+                        tier.title === "Investor" ? "That's 2 months free!" : "That's 4 months free!"
+                      ) : (
+                        `Save ${tier.title === "Investor" ? "$50" : "$150"} vs monthly!`
+                      )}
                     </p>
                   )}
                   {!tier.priceYearly && isAnnual && (
@@ -367,14 +424,14 @@ function PricingPage() {
 
                 <div
                   onClick={() => {
-                    if (tier.title.toLowerCase().includes("free")) {
-                      toast.info("Free plan is available after signup");
+                    if (tier.title.toLowerCase().includes("starter")) {
+                      navigate({ to: "/signup", search: { redirect: "/pricing" } });
                       return;
                     }
-                    const planParam = tier.title.toLowerCase().includes("plus")
+                    const planParam = tier.title.toLowerCase().includes("investor")
                       ? "plus"
                       : "premium";
-                    const isTrial = tier.title.toLowerCase().includes("plus") && tier.actionText === "Start Free Trial";
+                    const isTrial = tier.title.toLowerCase().includes("investor") && tier.actionText === "Start Free Trial";
                     handleSubscribe(planParam, isTrial);
                   }}
                   className={`mt-auto block w-full cursor-pointer rounded-lg px-6 py-3 text-center text-base font-medium shadow-md transition-transform duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
@@ -395,6 +452,12 @@ function PricingPage() {
             </motion.div>
           ))}
         </motion.div>
+
+        <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+
+        <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
+
+        <FaqSection faqData={faqData} />
 
         <motion.div
           className="mt-16 rounded-2xl border border-white/20 bg-slate-100/50 p-8 text-center shadow-lg backdrop-blur-md md:mt-24 dark:border-slate-700/50 dark:bg-slate-800/50"

@@ -137,7 +137,7 @@ function BlogsPage() {
         transition={{ duration: 0.5 }}
         className="mb-12 text-center"
       >
-        <h1             className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
+        <h1 className="mb-4 bg-gradient-to-r from-primary via-accent-pink to-accent-indigo dark:from-dark-primary dark:via-dark-accent-pink dark:to-dark-accent-indigo bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
         >
           Financial Education Blog
         </h1>
@@ -163,7 +163,7 @@ function BlogsPage() {
           animate={{ opacity: 1 }}
           className="my-16 text-center"
         >
-          <h3 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">No articles found</h3>
+          <h3 className="mb-2 text-xl font-medium text-foreground dark:text-dark-foreground">No articles found</h3>
           <p className="text-gray-600 dark:text-gray-400">
             Try adjusting your search or filter to find what you're looking for.
           </p>

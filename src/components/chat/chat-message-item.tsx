@@ -5,11 +5,14 @@ import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
-import { iconContainer } from "./chat-interface";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useEffect } from "react";
+import { iconContainer } from "./chat-conversation-display";
+import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
+import { useNavigate } from "@tanstack/react-router";
+import { GoalType } from "../goal-tracker/types";
 
 interface Message {
   content: string;
@@ -21,20 +24,21 @@ interface Message {
 
 interface ChatMessageItemProps {
   message: Message;
-  formatTime: (timestamp: number) => string;
-  extractFirstJson: (text: string) => { json: any; start: number; end: number } | null;
-  navigate: (opts: { to: string }) => void;
   onOpenQuizModal?: () => void;
+  onGoalTemplateClick?: (goalType: GoalType) => void;
+  formatTime?: (timestamp: number) => string;
 }
+
+
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
-  formatTime,
-  extractFirstJson,
-  navigate,
   onOpenQuizModal,
+  onGoalTemplateClick,
+  formatTime: formatTimeProp,
 }) => {
   const isUser = message.role === "user";
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   // Check if user has completed the financial assessment
@@ -76,7 +80,12 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
-        {formatTime(message.timestamp)}
+        {(formatTimeProp || defaultFormatTime)(message.timestamp)}
+        {message.metadata?.isStreaming && !isUser && (
+          <span className="ml-2 inline-flex items-center">
+            <div className="animate-pulse w-2 h-2 bg-emerald-400 rounded-full"></div>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -84,6 +93,12 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   const renderMessageContent = () => {
     // Check if message contains QUESTIONNAIRE keyword
     const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
+    
+    // Check for goal template patterns
+    const goalTemplates:GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
+    const detectedTemplate = goalTemplates.find(template => 
+      message.content.includes(`\`\`${template}\`\``)
+    );
     
     if (found) {
       const { json, start, end } = found;
@@ -98,7 +113,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
               icon={json.icon || ""}
               description={json.description || ""}
               lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: "/dashboard/learning" })}
+              onClick={() => navigate({ to: `/dashboard/learning/${json.id}` })}
             />
           </div>
           {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
@@ -125,6 +140,36 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
             >
               <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
               {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Handle goal template buttons
+    if (detectedTemplate && !isUser && onGoalTemplateClick) {
+      const templateLabels: Record<GoalType, string> = {
+        retirement: "Retirement Planning",
+        home_buying: "Home Buying",
+        wealth: "Wealth Building",
+        investment: "Investment Portfolio",
+        debt_payoff: "Debt Payoff",
+        emergency_fund: "Emergency Fund",
+        custom: "Custom Goal"
+      };
+      
+      const messageText = message.content.replace(new RegExp(`\`\`${detectedTemplate}\`\``, 'g'), '').trim();
+      
+      return (
+        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
+          <div className="mt-3">
+            <Button
+              onClick={() => onGoalTemplateClick(detectedTemplate)}
+              className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
+              Start {templateLabels[detectedTemplate]} Setup
             </Button>
           </div>
         </div>

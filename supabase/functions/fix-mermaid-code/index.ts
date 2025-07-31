@@ -79,7 +79,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { mermaidCode, questionId } = requestData;
+    const { mermaidCode, questionId, imageOptionId } = requestData;
 
     if (!mermaidCode) {
       return new Response(
@@ -103,7 +103,7 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Fixing malformed Mermaid code...");
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 4000,
@@ -144,55 +144,61 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Successfully fixed Mermaid code");
 
-    // Update the database with the fixed code if questionId is provided
-    // if (questionId) {
-    //   try {
-    //     const { error: updateError } = await supabaseClient
-    //       .from('user_questions')
-    //       .update({ 
-    //         image_options: { mermaidCode: fixedCode },
-    //         updated_at: new Date().toISOString()
-    //       })
-    //       .eq('id', questionId);
+    // Update the database with the fixed code if questionId and imageOptionId are provided
+    let databaseUpdated = false;
+    if (questionId && imageOptionId) {
+      try {
+        // First, fetch the current question to get the existing image_options
+        const { data: currentQuestion, error: fetchError } = await supabaseClient
+          .from('user_questions')
+          .select('image_options')
+          .eq('id', questionId)
+          .single();
 
-    //     if (updateError) {
-    //       console.error('Error updating database:', updateError);
-    //       return new Response(
-    //         JSON.stringify({ 
-    //           error: "Failed to update database", 
-    //           details: updateError.message,
-    //           timestamp: new Date().toISOString(),
-    //         }),
-    //         {
-    //           status: 500,
-    //           headers: { ...corsHeaders, "Content-Type": "application/json" },
-    //         },
-    //       );
-    //     }
+        if (fetchError) {
+          console.error('Error fetching current question:', fetchError);
+          // Don't fail the entire request, just log the error
+        } else if (currentQuestion && currentQuestion.image_options) {
+          // Update the specific imagePrompt in the image_options array
+          const updatedImageOptions = currentQuestion.image_options.map((option: any) => {
+            if (option.id === imageOptionId) {
+              return {
+                ...option,
+                imagePrompt: fixedCode
+              };
+            }
+            return option;
+          });
 
-    //     console.log("Successfully updated mermaid code in database");
-    //   } catch (dbError) {
-    //     console.error('Database update error:', dbError);
-    //     return new Response(
-    //       JSON.stringify({ 
-    //         error: "Database update failed", 
-    //         details: dbError instanceof Error ? dbError.message : "Unknown database error",
-    //         timestamp: new Date().toISOString(),
-    //       }),
-    //       {
-    //         status: 500,
-    //         headers: { ...corsHeaders, "Content-Type": "application/json" },
-    //       },
-    //     );
-    //   }
-    // }
+          // Update the question with the modified image_options
+          const { error: updateError } = await supabaseClient
+            .from('user_questions')
+            .update({ 
+              image_options: updatedImageOptions,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', questionId);
+
+          if (updateError) {
+            console.error('Error updating database:', updateError);
+            // Don't fail the entire request, just log the error
+          } else {
+            console.log(`Successfully updated imagePrompt for option ${imageOptionId} in question ${questionId}`);
+            databaseUpdated = true;
+          }
+        }
+      } catch (dbError) {
+        console.error('Database update error:', dbError);
+        // Don't fail the entire request, just log the error
+      }
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         fixedCode: fixedCode,
         questionId: questionId || null,
-        databaseUpdated: !!questionId,
+        databaseUpdated: databaseUpdated,
         debug: {
           message: "Mermaid code fixed successfully",
           timestamp: new Date().toISOString(),

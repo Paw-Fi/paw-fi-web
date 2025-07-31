@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSignInAlt, faCreditCard, faArrowRight, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import logo from "@assets/images/icon.svg";
 import { SkeletonDashboard } from "../profile/SkeletonDashboard";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 interface ProtectedRouteSubscriptionProps {
   children: React.ReactNode;
@@ -47,7 +48,7 @@ export function ProtectedRouteSubscription({ children }: ProtectedRouteSubscript
           className="mb-8 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-purple-300 shadow-lg"
           transition={{ duration: 0.5 }}
         >
-          <img src={logo} className="size-16" />
+          <OptimizedImage src={logo} alt="Moneko Logo" className="size-16" />
         </motion.div>
 
         <motion.h2

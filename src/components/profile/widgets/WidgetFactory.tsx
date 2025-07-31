@@ -29,6 +29,11 @@ import {
   MortgageDepositTimelineWidget, 
   SalarySlicerWidget
 } from "./PlaygroundWidgets";
+import {
+  GoalTrackerSummaryWidget,
+  GoalProgressWidget,
+  GoalsGridWidget
+} from '@/components/goal-tracker/widgets';
 
 interface WidgetFactoryProps {
   widget: IBaseWidget;
@@ -89,10 +94,16 @@ export function WidgetFactory({ widget, controls }: WidgetFactoryProps) {
       return renderWidget(PensionHeadStartWidget);
     case 'mortgageDepositTimeline':
       return renderWidget(MortgageDepositTimelineWidget);
+    case 'goalTrackerSummary':
+      return renderWidget(GoalTrackerSummaryWidget);
+    case 'goalProgress':
+      return renderWidget(GoalProgressWidget);
+    case 'goalsGrid':
+      return renderWidget(GoalsGridWidget);
     default:
       return (
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <p className="text-red-600">Unknown widget type: {widgetType}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-700">
+          <p className="text-red-600 dark:text-red-400">Unknown widget type: {widgetType}</p>
         </div>
       );
   }

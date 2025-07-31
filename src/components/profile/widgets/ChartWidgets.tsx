@@ -32,7 +32,7 @@ ChartJS.register(
 );
 
 // Common chart options with glassmorphism styling
-const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
+const getChartOptions = (title: string, isDark?: boolean): ChartOptions<'bar' | 'line'> => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -45,7 +45,7 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
         font: {
           size: 12,
         },
-        color: '#6B7280',
+        color: isDark ? '#9CA3AF' : '#6B7280',
       },
     },
     title: {
@@ -53,10 +53,10 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
       text: title,
     },
     tooltip: {
-      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-      titleColor: '#1F2937',
-      bodyColor: '#4B5563',
-      borderColor: 'rgba(209, 213, 219, 0.5)',
+      backgroundColor: isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.8)',
+      titleColor: isDark ? '#F9FAFB' : '#1F2937',
+      bodyColor: isDark ? '#D1D5DB' : '#4B5563',
+      borderColor: isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)',
       borderWidth: 1,
       padding: 10,
       cornerRadius: 8,
@@ -73,7 +73,7 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
         display: false
       },
       ticks: {
-        color: '#9CA3AF',
+        color: isDark ? '#9CA3AF' : '#6B7280',
         font: {
           size: 11,
         },
@@ -81,13 +81,13 @@ const getChartOptions = (title: string): ChartOptions<'bar' | 'line'> => ({
     },
     y: {
       grid: {
-        color: 'rgba(209, 213, 219, 0.2)',
+        color: isDark ? 'rgba(75, 85, 99, 0.3)' : 'rgba(209, 213, 219, 0.2)',
       },
       border: {
         display: false
       },
       ticks: {
-        color: '#9CA3AF',
+        color: isDark ? '#9CA3AF' : '#6B7280',
         font: {
           size: 11,
         },
@@ -146,7 +146,7 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
     ],
   };
 
-  const chartOptions = getChartOptions(title);
+  const chartOptions = getChartOptions(title, document.documentElement.classList.contains('dark'));
   const { height, showLegend } = chartDataDefinition || {};
   
   // Modify options based on data properties
@@ -216,7 +216,7 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
     ],
   };
 
-  const chartOptions = getChartOptions(chartDataDefinition.xAxisLabel || title);
+  const chartOptions = getChartOptions(chartDataDefinition.xAxisLabel || title, document.documentElement.classList.contains('dark'));
   const { height, showLegend, showDataPoints } = chartDataDefinition || {};
   
   // Modify options based on data properties
@@ -310,7 +310,7 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
   };
 
   // Pie chart specific options
-  const getPieChartOptions = (title: string) => ({
+  const getPieChartOptions = (title: string, isDark?: boolean) => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -323,7 +323,7 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
           font: {
             size: 12,
           },
-          color: '#6B7280',
+          color: isDark ? '#9CA3AF' : '#6B7280',
         },
       },
       title: {
@@ -331,10 +331,10 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
         text: title,
       },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        titleColor: '#1F2937',
-        bodyColor: '#4B5563',
-        borderColor: 'rgba(209, 213, 219, 0.5)',
+        backgroundColor: isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.8)',
+        titleColor: isDark ? '#F9FAFB' : '#1F2937',
+        bodyColor: isDark ? '#D1D5DB' : '#4B5563',
+        borderColor: isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)',
         borderWidth: 1,
         padding: 10,
         cornerRadius: 8,
@@ -344,7 +344,7 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
     },
   });
   
-  const chartOptions = getPieChartOptions(title);
+  const chartOptions = getPieChartOptions(title, document.documentElement.classList.contains('dark'));
   
   // Modify options based on data properties
   if (showLegend === false) {
@@ -398,21 +398,38 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   const savings = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : '0.0';
 
+  // More encouraging color scheme
+  const getSavingsColor = (savings: number) => {
+    if (savings >= 0) {
+      return {
+        background: 'rgba(16, 185, 129, 0.7)', // Green for positive savings
+        border: 'rgba(16, 185, 129, 1)',
+      };
+    } else {
+      return {
+        background: 'rgba(168, 85, 247, 0.7)', // Purple instead of red for negative
+        border: 'rgba(168, 85, 247, 1)',
+      };
+    }
+  };
+
+  const savingsColor = getSavingsColor(savings);
+
   const chartData = {
     labels: ['Income', 'Savings', 'Expenses'],
     datasets: [
       {
         label: cashFlowData.projectedPeriod ? `${cashFlowData.projectedPeriod} Amount ($)` : 'Amount ($)',
-        data: [totalIncome, savings, totalExpenses],
+        data: [totalIncome, Math.abs(savings), totalExpenses], // Show absolute value for negative savings
         backgroundColor: [
           'rgba(16, 185, 129, 0.7)', // Green for income
-          'rgba(79, 70, 229, 0.7)',  // Purple for savings
-          'rgba(239, 68, 68, 0.7)',  // Red for expenses
+          savingsColor.background,
+          'rgba(251, 146, 60, 0.7)',  // Orange instead of red for expenses
         ],
         borderColor: [
           'rgba(16, 185, 129, 1)',
-          'rgba(79, 70, 229, 1)',
-          'rgba(239, 68, 68, 1)',
+          savingsColor.border,
+          'rgba(251, 146, 60, 1)',
         ],
         borderWidth: 1,
         borderRadius: 8,
@@ -421,13 +438,14 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
     ],
   };
 
+  const isDark = document.documentElement.classList.contains('dark');
   const chartOptions = {
-    ...getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : '')),
+    ...getChartOptions(title + (cashFlowData.projectedPeriod ? ` (${cashFlowData.projectedPeriod})` : ''), isDark),
     scales: {
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(156, 163, 175, 0.1)', // Light grid lines
+          color: isDark ? 'rgba(75, 85, 99, 0.2)' : 'rgba(156, 163, 175, 0.1)',
         },
         ticks: {
           callback: (value: any) => `${value}`
@@ -457,9 +475,34 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
 
+  // Encouraging message based on savings situation
+  const getSavingsMessage = (savings: number, savingsRate: string) => {
+    if (savings >= 0) {
+      const rate = parseFloat(savingsRate);
+      if (rate >= 20) return `🎯 Excellent ${savingsRate}% savings rate!`;
+      if (rate >= 10) return `📈 Good progress with ${savingsRate}% saved!`;
+      if (rate > 0) return `🌱 Building wealth at ${savingsRate}% savings rate`;
+      return '🎯 Every dollar saved is progress!';
+    } else {
+      return '💡 Ready to flip the script? Small expense cuts can create savings!';
+    }
+  };
+
   return (
     <Widget widget={widget} controls={widget.controls}>
       <div className="flex flex-col h-full p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+        {/* Encouraging message */}
+        <div className="mb-3 text-center">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {getSavingsMessage(savings, savingsRate)}
+          </p>
+          {savings < 0 && (
+            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+              Focus area: Reduce expenses by ${ Math.abs(savings).toLocaleString()}/month to break even
+            </p>
+          )}
+        </div>
+        
         <div 
           ref={chartContainerRef}
           className="flex-grow w-full flex items-center justify-center relative" 
