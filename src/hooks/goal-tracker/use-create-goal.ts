@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { goalQueryKeys } from "./use-goals";
+import { getQuestionnaireTemplate } from "@/data/questionnaire-templates";
 import type { CreateGoalRequest, QuestionnaireData, GoalType } from "@/components/goal-tracker/types";
 
 interface CreateGoalWithAIParams extends CreateGoalRequest {
-  userId?: string;
+  userId?: string | null;
 }
 
 interface ValidationError {
@@ -19,22 +20,15 @@ async function validateQuestionnaireData(
   answers: QuestionnaireData
 ): Promise<{ isValid: boolean; errors: ValidationError[] }> {
   try {
-    // Get template for validation rules
-    const { data: template, error } = await supabase
-      .from('goal_questionnaire_templates')
-      .select('questions')
-      .eq('goal_type', goalType)
-      .eq('is_active', true)
-      .single();
+    // Get template for validation rules from local data
+    const template = getQuestionnaireTemplate(goalType);
 
-    if (error || !template) {
-      console.warn('Could not fetch template for validation, proceeding without validation');
+    if (!template) {
+      console.warn('Could not find template for validation, proceeding without validation');
       return { isValid: true, errors: [] };
     }
 
-    const questions = typeof template.questions === 'string' 
-      ? JSON.parse(template.questions) 
-      : template.questions;
+    const questions = template.questions;
 
     const errors: ValidationError[] = [];
 
@@ -144,10 +138,6 @@ async function validateQuestionnaireData(
 async function createGoalWithAI(params: CreateGoalWithAIParams): Promise<any> {
   const { goalType, questionnaireAnswers, userId } = params;
 
-  if (!userId) {
-    throw new Error('User must be authenticated to create a goal');
-  }
-
   // Validate questionnaire data
   const validation = await validateQuestionnaireData(goalType, questionnaireAnswers);
   if (!validation.isValid) {
@@ -156,12 +146,14 @@ async function createGoalWithAI(params: CreateGoalWithAIParams): Promise<any> {
   }
 
   // Call the AI goal generator function
+  const requestBody = {
+    userId,
+    goalType,
+    questionnaireAnswers,
+  };
+
   const { data, error } = await supabase.functions.invoke('ai-goal-generator', {
-    body: {
-      userId,
-      goalType,
-      questionnaireAnswers,
-    },
+    body: requestBody,
   });
 
   if (error) {
@@ -184,10 +176,10 @@ export function useCreateGoalWithAI() {
 
   const mutation = useMutation({
     mutationFn: async (params: CreateGoalWithAIParams) => {
-      // Get user ID if not provided
-      const userId = params.userId || (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) {
-        throw new Error('User must be authenticated');
+      // Get user ID if not provided (can be null for guest users)
+      let userId = params.userId;
+      if (userId === undefined) {
+        userId = (await supabase.auth.getUser()).data.user?.id || null;
       }
 
       setGenerationProgress(10);

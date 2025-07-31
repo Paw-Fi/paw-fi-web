@@ -1,7 +1,4 @@
-import React from "react";
 import { motion } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
 interface CategoryInfo {
   id: string;
@@ -13,19 +10,13 @@ interface CategoryInfo {
 interface CategoryProgressProps {
   categories: CategoryInfo[];
   activeCategory: string;
-  completedCategories: string[];
   progress: number;
-  onCategoryChange?: (categoryId: string) => void;
-  showTabs?: boolean;
 }
 
 export function CategoryProgress({
   categories,
   activeCategory,
-  completedCategories,
-  progress,
-  onCategoryChange,
-  showTabs = false
+  progress
 }: CategoryProgressProps) {
   const activeCategoryIndex = categories.findIndex(cat => cat.id === activeCategory);
   const activeInfo = categories.find(cat => cat.id === activeCategory);
@@ -63,31 +54,7 @@ export function CategoryProgress({
           </p>
         </div>
       )}
-
-      {/* Category tabs (optional) */}
-      {showTabs && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => onCategoryChange?.(category.id)}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                activeCategory === category.id 
-                  ? `${category.color} shadow-sm` 
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {category.title}
-              {completedCategories.includes(category.id) && (
-                <FontAwesomeIcon
-                  icon={faCheck}
-                  className="ml-2 text-xs"
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      
     </div>
   );
 }

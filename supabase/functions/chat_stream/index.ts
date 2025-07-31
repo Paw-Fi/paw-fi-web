@@ -227,7 +227,7 @@ serve(async (req: Request): Promise<Response> => {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const generationConfig = {
         responseMimeType: "text/plain",
-        maxOutputTokens: 4000,
+        maxOutputTokens: 8000,
       };
       
       // Helper function to check if JSON is complete

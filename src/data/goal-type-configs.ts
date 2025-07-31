@@ -75,6 +75,36 @@ export const GOAL_TYPE_CONFIGS: Record<string, GoalTypeConfig> = {
       'Return expectation calibration'
     ]
   },
+  debt_payoff: {
+    id: 'debt_payoff',
+    name: 'Debt Payoff',
+    description: 'Create a strategic plan to eliminate debt efficiently with optimized payment strategies.',
+    color: 'bg-gradient-to-br from-red-500 to-red-600',
+    difficulty: 'beginner',
+    estimatedTime: '5-8 minutes',
+    benefits: [
+      'Debt snowball vs avalanche comparison',
+      'Optimized payment strategy',
+      'Interest savings calculations',
+      'Timeline optimization',
+      'Credit score improvement tracking'
+    ]
+  },
+  emergency_fund: {
+    id: 'emergency_fund',
+    name: 'Emergency Fund',
+    description: 'Build a financial safety net with a strategic emergency fund savings plan.',
+    color: 'bg-gradient-to-br from-teal-500 to-teal-600',
+    difficulty: 'beginner',
+    estimatedTime: '4-6 minutes',
+    benefits: [
+      'Personalized fund size calculation',
+      'Monthly savings target optimization',
+      'High-yield savings account guidance',
+      'Automated savings strategies',
+      'Financial security milestone tracking'
+    ]
+  },
   custom: {
     id: 'custom',
     name: 'Custom Goal',

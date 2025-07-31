@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { getQuestionnaireTemplate, getActiveQuestionnaireTemplates } from "@/data/questionnaire-templates";
 import type { QuestionnaireTemplate, GoalType } from "@/components/goal-tracker/types";
 
 // Query key factory for questionnaire templates
@@ -8,62 +8,24 @@ export const questionnaireQueryKeys = {
   template: (goalType: string) => [...questionnaireQueryKeys.all, goalType] as const,
 };
 
-// Fetch questionnaire template for a goal type
+// Fetch questionnaire template for a goal type (now from local data)
 async function fetchQuestionnaireTemplate(goalType: GoalType): Promise<QuestionnaireTemplate> {
   if (!goalType) {
     throw new Error('Goal type is required');
   }
 
-  const { data, error } = await supabase
-    .from('goal_questionnaire_templates')
-    .select('*')
-    .eq('goal_type', goalType)
-    .eq('is_active', true)
-    .order('version', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error) {
-    console.error('Error fetching questionnaire template:', error);
-    throw new Error(`Failed to fetch questionnaire template: ${error.message}`);
+  const template = getQuestionnaireTemplate(goalType);
+  
+  if (!template) {
+    throw new Error(`No questionnaire template found for goal type: ${goalType}`);
   }
 
-  if (!data) {
-    throw new Error(`No active questionnaire template found for goal type: ${goalType}`);
+  if (!template.is_active) {
+    throw new Error(`Template for goal type ${goalType} is not active`);
   }
 
-  // Parse the questions JSON if it's a string
-  let questions;
-  try {
-    questions = typeof data.questions === 'string' 
-      ? JSON.parse(data.questions) 
-      : data.questions;
-  } catch (parseError) {
-    console.error('Error parsing questionnaire questions:', parseError);
-    throw new Error('Invalid questionnaire template format');
-  }
-
-  // Parse AI model config if it's a string
-  let aiModelConfig;
-  try {
-    aiModelConfig = typeof data.ai_model_config === 'string'
-      ? JSON.parse(data.ai_model_config)
-      : data.ai_model_config;
-  } catch (parseError) {
-    console.error('Error parsing AI model config:', parseError);
-    // Use default config if parsing fails
-    aiModelConfig = {
-      model: "gemini-2.5-flash",
-      temperature: 0.7,
-      max_tokens: 3000,
-    };
-  }
-
-  return {
-    ...data,
-    questions,
-    ai_model_config: aiModelConfig,
-  };
+  // Return the template - no parsing needed since it's already a proper object
+  return template;
 }
 
 // Hook for fetching questionnaire template
@@ -95,7 +57,7 @@ export function useQuestionnaireTemplate(goalType?: GoalType) {
 
 // Hook for prefetching all questionnaire templates
 export function usePrefetchQuestionnaireTemplates() {
-  const goalTypes: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'custom'];
+  const goalTypes: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
   
   return goalTypes.map(goalType => 
     useQuestionnaireTemplate(goalType)

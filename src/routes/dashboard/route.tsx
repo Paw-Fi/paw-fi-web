@@ -5,10 +5,11 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
+import { supabase } from "@/lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChessKnight,
@@ -36,6 +37,10 @@ import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
 import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
 import { useGamification } from "@/hooks/use-gamification";
+import { useGoals } from "@/hooks/goal-tracker";
+import { logUserActivity } from "@/utils/activity-logger-clone";
+import { ActivityActions } from "@/utils/reward-actions-clone";
+
 
 
 const NON_PROTECTED_ROUTES = [
@@ -105,16 +110,112 @@ export function Dashboard() {
     user?.id ?? "",
     { enabled: !!user },
   );
-  const { isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { isActive,isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('paw-fi-guide-hidden') === 'true');
-  const { gamificationData } = useGamification();
-const isActive=true
+  const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
+  const {refetch}=useGoals(user?.id)
   const showGuide = () => {
     setCookie('paw-fi-guide-hidden', 'false', { days: 365 });
     setIsGuideHidden(false);
   };
+
+  // Guest goals migration utility functions
+  const getGuestGoalIds = useCallback((): string[] => {
+    const goalIds = getCookie('paw-fi-guest-goals');
+    return goalIds ? JSON.parse(goalIds) : [];
+  }, [getCookie]);
+
+  const clearGuestGoalIds = useCallback(() => {
+    document.cookie = 'paw-fi-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }, []);
+
+  // Migrate guest goals to authenticated user
+  const migrateGuestGoals = useCallback(async (userId: string) => {
+    const guestGoalIds = getGuestGoalIds();
+    
+    if (guestGoalIds.length === 0) {
+      return;
+    }
+    
+    try {
+      console.log(`Migrating ${guestGoalIds.length} guest goals to user ${userId}`);
+      
+      // Update each guest goal with the user ID and log activity
+      for (const goalId of guestGoalIds) {
+        // First, get the goal details for activity logging
+        const { data: goalData, error: fetchError } = await supabase
+          .from('financial_goals')
+          .select('*')
+          .eq('id', goalId)
+          .is('user_id', null)
+          .single();
+        
+        if (fetchError) {
+          console.error(`Failed to fetch guest goal ${goalId}:`, fetchError);
+          continue;
+        }
+        
+        if (!goalData) {
+          console.warn(`Guest goal ${goalId} not found or already migrated`);
+          continue;
+        }
+        
+        // Update the goal with user ID
+        const { error: updateError } = await supabase
+          .from('financial_goals')
+          .update({ user_id: userId })
+          .eq('id', goalId)
+          .is('user_id', null);
+        
+        if (updateError) {
+          console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
+          continue;
+        }
+        refetch();
+        
+        // Log the goal creation activity with original creation timestamp
+        try {
+          await logUserActivity(userId, {
+            type: 'goal',
+            action: ActivityActions.GOAL_CREATED,
+            source: 'ai-goal-generator-migration',
+            metadata: {
+              goalId: goalData.id,
+              goalTitle: goalData.title,
+              goalType: goalData.goal_type,
+              targetAmount: goalData.target_amount,
+              targetDate: goalData.target_date,
+              migratedFromGuest: true,
+              originalCreatedAt: goalData.created_at
+            },
+            timestamp: goalData.created_at // Use original creation time
+          });
+          
+          console.log(`Successfully migrated guest goal ${goalId} to user ${userId} with activity log`);
+        } catch (activityError) {
+          console.warn(`Failed to log activity for migrated goal ${goalId}:`, activityError);
+          // Continue even if activity logging fails
+        }
+      }
+      
+      // Clear guest goal IDs after successful migration
+      clearGuestGoalIds();
+      console.log(`Completed migration of ${guestGoalIds.length} guest goals with activity logging`);
+      
+    } catch (error) {
+      console.error('Failed to migrate guest goals:', error);
+    }
+  }, [getGuestGoalIds, clearGuestGoalIds]);
+
+  // Handle guest goal migration on login
+  useEffect(() => {
+    if (user?.id && !hasCheckedGuestGoals) {
+      migrateGuestGoals(user.id);
+      setHasCheckedGuestGoals(true);
+    }
+  }, [user?.id, hasCheckedGuestGoals, migrateGuestGoals]);
 
 
   // Helper function to check if a route is active

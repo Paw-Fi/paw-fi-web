@@ -120,31 +120,6 @@ CREATE TABLE IF NOT EXISTS public.goal_progress_updates (
 );
 
 -- ====================
--- GOAL QUESTIONNAIRE TEMPLATES TABLE
--- ====================
-CREATE TABLE IF NOT EXISTS public.goal_questionnaire_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  goal_type VARCHAR(50) NOT NULL, -- 'retirement', 'home_buying', 'wealth', 'investment', 'custom'
-  
-  -- Template Details
-  template_name VARCHAR(255) NOT NULL,
-  description TEXT,
-  questions JSONB NOT NULL, -- Array of question objects with types, options, validation
-  
-  -- AI Configuration
-  ai_prompt_template TEXT NOT NULL, -- Template for generating AI responses
-  ai_model_config JSONB, -- Model-specific configuration
-  
-  -- Status
-  is_active BOOLEAN DEFAULT true,
-  version INTEGER DEFAULT 1,
-  
-  -- Metadata
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ====================
 -- GOAL INSIGHTS TABLE
 -- ====================
 CREATE TABLE IF NOT EXISTS public.goal_insights (
@@ -197,10 +172,6 @@ CREATE INDEX IF NOT EXISTS idx_goal_progress_updates_milestone_id ON public.goal
 CREATE INDEX IF NOT EXISTS idx_goal_insights_goal_id ON public.goal_insights(goal_id);
 CREATE INDEX IF NOT EXISTS idx_goal_insights_unread ON public.goal_insights(goal_id, is_read) WHERE is_read = false;
 CREATE INDEX IF NOT EXISTS idx_goal_insights_priority ON public.goal_insights(priority);
-
--- Questionnaire Templates Indexes
-CREATE INDEX IF NOT EXISTS idx_goal_questionnaire_templates_goal_type ON public.goal_questionnaire_templates(goal_type);
-CREATE INDEX IF NOT EXISTS idx_goal_questionnaire_templates_active ON public.goal_questionnaire_templates(is_active) WHERE is_active = true;
 
 -- ====================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -291,10 +262,6 @@ CREATE POLICY "Users can update insights for their goals" ON public.goal_insight
       WHERE id = goal_insights.goal_id AND user_id = auth.uid()
     )
   );
-
--- Questionnaire Templates - Public read access, admin write access
-CREATE POLICY "Anyone can view active questionnaire templates" ON public.goal_questionnaire_templates
-  FOR SELECT USING (is_active = true);
 
 -- ====================
 -- DATABASE FUNCTIONS

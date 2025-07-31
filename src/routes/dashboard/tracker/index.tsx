@@ -12,17 +12,7 @@ import { RecentActivity } from "@/components/goal-tracker/goal-overview/RecentAc
 import { EmptyState } from "@/components/goal-tracker/shared/EmptyState";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { memo, useCallback } from "react";
-
-// Animation constants for consistent motion design
-const ANIMATION_DURATION = {
-  fast: 0.3,
-  normal: 0.5,
-  slow: 0.8
-} as const;
-
-const STAGGER_DELAY = 0.1;
-const TOUCH_TARGET_SIZE = "min-h-[44px] min-w-[44px]"; // Minimum touch target size for accessibility
+import { memo, useCallback } from "react";onst;
 
 const trackerSearchSchema = z.object({
   tab: z.string().optional(),

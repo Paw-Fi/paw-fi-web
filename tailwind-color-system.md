@@ -1,6 +1,6 @@
 # Tailwind Color System Documentation
 
-This document defines the complete color system for the Paw-Fi (Moneko) project. All colors are implemented using Tailwind's built-in dark mode system with semantic naming for consistent theming across light and dark modes.
+This document defines the complete color system for the Moneko (Moneko) project. All colors are implemented using Tailwind's built-in dark mode system with semantic naming for consistent theming across light and dark modes.
 
 ## 🎨 Color Architecture
 

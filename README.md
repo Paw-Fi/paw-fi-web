@@ -1,10 +1,10 @@
-# Paw-Fi Web Application: Comprehensive Developer & AI Onboarding Guide
+# Moneko Web Application: Comprehensive Developer & AI Onboarding Guide
 
-Welcome to the Paw-Fi project. This document provides an exhaustive, in-depth overview of the entire application architecture, component structure, backend services, and data schemas. It is designed to be a single source of truth for both human developers and AI agents.
+Welcome to the Moneko project. This document provides an exhaustive, in-depth overview of the entire application architecture, component structure, backend services, and data schemas. It is designed to be a single source of truth for both human developers and AI agents.
 
 ## 1. High-Level Overview
 
-Paw-Fi is a financial technology platform designed to make financial education and planning accessible and engaging. It features an AI-powered chat, personalized goal tracking, educational courses, and comprehensive financial health assessments.
+Moneko is a financial technology platform designed to make financial education and planning accessible and engaging. It features an AI-powered chat, personalized goal tracking, educational courses, and comprehensive financial health assessments.
 
 The project is a monorepo containing the frontend web application, backend serverless functions, and the database schema.
 
@@ -236,4 +236,4 @@ This directory contains SQL files that define the database schema in an incremen
 
 ---
 
-This guide provides a comprehensive foundation for understanding the Paw-Fi codebase. Welcome to the team!
+This guide provides a comprehensive foundation for understanding the Moneko codebase. Welcome to the team!

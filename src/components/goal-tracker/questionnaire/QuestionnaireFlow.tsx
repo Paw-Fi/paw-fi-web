@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
@@ -23,16 +23,19 @@ interface QuestionnaireFlowProps {
   template: QuestionnaireTemplate;
   onComplete: (result: any) => void;
   onCancel: () => void;
+  userId?: string | null;
 }
 
 export function QuestionnaireFlow({ 
   goalType, 
   template, 
   onComplete, 
-  onCancel 
+  onCancel,
+  userId 
 }: QuestionnaireFlowProps) {
   const [answers, setAnswers] = useState<QuestionnaireData>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>('');
   
   const { 
     createGoalWithAI, 
@@ -89,9 +92,64 @@ export function QuestionnaireFlow({
     
     questions.forEach((q) => {
       const value = answers[q.id];
+      
+      // Required field validation
       if (q.validation?.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
         newErrors[q.id] = 'This field is required.';
         isValid = false;
+        return;
+      }
+      
+      // Skip further validation if no value provided and not required
+      if (!value && !q.validation?.required) {
+        return;
+      }
+      
+      // Type-specific validation
+      switch (q.type) {
+        case 'number':
+        case 'currency':
+        case 'percentage':
+          const num = Number(value);
+          if (isNaN(num)) {
+            newErrors[q.id] = `${q.question} must be a valid number`;
+            isValid = false;
+          } else {
+            if (q.validation?.min !== undefined && num < q.validation.min) {
+              newErrors[q.id] = `${q.question} must be at least ${q.validation.min.toLocaleString()}`;
+              isValid = false;
+            }
+            if (q.validation?.max !== undefined && num > q.validation.max) {
+              newErrors[q.id] = `${q.question} must not exceed ${q.validation.max.toLocaleString()}`;
+              isValid = false;
+            }
+          }
+          break;
+          
+        case 'date':
+          if (!Date.parse(value)) {
+            newErrors[q.id] = `${q.question} must be a valid date`;
+            isValid = false;
+          }
+          break;
+          
+        case 'single_choice':
+          if (q.options && !q.options.some((opt: any) => opt.value === value)) {
+            newErrors[q.id] = `${q.question} must be one of the provided options`;
+            isValid = false;
+          }
+          break;
+          
+        case 'multiple_choice':
+          if (Array.isArray(value) && q.options) {
+            const validValues = q.options.map((opt: any) => opt.value);
+            const invalidAnswers = value.filter(a => !validValues.includes(a));
+            if (invalidAnswers.length > 0) {
+              newErrors[q.id] = `${q.question} contains invalid options: ${invalidAnswers.join(', ')}`;
+              isValid = false;
+            }
+          }
+          break;
       }
     });
     
@@ -101,6 +159,8 @@ export function QuestionnaireFlow({
 
   const handleAnswerChange = (questionId: string, value: any) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
+    
+    // Clear any existing error for this field
     if (errors[questionId]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -108,7 +168,20 @@ export function QuestionnaireFlow({
         return newErrors;
       });
     }
+    
+    // Clear general error when user starts fixing issues
+    if (generalError) {
+      setGeneralError('');
+    }
   };
+
+  // Real-time validation effect - validates instantly when answers change
+  useEffect(() => {
+    // Only run validation if we have some answers to avoid initial validation noise
+    if (Object.keys(answers).length > 0) {
+      validate();
+    }
+  }, [answers, validate]);
 
   const isFormComplete = useMemo(() => {
     return questions
@@ -120,16 +193,128 @@ export function QuestionnaireFlow({
   }, [questions, answers]);
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    // Clear previous errors
+    setGeneralError('');
+    
+    // Validate and show errors if validation fails
+    if (!validate()) {
+      // Find the first category with validation errors
+      const firstErrorQuestion = questions.find(q => errors[q.id]);
+      if (firstErrorQuestion) {
+        const errorCategory = Object.keys(questionsByCategory).find(categoryId =>
+          questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
+        );
+        if (errorCategory) {
+          setActiveCategory(errorCategory);
+        }
+      }
+      
+      // Show a general error message if there are validation errors but no specific category found
+      const errorCount = Object.keys(errors).length;
+      if (errorCount > 0) {
+        setGeneralError(`Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} before submitting.`);
+      } else {
+        setGeneralError('Please complete all required fields before submitting.');
+      }
+      
+      // Scroll to show the error message and focus on first error field
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Focus on the first field with an error after scrolling
+        setTimeout(() => {
+          const firstErrorFieldId = Object.keys(errors)[0];
+          if (firstErrorFieldId) {
+            const firstErrorField = document.getElementById(firstErrorFieldId);
+            if (firstErrorField) {
+              firstErrorField.focus();
+              firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        }, 300);
+      }, 100);
+      
+      return;
+    }
     
     try {
-      const result = await createGoalWithAI({
+      console.log('Submitting goal creation with answers:', answers);
+      const requestParams: any = {
         goalType,
         questionnaireAnswers: answers,
-      });
+        userId,
+      };
+
+
+      const result = await createGoalWithAI(requestParams);
       onComplete(result);
     } catch (error) {
       console.error('Failed to create goal:', error);
+      console.error('Questionnaire answers that caused error:', answers);
+      
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      // Parse different types of errors from the backend
+      if (error instanceof Error) {
+        if (error.message.includes('Validation failed:')) {
+          // Frontend validation errors
+          errorMessage = error.message.replace('Validation failed: ', '');
+        } else {
+          // Try to parse backend API errors
+          try {
+            // Check if it's a structured API error response
+            const apiError = JSON.parse(error.message);
+            if (apiError.error && apiError.details) {
+              errorMessage = `${apiError.error}: ${apiError.details}`;
+            } else if (apiError.message) {
+              errorMessage = apiError.message;
+            } else {
+              errorMessage = error.message;
+            }
+          } catch {
+            // Not JSON, use the raw error message
+            errorMessage = error.message;
+          }
+        }
+      }
+      
+      // Try to match error messages to specific questions for validation errors
+      if (errorMessage.includes('Validation failed:') || errorMessage.includes('must be at least')) {
+        const backendErrors: Record<string, string> = {};
+        
+        questions.forEach(q => {
+          if (errorMessage.includes(q.question) || errorMessage.includes(q.id)) {
+            backendErrors[q.id] = errorMessage;
+          }
+        });
+        
+        // If we found specific field errors, show them
+        if (Object.keys(backendErrors).length > 0) {
+          setErrors(prev => ({ ...prev, ...backendErrors }));
+          
+          // Navigate to the category containing the first error
+          const firstErrorQuestion = questions.find(q => backendErrors[q.id]);
+          if (firstErrorQuestion) {
+            const errorCategory = Object.keys(questionsByCategory).find(categoryId =>
+              questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
+            );
+            if (errorCategory) {
+              setActiveCategory(errorCategory);
+            }
+          }
+        } else {
+          // Show general error if we couldn't match to specific fields
+          setGeneralError(errorMessage);
+        }
+      } else {
+        // Show the actual backend error message
+        setGeneralError(errorMessage);
+      }
+      
+      // Scroll to show the error
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
     }
   };
 
@@ -149,15 +334,40 @@ export function QuestionnaireFlow({
     });
   }, [questionsByCategory, answers]);
 
-  const completedCategories = useMemo(() => {
-    return categories.filter(cat => isCategoryComplete(cat.id)).map(cat => cat.id);
-  }, [categories, isCategoryComplete]);
+  // Note: Removed completedCategories and categoriesWithErrors since they're not used in the simplified CategoryProgress
 
-  const canGoNext = isCategoryComplete(activeCategory);
+  // Check if current category is complete AND has no validation errors
+  const categoryHasErrors = useMemo(() => {
+    const categoryQuestions = questionsByCategory[activeCategory] || [];
+    return categoryQuestions.some(q => errors[q.id]);
+  }, [questionsByCategory, activeCategory, errors]);
+
+  const canGoNext = isCategoryComplete(activeCategory) && !categoryHasErrors;
   const canGoBack = categories.findIndex(cat => cat.id === activeCategory) > 0;
   const isLastCategory = categories.findIndex(cat => cat.id === activeCategory) === categories.length - 1;
 
   const handleNext = () => {
+    // Double-check validation before allowing navigation
+    if (!isCategoryComplete(activeCategory) || categoryHasErrors) {
+      // Highlight errors and show message
+      const categoryQuestions = questionsByCategory[activeCategory] || [];
+      const errorQuestions = categoryQuestions.filter(q => errors[q.id]);
+      
+      if (errorQuestions.length > 0) {
+        setGeneralError(`Please fix ${errorQuestions.length} error${errorQuestions.length > 1 ? 's' : ''} in this section before continuing.`);
+        
+        // Focus on first error field
+        setTimeout(() => {
+          const firstErrorField = document.getElementById(errorQuestions[0].id);
+          if (firstErrorField) {
+            firstErrorField.focus();
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+      return;
+    }
+    
     const currentIndex = categories.findIndex(cat => cat.id === activeCategory);
     if (currentIndex < categories.length - 1) {
       setActiveCategory(categories[currentIndex + 1].id);
@@ -190,12 +400,32 @@ export function QuestionnaireFlow({
         </p>
       </motion.div>
 
+      {generalError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg shadow-lg"
+        >
+          <div className="flex items-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 animate-pulse" />
+            <div>
+              <p className="text-red-800 dark:text-red-200 text-sm font-semibold">
+                {generalError}
+              </p>
+              {Object.keys(errors).length > 0 && (
+                <p className="text-red-600 dark:text-red-300 text-xs mt-1">
+                  Check the highlighted fields below for specific errors.
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <CategoryProgress
         categories={categories}
         activeCategory={activeCategory}
-        completedCategories={completedCategories}
         progress={progress}
-        onCategoryChange={setActiveCategory}
       />
 
       <AnimatePresence mode="wait">
@@ -242,6 +472,7 @@ export function QuestionnaireFlow({
         submitLabel="Create My Goal"
         submitIcon={faRocket}
         isSubmitting={isLoading}
+        hasValidationErrors={Object.keys(errors).length > 0 || !!generalError}
       />
     </div>
   );
@@ -291,7 +522,7 @@ function GeneratingGoalView({ progress, error, onCancel }: any) {
       <p className="text-sm text-gray-500 dark:text-gray-500 mb-8">
         {Math.round(progress)}% Complete
       </p>
-      <Button onClick={onCancel} variant="ghost">Cancel</Button>
+      <Button onClick={onCancel} variant="outline">Cancel</Button>
     </div>
   );
 }

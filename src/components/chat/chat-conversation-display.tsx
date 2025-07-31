@@ -8,6 +8,7 @@ import { ChatInput } from './chat-input';
 import logo from "@/assets/images/icon.svg";
 import { getPredictedResponses } from '@/services/conversation-service';
 import { supabase } from '@/lib/supabase';
+import { GoalType } from '../goal-tracker/types';
 
 export interface ConversationMessage {
   content: string;
@@ -44,6 +45,9 @@ interface ChatConversationDisplayProps {
   // Quiz modal (optional)  
   onOpenQuizModal?: () => void;
   
+  // Goal template handling (for AI onboarding)
+  onGoalTemplateClick?: (goalType: GoalType) => void;
+  
   // Navigation
   navigate?: any;
 
@@ -75,6 +79,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   loadingDuration = 0,
   onOpenVoiceModal,
   onOpenQuizModal,
+  onGoalTemplateClick,
   navigate,
   className = "",
   headerClassName = "",
@@ -273,6 +278,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                 <ChatMessageItem 
                   message={message} 
                   onOpenQuizModal={onOpenQuizModal}
+                  onGoalTemplateClick={onGoalTemplateClick}
                 />
               </motion.div>
             );

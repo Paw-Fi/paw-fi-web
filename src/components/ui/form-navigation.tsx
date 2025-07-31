@@ -4,7 +4,8 @@ import {
   faChevronLeft,
   faChevronRight,
   faRocket,
-  faCheck
+  faCheck,
+  faExclamationTriangle
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "./button";
 
@@ -21,6 +22,7 @@ interface FormNavigationProps {
   backLabel?: string;
   submitIcon?: any;
   isSubmitting?: boolean;
+  hasValidationErrors?: boolean;
 }
 
 export function FormNavigation({
@@ -35,7 +37,8 @@ export function FormNavigation({
   nextLabel = "Next",
   backLabel = "Previous",
   submitIcon = faRocket,
-  isSubmitting = false
+  isSubmitting = false,
+  hasValidationErrors = false
 }: FormNavigationProps) {
   return (
     <div className="flex items-center justify-between border-t border-gray-100 pt-6 mt-8">
@@ -52,11 +55,19 @@ export function FormNavigation({
         <Button 
           onClick={onSubmit} 
           size="lg" 
-          className="px-8 py-3" 
+          className={`px-8 py-3 transition-all duration-300 ${
+            hasValidationErrors 
+              ? 'bg-red-500 hover:bg-red-600 border-red-500 shadow-red-200' 
+              : ''
+          }`}
           disabled={!isFormComplete || isSubmitting}
+          title={hasValidationErrors ? "Please fix validation errors before submitting" : ""}
         >
-          <FontAwesomeIcon icon={submitIcon} className="mr-3" />
-          {isSubmitting ? "Submitting..." : submitLabel}
+          <FontAwesomeIcon 
+            icon={hasValidationErrors ? faExclamationTriangle : submitIcon} 
+            className={`mr-3 ${hasValidationErrors ? 'animate-pulse' : ''}`} 
+          />
+          {isSubmitting ? "Submitting..." : hasValidationErrors ? "Fix Errors" : submitLabel}
         </Button>
       ) : (
         <button
