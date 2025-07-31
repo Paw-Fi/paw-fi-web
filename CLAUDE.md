@@ -96,5 +96,4 @@ The project uses extensive TypeScript path aliases defined in `tsconfig.json`:
 - **Firebase hosting** for production deployment
 
 ## IMPORTANT
-
-This is a React 19 project. No useCallback or useMemo are needed.
+detailed project guideline at `/README.md`
