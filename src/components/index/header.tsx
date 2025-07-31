@@ -24,7 +24,7 @@ export const HomeHeader=()=>{
         <OptimizedImage
           src={catCoin}
           alt="Moneko Logo"
-          className="size-10"               
+          className="size-14 -translate-y-1"               
         />
         <span className="text-xl font-semibold text-foreground dark:text-dark-foreground">
           Moneko

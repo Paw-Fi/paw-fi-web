@@ -1,3 +1,4 @@
+import classNames from 'classnames'
 import React, { useState, useRef, useEffect } from 'react'
 
 interface OptimizedImageProps {
@@ -72,12 +73,6 @@ export function OptimizedImage({
   }
 
   const containerStyle = aspectRatio ? { aspectRatio } : {}
-  const imageClasses = `
-    transition-opacity duration-300 ease-in-out
-    ${isLoaded ? 'opacity-100' : 'opacity-0'}
-    ${className}
-  `.trim()
-
   return (
     <div 
       ref={containerRef}
@@ -101,17 +96,16 @@ export function OptimizedImage({
           alt={alt}
           width={width}
           height={height}
-          className={imageClasses}
+          className={classNames("transition-opacity duration-300 ease-in-out",className,{
+            "opacity-100":isLoaded,
+            "opacity-0":!isLoaded,
+          })}
           loading={loading}
           decoding={decoding}
           onLoad={handleLoad}
           onError={handleError}
           sizes={sizes}
-          style={{ 
-            objectFit: 'cover',
-            width: '100%',
-            height: '100%'
-          }}
+         
         />
       )}
       

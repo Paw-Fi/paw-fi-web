@@ -250,8 +250,6 @@ export function Dashboard() {
 
 
   const menuItems = [
-    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
-    { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
 
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
