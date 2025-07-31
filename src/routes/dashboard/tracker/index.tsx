@@ -12,7 +12,7 @@ import { RecentActivity } from "@/components/goal-tracker/goal-overview/RecentAc
 import { EmptyState } from "@/components/goal-tracker/shared/EmptyState";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { memo, useCallback } from "react";onst;
+import { memo, useCallback } from "react";
 
 const trackerSearchSchema = z.object({
   tab: z.string().optional(),

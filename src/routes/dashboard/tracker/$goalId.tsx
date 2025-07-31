@@ -1,6 +1,30 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  Filler
+);
 import { 
   faArrowLeft, 
   faEdit, 
@@ -804,6 +828,12 @@ function GoalDetail() {
                 )}
               </div>
             </motion.div>
+            
+            {/* Interactive Projection Chart */}
+            <InteractiveProjectionChart 
+              goal={currentGoal} 
+              progressData={progressData}
+            />
             
             {/* Metrics Overview */}
             <motion.div
@@ -2216,6 +2246,303 @@ function AllInsightsModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+// Interactive Projection Chart Component
+function InteractiveProjectionChart({ goal, progressData }: { goal: any; progressData: any }) {
+  const [monthlyContribution, setMonthlyContribution] = useState(progressData.monthlyCapacity || 0);
+  const [showProjection, setShowProjection] = useState(true);
+
+  // Calculate projection data based on current monthly contribution
+  const calculateProjection = (monthly: number) => {
+    const currentAmount = goal.current_amount || 0;
+    const targetAmount = goal.target_amount || 0;
+    const targetDate = new Date(goal.target_date);
+    const currentDate = new Date();
+    const monthsToTarget = Math.max(1, Math.ceil((targetDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+    
+    const labels = [];
+    const projectedData = [];
+    const targetLine = [];
+    
+    // Generate monthly projections
+    for (let i = 0; i <= monthsToTarget; i++) {
+      const date = new Date(currentDate);
+      date.setMonth(date.getMonth() + i);
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+      
+      const projectedAmount = currentAmount + (monthly * i);
+      projectedData.push(Math.min(projectedAmount, targetAmount));
+      targetLine.push(targetAmount);
+    }
+    
+    return { labels, projectedData, targetLine, monthsToTarget };
+  };
+
+  const { labels, projectedData, targetLine, monthsToTarget } = calculateProjection(monthlyContribution);
+  
+  // Calculate completion date and gap
+  const projectedCompletion = monthlyContribution > 0 
+    ? Math.ceil((goal.target_amount - goal.current_amount) / monthlyContribution)
+    : monthsToTarget;
+  
+  const completionDate = new Date();
+  completionDate.setMonth(completionDate.getMonth() + projectedCompletion);
+  
+  const isOnTrack = projectedCompletion <= monthsToTarget;
+  const monthlyGap = Math.ceil((goal.target_amount - goal.current_amount) / monthsToTarget) - monthlyContribution;
+
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Projected Savings',
+        data: projectedData,
+        borderColor: isOnTrack ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
+        backgroundColor: isOnTrack ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: isOnTrack ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+      },
+      {
+        label: 'Target Amount',
+        data: targetLine,
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+        borderDash: [5, 5],
+        fill: false,
+        pointRadius: 0,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 12,
+          },
+        },
+      },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        cornerRadius: 8,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.dataset.label || '';
+            const value = context.parsed.y;
+            return `${label}: $${value.toLocaleString()}`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          maxTicksLimit: 8,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
+        ticks: {
+          callback: function(value: any) {
+            return '$' + value.toLocaleString();
+          },
+        },
+      },
+    },
+    interaction: {
+      mode: 'nearest' as const,
+      axis: 'x' as const,
+      intersect: false,
+    },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
+            Savings Projection Playground
+          </h3>
+        </div>
+        <button
+          onClick={() => setShowProjection(!showProjection)}
+          className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <FontAwesomeIcon icon={showProjection ? faChevronUp : faChevronDown} className="w-4 h-4" />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showProjection && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-6"
+          >
+            {/* Slider Control */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Monthly Contribution
+                </label>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  ${monthlyContribution.toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="relative">
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.max(5000, progressData.monthlyCapacity * 2)}
+                  step="50"
+                  value={monthlyContribution}
+                  onChange={(e) => setMonthlyContribution(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>$0</span>
+                  <span className="text-blue-600 dark:text-blue-400">Current: ${progressData.monthlyCapacity}</span>
+                  <span>${Math.max(5000, progressData.monthlyCapacity * 2).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Projection Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`p-4 rounded-lg border ${
+                isOnTrack 
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/30'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <FontAwesomeIcon 
+                    icon={isOnTrack ? faCheckCircle : faExclamationTriangle} 
+                    className={`w-4 h-4 ${
+                      isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    }`} 
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Completion Date
+                  </span>
+                </div>
+                <div className={`text-lg font-bold ${
+                  isOnTrack ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'
+                }`}>
+                  {completionDate.toLocaleDateString()}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {projectedCompletion} months
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <FontAwesomeIcon icon={faDollarSign} className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Monthly Gap
+                  </span>
+                </div>
+                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                  {monthlyGap > 0 ? `+$${monthlyGap}` : monthlyGap < 0 ? `-$${Math.abs(monthlyGap)}` : '$0'}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {monthlyGap > 0 ? 'Need more' : monthlyGap < 0 ? 'Ahead of schedule' : 'On track'}
+                </div>
+              </div>
+
+              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Time Difference
+                  </span>
+                </div>
+                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                  {projectedCompletion - monthsToTarget > 0 
+                    ? `+${projectedCompletion - monthsToTarget}` 
+                    : projectedCompletion - monthsToTarget < 0 
+                    ? `${projectedCompletion - monthsToTarget}` 
+                    : '0'} months
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  vs. target timeline
+                </div>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div className="h-80">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+
+            {/* Disclaimer */}
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Playground Mode:</strong> This chart is for experimentation only. 
+                  Changes here don't affect your actual goal settings. Use this to explore different savings scenarios.
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
+    </motion.div>
   );
 }
 
