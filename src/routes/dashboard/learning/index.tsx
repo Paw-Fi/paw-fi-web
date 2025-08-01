@@ -33,6 +33,8 @@ import { seo } from "@/utils/seo";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { createPortal } from "react-dom";
 import { useGamification } from "@/hooks/use-gamification";
+import { FinancialGlassMetricsPanel } from "@/components/shared/FinancialGlassMetricsPanel";
+import { DashboardHeroSection } from "@/components/shared/DashboardHeroSection";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
@@ -162,162 +164,207 @@ export function UnifiedLearningPage() {
         activeTab === 'personalized' ? course.type === 'personalized' : course.type === 'essential'
       );
 
-  // Animation variants
+  // Enhanced Animation variants with physics-based motion (2025 Design System)
   const pageVariants: Variants = {
     initial: { opacity: 0 },
     animate: { 
       opacity: 1,
-      transition: { duration: 0.5, staggerChildren: 0.1 }
+      transition: { 
+        duration: 0.4, 
+        staggerChildren: 0.08,
+        ease: [0.2, 0.8, 0.4, 1] // Structured Expression easing
+      }
     }
   };
 
   const itemVariants: Variants = {
-    initial: { opacity: 0, y: 20 },
+    initial: { opacity: 0, y: 20, scale: 0.98 },
     animate: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.4 }
+      scale: 1,
+      transition: { 
+        duration: 0.3,
+        ease: [0.25, 0.8, 0.5, 1] // Educational reveal timing
+      }
     }
   };
 
   const courseCardVariants: Variants = {
-    initial: { opacity: 0, scale: 0.95 },
+    initial: { opacity: 0, scale: 0.96, y: 10 },
     animate: { 
       opacity: 1, 
       scale: 1,
-      transition: { duration: 0.3 }
+      y: 0,
+      transition: { 
+        duration: 0.4,
+        ease: [0.15, 0.8, 0.4, 1] // Premium feel transition
+      }
     },
     hover: {
-      scale: 1.02,
-      transition: { duration: 0.2 }
+      scale: 1.015, // Subtle, confident hover
+      y: -2,
+      transition: { 
+        duration: 0.2,
+        ease: [0.4, 0.0, 0.2, 1] // Glass material timing
+      }
+    }
+  };
+
+  // Financial Glass material variants
+  const glassVariants: Variants = {
+    initial: { 
+      backdropFilter: "blur(0px)",
+      background: "rgba(255, 255, 255, 0)"
+    },
+    animate: { 
+      backdropFilter: "blur(20px)",
+      background: "rgba(255, 255, 255, 0.08)",
+      transition: { 
+        duration: 0.3,
+        ease: [0.4, 0.0, 0.2, 1]
+      }
     }
   };
 
   return (
-    <motion.div 
-      className="min-h-screen"
-   
-    >
-      {/* Modern Hero Section with Stats */}
-      <motion.section 
-        className="relative px-4 py-8 mb-8 overflow-hidden"
-        variants={itemVariants}
+    <>
+      {/* Design System CSS Injection */}
+      <style jsx global>{`
+        /* Financial Glass Material System */
+        .financial-glass {
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px) saturate(150%);
+          border: 1px solid rgba(255, 255, 255, 0.125);
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Expressive Typography Classes */
+        .text-display {
+          font-size: clamp(2.5rem, 5vw, 4rem);
+          font-weight: 700;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+        }
+        
+        .text-headline {
+          font-size: clamp(1.875rem, 3vw, 2.5rem);
+          font-weight: 600;
+          line-height: 1.2;
+          letter-spacing: -0.01em;
+        }
+        
+        .text-title {
+          font-size: clamp(1.25rem, 2vw, 1.5rem);
+          font-weight: 600;
+          line-height: 1.3;
+        }
+        
+        .text-body {
+          font-size: 1rem;
+          font-weight: 400;
+          line-height: 1.6;
+        }
+        
+        .text-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          line-height: 1.4;
+          letter-spacing: 0.01em;
+        }
+        
+        /* Variable Font Support */
+        * {
+          font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+          * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
+
+      <motion.div 
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/20"
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
       >
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 dark:from-violet-400/10 via-purple-600/5 dark:via-purple-400/10 to-indigo-600/5 dark:to-indigo-400/10 rounded-3xl" />
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/10 dark:bg-purple-400/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 dark:bg-indigo-400/20 rounded-full blur-3xl" />
-        
-        <div className="relative max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            {/* Welcome Section */}
-            <div className="flex-1">
-              <motion.div
-        
+      {/* Modern Hero Section with Stats */}
+      <DashboardHeroSection
+        title={`Welcome back, ${user?.user_metadata?.full_name || 'Learner'}`}
+        titleGradient="from-violet-600 dark:from-violet-400 via-purple-600 dark:via-purple-400 to-indigo-600 dark:to-indigo-400"
+        emoji="👋"
+        emojiAnimation={{ rotate: [0, 20, 0], duration: 1, repeatDelay: 3 }}
+        description="Continue your journey to financial mastery with AI-powered and expert-crafted courses."
+        backgroundGradient="from-violet-600/5 dark:from-violet-400/10 via-purple-600/5 dark:via-purple-400/10 to-indigo-600/5 dark:to-indigo-400/10"
+        decorativeGradients={{
+          topRight: "bg-purple-400/10 dark:bg-purple-400/20",
+          bottomLeft: "bg-indigo-400/10 dark:bg-indigo-400/20"
+        }}
+        actions={[
+          {
+            label: "Create AI Course",
+            icon: faWandSparkles,
+            onClick: () => setShowAICoach(true),
+            variant: 'primary'
+          },
+          ...(aiCourses.length > 0 ? [{
+            label: "Resume Learning",
+            icon: faCirclePlay,
+            variant: 'secondary' as const,
+            component: (
+              <Link
+                to={`/dashboard/learning/${aiCourses[0].course_id}`}
+                className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:border-purple-300 dark:hover:border-purple-400 hover:text-purple-700 dark:hover:text-purple-400 transition-all duration-300"
               >
-                <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-                  <span className="bg-gradient-to-r from-violet-600 dark:from-violet-400 via-purple-600 dark:via-purple-400 to-indigo-600 dark:to-indigo-400 bg-clip-text text-transparent">
-                    Welcome back, {user?.user_metadata?.full_name || 'Learner'}
-                  </span>
-                  <motion.span
-                    className="inline-block ml-3"
-                    animate={{ rotate: [0, 20, 0] }}
-                    transition={{ duration: 1, repeat: Infinity, repeatDelay: 3 }}
-                  >
-                    👋
-                  </motion.span>
-                </h1>
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
-                  Continue your journey to financial mastery with AI-powered and expert-crafted courses.
-                </p>
-                
-                {/* Quick Actions */}
-                <div className="flex flex-wrap gap-3">
-                  <motion.button
-                    onClick={() => setShowAICoach(true)}
-                    className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-purple-600/20 dark:shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-600/30 dark:hover:shadow-purple-500/40 transition-all duration-300"
-                  >
-                    <FontAwesomeIcon icon={faWandSparkles} className="h-5 w-5" />
-                    <span>Create AI Course</span>
-                    <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
-                  </motion.button>
-                  
-                  {aiCourses.length > 0 && (
-                    <Link
-                      to={`/dashboard/learning/${aiCourses[0].course_id}`}
-                      className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:border-purple-300 dark:hover:border-purple-400 hover:text-purple-700 dark:hover:text-purple-400 transition-all duration-300"
-                    >
-                      <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
-                      <span>Resume Learning</span>
-                    </Link>
-                  )}
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Compact Metrics Bar */}
-            <motion.div 
-              className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-lg"
-              variants={itemVariants}
-            >
-              <div className="flex items-center justify-between gap-6 overflow-x-auto">
-                {/* Streak Metric */}
-                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center shadow-md">
-                    <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.streak}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Day Streak</span>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
-
-                {/* XP Metric */}
-                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center shadow-md">
-                    <FontAwesomeIcon icon={faTrophy} className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalXP}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Total XP</span>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
-
-                {/* Courses Metric */}
-                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-md">
-                    <FontAwesomeIcon icon={faBookOpen} className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.totalCourses}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Courses</span>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
-
-                {/* Lessons Metric */}
-                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center shadow-md">
-                    <FontAwesomeIcon icon={faChartLine} className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-foreground dark:text-dark-foreground">{learningStats.completedLessons}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Lessons Done</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </motion.section>
+                <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
+                <span>Resume Learning</span>
+              </Link>
+            )
+          }] : [])
+        ]}
+        metrics={[
+          {
+            icon: faFire,
+            value: learningStats.streak,
+            label: "Day Streak",
+            gradientColors: "from-orange-600 to-red-600",
+            iconColors: "from-orange-400 to-red-500",
+            delay: 0.5
+          },
+          {
+            icon: faTrophy,
+            value: learningStats.totalXP.toLocaleString(),
+            label: "Total XP",
+            gradientColors: "from-blue-600 to-indigo-600",
+            iconColors: "from-blue-400 to-indigo-500",
+            delay: 0.6
+          },
+          {
+            icon: faBookOpen,
+            value: learningStats.totalCourses,
+            label: "Courses",
+            gradientColors: "from-green-600 to-emerald-600",
+            iconColors: "from-green-400 to-emerald-500",
+            delay: 0.7
+          },
+          {
+            icon: faChartLine,
+            value: learningStats.completedLessons,
+            label: "Lessons Done",
+            gradientColors: "from-purple-600 to-pink-600",
+            iconColors: "from-purple-400 to-pink-500",
+            delay: 0.8
+          }
+        ]}
+      />
 
       {/* Modern Tab Navigation */}
       <motion.div 
@@ -325,7 +372,14 @@ export function UnifiedLearningPage() {
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-gray-100 dark:border-gray-700">
+          <motion.div 
+            className="rounded-2xl p-2 shadow-xl border border-white/20 dark:border-gray-700/50 backdrop-blur-xl"
+            variants={glassVariants}
+            style={{
+              background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(124, 58, 237, 0.03) 100%)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
+            }}
+          >
             <div className="flex gap-2">
               {[
                 { id: 'all', label: 'All Courses', icon: faBookOpen },
@@ -336,10 +390,10 @@ export function UnifiedLearningPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`
-                    flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-300
+                    flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden
                     ${activeTab === tab.id 
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-[1.02]' 
+                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-700/50 hover:backdrop-blur-sm hover:scale-[1.01]'
                     }
                   `}
                 >
@@ -348,7 +402,7 @@ export function UnifiedLearningPage() {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </motion.div>
 
@@ -403,10 +457,10 @@ export function UnifiedLearningPage() {
                       className="block h-full"
                     >
                       <div className={`
-                        h-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border
+                        h-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border group
                         ${course.type === 'essential' 
-                          ? 'border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600' 
-                          : 'border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600'
+                          ? 'border-emerald-200/50 dark:border-emerald-700/50 hover:border-emerald-400/70 dark:hover:border-emerald-500/70 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10' 
+                          : 'border-purple-200/50 dark:border-purple-700/50 hover:border-purple-400/70 dark:hover:border-purple-500/70 hover:bg-purple-50/30 dark:hover:bg-purple-900/10'
                         }
                       `}>
                         {/* Course Header */}
@@ -440,13 +494,24 @@ export function UnifiedLearningPage() {
                                   </span>
                                 )}
                               </div>
-                              <h3 className="text-lg font-bold text-foreground dark:text-dark-foreground line-clamp-2 mb-2">
+                              <motion.h3 
+                                className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-200"
+                                style={{
+                                  fontVariationSettings: "'wght' 600",
+                                  fontSize: "clamp(1.25rem, 2vw, 1.5rem)", // Design system text-title
+                                  lineHeight: "1.3"
+                                }}
+                              >
                                 {course.title}
-                              </h3>
+                              </motion.h3>
                             </div>
                           </div>
                           
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
+                          <p className="text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed" style={{
+                            fontSize: "1rem", // Design system text-body
+                            fontWeight: "400",
+                            lineHeight: "1.6"
+                          }}>
                             {course.description}
                           </p>
                         </div>
@@ -473,16 +538,24 @@ export function UnifiedLearningPage() {
                                 </div>
                                 <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                   <motion.div 
-                                    className={`h-full ${
+                                    className={`h-full rounded-full ${
                                       course.type === 'essential' 
                                         ? 'bg-gradient-to-r from-emerald-500 to-green-500'
                                         : 'bg-gradient-to-r from-purple-500 to-indigo-500'
                                     }`}
-                                    initial={{ width: 0 }}
+                                    initial={{ width: 0, scaleX: 0 }}
                                     animate={{ 
-                                      width: `${progressPercentage}%` 
+                                      width: `${progressPercentage}%`,
+                                      scaleX: 1
                                     }}
-                                    transition={{ duration: 1, delay: 0.5 }}
+                                    transition={{ 
+                                      duration: 1.2, 
+                                      delay: 0.5,
+                                      ease: [0.25, 0.8, 0.5, 1] // Structured Expression timing
+                                    }}
+                                    style={{
+                                      transformOrigin: "left center"
+                                    }}
                                   />
                                 </div>
                               </div>
@@ -611,16 +684,14 @@ export function UnifiedLearningPage() {
   
                 {/* Chat Interface */}
                  <div className="flex-1 h-full overflow-hidden">
-                 <FinancialEducatorChatInterface 
-                    initialPrompt={selectedPrompt}
-                    onPromptUsed={() => setSelectedPrompt(null)}
-                  />
+                 <FinancialEducatorChatInterface />
                  </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>, document.body)
       }
-    </motion.div>
+      </motion.div>
+    </>
   );
 }

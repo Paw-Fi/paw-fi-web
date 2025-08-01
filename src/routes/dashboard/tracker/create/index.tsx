@@ -270,7 +270,6 @@ function GoalCreationSuccess({
         <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
           Your AI-powered strategy is ready with {goal.milestones?.length || 0} smart milestones 
           to help you achieve your goal of ${typeof goal.goal?.target_amount === 'number' ? goal.goal.target_amount.toLocaleString() : 'a certain amount'}.
-
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

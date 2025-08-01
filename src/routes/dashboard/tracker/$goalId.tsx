@@ -791,6 +791,11 @@ function GoalDetail() {
                 onOptimisticUpdate={setOptimisticMilestones}
               />
             </motion.div>
+             {/* Interactive Projection Chart */}
+             <InteractiveProjectionChart 
+              goal={currentGoal} 
+              progressData={progressData}
+            />
           </div>
           
           {/* Sidebar - 2 columns */}
@@ -888,11 +893,7 @@ function GoalDetail() {
               </div>
             </motion.div>
             
-            {/* Interactive Projection Chart */}
-            <InteractiveProjectionChart 
-              goal={currentGoal} 
-              progressData={progressData}
-            />
+           
             
             {/* Metrics Overview */}
             <motion.div
@@ -941,6 +942,7 @@ function GoalDetail() {
                 )}
               </AnimatePresence>
             </motion.div>
+            
           </div>
         </div>
 

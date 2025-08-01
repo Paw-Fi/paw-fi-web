@@ -2,7 +2,7 @@
 // This file contains the configuration for different goal types used in the goal creation flow
 
 export interface GoalTypeConfig {
-  id: string;
+  id: GoalType;
   name: string;
   description: string;
   color: string;

@@ -101,8 +101,8 @@ function CreateGoalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-900/50 dark:to-gray-900 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-5xl">
+    <div className="h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-900/50 dark:to-gray-900 p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-7xl">
         <AnimatePresence mode="wait">
           <motion.div
             key={state.currentStep}
@@ -114,12 +114,6 @@ function CreateGoalPage() {
             {renderStep()}
           </motion.div>
         </AnimatePresence>
-      </div>
-      <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-        <Button onClick={handleBack} variant="ghost" className="text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/10">
-          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-          {state.currentStep === 'goal_type_selection' ? 'Back to Tracker' : 'Back'}
-        </Button>
       </div>
     </div>
   );
