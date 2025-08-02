@@ -67,7 +67,9 @@ import { ProgressUpdater } from "@/components/goal-tracker/goal-detail/ProgressU
 import { MilestonesList } from "@/components/goal-tracker/goal-detail/MilestonesList";
 import { GoalMetrics } from "@/components/goal-tracker/goal-detail/GoalMetrics";
 import { AdjustTimelineModal } from "@/components/goal-tracker/goal-detail/AdjustTimelineModal";
+import { GoalInsights } from "@/components/goal-tracker/goal-detail/GoalInsights";
 import { useState, useEffect, useRef, useOptimistic } from "react";
+import { useUserActivities } from "@/hooks/useUserActivities";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/dashboard/tracker/$goalId")({
   loader: ({ params }) => {
     const { goalId } = params;
     // Assuming you have a way to fetch goal details by ID
-    // This is a placeholder, replace with actual data fetching logic if needed
+    // Goal data for SEO and metadata
     const goal = { 
       id: goalId, 
       title: "My Financial Goal", 
@@ -141,37 +143,65 @@ export const Route = createFileRoute("/dashboard/tracker/$goalId")({
   },
 });
 
+// Animated Number Component - moved outside to prevent hooks violation
+function AnimatedNumber({ value, prefix = '', suffix = '', className = '', isAnimated }: { 
+  value: number; 
+  prefix?: string; 
+  suffix?: string; 
+  className?: string;
+  isAnimated: boolean;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+  
+  useEffect(() => {
+    if (isAnimated) {
+      const duration = 1000;
+      const steps = 60;
+      const stepValue = value / steps;
+      let currentStep = 0;
+      
+      const timer = setInterval(() => {
+        currentStep++;
+        setDisplayValue(Math.round(stepValue * currentStep));
+        
+        if (currentStep >= steps) {
+          setDisplayValue(value);
+          clearInterval(timer);
+        }
+      }, duration / steps);
+      
+      return () => clearInterval(timer);
+    } else {
+      setDisplayValue(value);
+    }
+  }, [value, isAnimated]);
+  
+  return (
+    <span className={className}>
+      {prefix}{displayValue.toLocaleString()}{suffix}
+    </span>
+  );
+}
+
 function GoalDetail() {
   const { goalId } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [showTips, setShowTips] = useState(false);
-  const [showSolutionsModal, setShowSolutionsModal] = useState(false);
-  const [isAdjustTimelineModalOpen, setAdjustTimelineModalOpen] = useState(false);
-  const [showStrategyModal, setShowStrategyModal] = useState(false);
+  // Main UI state
+  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'playground' | 'activity'>('overview');
+  const [showTrackerModal, setShowTrackerModal] = useState(false);
+  const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | 'milestones'>('activity');
+  const [showAdjustTimelineModal, setShowAdjustTimelineModal] = useState(false);
   const [showAllInsightsModal, setShowAllInsightsModal] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
-  const [editedDescription, setEditedDescription] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  const [showGoalMenu, setShowGoalMenu] = useState(false);
+  const [showEditGoalModal, setShowEditGoalModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUpdateProgressModal, setShowUpdateProgressModal] = useState(false);
+  
+  // Animation states
+  const [numbersAnimated, setNumbersAnimated] = useState(false);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowActionsMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
   
   const { 
     goal, 
@@ -185,15 +215,15 @@ function GoalDetail() {
     refetch
   } = useGoal(goalId, user?.id);
 
-  // Optimistic state for goal updates
+  // Optimistic state for goal updates - always called, even with null data
   const [optimisticGoal, setOptimisticGoal] = useOptimistic(
-    goal,
+    goal || null,
     (state, newGoal) => ({ ...state, ...newGoal })
   );
 
-  // Optimistic state for milestones
+  // Optimistic state for milestones - always called, even with empty array
   const [optimisticMilestones, setOptimisticMilestones] = useOptimistic(
-    milestones,
+    milestones || [],
     (state, action) => {
       switch (action.type) {
         case 'update':
@@ -208,9 +238,9 @@ function GoalDetail() {
     }
   );
 
-  // Optimistic state for insights
+  // Optimistic state for insights - always called, even with empty array
   const [optimisticInsights, setOptimisticInsights] = useOptimistic(
-    insights,
+    insights || [],
     (state, action) => {
       switch (action.type) {
         case 'update':
@@ -224,131 +254,27 @@ function GoalDetail() {
       }
     }
   );
+  
+  // Trigger number animation on mount - always called
+  useEffect(() => {
+    const timer = setTimeout(() => setNumbersAnimated(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Early returns AFTER all hooks are called
+  if (isLoading) {
+    return <GoalDetailSkeleton />;
+  }
+
+  if (error || !goal) {
+    return <GoalNotFound onBack={() => navigate({ to: '/dashboard/tracker' })} />;
+  }
 
   // Use optimistic data or fallback to real data
   const currentGoal = optimisticGoal || goal;
   const currentMilestones = optimisticMilestones || milestones;
   const currentInsights = optimisticInsights || insights;
 
-  if (isLoading) {
-    return <GoalDetailSkeleton />;
-  }
-
-  if (error || !currentGoal) {
-    return <GoalNotFound onBack={() => navigate({ to: '/dashboard/tracker' })} />;
-  }
-
-  const handleDeleteGoal = async () => {
-    // Optimistically mark goal as deleted (we'll navigate away)
-    setOptimisticGoal({ ...currentGoal, status: 'deleted' });
-    
-    try {
-      await deleteGoal();
-      navigate({ to: '/dashboard/tracker' });
-    } catch (error) {
-      console.error('Failed to delete goal:', error);
-      // Revert optimistic update by refetching
-      refetch();
-      // Show error toast to user
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete goal';
-      console.error('Delete failed:', errorMessage);
-    }
-  };
-
-  const handleToggleStatus = async () => {
-    const newStatus = currentGoal.status === 'active' ? 'paused' : 'active';
-    
-    // Optimistically update the UI
-    setOptimisticGoal({ status: newStatus });
-    
-    try {
-      await updateGoal({ status: newStatus });
-    } catch (error) {
-      console.error('Failed to toggle status:', error);
-      // Revert optimistic update by refetching
-      refetch();
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update goal status';
-      console.error('Status toggle failed:', errorMessage);
-    }
-  };
-
-  const handleEditTitle = () => {
-    setEditedTitle(currentGoal.title);
-    setIsEditingTitle(true);
-    setShowActionsMenu(false);
-    setTimeout(() => titleInputRef.current?.focus(), 50);
-  };
-
-  const handleSaveTitle = async () => {
-    if (editedTitle.trim() === currentGoal.title || !editedTitle.trim()) {
-      setIsEditingTitle(false);
-      return;
-    }
-
-    // Optimistically update the UI
-    setOptimisticGoal({ title: editedTitle.trim() });
-    
-    try {
-      await updateGoal({ title: editedTitle.trim() });
-      setIsEditingTitle(false);
-    } catch (error) {
-      console.error('Failed to update title:', error);
-      // Revert optimistic update by refetching
-      refetch();
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update goal title';
-      console.error('Title update failed:', errorMessage);
-      setIsEditingTitle(false);
-    }
-  };
-
-  const handleCancelEditTitle = () => {
-    setEditedTitle(currentGoal.title);
-    setIsEditingTitle(false);
-  };
-
-  const handleEditDescription = () => {
-    setEditedDescription(currentGoal.description || '');
-    setIsEditingDescription(true);
-    setTimeout(() => descriptionInputRef.current?.focus(), 50);
-  };
-
-  const handleSaveDescription = async () => {
-    const trimmedDescription = editedDescription.trim();
-    if (trimmedDescription === (currentGoal.description || '')) {
-      setIsEditingDescription(false);
-      return;
-    }
-
-    // Optimistically update the UI
-    setOptimisticGoal({ description: trimmedDescription });
-    
-    try {
-      await updateGoal({ description: trimmedDescription });
-      setIsEditingDescription(false);
-    } catch (error) {
-      console.error('Failed to update description:', error);
-      // Revert optimistic update by refetching
-      refetch();
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update goal description';
-      console.error('Description update failed:', errorMessage);
-      setIsEditingDescription(false);
-    }
-  };
-
-  const handleCancelEditDescription = () => {
-    setEditedDescription(currentGoal.description || '');
-    setIsEditingDescription(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent, saveHandler: () => void, cancelHandler: () => void) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      saveHandler();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelHandler();
-    }
-  };
 
   // Calculate key metrics
   const progressData = {
@@ -363,6 +289,27 @@ function GoalDetail() {
 
   const savingsGap = progressData.requiredMonthly - progressData.monthlyCapacity;
   const isOnTrack = savingsGap <= 0;
+  
+  // Toggle step expansion
+  const toggleStepExpansion = (stepId: string) => {
+    const newExpanded = new Set(expandedSteps);
+    if (newExpanded.has(stepId)) {
+      newExpanded.delete(stepId);
+    } else {
+      newExpanded.add(stepId);
+    }
+    setExpandedSteps(newExpanded);
+  };
+
+  // Handle goal deletion
+  const handleDeleteGoal = async () => {
+    try {
+      await deleteGoal();
+      navigate({ to: '/dashboard/tracker' });
+    } catch (error) {
+      console.error('Failed to delete goal:', error);
+    }
+  };
   
   // Categorize insights by priority and type
   const criticalInsights = (currentInsights || []).filter(insight => insight.priority === 'high');
@@ -382,586 +329,681 @@ function GoalDetail() {
   
   const progressStage = getProgressStage();
 
+  // Animation effect moved above early returns
+
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-4 pb-6">
-      {/* Compact Header */}
-      <motion.div   
-        className=" mt-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm"
-      >
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
-          <div className="flex items-center justify-between">
-              
-              <div className="flex items-center gap-3">              
-                  {isEditingTitle ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        ref={titleInputRef}
-                        type="text"
-                        value={editedTitle}
-                        onChange={(e) => setEditedTitle(e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, handleSaveTitle, handleCancelEditTitle)}
-                        onBlur={handleSaveTitle}
-                        className="font-semibold text-gray-900 dark:text-white text-sm bg-transparent border-b border-blue-500 focus:outline-none min-w-0 flex-1"
-                        placeholder="Goal title"
-                      />
-                      <button
-                        onClick={handleSaveTitle}
-                        className="text-green-600 hover:text-green-700 p-1"
-                      >
-                        <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={handleCancelEditTitle}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                      >
-                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <h1 
-                      className="font-semibold text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      onClick={handleEditTitle}
-                      title="Click to edit title"
-                    >
-                      {currentGoal.title}
-                    </h1>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      currentGoal.status === 'active' 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        currentGoal.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                      }`} />
-                      {currentGoal.status === 'active' ? 'Active' : 'Paused'}
-                    </span>
-                    {!isOnTrack && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-medium">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
-                        Attention
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mr-4">
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-gray-900 dark:text-white">${progressData.currentAmount.toLocaleString()}</span>
-                  <span>/</span>
-                  <span>${progressData.targetAmount.toLocaleString()}</span>
-                </div>
-                <div className="w-20 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-1000" 
-                    style={{ width: `${progressData.progressPercentage}%` }}
-                  />
-                </div>
-                <span className="font-medium text-gray-900 dark:text-white">{progressData.progressPercentage.toFixed(1)}%</span>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleStatus}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Hero Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 mb-8">
+          {/* Header with Actions */}
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
+                {currentGoal.title}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+                {currentGoal.description || 'Working towards your financial independence goal'}
+              </p>
+            </div>
+            
+            <div className="relative ml-6">
+              <button
+                onClick={() => setShowGoalMenu(!showGoalMenu)}
+                className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
+                aria-label="Goal options"
               >
                 <FontAwesomeIcon 
-                  icon={currentGoal.status === 'active' ? faPause : faPlay} 
-                  className="w-4 h-4" 
-                />
-              </Button>
-              
-              <div className="relative" ref={dropdownRef}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowActionsMenu(!showActionsMenu)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                >
-                  <FontAwesomeIcon icon={faEllipsisV} className="w-4 h-4" />
-                </Button>
-                
-                <AnimatePresence>
-                  {showActionsMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
-                    >
-                      <button
-                        onClick={handleEditTitle}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4 mr-2" />
-                        Edit Title
-                      </button>
-                      <button
-                        onClick={handleEditDescription}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4 mr-2" />
-                        Edit Description
-                      </button>
-                      <div className="border-t border-gray-200 dark:border-gray-700" />
-                      <button
-                        onClick={() => {
-                          setShowDeleteModal(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4 mr-2" />
-                        Delete Goal
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Hero Stats Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm overflow-hidden"
-        >
-          <div className="p-6">
-            {/* Title and Description - More Compact */}
-            <div className="mb-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
-                    {currentGoal.goal_type.replace('_', ' ')}
-                  </p>
-                  {isEditingDescription ? (
-                    <div className="flex flex-col gap-2">
-                      <textarea
-                        ref={descriptionInputRef}
-                        value={editedDescription}
-                        onChange={(e) => setEditedDescription(e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, handleSaveDescription, handleCancelEditDescription)}
-                        onBlur={handleSaveDescription}
-                        className="text-gray-700 dark:text-gray-300 leading-relaxed bg-transparent border border-blue-500 rounded-lg p-2 focus:outline-none resize-none"
-                        placeholder="Goal description"
-                        rows={3}
-                      />
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleSaveDescription}
-                          className="text-green-600 hover:text-green-700 p-1"
-                        >
-                          <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={handleCancelEditDescription}
-                          className="text-gray-400 hover:text-gray-600 p-1"
-                        >
-                          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p 
-                      className="text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      onClick={handleEditDescription}
-                      title="Click to edit description"
-                    >
-                      {currentGoal.description || 'Click to add a description'}
-                    </p>
-                  )}
-                </div>
-                {isOnTrack ? (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium">
-                    <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
-                    On Track
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium">
-                    <FontAwesomeIcon icon={faExclamationTriangle} className="w-4 h-4" />
-                    Behind Target
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Inline Key Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-              <div className="lg:col-span-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <FontAwesomeIcon icon={faDollarSign} className="w-3 h-3 text-green-600 dark:text-green-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Progress</span>
-                </div>
-                <div className="text-xl font-bold text-gray-900 dark:text-white">
-                  ${progressData.currentAmount.toLocaleString()}
-                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
-                    / ${progressData.targetAmount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressData.progressPercentage}%` }}
-                    transition={{ duration: 1, delay: 0.2 }}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Timeline</span>
-                  <Tooltip content={`Target date: ${new Date(currentGoal.target_date).toLocaleDateString()}`}>
-                    <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-gray-400" />
-                  </Tooltip>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  {Math.floor(progressData.daysLeft / 365)}y {Math.floor((progressData.daysLeft % 365) / 30)}m
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {progressData.daysLeft} days left
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <FontAwesomeIcon icon={faBullseye} className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Complete</span>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  {progressData.progressPercentage.toFixed(1)}%
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  ${(progressData.targetAmount - progressData.currentAmount).toLocaleString()} to go
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <FontAwesomeIcon icon={faUpLong} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Monthly</span>
-                  <Tooltip content="Required monthly savings vs your capacity">
-                    <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-gray-400" />
-                  </Tooltip>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  ${progressData.requiredMonthly.toLocaleString()}
-                </div>
-                <div className={`text-xs ${
-                  savingsGap <= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {savingsGap <= 0 ? 'Within capacity' : `$${savingsGap} gap`}
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <FontAwesomeIcon icon={faFlag} className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Milestones</span>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  {completedMilestones}/{currentMilestones?.length || 0}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {currentMilestones?.length ? Math.round((completedMilestones / currentMilestones.length) * 100) : 0}% done
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-      {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Primary Content - 3 columns */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Critical Alert - Compact */}
-            {!isOnTrack && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-amber-900 dark:text-amber-100 text-sm">
-                      Monthly Savings Gap: ${savingsGap}/month
-                    </h3>
-                    <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
-                      Need ${progressData.requiredMonthly}/month, capacity is ${progressData.monthlyCapacity}/month
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => setShowSolutionsModal(true)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1"
-                    >
-                      <FontAwesomeIcon icon={faLightbulb} className="w-3 h-3 mr-1" />
-                      Solutions
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setAdjustTimelineModalOpen(true)}
-                      className="text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/20 px-2"
-                    >
-                      Adjust Timeline
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Next Action - Inline */}
-            {nextMilestone && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon 
-                        icon={nextMilestone.milestone_type === 'action' ? faRocket : 
-                              nextMilestone.milestone_type === 'habit' ? faClock : faBullseye} 
-                        className="w-4 h-4 text-blue-600 dark:text-blue-400" 
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                          {nextMilestone.title}
-                        </h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          nextMilestone.priority === 'critical' 
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                            : nextMilestone.priority === 'high'
-                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        }`}>
-                          {nextMilestone.priority}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                        <span>Next {nextMilestone.milestone_type}</span>
-                        <span>Due {new Date(nextMilestone.due_date).toLocaleDateString()}</span>
-                        {nextMilestone.target_amount && (
-                          <span>${nextMilestone.target_amount.toLocaleString()}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3">
-                    Start
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Progress Update - Compact */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <ProgressUpdater 
-                goal={currentGoal} 
-                onUpdate={refetch} 
-                onOptimisticUpdate={setOptimisticGoal}
-              />
-            </motion.div>
-
-            {/* Milestones - Streamlined */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <MilestonesList 
-                milestones={currentMilestones || []}
-                goalId={goalId}
-                onMilestoneUpdate={refetch}
-                onOptimisticUpdate={setOptimisticMilestones}
-              />
-            </motion.div>
-             {/* Interactive Projection Chart */}
-             <InteractiveProjectionChart 
-              goal={currentGoal} 
-              progressData={progressData}
-            />
-          </div>
-          
-          {/* Sidebar - 2 columns */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* AI Strategy - Compact */}
-            {currentGoal.ai_generated_strategy && (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                    <FontAwesomeIcon icon={faBrain} className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                      AI Strategy
-                    </h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      Personalized plan
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg mb-3">
-                  <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {currentGoal.ai_generated_strategy.split('.')[0]}.
-                  </p>
-                </div>
-                
-                <Button
-                  size="sm"
-                  onClick={() => setShowStrategyModal(true)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
-                >
-                  View Full Strategy
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Key Insights - Compact */}
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                    Key Insights
-                  </h3>
-                  {criticalInsights.length > 0 && (
-                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
-                      {criticalInsights.length}
-                    </span>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowAllInsightsModal(true)}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 px-2 py-1"
-                >
-                  View All ({(currentInsights || []).length})
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                {criticalInsights.slice(0, 3).map((insight, index) => (
-                  <Tooltip key={insight.id} content={insight.content}>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg cursor-help">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          insight.insight_type === 'savings' ? 'bg-red-500' :
-                          insight.insight_type === 'timeline' ? 'bg-amber-500' :
-                          insight.insight_type === 'strategy' ? 'bg-blue-500' :
-                          'bg-gray-500'
-                        }`} />
-                        <h4 className="font-medium text-xs text-gray-900 dark:text-white flex-1">
-                          {insight.title}
-                        </h4>
-                        <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-gray-400" />
-                      </div>
-                    </div>
-                  </Tooltip>
-                ))}
-                {criticalInsights.length === 0 && (
-                  <div className="text-center py-4">
-                    <FontAwesomeIcon icon={faMagicWandSparkles} className="w-6 h-6 text-gray-400 mb-2" />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">No critical insights</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-            
-           
-            
-            {/* Metrics Overview */}
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              <GoalMetrics goal={currentGoal} milestones={currentMilestones || []} />
-            </motion.div>
-
-            {/* Quick Tips - Collapsible */}
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-            >
-              <button 
-                className="flex items-center justify-between w-full p-4 text-left"
-                onClick={() => setShowTips(!showTips)}
-              >
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faFire} className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                    Pro Tips
-                  </h3>
-                </div>
-                <FontAwesomeIcon 
-                  icon={showTips ? faChevronUp : faChevronDown} 
-                  className="w-3 h-3 text-gray-500 dark:text-gray-400"
+                  icon={faEllipsisV} 
+                  className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" 
                 />
               </button>
-              
+          
+              {/* Enhanced Dropdown Menu */}
               <AnimatePresence>
-                {showTips && (
+                {showGoalMenu && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="px-4 pb-4 space-y-2"
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 top-full mt-3 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
                   >
-                    <TipCard emoji="💵" title="Automate Everything" content="Set up automatic transfers on payday. Consistency beats perfection." />
-                    <TipCard emoji="🎯" title="Visual Motivation" content="Keep photos of your dream home visible. Emotional connection drives success." />
-                    {currentGoal.progress_percentage < 25 && (
-                      <TipCard emoji="🚀" title="Start Small, Think Big" content="Focus on building the savings habit first. The amounts will grow naturally." />
-                    )}
+                    <div className="py-3">
+                      <button
+                        onClick={() => {
+                          setShowEditGoalModal(true);
+                          setShowGoalMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                          <FontAwesomeIcon icon={faEdit} className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Edit Goal</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Modify title and details</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDeleteConfirm(true);
+                          setShowGoalMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Delete Goal</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Permanently remove goal</div>
+                        </div>
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+          
+              {/* Click outside to close menu */}
+              {showGoalMenu && (
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowGoalMenu(false)}
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Visual Progress Section */}
+          <div className="mb-8">
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <AnimatedNumber 
+                  value={progressData.currentAmount} 
+                  prefix="$" 
+                  className="text-5xl font-bold text-gray-900 dark:text-white"
+                  isAnimated={numbersAnimated}
+                />
+                <div className="text-lg text-gray-600 dark:text-gray-400 mt-1">
+                  of <AnimatedNumber value={progressData.targetAmount} prefix="$" className="font-semibold" isAnimated={numbersAnimated} /> target
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">complete</div>
+              </div>
+            </div>
             
+            {/* Enhanced Progress Bar */}
+            <div className="relative">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                <motion.div
+                  className="bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 h-4 rounded-full relative"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressData.progressPercentage}%` }}
+                  transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                </motion.div>
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>$0</span>
+                <span>${(progressData.targetAmount / 2).toLocaleString()}</span>
+                <span>${progressData.targetAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Primary CTA */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowUpdateProgressModal(true)}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center gap-3 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              <FontAwesomeIcon icon={faArrowUp} className="w-5 h-5" />
+              Update Progress
+            </button>
+            
+            <button
+              onClick={() => setShowTrackerModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-xl font-medium flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <FontAwesomeIcon icon={faBullseye} className="w-4 h-4" />
+              Tracker
+            </button>
+          </div>
+        </div>
+        
+        {/* Tabbed Interface */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex" aria-label="Goal sections">
+              {[
+                { id: 'overview', label: 'Overview', icon: faChartLine },
+                { id: 'milestones', label: 'Milestones', icon: faFlag },
+                { id: 'playground', label: 'Playground', icon: faMagicWandSparkles },
+                { id: 'activity', label: 'Activity', icon: faClock }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`group flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <FontAwesomeIcon 
+                    icon={tab.icon} 
+                    className={`w-4 h-4 transition-colors ${
+                      activeTab === tab.id 
+                        ? 'text-blue-500 dark:text-blue-400' 
+                        : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'
+                    }`} 
+                  />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Tab Content */}
+          <div className="p-8">
+            <AnimatePresence mode="wait">
+              {activeTab === 'overview' && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-8"
+                >
+                  {/* Key Metrics Card */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-blue-600 dark:text-blue-400">Days Left</div>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                        <AnimatedNumber value={progressData.daysLeft} isAnimated={numbersAnimated} />
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        {Math.floor(progressData.daysLeft / 365)} years remaining
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                          <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Progress</div>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                        <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
+                      </div>
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                        On track: {isOnTrack ? 'Yes' : 'Needs adjustment'}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                          <FontAwesomeIcon icon={faDollarSign} className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-purple-600 dark:text-purple-400">Monthly Gap</div>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                        {savingsGap > 0 ? '+' : ''}<AnimatedNumber value={Math.abs(savingsGap)} prefix="$" isAnimated={numbersAnimated} />
+                      </div>
+                      <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                        {savingsGap > 0 ? 'Increase needed' : 'Surplus available'}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-6 border border-orange-200 dark:border-orange-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <FontAwesomeIcon icon={faCalendarAlt} className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-orange-600 dark:text-orange-400">Projected Finish</div>
+                        </div>
+                      </div>
+                      <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                        {new Date(currentGoal.target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                        Target completion
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* AI Insights Section */}
+                  <GoalInsights 
+                    insights={currentInsights || []} 
+                    goal={currentGoal}
+                    onInsightUpdate={refetch}
+                    onOptimisticUpdate={(action) => setOptimisticInsights(action)}
+                  />
+                </motion.div>
+              )}
+              
+              {activeTab === 'milestones' && (
+                <motion.div
+                  key="milestones"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <MilestonesList 
+                    milestones={currentMilestones || []}
+                    goalId={goalId}
+                    onMilestoneUpdate={refetch}
+                    onOptimisticUpdate={(action) => setOptimisticMilestones(action)}
+                  />
+                </motion.div>
+              )}
+              
+              {activeTab === 'playground' && (
+                <motion.div
+                  key="playground"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faMagicWandSparkles} className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Savings Projection Playground</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Explore different scenarios and see how they affect your goal</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                        <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Playground Mode</span>
+                      </div>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        Changes here are for exploration only and won't affect your actual goal settings.
+                      </p>
+                    </div>
+                    
+                    <InteractiveProjectionChart 
+                      goal={currentGoal} 
+                      progressData={progressData}
+                    />
+                  </div>
+                </motion.div>
+              )}
+              
+              {activeTab === 'activity' && (
+                <motion.div
+                  key="activity"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faClock} className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Track your progress updates and goal modifications</p>
+                      </div>
+                    </div>
+                    
+                    <ActivityTimelineComponent goalId={goalId} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
+      {/* Next Steps - Now outside of tabs as requested in original design */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+            <FontAwesomeIcon icon={faRocket} className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Next Steps</h3>
+        </div>
+        <div className="space-y-4">
+          {/* Increase Income */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <button 
+              onClick={() => toggleStepExpansion('increase-income')}
+              className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📈</span>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Increase Your Income</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Ask for a raise of ${Math.ceil(savingsGap * 1.3)}/month (accounting for taxes)
+                  </p>
+                </div>
+              </div>
+              <FontAwesomeIcon 
+                icon={expandedSteps.has('increase-income') ? faChevronUp : faChevronDown} 
+                className="w-4 h-4 text-gray-400" 
+              />
+            </button>
+            <AnimatePresence>
+              {expandedSteps.has('increase-income') && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+                >
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <strong>Impact:</strong> High • <strong>Difficulty:</strong> Medium
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-500 mt-1">•</span>
+                        Ask for a raise of ${Math.ceil(savingsGap * 1.3)}/month (accounting for taxes)
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-500 mt-1">•</span>
+                        Start a side hustle or freelance work
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-500 mt-1">•</span>
+                        Sell unused items or rent out assets
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-500 mt-1">•</span>
+                        Pick up extra hours or overtime shifts
+                      </li>
+                    </ul>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
+          {/* Cut Expenses */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <button 
+              onClick={() => toggleStepExpansion('cut-expenses')}
+              className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">💰</span>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Cut Monthly Expenses</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Review subscriptions and cancel ${Math.ceil(Math.abs(savingsGap) * 0.3)}/month worth
+                  </p>
+                </div>
+              </div>
+              <FontAwesomeIcon 
+                icon={expandedSteps.has('cut-expenses') ? faChevronUp : faChevronDown} 
+                className="w-4 h-4 text-gray-400" 
+              />
+            </button>
+            <AnimatePresence>
+              {expandedSteps.has('cut-expenses') && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+                >
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <strong>Impact:</strong> Medium • <strong>Difficulty:</strong> Low
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        Review subscriptions and cancel ${Math.ceil(savingsGap * 0.3)}/month worth
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        Cook more meals at home instead of eating out
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        Switch to cheaper phone/internet plans
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        Reduce entertainment and shopping expenses
+                      </li>
+                    </ul>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
+          {/* Adjust Timeline */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <button 
+              onClick={() => toggleStepExpansion('adjust-timeline')}
+              className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📅</span>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Adjust Your Timeline</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Extend target date by {Math.ceil(savingsGap / progressData.monthlyCapacity * 12) || 0} months
+                  </p>
+                </div>
+              </div>
+              <FontAwesomeIcon 
+                icon={expandedSteps.has('adjust-timeline') ? faChevronUp : faChevronDown} 
+                className="w-4 h-4 text-gray-400" 
+              />
+            </button>
+            <AnimatePresence>
+              {expandedSteps.has('adjust-timeline') && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+                >
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <strong>Impact:</strong> High • <strong>Difficulty:</strong> Very Low
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300 mb-4">
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-500 mt-1">•</span>
+                        Extend target date by {Math.ceil(savingsGap / progressData.monthlyCapacity * 12)} months
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-500 mt-1">•</span>
+                        Break goal into smaller milestones
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-500 mt-1">•</span>
+                        Start with a lower target amount first
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-500 mt-1">•</span>
+                        Consider a phased approach to reaching your goal
+                      </li>
+                    </ul>
+                    <button
+                      onClick={() => setShowAdjustTimelineModal(true)}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Adjust Timeline Now
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
+          {/* Investment Strategy */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <button 
+              onClick={() => toggleStepExpansion('investment-strategy')}
+              className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📊</span>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Investment Strategy</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Invest existing savings for higher returns
+                  </p>
+                </div>
+              </div>
+              <FontAwesomeIcon 
+                icon={expandedSteps.has('investment-strategy') ? faChevronUp : faChevronDown} 
+                className="w-4 h-4 text-gray-400" 
+              />
+            </button>
+            <AnimatePresence>
+              {expandedSteps.has('investment-strategy') && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+                >
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <strong>Impact:</strong> Medium • <strong>Difficulty:</strong> Medium
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500 mt-1">•</span>
+                        Invest existing savings for higher returns
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500 mt-1">•</span>
+                        Use dollar-cost averaging for consistent growth
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500 mt-1">•</span>
+                        Consider low-cost index funds or ETFs
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500 mt-1">•</span>
+                        Automate investments to reduce required manual savings
+                      </li>
+                    </ul>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* Goal Tracker Modal */}
+      {/* Update Progress Modal */}
+      <UpdateProgressModal 
+        isOpen={showUpdateProgressModal}
+        onClose={() => setShowUpdateProgressModal(false)}
+        goal={currentGoal}
+        onProgressUpdate={updateProgress}
+        onOptimisticUpdate={setOptimisticGoal}
+      />
+      
+      <TrackerModal 
+        isOpen={showTrackerModal}
+        onClose={() => setShowTrackerModal(false)}
+        goal={currentGoal}
+        progressData={progressData}
+        milestones={currentMilestones || []}
+        activeTab={trackerActiveTab}
+        setActiveTab={setTrackerActiveTab}
+        savingsGap={savingsGap}
+        onUpdate={refetch}
+        onOptimisticUpdate={setOptimisticGoal}
+        onProgressUpdate={updateProgress}
+      />
+
+      {/* Adjust Timeline Modal */}
+      <AdjustTimelineModal 
+        isOpen={showAdjustTimelineModal}
+        onClose={() => setShowAdjustTimelineModal(false)}
+        goal={currentGoal}
+        onGoalUpdate={updateGoal}
+        onOptimisticUpdate={setOptimisticGoal}
+      />
+
+      {/* All Insights Modal */}
+      <AllInsightsModal 
+        isOpen={showAllInsightsModal}
+        onClose={() => setShowAllInsightsModal(false)}
+        insights={currentInsights || []}
+        goal={currentGoal}
+        onInsightUpdate={refetch}
+        onOptimisticUpdate={(action) => setOptimisticInsights(action)}
+      />
+
+      {/* Edit Goal Modal */}
+      <EditGoalModal
+        isOpen={showEditGoalModal}
+        onClose={() => setShowEditGoalModal(false)}
+        goal={currentGoal}
+        onGoalUpdate={updateGoal}
+        onOptimisticUpdate={setOptimisticGoal}
+      />
+
       {/* Delete Confirmation Modal */}
       <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
         title="Delete Goal"
+        size="small"
       >
         <div className="p-6">
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Are you sure you want to delete "<strong>{currentGoal.title}</strong>"? 
-            This action cannot be undone and will permanently remove all associated milestones and progress data.
-          </p>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <FontAwesomeIcon icon={faTrash} className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Delete "{currentGoal.title}"?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This action cannot be undone. All milestones and progress will be permanently deleted.
+              </p>
+            </div>
+          </div>
           
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end gap-3">
             <Button
+              onClick={() => setShowDeleteConfirm(false)}
               variant="outline"
-              onClick={() => setShowDeleteModal(false)}
             >
               Cancel
             </Button>
@@ -974,42 +1016,192 @@ function GoalDetail() {
           </div>
         </div>
       </Modal>
-
-      {/* Solutions Modal */}
-            <SolutionsModal 
-        isOpen={showSolutionsModal}
-        onClose={() => setShowSolutionsModal(false)}
-        savingsGap={savingsGap}
-        goal={currentGoal}
-        progressData={progressData}
-        onAdjustTimeline={() => setAdjustTimelineModalOpen(true)}
-      />
-
-      {/* Adjust Timeline Modal */}
-      <AdjustTimelineModal 
-        isOpen={isAdjustTimelineModalOpen}
-        onClose={() => setAdjustTimelineModalOpen(false)}
-        goal={currentGoal}
-        onOptimisticUpdate={setOptimisticGoal}
-      />
-
-      {/* Strategy Modal */}
-      <StrategyModal 
-        isOpen={showStrategyModal}
-        onClose={() => setShowStrategyModal(false)}
-        goal={currentGoal}
-      />
-
-      {/* All Insights Modal */}
-      <AllInsightsModal 
-        isOpen={showAllInsightsModal}
-        onClose={() => setShowAllInsightsModal(false)}
-        insights={currentInsights || []}
-        onOptimisticUpdate={setOptimisticInsights}
-        goal={currentGoal}
-        onInsightUpdate={refetch}
-      />
     </div>
+    </div>
+  );
+}
+
+function EditGoalModal({ 
+  isOpen, 
+  onClose, 
+  goal,
+  onGoalUpdate,
+  onOptimisticUpdate
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  goal: any;
+  onGoalUpdate: any;
+  onOptimisticUpdate: any;
+}) {
+  const [formData, setFormData] = useState({
+    title: goal?.title || '',
+    description: goal?.description || '',
+    target_amount: goal?.target_amount || 0,
+    target_date: goal?.target_date ? new Date(goal.target_date).toISOString().split('T')[0] : ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Update form data when goal changes
+  useEffect(() => {
+    if (goal) {
+      setFormData({
+        title: goal.title || '',
+        description: goal.description || '',
+        target_amount: goal.target_amount || 0,
+        target_date: goal.target_date ? new Date(goal.target_date).toISOString().split('T')[0] : ''
+      });
+    }
+  }, [goal]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Optimistic update
+      const optimisticUpdates = {
+        ...formData,
+        target_amount: Number(formData.target_amount),
+        updated_at: new Date().toISOString()
+      };
+      
+      onOptimisticUpdate(optimisticUpdates);
+
+      // API call
+      await onGoalUpdate({
+        title: formData.title,
+        description: formData.description,
+        target_amount: Number(formData.target_amount),
+        target_date: formData.target_date
+      });
+
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update goal');
+      // Revert optimistic update by refetching
+      window.location.reload();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit Goal"
+      size="medium"
+    >
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Goal Title
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+            placeholder="Enter goal title"
+            required
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Description
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white resize-none"
+            rows={3}
+            placeholder="Describe your goal"
+          />
+        </div>
+
+        {/* Target Amount */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Target Amount
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">
+              $
+            </span>
+            <input
+              type="number"
+              value={formData.target_amount}
+              onChange={(e) => handleInputChange('target_amount', parseFloat(e.target.value) || 0)}
+              className="w-full pl-8 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+              placeholder="0"
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Target Date */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Target Date
+          </label>
+          <input
+            type="date"
+            value={formData.target_date}
+            onChange={(e) => handleInputChange('target_date', e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+            required
+          />
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="outline"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isSubmitting ? (
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />
+                Updating...
+              </div>
+            ) : (
+              'Update Goal'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -1493,7 +1685,7 @@ function StrategyModal({
               <FontAwesomeIcon icon={faCopy} className="w-4 h-4 mr-2" />
               Copy Strategy
             </Button>
-            <Button
+            {/* <Button
               onClick={() => {
                 // Create a comprehensive print window with goal details
                 const printContent = `
@@ -1687,7 +1879,7 @@ function StrategyModal({
             >
               <FontAwesomeIcon icon={faPrint} className="w-4 h-4 mr-2" />
               Print Strategy
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
@@ -2014,7 +2206,7 @@ function AllInsightsModal({
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  All AI Insights
+                  All of Moneko's Insights
                 </h1>
                 {highPriorityCount > 0 && (
                   <div className="flex items-center gap-1 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
@@ -2025,12 +2217,12 @@ function AllInsightsModal({
                 {insights.filter(i => i.is_ai_generated).length > 0 && (
                   <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                     <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
-                    AI Powered
+                    Moneko
                   </div>
                 )}
               </div>
               <p className="text-gray-600 dark:text-gray-400">
-                Comprehensive view of all insights for "{goal.title}"
+                Everything Moneko has learned about "{goal.title}"
               </p>
             </div>
           </div>
@@ -2053,7 +2245,7 @@ function AllInsightsModal({
             ) : (
               <FontAwesomeIcon icon={faRocket} className="w-4 h-4" />
             )}
-            <span>{isGeneratingNew ? 'Generating...' : 'Generate New'}</span>
+            <span>{isGeneratingNew ? 'Moneko is thinking...' : 'Ask Moneko for More'}</span>
           </motion.button>
         </div>
 
@@ -2128,10 +2320,10 @@ function AllInsightsModal({
               <FontAwesomeIcon icon={faLightbulb} className="w-10 h-10 text-gray-400" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              No Insights Available
+              Moneko Hasn't Shared Insights Yet
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Generate AI insights to get personalized recommendations for your goal.
+              Let Moneko analyze your goal and provide personalized recommendations to help you succeed.
             </p>
             <motion.button
               onClick={generateNewInsights}
@@ -2141,7 +2333,7 @@ function AllInsightsModal({
               className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
             >
               <FontAwesomeIcon icon={faRocket} className="w-4 h-4" />
-              Generate First Insights
+              Get Moneko's First Insights
             </motion.button>
           </div>
         ) : (
@@ -2185,7 +2377,7 @@ function AllInsightsModal({
                             {insight.is_ai_generated && (
                               <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
                                 <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
-                                AI
+                                Moneko
                               </div>
                             )}
                           </div>
@@ -2246,7 +2438,7 @@ function AllInsightsModal({
                           <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                AI Confidence Score
+                                Moneko's Confidence
                               </span>
                               <span className="text-sm font-bold text-gray-900 dark:text-white">
                                 {Math.round(insight.ai_confidence_score * 100)}%
@@ -2649,6 +2841,659 @@ function TipCard({ emoji, title, content }: { emoji: string; title: string; cont
       <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
         {content}
       </p>
+    </div>
+  );
+}
+
+// Tracker Modal Component
+function TrackerModal({ 
+  isOpen, 
+  onClose, 
+  goal,
+  progressData,
+  milestones,
+  activeTab,
+  setActiveTab,
+  savingsGap,
+  onUpdate,
+  onOptimisticUpdate,
+  onProgressUpdate
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  goal: any;
+  progressData: any;
+  milestones: any[];
+  activeTab: 'activity' | 'milestones';
+  setActiveTab: (tab: 'activity' | 'milestones') => void;
+  savingsGap: number;
+  onUpdate: () => void;
+  onOptimisticUpdate: (updates: any) => void;
+  onProgressUpdate: any;
+}) {
+  const [showAIAdvice, setShowAIAdvice] = useState(true);
+  const [currentAdviceIndex, setCurrentAdviceIndex] = useState(0);
+  const [showAddFundsForm, setShowAddFundsForm] = useState(false);
+  const [addFundsAmount, setAddFundsAmount] = useState('');
+  const [isAddingFunds, setIsAddingFunds] = useState(false);
+  
+  // Get real activities and filter for this goal
+  const { activities, isLoading: activitiesLoading } = useUserActivities();
+  const goalActivities = activities.filter(activity => activity.goalId === goal.id);
+
+  // Handle adding funds
+  const handleAddFunds = async () => {
+    if (!addFundsAmount || isAddingFunds) return;
+    
+    const amount = parseFloat(addFundsAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    setIsAddingFunds(true);
+    try {
+      await onProgressUpdate({
+        goalId: goal.id,
+        newAmount: (goal.current_amount || 0) + amount,
+        source: 'manual_update'
+      });
+      
+      setAddFundsAmount('');
+      setShowAddFundsForm(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Failed to add funds:', error);
+    } finally {
+      setIsAddingFunds(false);
+    }
+  };
+  
+  const aiAdviceMessages = [
+    {
+      message: `You'll need to save $${Math.abs(savingsGap)}/month to stay on track, and right now you're at $${progressData.monthlyCapacity}/month. We've got some work to do!`,
+      type: savingsGap > 0 ? 'warning' : 'success'
+    },
+    {
+      message: "Great progress! Your consistent saving habits are building a strong foundation for your financial future.",
+      type: 'success'
+    },
+    {
+      message: "Consider automating your savings to make reaching your goal even easier!",
+      type: 'tip'
+    }
+  ];
+
+  // Transform activities to display format
+  const recentActivities = goalActivities.slice(0, 10).map(activity => ({
+    type: activity.action,
+    date: new Date(activity.created_at).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    }),
+    amount: activity.metadata?.amount || 0,
+    icon: activity.action.toLowerCase().includes('deposit') ? faRocket : faDollarSign
+  }));
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="" size="large">
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+              Goal Tracker
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* AI Advice Section */}
+        {showAIAdvice && (
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/30">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={faBrain} className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {aiAdviceMessages[currentAdviceIndex].message}
+                </p>
+                
+                {/* Pagination dots */}
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  {aiAdviceMessages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentAdviceIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        index === currentAdviceIndex 
+                          ? 'bg-indigo-500' 
+                          : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAIAdvice(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Current Saving */}
+        <div className="px-6 py-4">
+          <div className="mb-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Current Saving</span>
+          </div>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              ${progressData.currentAmount.toLocaleString()}
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              ${(progressData.targetAmount - progressData.currentAmount).toLocaleString()} to go
+            </span>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <motion.div
+              className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-2 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressData.progressPercentage}%` }}
+              transition={{ duration: 1 }}
+            />
+          </div>
+        </div>
+
+        {/* Countdown Cards */}
+        <div className="px-6 py-4">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Days Until Target */}
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FontAwesomeIcon icon={faHome} className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {progressData.daysLeft} Days
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Until {goal.goal_type === 'house' ? 'Home Purchase' : 'Goal Achievement'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Progress Percentage */}
+            <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {progressData.progressPercentage.toFixed(2)}%
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Progress to Goal
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="px-6">
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'activity'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              Activity
+            </button>
+            <button
+              onClick={() => setActiveTab('milestones')}
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'milestones'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              Milestones
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="px-6 py-4 max-h-80 overflow-y-auto">
+          {activeTab === 'activity' ? (
+            <div className="space-y-3">
+              {activitiesLoading ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faClock} className="w-8 h-8 mb-2 animate-spin" />
+                  <p className="text-sm">Loading activities...</p>
+                </div>
+              ) : recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <FontAwesomeIcon 
+                          icon={activity.icon} 
+                          className="w-4 h-4 text-gray-600 dark:text-gray-400" 
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {activity.type}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {activity.date}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      ${activity.amount.toFixed(2)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faRocket} className="w-8 h-8 mb-2" />
+                  <p className="text-sm">No activities yet</p>
+                  <p className="text-xs">Activity for this goal will appear here</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {milestones && milestones.length > 0 ? (
+                milestones.map((milestone) => (
+                  <div key={milestone.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        milestone.status === 'completed' 
+                          ? 'bg-green-100 dark:bg-green-900/30' 
+                          : 'bg-gray-100 dark:bg-gray-700'
+                      }`}>
+                        <FontAwesomeIcon 
+                          icon={milestone.status === 'completed' ? faCheckCircle : faFlag} 
+                          className={`w-4 h-4 ${
+                            milestone.status === 'completed' 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`} 
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">
+                          {milestone.title}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {milestone.due_date ? new Date(milestone.due_date).toLocaleDateString() : 'No due date'}
+                        </div>
+                      </div>
+                    </div>
+                    {milestone.target_amount && (
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                        ${milestone.target_amount.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faFlag} className="w-8 h-8 mb-2" />
+                  <p className="text-sm">No milestones yet</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Add Funds Section (only in activity tab) */}
+        {activeTab === 'activity' && (
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            {!showAddFundsForm ? (
+              <button 
+                onClick={() => setShowAddFundsForm(true)}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                Add Funds
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={addFundsAmount}
+                      onChange={(e) => setAddFundsAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900 dark:text-white"
+                      min="0"
+                      step="0.01"
+                      disabled={isAddingFunds}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddFunds}
+                    disabled={!addFundsAmount || isAddingFunds || parseFloat(addFundsAmount) <= 0}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                  >
+                    {isAddingFunds ? (
+                      <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                    )}
+                    {isAddingFunds ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddFundsForm(false);
+                    setAddFundsAmount('');
+                  }}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  disabled={isAddingFunds}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+// Enhanced Update Progress Modal
+function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate, onOptimisticUpdate }: {
+  isOpen: boolean;
+  onClose: () => void;
+  goal: any;
+  onProgressUpdate: (data: any) => void;
+  onOptimisticUpdate: (data: any) => void;
+}) {
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const quickAmounts = [100, 250, 500, 1000];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || parseFloat(amount) <= 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const amountValue = parseFloat(amount);
+      
+      // Optimistic update
+      const newAmount = goal.current_amount + amountValue;
+      const newProgressPercentage = (newAmount / goal.target_amount) * 100;
+      
+      onOptimisticUpdate({
+        current_amount: newAmount,
+        progress_percentage: Math.min(100, newProgressPercentage),
+        updated_at: new Date().toISOString()
+      });
+
+      await onProgressUpdate({
+        goalId: goal.id,
+        amountChange: amountValue,
+        note: note || undefined
+      });
+
+      // Reset form and close modal
+      setAmount('');
+      setNote('');
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update progress');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickAmount = (quickAmount: number) => {
+    setAmount(quickAmount.toString());
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Update Progress">
+      <div className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Amount to Add
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl text-gray-500 dark:text-gray-400">
+                $
+              </span>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-10 pr-4 py-4 text-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Quick Amount Buttons */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Quick Add
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {quickAmounts.map((quickAmount) => (
+                <button
+                  key={quickAmount}
+                  type="button"
+                  onClick={() => handleQuickAmount(quickAmount)}
+                  className="p-3 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg font-medium transition-colors"
+                  disabled={isSubmitting}
+                >
+                  ${quickAmount}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Note (Optional)
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white resize-none"
+              rows={3}
+              placeholder="Add a note about this progress update..."
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
+              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />
+              ) : (
+                <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
+              )}
+              {isSubmitting ? 'Updating...' : 'Update Progress'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+// Activity Timeline Component
+function ActivityTimelineComponent({ goalId }: { goalId: string }) {
+  const { activities, isLoading, error } = useUserActivities();
+  
+  // Filter activities for this specific goal
+  const goalActivities = activities?.filter(activity => 
+    activity.metadata?.goalId === goalId ||
+    activity.description?.toLowerCase().includes('goal') ||
+    activity.activity_type === 'goal_progress_updated'
+  ) || [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+              </div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <FontAwesomeIcon icon={faExclamationTriangle} className="w-8 h-8 text-red-500 mb-3" />
+        <p className="text-gray-500 dark:text-gray-400">Failed to load activity</p>
+      </div>
+    );
+  }
+
+  if (goalActivities.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <FontAwesomeIcon icon={faClock} className="w-12 h-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No activity yet</h3>
+        <p className="text-gray-500 dark:text-gray-400">Updates and changes to your goal will appear here</p>
+      </div>
+    );
+  }
+
+  const getActivityIcon = (activityType: string) => {
+    switch (activityType) {
+      case 'goal_progress_updated':
+        return faDollarSign;
+      case 'goal_created':
+        return faFlag;
+      case 'goal_updated':
+        return faEdit;
+      case 'milestone_completed':
+        return faCheckCircle;
+      default:
+        return faClock;
+    }
+  };
+
+  const getActivityColor = (activityType: string) => {
+    switch (activityType) {
+      case 'goal_progress_updated':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400';
+      case 'goal_created':
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+      case 'goal_updated':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400';
+      case 'milestone_completed':
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {goalActivities.map((activity, index) => (
+        <motion.div
+          key={activity.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getActivityColor(activity.activity_type)}`}>
+            <FontAwesomeIcon 
+              icon={getActivityIcon(activity.activity_type)} 
+              className="w-4 h-4" 
+            />
+          </div>
+          
+          <div className="flex-1">
+            <p className="font-medium text-gray-900 dark:text-white">
+              {activity.description}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {new Date(activity.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+          </div>
+          
+          {activity.amount && (
+            <div className="text-right">
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                +${activity.amount.toLocaleString()}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      ))}
     </div>
   );
 }

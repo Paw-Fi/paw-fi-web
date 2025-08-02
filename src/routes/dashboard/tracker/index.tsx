@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
-import { motion, Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faPlus, 
@@ -11,23 +11,25 @@ import {
   faCalendarAlt, 
   faDollarSign, 
   faArrowRight,
-  faFire,
   faBullseye,
   faWandSparkles,
-  faUpLong,
   faCheckCircle,
-  faCirclePlay
+  faEllipsisH,
+  faFilter,
+  faHome,
+  faPlane,
+  faCar,
+  faGraduationCap,
+  faHeart,
+  faRocket
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
-import { RecentActivity } from "@/components/goal-tracker/goal-overview/RecentActivity";
-import { FinancialGlassMetricsPanel } from "@/components/shared/FinancialGlassMetricsPanel";
-import { DashboardHeroSection } from "@/components/shared/DashboardHeroSection";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useMemo } from "react";
 
 const trackerSearchSchema = z.object({
-  tab: z.string().optional(),
-  filter: z.string().optional(),
+  filter: z.enum(['all', 'on-track', 'needs-attention', 'completed']).optional().default('all'),
+  sort: z.enum(['due-date', 'progress', 'recently-updated']).optional().default('due-date'),
 });
 
 export const Route = createFileRoute("/dashboard/tracker/")(({
@@ -75,8 +77,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
 
 function GoalsTracker() {
   const { user } = useAuth();
-  const { goals, metrics, isLoading, error, refetch } = useGoals(user?.id);
-  const [selectedView, setSelectedView] = useState<'all' | 'active' | 'completed'>('all');
+  const { goals, isLoading, error, refetch } = useGoals(user?.id);
 
   if (isLoading) {
     return <GoalsLoadingSkeleton />;
@@ -87,625 +88,491 @@ function GoalsTracker() {
   }
 
   const hasGoals = goals && goals.length > 0;
-  const filteredGoals = goals?.filter(goal => {
-    if (selectedView === 'active') return goal.status === 'active';
-    if (selectedView === 'completed') return goal.status === 'completed';
-    return true;
-  }) || [];
+  
+  const getGoalStatus = (goal: any) => {
+    if (goal.status === 'completed') return 'completed';
+    
+    const progress = goal.current_amount && goal.target_amount 
+      ? (goal.current_amount / goal.target_amount) * 100 
+      : 0;
+    
+    const daysUntilTarget = goal.target_date 
+      ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    
+    if (progress >= 50 || daysUntilTarget > 30) return 'on-track';
+    return 'needs-attention';
+  };
+  
+  const sortedGoals = useMemo(() => {
+    if (!goals) return [];
+    
+    return goals.sort((a, b) => {
+      if (!a.target_date && !b.target_date) return 0;
+      if (!a.target_date) return 1;
+      if (!b.target_date) return -1;
+      return new Date(a.target_date).getTime() - new Date(b.target_date).getTime();
+    });
+  }, [goals]);
+  
+  const spotlightGoals = useMemo(() => {
+    if (!goals || goals.length === 0) return { urgency: null, attention: null };
+    
+    const urgentGoal = goals
+      .filter(goal => goal.target_date && goal.status !== 'completed')
+      .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime())[0] || null;
+    
+    const attentionGoal = goals
+      .filter(goal => goal.status !== 'completed')
+      .map(goal => {
+        const progress = goal.current_amount && goal.target_amount 
+          ? (goal.current_amount / goal.target_amount) * 100 
+          : 0;
+        const daysUntilTarget = goal.target_date 
+          ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        const expectedProgress = daysUntilTarget > 0 ? Math.max(0, 100 - (daysUntilTarget / 365) * 100) : 100;
+        return { ...goal, deficit: expectedProgress - progress };
+      })
+      .sort((a, b) => b.deficit - a.deficit)[0] || null;
+    
+    return { urgency: urgentGoal, attention: attentionGoal };
+  }, [goals]);
+  
+  const statsData = useMemo(() => {
+    if (!goals || goals.length === 0) {
+      return {
+        totalGoals: 0,
+        activeGoals: 0,
+        completedGoals: 0,
+        onTrackPercentage: 0
+      };
+    }
+    
+    const totalGoals = goals.length;
+    const activeGoals = goals.filter(goal => goal.status === 'active').length;
+    const completedGoals = goals.filter(goal => goal.status === 'completed').length;
+    const onTrackGoals = goals.filter(goal => getGoalStatus(goal) === 'on-track').length;
+    const onTrackPercentage = Math.round((onTrackGoals / totalGoals) * 100);
+    
+    return {
+      totalGoals,
+      activeGoals,
+      completedGoals,
+      onTrackPercentage
+    };
+  }, [goals]);
 
-  // Enhanced Animation variants with physics-based motion (2025 Design System)
-  const pageVariants: Variants = {
+  const pageVariants = {
     initial: { opacity: 0 },
     animate: { 
       opacity: 1,
       transition: { 
-        duration: 0.4, 
-        staggerChildren: 0.08,
-        ease: [0.2, 0.8, 0.4, 1] // Structured Expression easing
+        duration: 0.3, 
+        staggerChildren: 0.1
       }
     }
   };
 
-  const itemVariants: Variants = {
-    initial: { opacity: 0, y: 20, scale: 0.98 },
+  const itemVariants = {
+    initial: { opacity: 0, y: 16 },
     animate: { 
       opacity: 1, 
       y: 0,
-      scale: 1,
       transition: { 
-        duration: 0.3,
-        ease: [0.25, 0.8, 0.5, 1] // Educational reveal timing
+        duration: 0.4,
+        ease: [0.25, 0.8, 0.5, 1]
       }
     }
   };
-
-  // Financial Glass material variants
-  const glassVariants: Variants = {
-    initial: { 
-      backdropFilter: "blur(0px)",
-      background: "rgba(255, 255, 255, 0)"
-    },
-    animate: { 
-      backdropFilter: "blur(20px)",
-      background: "rgba(255, 255, 255, 0.08)",
-      transition: { 
-        duration: 0.3,
-        ease: [0.4, 0.0, 0.2, 1]
-      }
-    }
+  
+  const getGoalIcon = (title: string) => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('home') || titleLower.includes('house')) return faHome;
+    if (titleLower.includes('travel') || titleLower.includes('vacation')) return faPlane;
+    if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
+    if (titleLower.includes('education') || titleLower.includes('school')) return faGraduationCap;
+    if (titleLower.includes('wedding') || titleLower.includes('marriage')) return faHeart;
+    if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
+    return faBullseye;
   };
 
   return (
-    <>
-      {/* Design System CSS Injection */}
-      <style jsx global>{`
-        /* Financial Glass Material System */
-        .financial-glass {
-          background: rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(20px) saturate(150%);
-          border: 1px solid rgba(255, 255, 255, 0.125);
-          box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Expressive Typography Classes */
-        .text-display {
-          font-size: clamp(2.5rem, 5vw, 4rem);
-          font-weight: 700;
-          line-height: 1.1;
-          letter-spacing: -0.02em;
-        }
-        
-        .text-headline {
-          font-size: clamp(1.875rem, 3vw, 2.5rem);
-          font-weight: 600;
-          line-height: 1.2;
-          letter-spacing: -0.01em;
-        }
-        
-        .text-title {
-          font-size: clamp(1.25rem, 2vw, 1.5rem);
-          font-weight: 600;
-          line-height: 1.3;
-        }
-        
-        .text-body {
-          font-size: 1rem;
-          font-weight: 400;
-          line-height: 1.6;
-        }
-        
-        .text-label {
-          font-size: 0.875rem;
-          font-weight: 500;
-          line-height: 1.4;
-          letter-spacing: 0.01em;
-        }
-        
-        /* Variable Font Support */
-        * {
-          font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        }
-        
-        /* Reduced Motion Support */
-        @media (prefers-reduced-motion: reduce) {
-          * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-      `}</style>
-
-      <motion.main 
-        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950/10" 
-        role="main" 
-        aria-label="Goal Tracker Dashboard"
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
+    <motion.main 
+      className="min-h-screen bg-gray-50" 
+      role="main" 
+      aria-label="Goals Dashboard"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+    >
+      {/* Skip to main content link for keyboard navigation */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-purple-600 text-white px-4 py-2 rounded-md z-50 font-medium"
       >
-        {/* Skip to main content link for keyboard navigation */}
-        <a 
-          href="#main-content" 
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-md z-50 font-medium"
-        >
-          Skip to main content
-        </a>
+        Skip to main content
+      </a>
 
-        {/* Modern Hero Section with Stats */}
-        <DashboardHeroSection
-          title="Financial Goals"
-          titleGradient="from-blue-600 dark:from-blue-400 via-purple-600 dark:via-purple-400 to-indigo-600 dark:to-indigo-400"
-          emoji="🎯"
-          emojiAnimation={{ rotate: [0, 15, 0], duration: 2, repeatDelay: 4 }}
-          description={hasGoals 
-            ? `Track and achieve your ${goals.length} financial goals with AI-powered insights and milestone management.`
-            : 'Transform your financial dreams into achievable goals with personalized AI strategies and smart milestone tracking.'
-          }
-          backgroundGradient="from-blue-600/5 dark:from-blue-400/10 via-purple-600/5 dark:via-purple-400/10 to-indigo-600/5 dark:to-indigo-400/10"
-          decorativeGradients={{
-            topRight: "bg-blue-400/10 dark:bg-blue-400/20",
-            bottomLeft: "bg-purple-400/10 dark:bg-purple-400/20"
-          }}
-          actions={[
-            {
-              label: "Create New Goal",
-              icon: faWandSparkles,
-              variant: 'primary',
-              component: (
-                <Link to="/dashboard/tracker/create">
-                  <button className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-xl shadow-blue-600/20 dark:shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-600/30 dark:hover:shadow-blue-500/40 transition-all duration-300">
-                    <FontAwesomeIcon icon={faWandSparkles} className="h-5 w-5" />
-                    <span>Create New Goal</span>
-                    <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </Link>
-              )
-            },
-            ...(hasGoals ? [{
-              label: "View Analytics",
-              icon: faChartLine,
-              variant: 'secondary' as const,
-              component: (
-                <button className="group flex items-center gap-3 px-8 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200/50 dark:border-gray-600/50 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:border-blue-300/70 dark:hover:border-blue-400/70 hover:text-blue-700 dark:hover:text-blue-400 transition-all duration-300">
-                  <FontAwesomeIcon icon={faChartLine} className="h-5 w-5" />
-                  <span>View Analytics</span>
-                </button>
-              )
-            }] : [])
-          ]}
-          metrics={hasGoals ? [
-            {
-              icon: faBullseye,
-              value: metrics?.totalGoals || 0,
-              label: "Total Goals",
-              gradientColors: "from-blue-600 to-indigo-600",
-              iconColors: "from-blue-500 to-blue-600",
-              delay: 0.5
-            },
-            {
-              icon: faFire,
-              value: metrics?.activeGoals || 0,
-              label: "Active",
-              gradientColors: "from-green-600 to-emerald-600",
-              iconColors: "from-green-500 to-emerald-600",
-              delay: 0.6
-            },
-            {
-              icon: faTrophy,
-              value: metrics?.completedGoals || 0,
-              label: "Completed",
-              gradientColors: "from-purple-600 to-pink-600",
-              iconColors: "from-purple-500 to-purple-600",
-              delay: 0.7
-            },
-            {
-              icon: faDollarSign,
-              value: `$${(metrics?.totalTargetAmount || 0).toLocaleString()}`,
-              label: "Total Value",
-              gradientColors: "from-amber-600 to-orange-600",
-              iconColors: "from-amber-500 to-orange-500",
-              delay: 0.8
-            }
-          ] : undefined}
-
-          showMetrics={hasGoals}
-        />
-
-        {/* Main Content */}
-        <div id="main-content" className="max-w-7xl mx-auto px-6 pb-12" tabIndex={-1}>
-          {hasGoals ? (
-            <>
-              {/* Filter Tabs with Glass Material */}
-              <motion.div 
-                className="mb-8"
-                variants={itemVariants}
-              >
-                <motion.div 
-                  className="rounded-2xl p-2 shadow-xl border border-white/20 dark:border-gray-700/50 backdrop-blur-xl max-w-md"
-                  variants={glassVariants}
-                  style={{
-                    background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(59, 130, 246, 0.03) 100%)",
-                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
-                  }}
-                >
-                  <div className="flex gap-2">
-                    {[
-                      { id: 'all', label: 'All Goals', icon: faBullseye },
-                      { id: 'active', label: 'Active', icon: faFire },
-                      { id: 'completed', label: 'Completed', icon: faCheckCircle }
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setSelectedView(tab.id as any)}
-                        className={`
-                          flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden
-                          ${selectedView === tab.id 
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-[1.02]' 
-                            : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-700/50 hover:backdrop-blur-sm hover:scale-[1.01]'
-                          }
-                        `}
-                      >
-                        <FontAwesomeIcon icon={tab.icon} className="h-4 w-4" />
-                        <span>{tab.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              </motion.div>
-
-              {/* Financial Bento Grid Layout */}
-              <motion.div 
-                className="grid grid-cols-1 xl:grid-cols-4 gap-6"
-                variants={itemVariants}
-              >
-                {/* Goals Section - Takes 3/4 width */}
-                <div className="xl:col-span-3 space-y-6">
-                  {/* Primary Goal (Hero) */}
-                  {filteredGoals.length > 0 && (
-                    <PrimaryGoalCard goal={filteredGoals[0]} onUpdate={refetch} />
-                  )}
-                  
-                  {/* Secondary Goals Grid */}
-                  {filteredGoals.length > 1 && (
-                    <motion.div 
-                      className="space-y-4"
-                      variants={itemVariants}
-                    >
-                      <h3 className="text-title font-semibold text-gray-900 dark:text-white">
-                        {selectedView === 'all' ? 'Other Goals' : 
-                         selectedView === 'active' ? 'Active Goals' : 
-                         'Completed Goals'}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredGoals.slice(1).map((goal, index) => (
-                          <SecondaryGoalCard 
-                            key={goal.id} 
-                            goal={goal} 
-                            onUpdate={refetch}
-                            index={index} 
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-
-                {/* Activity Sidebar - Takes 1/4 width */}
-                <div className="xl:col-span-1">
-                  <motion.div
-                    className="sticky top-6"
-                    variants={itemVariants}
-                  >
-                    <RecentActivity />
-                  </motion.div>
-                </div>
-              </motion.div>
-            </>
-          ) : (
-            <EmptyGoalsState />
-          )}
+      {/* Clean Header inspired by the design */}
+      <div className="bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Goals
+              </h1>
+              <p className="text-gray-500 text-lg">
+                Track your financial goals with AI-powered insights
+              </p>
+            </div>
+            <Link to="/dashboard/tracker/create">
+              <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
+                <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                Create Goal
+              </button>
+            </Link>
+          </div>
         </div>
-      </motion.main>
-    </>
+      </div>
+
+      {/* Main Content */}
+      <div id="main-content" className="max-w-6xl mx-auto px-6 py-8 space-y-8" tabIndex={-1}>
+        {hasGoals ? (
+          <>
+            <SpotlightSection 
+              urgencyGoal={spotlightGoals.urgency} 
+              attentionGoal={spotlightGoals.attention}
+              getGoalIcon={getGoalIcon}
+              getGoalStatus={getGoalStatus}
+            />
+            
+            <StatsBar stats={statsData} />
+            
+            <CommandCenter 
+              goals={sortedGoals}
+              getGoalStatus={getGoalStatus}
+              onUpdate={refetch}
+            />
+          </>
+        ) : (
+          <EmptyGoalsState />
+        )}
+      </div>
+    </motion.main>
   );
 }
 
-// Enhanced Primary Goal Card with 2025 Design System
-const PrimaryGoalCard = memo(function PrimaryGoalCard({ 
-  goal, 
-  onUpdate 
-}: { 
-  goal: any; 
-  onUpdate: () => void 
+// Spotlight Section Component
+const SpotlightSection = memo(function SpotlightSection({ 
+  urgencyGoal, 
+  attentionGoal, 
+  getGoalIcon, 
+  getGoalStatus 
+}: {
+  urgencyGoal: any;
+  attentionGoal: any;
+  getGoalIcon: (title: string) => any;
+  getGoalStatus: (goal: any) => string;
 }) {
-  if (!goal) return null;
-
-  const progress = goal.current_amount && goal.target_amount 
-    ? (goal.current_amount / goal.target_amount) * 100 
-    : 0;
+  if (!urgencyGoal && !attentionGoal) return null;
   
-  const isOnTrack = progress >= 50;
-  const daysUntilTarget = goal.target_date 
-    ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-
   return (
-    <motion.div
-      className="group relative overflow-hidden rounded-3xl"
-      whileHover={{ 
-        y: -4,
-        transition: { 
-          duration: 0.2,
-          ease: [0.4, 0.0, 0.2, 1]
-        }
-      }}
-      style={{
-        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)",
-        backdropFilter: "blur(20px) saturate(150%)",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
-      }}
+    <motion.section 
+      className="space-y-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Decorative Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-50/10 to-purple-50/10 dark:from-transparent dark:via-blue-950/10 dark:to-purple-950/10" />
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-400/5 rounded-full blur-2xl" />
-      
-      <div className="relative p-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-3 h-3 rounded-full ${isOnTrack ? 'bg-green-500' : 'bg-amber-500'} animate-pulse shadow-lg`}></div>
-              <span className={`text-label font-semibold ${isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                {isOnTrack ? 'On Track' : 'Needs Attention'}
-              </span>
-              <div className="text-right ml-auto">
-                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {Math.round(progress)}%
-                </span>
-              </div>
-            </div>
-            
-            <motion.h2 
-              className="text-headline font-bold text-gray-900 dark:text-white mb-3 leading-tight group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200"
-              style={{
-                fontVariationSettings: "'wght' 600",
-                fontSize: "clamp(1.5rem, 3vw, 2rem)",
-                lineHeight: "1.2"
-              }}
-            >
-              {goal.title}
-            </motion.h2>
-            
-            <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl">
-              {goal.description || 'Working towards your financial goal with smart milestones and AI insights.'}
-            </p>
-          </div>
-        </div>
-
-        {/* Enhanced Progress Visualization */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-label text-gray-600 dark:text-gray-400 mb-1">Current</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ${(goal.current_amount || 0).toLocaleString()}
-                </p>
-              </div>
-              <FontAwesomeIcon icon={faArrowRight} className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-label text-gray-600 dark:text-gray-400 mb-1">Target</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ${(goal.target_amount || 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Animated Progress Bar with Glass Effect */}
-          <div className="relative h-4 bg-gray-200/50 dark:bg-gray-700/50 rounded-full overflow-hidden backdrop-blur-sm">
-            <motion.div
-              initial={{ width: 0, scaleX: 0 }}
-              animate={{ 
-                width: `${progress}%`,
-                scaleX: 1
-              }}
-              transition={{ 
-                duration: 1.5, 
-                delay: 0.3,
-                ease: [0.25, 0.8, 0.5, 1]
-              }}
-              className={`h-full rounded-full ${
-                isOnTrack 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-                  : 'bg-gradient-to-r from-amber-500 to-orange-600'
-              }`}
-              style={{
-                transformOrigin: "left center",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-          </div>
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-blue-100/80 to-blue-200/80 dark:from-blue-900/50 dark:to-blue-800/50 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm">
-              <FontAwesomeIcon icon={faCalendarAlt} className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <p className="text-label text-gray-600 dark:text-gray-400 mb-1">Time Left</p>
-            <p className="font-bold text-gray-900 dark:text-white">
-              {daysUntilTarget > 0 ? `${daysUntilTarget} days` : 'Overdue'}
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-green-100/80 to-green-200/80 dark:from-green-900/50 dark:to-green-800/50 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm">
-              <FontAwesomeIcon icon={faDollarSign} className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <p className="text-label text-gray-600 dark:text-gray-400 mb-1">Remaining</p>
-            <p className="font-bold text-gray-900 dark:text-white">
-              ${((goal.target_amount || 0) - (goal.current_amount || 0)).toLocaleString()}
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto bg-gradient-to-br from-purple-100/80 to-purple-200/80 dark:from-purple-900/50 dark:to-purple-800/50 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm">
-              <FontAwesomeIcon icon={faBullseye} className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-label text-gray-600 dark:text-gray-400 mb-1">Milestones</p>
-            <p className="font-bold text-gray-900 dark:text-white">
-              {goal.milestones?.length || 0}
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4">
-          <Link
-            to={`/dashboard/tracker/${goal.id}`}
-            className="flex-1 flex justify-center items-center h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl group"
-          >
-            <FontAwesomeIcon icon={faCirclePlay} className="mr-2 group-hover:scale-110 transition-transform" />
-            Continue Goal
-          </Link>
-          
-          <Link
-            to={`/dashboard/tracker/${goal.id}`}
-            className="flex justify-center items-center h-12 px-6 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm hover:bg-white/80 dark:hover:bg-gray-800/80 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-200 border border-gray-200/50 dark:border-gray-600/50"
-          >
-            <FontAwesomeIcon icon={faChartLine} className="mr-2" />
-            View Details
-          </Link>
-        </div>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Spotlight</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Urgency Card */}
+        {urgencyGoal && (
+          <SpotlightCard 
+            goal={urgencyGoal}
+            type="urgency"
+            icon={getGoalIcon(urgencyGoal.title)}
+            status={getGoalStatus(urgencyGoal)}
+          />
+        )}
+        
+        {/* Attention Card */}
+        {attentionGoal && (
+          <SpotlightCard 
+            goal={attentionGoal}
+            type="attention"
+            icon={getGoalIcon(attentionGoal.title)}
+            status={getGoalStatus(attentionGoal)}
+          />
+        )}
       </div>
-    </motion.div>
+    </motion.section>
   );
 });
 
-// Enhanced Secondary Goal Card with 2025 Design System
-const SecondaryGoalCard = memo(function SecondaryGoalCard({ 
+// Playful Spotlight Card Component inspired by the design
+const SpotlightCard = memo(function SpotlightCard({ 
   goal, 
-  onUpdate, 
-  index = 0 
-}: { 
-  goal: any; 
+  type, 
+  icon, 
+  status 
+}: {
+  goal: any;
+  type: 'urgency' | 'attention';
+  icon: any;
+  status: string;
+}) {
+  const daysUntilTarget = goal.target_date 
+    ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+  
+  // Playful background colors matching the design
+  const cardStyles = {
+    urgency: 'bg-gradient-to-br from-purple-200 via-purple-100 to-blue-100',
+    attention: 'bg-gradient-to-br from-purple-200 via-blue-100 to-purple-100'
+  };
+  
+  const decorativeElements = type === 'urgency' ? (
+    <>
+      <div className="absolute top-4 right-6 text-orange-400 text-xl">✦</div>
+      <div className="absolute top-8 right-12 text-yellow-400 text-sm">⭐</div>
+      <div className="absolute bottom-6 left-6 text-green-400 text-lg">✦</div>
+      <div className="absolute bottom-4 right-8 text-teal-400 text-xs">●</div>
+      <div className="absolute top-12 left-8 text-blue-400 text-xs">●</div>
+      <div className="absolute bottom-8 right-4 text-purple-400 text-lg">✦</div>
+    </>
+  ) : (
+    <>
+      <div className="absolute top-4 right-6 text-blue-400 text-xl">●</div>
+      <div className="absolute bottom-6 left-6 text-purple-400 text-lg">●</div>
+      <div className="absolute top-8 left-8 text-teal-400 text-xs">●</div>
+    </>
+  );
+  
+  return (
+    <Link to={`/dashboard/tracker/${goal.id}`}>
+      <motion.div 
+        className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all duration-300 hover:shadow-xl ${cardStyles[type]}`}
+        whileHover={{ y: -4, scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        {decorativeElements}
+        
+        <div className="relative z-10">
+          {/* Large icon display */}
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-white/50 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <FontAwesomeIcon icon={icon} className="w-8 h-8 text-gray-700" />
+            </div>
+          </div>
+          
+          {/* Main content */}
+          <div className="space-y-4">
+            <div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">
+                {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : 'Due Today'}
+              </div>
+              <div className="text-gray-700 font-medium">
+                {type === 'urgency' ? `Until ${goal.title}` : `Until ${goal.title}`}
+              </div>
+            </div>
+            
+            {type === 'attention' && (
+              <div className="text-sm text-gray-600 font-medium">
+                Next Milestone:
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </Link>
+  );
+});
+
+// Clean Stats Bar inspired by the design
+const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
+  const statItems = [
+    { 
+      label: 'Total Goals', 
+      value: stats.totalGoals, 
+      icon: faBullseye,
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-500'
+    },
+    { 
+      label: 'Active Goals', 
+      value: stats.activeGoals, 
+      icon: faChartLine,
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-500'
+    },
+    { 
+      label: 'Completed Goals', 
+      value: stats.completedGoals, 
+      icon: faTrophy,
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-500'
+    },
+    { 
+      label: 'Overall Progress', 
+      value: `${stats.onTrackPercentage}%`, 
+      icon: faCheckCircle,
+      bgColor: 'bg-orange-50',
+      iconColor: 'text-orange-500',
+      subtitle: `${stats.activeGoals} of ${stats.totalGoals} goals on track`
+    }
+  ];
+  
+  return (
+    <motion.section 
+      className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1 }}
+    >
+      {statItems.map((stat) => (
+        <motion.div 
+          key={stat.label} 
+          className="bg-white rounded-2xl p-6 text-center border border-gray-100 hover:shadow-lg transition-all duration-300"
+          whileHover={{ y: -2 }}
+        >
+          <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+            <FontAwesomeIcon icon={stat.icon} className={`w-5 h-5 ${stat.iconColor}`} />
+          </div>
+          <div className="text-3xl font-bold text-gray-900 mb-2">
+            {stat.value}
+          </div>
+          <div className="text-sm text-gray-600 font-medium">
+            {stat.label}
+          </div>
+          {stat.subtitle && (
+            <div className="text-xs text-gray-500 mt-1">
+              {stat.subtitle}
+            </div>
+          )}
+        </motion.div>
+      ))}
+    </motion.section>
+  );
+});
+
+// Clean Goals List inspired by the design
+const CommandCenter = memo(function CommandCenter({ 
+  goals, 
+  getGoalStatus, 
+  onUpdate 
+}: {
+  goals: any[];
+  getGoalStatus: (goal: any) => string;
   onUpdate: () => void;
-  index?: number;
+}) {
+  return (
+    <motion.section 
+      className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 }}
+    >
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100">
+        <h2 className="text-2xl font-bold text-gray-900">Goals</h2>
+      </div>
+      
+      {/* Goals List */}
+      <div className="divide-y divide-gray-100">
+        {goals.length === 0 ? (
+          <div className="text-center py-12">
+            <FontAwesomeIcon icon={faFilter} className="w-12 h-12 text-gray-400 mb-4" />
+            <p className="text-gray-500">No goals match your current filter</p>
+          </div>
+        ) : (
+          goals.map((goal) => (
+            <GoalCard 
+              key={goal.id} 
+              goal={goal} 
+              getGoalStatus={getGoalStatus}
+            />
+          ))
+        )}
+      </div>
+    </motion.section>
+  );
+});
+
+// Clean Goal Card inspired by the design
+const GoalCard = memo(function GoalCard({ 
+  goal, 
+  getGoalStatus 
+}: {
+  goal: any;
+  getGoalStatus: (goal: any) => string;
 }) {
   const progress = goal.current_amount && goal.target_amount 
     ? (goal.current_amount / goal.target_amount) * 100 
     : 0;
   
-  const isOnTrack = progress >= 50;
-  const daysUntilTarget = goal.target_date 
-    ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-
+  const getProgressColor = (progress: number) => {
+    if (progress >= 75) return 'bg-gradient-to-r from-purple-500 to-purple-600';
+    if (progress >= 50) return 'bg-gradient-to-r from-blue-500 to-purple-500';
+    if (progress >= 25) return 'bg-gradient-to-r from-orange-400 to-orange-500';
+    return 'bg-gradient-to-r from-gray-300 to-gray-400';
+  };
+  
+  const getGoalIcon = (title: string) => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('home') || titleLower.includes('house')) return faHome;
+    if (titleLower.includes('travel') || titleLower.includes('vacation') || titleLower.includes('trip')) return faPlane;
+    if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
+    if (titleLower.includes('education') || titleLower.includes('school')) return faGraduationCap;
+    if (titleLower.includes('wedding') || titleLower.includes('marriage')) return faHeart;
+    if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
+    return faBullseye; // Default
+  };
+  
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ 
-        opacity: 1, 
-        y: 0,
-        transition: { 
-          delay: index * 0.1,
-          duration: 0.4,
-          ease: [0.15, 0.8, 0.4, 1]
-        }
-      }}
-      whileHover={{ 
-        y: -3,
-        transition: { 
-          duration: 0.2,
-          ease: [0.4, 0.0, 0.2, 1]
-        }
-      }}
-      className="group overflow-hidden rounded-2xl cursor-pointer"
-      style={{
-        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(59, 130, 246, 0.03) 100%)",
-        backdropFilter: "blur(16px)",
-        border: "1px solid rgba(255, 255, 255, 0.15)",
-        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)"
-      }}
-    >
-      <Link to={`/dashboard/tracker/${goal.id}`} className="block p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
+    <Link to={`/dashboard/tracker/${goal.id}`}>
+      <motion.div 
+        className="p-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+        whileHover={{ x: 4 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div className="flex items-center gap-4">
+          {/* Icon */}
+          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FontAwesomeIcon 
+              icon={getGoalIcon(goal.title)} 
+              className="w-6 h-6 text-gray-600" 
+            />
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isOnTrack ? 'bg-green-500' : 'bg-amber-500'} shadow-sm`}></div>
-                <span className={`text-xs font-semibold ${isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {isOnTrack ? 'On Track' : 'Behind'}
-                </span>
-              </div>
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                {goal.title}
+              </h3>
+              <span className="text-lg font-bold text-gray-900 ml-4">
                 {Math.round(progress)}%
               </span>
             </div>
             
-            <h3 className="text-title font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200 mb-2">
-              {goal.title}
-            </h3>
-            
-            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>{goal.milestones?.length || 0} milestones</span>
-              <span>
-                Due {goal.target_date 
-                  ? new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) 
-                  : 'No deadline'
-                }
-              </span>
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <motion.div 
+                className={`h-full rounded-full ${getProgressColor(progress)}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(progress, 100)}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
           </div>
         </div>
-
-        {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="h-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ 
-                duration: 1.2, 
-                delay: 0.2 + (index * 0.1),
-                ease: [0.25, 0.8, 0.5, 1]
-              }}
-              className={`h-full rounded-full ${
-                isOnTrack 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-                  : 'bg-gradient-to-r from-amber-500 to-orange-600'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Financial Info */}
-        <div className="flex items-center justify-between text-sm">
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 text-xs">Current</p>
-            <p className="font-bold text-gray-900 dark:text-white">
-              ${(goal.current_amount || 0).toLocaleString()}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-gray-600 dark:text-gray-400 text-xs">Target</p>
-            <p className="font-bold text-gray-900 dark:text-white">
-              ${(goal.target_amount || 0).toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Time Info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 mt-3 border-t border-gray-200/30 dark:border-gray-700/30">
-          <span>
-            Started {goal.created_at 
-              ? new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
-              : 'Recently'
-            }
-          </span>
-          <span>
-            {daysUntilTarget > 0 
-              ? `${daysUntilTarget} days left`
-              : daysUntilTarget === 0 
-              ? 'Due today'
-              : `${Math.abs(daysUntilTarget)} days overdue`
-            }
-          </span>
-        </div>
-      </Link>
-    </motion.div>
+      </motion.div>
+    </Link>
   );
 });
 
-// Enhanced Empty State with 2025 Design System
+// Mission Control: Enhanced Empty State
 const EmptyGoalsState = memo(function EmptyGoalsState() {
   return (
     <motion.section
@@ -768,21 +635,13 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
         {/* Content with Expressive Typography */}
         <motion.h2 
           id="empty-state-heading" 
-          className="text-headline font-bold text-gray-900 dark:text-white mb-4 leading-tight"
-          style={{
-            fontVariationSettings: "'wght' 700",
-            fontSize: "clamp(1.75rem, 3vw, 2.25rem)"
-          }}
+          className="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight"
         >
           Start Your Financial Journey
         </motion.h2>
         
         <motion.p 
-          className="text-body text-gray-600 dark:text-gray-400 mb-12 leading-relaxed max-w-md mx-auto"
-          style={{
-            fontSize: "1.125rem",
-            lineHeight: "1.6"
-          }}
+          className="text-lg text-gray-600 dark:text-gray-400 mb-12 leading-relaxed max-w-md mx-auto"
         >
           Transform your financial dreams into achievable goals with AI-powered strategies, smart milestones, and progress tracking.
         </motion.p>
@@ -792,7 +651,7 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
           {[
             { icon: faWandSparkles, label: 'AI Strategy', color: 'from-blue-500 to-blue-600' },
             { icon: faBullseye, label: 'Smart Milestones', color: 'from-green-500 to-emerald-600' },
-            { icon: faUpLong, label: 'Track Progress', color: 'from-purple-500 to-purple-600' }
+            { icon: faTrophy, label: 'Track Progress', color: 'from-purple-500 to-purple-600' }
           ].map((benefit, index) => (
             <motion.div 
               key={benefit.label}
@@ -809,7 +668,7 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
               <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
                 <FontAwesomeIcon icon={benefit.icon} className="w-7 h-7 text-white" aria-hidden="true" />
               </div>
-              <p className="text-label font-semibold text-gray-700 dark:text-gray-300">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {benefit.label}
               </p>
             </motion.div>
@@ -834,52 +693,63 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
   );
 });
 
-// Enhanced Loading Skeleton with 2025 Design System
+// Mission Control: Enhanced Loading Skeleton
 const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950/10" role="main" aria-label="Loading goal tracker data">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900" role="main" aria-label="Loading goal tracker data">
       <div aria-live="polite" aria-label="Loading your goals">
         <span className="sr-only">Loading your financial goals, please wait...</span>
       </div>
       
       {/* Hero Skeleton */}
-      <div className="px-6 py-12 mb-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="flex-1 space-y-4">
-              <div className="h-16 bg-gray-200/60 dark:bg-gray-700/60 rounded-2xl animate-pulse backdrop-blur-sm"></div>
-              <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded-xl w-3/4 animate-pulse backdrop-blur-sm"></div>
-              <div className="flex gap-4">
-                <div className="h-12 w-48 bg-gray-200/60 dark:bg-gray-700/60 rounded-xl animate-pulse backdrop-blur-sm"></div>
-                <div className="h-12 w-36 bg-gray-200/60 dark:bg-gray-700/60 rounded-xl animate-pulse backdrop-blur-sm"></div>
-              </div>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="h-8 bg-gray-200/60 dark:bg-gray-700/60 rounded w-32 animate-pulse"></div>
+              <div className="h-5 bg-gray-200/60 dark:bg-gray-700/60 rounded w-96 animate-pulse"></div>
             </div>
-            <div className="w-80 h-64 bg-white/40 dark:bg-gray-800/40 rounded-2xl animate-pulse backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30"></div>
+            <div className="h-12 w-40 bg-gray-200/60 dark:bg-gray-700/60 rounded-lg animate-pulse"></div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pb-12 space-y-6">
-        {/* Filter Skeleton */}
-        <div className="h-14 w-72 bg-white/40 dark:bg-gray-800/40 rounded-2xl animate-pulse backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30"></div>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Spotlight Skeleton */}
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-24 animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-40 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+            <div className="h-40 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+          </div>
+        </div>
         
-        {/* Main Content Skeleton */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          <div className="xl:col-span-3 space-y-6">
-            {/* Primary Goal Skeleton */}
-            <div className="h-80 bg-white/40 dark:bg-gray-800/40 rounded-3xl animate-pulse backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30"></div>
-            
-            {/* Secondary Goals Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-48 bg-white/40 dark:bg-gray-800/40 rounded-2xl animate-pulse backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30"></div>
-              ))}
+        {/* Stats Skeleton */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-200/60 dark:bg-gray-700/60 rounded-lg mx-auto animate-pulse"></div>
+                <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-16 mx-auto animate-pulse"></div>
+                <div className="h-4 bg-gray-200/60 dark:bg-gray-700/60 rounded w-20 mx-auto animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Goals List Skeleton */}
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-24 animate-pulse"></div>
+            <div className="flex gap-4">
+              <div className="h-10 bg-gray-200/60 dark:bg-gray-700/60 rounded w-32 animate-pulse"></div>
+              <div className="h-10 bg-gray-200/60 dark:bg-gray-700/60 rounded w-40 animate-pulse"></div>
             </div>
           </div>
-          
-          {/* Sidebar Skeleton */}
-          <div className="xl:col-span-1">
-            <div className="h-96 bg-white/40 dark:bg-gray-800/40 rounded-2xl animate-pulse backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30"></div>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-32 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -887,14 +757,14 @@ const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
   );
 });
 
-// Enhanced Error State with 2025 Design System
+// Mission Control: Enhanced Error State
 const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; onRetry: () => void }) {
   const handleRetry = useCallback(() => {
     onRetry();
   }, [onRetry]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950/10 flex items-center justify-center" role="main">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" role="main">
       <div className="max-w-md text-center px-6">
         <motion.div 
           className="w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center shadow-2xl"
@@ -918,11 +788,11 @@ const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; on
           </div>
         </motion.div>
         
-        <h2 className="text-headline font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
           Failed to Load Goals
         </h2>
         
-        <p className="text-body text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+        <p className="text-base text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
           {error?.message || 'Something went wrong while loading your goals. Please try again.'}
         </p>
         
