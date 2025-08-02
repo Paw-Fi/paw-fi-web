@@ -8,6 +8,11 @@ import { getCanonicalUrl } from "@/utils/canonical";
 
 export const Route = createFileRoute('/onboarding/')({
   component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      message: (search.message as string) || undefined,
+    };
+  },
   head: () => {
     const pageUrl = getCanonicalUrl("/onboarding");
     const title = "Moneko Onboarding: Start Your Financial Journey";
@@ -36,6 +41,7 @@ export const Route = createFileRoute('/onboarding/')({
 function RouteComponent() {
   const {user} = useAuth();
   const navigate = useNavigate();
+  const { message } = Route.useSearch();
 
   // useEffect(() => {
   //   if (user) {
@@ -43,5 +49,5 @@ function RouteComponent() {
   //   }
   // }, [user, navigate]);
 
-  return <AIIntroComponent/>
+  return <AIIntroComponent initialMessage={message} />
 }

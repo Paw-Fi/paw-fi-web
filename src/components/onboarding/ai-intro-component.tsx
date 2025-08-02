@@ -21,6 +21,7 @@ import { Modal } from "../ui/modal";
 
 interface AIIntroComponentProps {
   className?: string;
+  initialMessage?: string;
 }
 
 // Cookie utility functions
@@ -63,7 +64,7 @@ const clearGuestGoalIds = () => {
   deleteCookie(GUEST_GOALS_COOKIE);
 };
 
-export function AIIntroComponent({ className = "" }: AIIntroComponentProps) {
+export function AIIntroComponent({ className = "", initialMessage }: AIIntroComponentProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -161,7 +162,7 @@ export function AIIntroComponent({ className = "" }: AIIntroComponentProps) {
     }
   }, [user?.id, hasUpdatedGuestGoals, updateGuestGoals]);
 
-  // Initialize with welcome message
+  // Initialize with welcome message and process initial message if provided
   useEffect(() => {
     const initializeChat = async () => {
       try {
@@ -187,7 +188,46 @@ export function AIIntroComponent({ className = "" }: AIIntroComponentProps) {
           chat_session_id: "intro-session",
         };
 
-        setMessages([welcomeMessage]);
+        const initialMessages = [welcomeMessage];
+
+        // If there's an initial message, add it as a user message and process it
+        if (initialMessage?.trim()) {
+          const userMessage: ConversationMessage = {
+            content: initialMessage,
+            role: "user",
+            timestamp: Date.now() + 1,
+            chat_session_id: "intro-session",
+          };
+          
+          initialMessages.push(userMessage);
+          
+          // Process the initial message through the AI coach
+          try {
+            const aiResponse = await fetch(`${supabase.supabaseUrl}/functions/v1/ai-onboarding-coach`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabase.supabaseKey}`,
+              },
+              body: JSON.stringify({ message: initialMessage }),
+            });
+
+            if (aiResponse.ok) {
+              const aiData = await aiResponse.json();
+              const aiMessage: ConversationMessage = {
+                content: aiData.response || "I'm sorry, I couldn't generate a response.",
+                role: "assistant",
+                timestamp: Date.now() + 2,
+                chat_session_id: "intro-session",
+              };
+              initialMessages.push(aiMessage);
+            }
+          } catch (aiError) {
+            console.error('Failed to process initial message:', aiError);
+          }
+        }
+
+        setMessages(initialMessages);
       } catch (error) {
         console.error('Failed to initialize chat:', error);
         // Fallback message
@@ -204,12 +244,26 @@ Sound good?`,
           timestamp: Date.now(),
           chat_session_id: "intro-session",
         };
-        setMessages([fallbackMessage]);
+        
+        const initialMessages = [fallbackMessage];
+        
+        // Still add initial message if provided, even with fallback
+        if (initialMessage?.trim()) {
+          const userMessage: ConversationMessage = {
+            content: initialMessage,
+            role: "user",
+            timestamp: Date.now() + 1,
+            chat_session_id: "intro-session",
+          };
+          initialMessages.push(userMessage);
+        }
+        
+        setMessages(initialMessages);
       }
     };
 
     initializeChat();
-  }, []);
+  }, [initialMessage]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isSendingMessage) return;

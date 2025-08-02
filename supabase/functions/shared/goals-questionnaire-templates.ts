@@ -802,7 +802,7 @@ CALCULATION GUIDELINES:
 
 
 // Export all templates
-export const QUESTIONNAIRE_TEMPLATES: Record<string, QuestionnaireTemplate> = {
+export const QUESTIONNAIRE_TEMPLATES: Record<GoalType, QuestionnaireTemplate> = {
   retirement: retirementTemplate,
   home_buying: homeBuyingTemplate,
   wealth: wealthTemplate,
@@ -814,7 +814,7 @@ export const QUESTIONNAIRE_TEMPLATES: Record<string, QuestionnaireTemplate> = {
 };
 
 // Helper function to get template by goal type
-export function getQuestionnaireTemplate(goalType: string): QuestionnaireTemplate | undefined {
+export function getQuestionnaireTemplate(goalType: GoalType): QuestionnaireTemplate | undefined {
   return QUESTIONNAIRE_TEMPLATES[goalType];
 }
 

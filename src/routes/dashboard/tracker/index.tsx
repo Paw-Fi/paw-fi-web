@@ -21,7 +21,10 @@ import {
   faCar,
   faGraduationCap,
   faHeart,
-  faRocket
+  faRocket,
+  faChartBar,
+  faCreditCard,
+  faShieldAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
@@ -116,27 +119,110 @@ function GoalsTracker() {
   }, [goals]);
   
   const spotlightGoals = useMemo(() => {
-    if (!goals || goals.length === 0) return { urgency: null, attention: null };
+    if (!goals || goals.length === 0) return [];
     
-    const urgentGoal = goals
-      .filter(goal => goal.target_date && goal.status !== 'completed')
-      .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime())[0] || null;
+    const activeGoals = goals.filter(goal => goal.status !== 'completed');
+    if (activeGoals.length === 0) return [];
     
-    const attentionGoal = goals
-      .filter(goal => goal.status !== 'completed')
-      .map(goal => {
-        const progress = goal.current_amount && goal.target_amount 
-          ? (goal.current_amount / goal.target_amount) * 100 
-          : 0;
-        const daysUntilTarget = goal.target_date 
-          ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-          : 0;
-        const expectedProgress = daysUntilTarget > 0 ? Math.max(0, 100 - (daysUntilTarget / 365) * 100) : 100;
-        return { ...goal, deficit: expectedProgress - progress };
+    const currentDate = new Date();
+    const spotlightCandidates = activeGoals.map(goal => {
+      const progress = goal.current_amount && goal.target_amount 
+        ? (goal.current_amount / goal.target_amount) * 100 
+        : 0;
+      
+      const daysUntilTarget = goal.target_date 
+        ? Math.ceil((new Date(goal.target_date).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+        : Infinity;
+      
+      // Calculate expected progress based on time elapsed
+      const totalDays = goal.target_date && goal.created_at
+        ? Math.ceil((new Date(goal.target_date).getTime() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        : 365; // Default to 1 year if no creation date
+      
+      const elapsedDays = goal.created_at
+        ? Math.ceil((currentDate.getTime() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      
+      const expectedProgress = totalDays > 0 ? Math.min(100, (elapsedDays / totalDays) * 100) : 0;
+      const progressDeficit = expectedProgress - progress;
+      
+      // Calculate spotlight priority score
+      let spotlightScore = 0;
+      let spotlightType = 'progress';
+      let spotlightReason = '';
+      
+      // Critical urgency: Less than 7 days remaining
+      if (daysUntilTarget <= 7 && daysUntilTarget > 0) {
+        spotlightScore = 100;
+        spotlightType = 'critical';
+        spotlightReason = `Only ${daysUntilTarget} day${daysUntilTarget === 1 ? '' : 's'} remaining`;
+      }
+      // High urgency: Less than 30 days remaining
+      else if (daysUntilTarget <= 30 && daysUntilTarget > 7) {
+        spotlightScore = 80;
+        spotlightType = 'urgency';
+        spotlightReason = `${daysUntilTarget} days until target date`;
+      }
+      // Behind schedule: Progress deficit > 20%
+      else if (progressDeficit > 20) {
+        spotlightScore = 70;
+        spotlightType = 'attention';
+        spotlightReason = `${Math.round(progressDeficit)}% behind expected progress`;
+      }
+      // Moderate urgency: Less than 90 days remaining
+      else if (daysUntilTarget <= 90 && daysUntilTarget > 30) {
+        spotlightScore = 60;
+        spotlightType = 'upcoming';
+        spotlightReason = `${Math.round(daysUntilTarget / 30)} month${Math.round(daysUntilTarget / 30) === 1 ? '' : 's'} remaining`;
+      }
+      // Good progress: Ahead of schedule
+      else if (progressDeficit < -10 && progress > 10) {
+        spotlightScore = 50;
+        spotlightType = 'success';
+        spotlightReason = `${Math.round(Math.abs(progressDeficit))}% ahead of schedule`;
+      }
+      // Recently started: Less than 10% progress but recent activity
+      else if (progress < 10 && progress > 0) {
+        spotlightScore = 40;
+        spotlightType = 'momentum';
+        spotlightReason = 'Building momentum - keep it up!';
+      }
+      // Stagnant: No progress in a while
+      else if (progress === 0 && elapsedDays > 30) {
+        spotlightScore = 30;
+        spotlightType = 'stagnant';
+        spotlightReason = 'No progress yet - time to take action';
+      }
+      
+      return {
+        ...goal,
+        progress,
+        daysUntilTarget,
+        progressDeficit,
+        spotlightScore,
+        spotlightType,
+        spotlightReason
+      };
+    });
+    
+    // Sort by spotlight score (highest first) and select top 1-3
+    const selectedSpotlights = spotlightCandidates
+      .filter(goal => goal.spotlightScore > 0)
+      .sort((a, b) => {
+        // Primary sort: spotlight score
+        if (b.spotlightScore !== a.spotlightScore) {
+          return b.spotlightScore - a.spotlightScore;
+        }
+        // Secondary sort: closest target date
+        if (a.daysUntilTarget !== b.daysUntilTarget) {
+          return a.daysUntilTarget - b.daysUntilTarget;
+        }
+        // Tertiary sort: highest target amount (more significant goals)
+        return (b.target_amount || 0) - (a.target_amount || 0);
       })
-      .sort((a, b) => b.deficit - a.deficit)[0] || null;
+      .slice(0, 3); // Maximum 3 spotlight cards
     
-    return { urgency: urgentGoal, attention: attentionGoal };
+    return selectedSpotlights;
   }, [goals]);
   
   const statsData = useMemo(() => {
@@ -186,14 +272,33 @@ function GoalsTracker() {
     }
   };
   
-  const getGoalIcon = (title: string) => {
-    const titleLower = title.toLowerCase();
-    if (titleLower.includes('home') || titleLower.includes('house')) return faHome;
+  const getGoalIcon = (goal: any) => {
+    // First check if goal has a type property for exact matching
+    if (goal.type) {
+      switch (goal.type) {
+        case 'retirement': return faRocket;
+        case 'home_buying': return faHome;
+        case 'wealth': return faChartLine;
+        case 'investment': return faChartBar;
+        case 'debt_payoff': return faCreditCard;
+        case 'emergency_fund': return faShieldAlt;
+        case 'custom': return faBullseye;
+        default: break;
+      }
+    }
+    
+    // Fallback to title-based matching for legacy goals
+    const titleLower = goal.title?.toLowerCase() || '';
+    if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
+    if (titleLower.includes('home') || titleLower.includes('house') || titleLower.includes('buying')) return faHome;
+    if (titleLower.includes('wealth') || titleLower.includes('rich')) return faChartLine;
+    if (titleLower.includes('invest') || titleLower.includes('stock') || titleLower.includes('portfolio')) return faChartBar;
+    if (titleLower.includes('debt') || titleLower.includes('loan') || titleLower.includes('payoff')) return faCreditCard;
+    if (titleLower.includes('emergency') || titleLower.includes('fund') || titleLower.includes('safety')) return faShieldAlt;
     if (titleLower.includes('travel') || titleLower.includes('vacation')) return faPlane;
     if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
     if (titleLower.includes('education') || titleLower.includes('school')) return faGraduationCap;
     if (titleLower.includes('wedding') || titleLower.includes('marriage')) return faHeart;
-    if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
     return faBullseye;
   };
 
@@ -241,8 +346,7 @@ function GoalsTracker() {
         {hasGoals ? (
           <>
             <SpotlightSection 
-              urgencyGoal={spotlightGoals.urgency} 
-              attentionGoal={spotlightGoals.attention}
+              spotlightGoals={spotlightGoals}
               getGoalIcon={getGoalIcon}
               getGoalStatus={getGoalStatus}
             />
@@ -265,17 +369,22 @@ function GoalsTracker() {
 
 // Spotlight Section Component
 const SpotlightSection = memo(function SpotlightSection({ 
-  urgencyGoal, 
-  attentionGoal, 
+  spotlightGoals, 
   getGoalIcon, 
   getGoalStatus 
 }: {
-  urgencyGoal: any;
-  attentionGoal: any;
-  getGoalIcon: (title: string) => any;
+  spotlightGoals: any[];
+  getGoalIcon: (goal: any) => any;
   getGoalStatus: (goal: any) => string;
 }) {
-  if (!urgencyGoal && !attentionGoal) return null;
+  if (!spotlightGoals || spotlightGoals.length === 0) return null;
+  
+  // Determine grid layout based on number of cards
+  const getGridClass = (count: number) => {
+    if (count === 1) return 'grid grid-cols-1 max-w-md mx-auto';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6';
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+  };
   
   return (
     <motion.section 
@@ -285,101 +394,123 @@ const SpotlightSection = memo(function SpotlightSection({
       transition={{ duration: 0.4 }}
     >
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Spotlight</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Urgency Card */}
-        {urgencyGoal && (
+      <div className={getGridClass(spotlightGoals.length)}>
+        {spotlightGoals.map((goal, index) => (
           <SpotlightCard 
-            goal={urgencyGoal}
-            type="urgency"
-            icon={getGoalIcon(urgencyGoal.title)}
-            status={getGoalStatus(urgencyGoal)}
+            key={goal.id}
+            goal={goal}
+            type={goal.spotlightType}
+            icon={getGoalIcon(goal)}
+            status={getGoalStatus(goal)}
+            reason={goal.spotlightReason}
+            priority={index + 1}
           />
-        )}
-        
-        {/* Attention Card */}
-        {attentionGoal && (
-          <SpotlightCard 
-            goal={attentionGoal}
-            type="attention"
-            icon={getGoalIcon(attentionGoal.title)}
-            status={getGoalStatus(attentionGoal)}
-          />
-        )}
+        ))}
       </div>
     </motion.section>
   );
 });
 
-// Playful Spotlight Card Component inspired by the design
+// Clean Spotlight Card Component matching the attached design
 const SpotlightCard = memo(function SpotlightCard({ 
   goal, 
   type, 
   icon, 
-  status 
+  status,
+  reason,
+  priority 
 }: {
   goal: any;
-  type: 'urgency' | 'attention';
+  type: 'critical' | 'urgency' | 'attention' | 'upcoming' | 'success' | 'momentum' | 'stagnant';
   icon: any;
   status: string;
+  reason?: string;
+  priority?: number;
 }) {
   const daysUntilTarget = goal.target_date 
     ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : 0;
   
-  // Playful background colors matching the design
-  const cardStyles = {
-    urgency: 'bg-gradient-to-br from-purple-200 via-purple-100 to-blue-100',
-    attention: 'bg-gradient-to-br from-purple-200 via-blue-100 to-purple-100'
+  // Get background color based on goal type and spotlight type
+  const getCardBackground = (goalType: string, spotlightType: string) => {
+    // Primary colors based on goal type
+    const goalTypeColors = {
+      'retirement': 'bg-gradient-to-br from-purple-200 to-purple-300',
+      'home_buying': 'bg-gradient-to-br from-blue-200 to-blue-300', 
+      'wealth': 'bg-gradient-to-br from-green-200 to-green-300',
+      'investment': 'bg-gradient-to-br from-indigo-200 to-indigo-300',
+      'debt_payoff': 'bg-gradient-to-br from-red-200 to-red-300',
+      'emergency_fund': 'bg-gradient-to-br from-orange-200 to-orange-300',
+      'custom': 'bg-gradient-to-br from-gray-200 to-gray-300'
+    };
+    
+    // Override with spotlight urgency colors if critical
+    if (spotlightType === 'critical') {
+      return 'bg-gradient-to-br from-red-300 to-red-400';
+    }
+    if (spotlightType === 'urgency') {
+      return 'bg-gradient-to-br from-orange-300 to-orange-400';
+    }
+    
+    return goalTypeColors[goalType as keyof typeof goalTypeColors] || goalTypeColors.custom;
   };
   
-  const decorativeElements = type === 'urgency' ? (
-    <>
-      <div className="absolute top-4 right-6 text-orange-400 text-xl">✦</div>
-      <div className="absolute top-8 right-12 text-yellow-400 text-sm">⭐</div>
-      <div className="absolute bottom-6 left-6 text-green-400 text-lg">✦</div>
-      <div className="absolute bottom-4 right-8 text-teal-400 text-xs">●</div>
-      <div className="absolute top-12 left-8 text-blue-400 text-xs">●</div>
-      <div className="absolute bottom-8 right-4 text-purple-400 text-lg">✦</div>
-    </>
-  ) : (
-    <>
-      <div className="absolute top-4 right-6 text-blue-400 text-xl">●</div>
-      <div className="absolute bottom-6 left-6 text-purple-400 text-lg">●</div>
-      <div className="absolute top-8 left-8 text-teal-400 text-xs">●</div>
-    </>
-  );
+  // Get decorative elements based on goal type
+  const getDecorativeElements = (goalType: string) => {
+    const decorativeMap = {
+      'retirement': ['🚀', '⭐', '✨', '●', '✦'],
+      'home_buying': ['🏠', '⭐', '●', '✦'],
+      'wealth': ['💎', '⭐', '✨', '●'],
+      'investment': ['📈', '⭐', '●', '✦'],
+      'debt_payoff': ['💳', '⚡', '●', '✦'],
+      'emergency_fund': ['🛡️', '⭐', '●', '✦'],
+      'custom': ['🎯', '⭐', '●', '✦']
+    };
+    
+    const elements = decorativeMap[goalType as keyof typeof decorativeMap] || decorativeMap.custom;
+    return elements.slice(0, 4); // Limit to 4 elements
+  };
+  
+  const cardBackground = getCardBackground(goal.type || 'custom', type);
+  const decorativeElements = getDecorativeElements(goal.type || 'custom');
   
   return (
     <Link to={`/dashboard/tracker/${goal.id}`}>
       <motion.div 
-        className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all duration-300 hover:shadow-xl ${cardStyles[type]}`}
-        whileHover={{ y: -4, scale: 1.02 }}
+        className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
+        whileHover={{ y: -2, scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {decorativeElements}
+        {/* Decorative Elements */}
+        <div className="absolute top-4 right-6 text-2xl opacity-30">{decorativeElements[0]}</div>
+        <div className="absolute top-8 right-12 text-sm opacity-25">{decorativeElements[1]}</div>
+        <div className="absolute bottom-6 left-6 text-lg opacity-20">{decorativeElements[2]}</div>
+        <div className="absolute bottom-4 right-8 text-xs opacity-25">{decorativeElements[3]}</div>
         
         <div className="relative z-10">
-          {/* Large icon display */}
+          {/* Large Icon */}
           <div className="mb-6">
             <div className="w-16 h-16 bg-white/50 backdrop-blur-sm rounded-2xl flex items-center justify-center">
               <FontAwesomeIcon icon={icon} className="w-8 h-8 text-gray-700" />
             </div>
           </div>
           
-          {/* Main content */}
-          <div className="space-y-4">
-            <div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : 'Due Today'}
-              </div>
-              <div className="text-gray-700 font-medium">
-                {type === 'urgency' ? `Until ${goal.title}` : `Until ${goal.title}`}
-              </div>
+          {/* Main Content */}
+          <div className="space-y-2">
+            {/* Days Display */}
+            <div className="text-4xl font-bold text-gray-900">
+              {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
             </div>
             
-            {type === 'attention' && (
-              <div className="text-sm text-gray-600 font-medium">
-                Next Milestone:
+            {/* Goal Title */}
+            <div className="text-gray-800 font-medium text-lg leading-tight">
+              Until {goal.title}
+            </div>
+            
+            {/* Additional Info for certain types */}
+            {(type === 'attention' || type === 'stagnant') && (
+              <div className="text-sm text-gray-700 font-medium mt-3">
+                {reason || 'Next Milestone:'}
               </div>
             )}
           </div>
@@ -519,7 +650,7 @@ const GoalCard = memo(function GoalCard({
   };
   
   const getGoalIcon = (title: string) => {
-    const titleLower = title.toLowerCase();
+    const titleLower = title?.toLowerCase() || '';
     if (titleLower.includes('home') || titleLower.includes('house')) return faHome;
     if (titleLower.includes('travel') || titleLower.includes('vacation') || titleLower.includes('trip')) return faPlane;
     if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
