@@ -33,20 +33,16 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const requestData = await req.json();
-    const { message, isFirstMessage = false } = requestData;
+    const { message, isFirstMessage = false, withWelcomeAndResponse = false } = requestData;
 
-    if (!message && !isFirstMessage) {
+    if (!message && !isFirstMessage && !withWelcomeAndResponse) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let aiResponse: string;
-
-    // Handle first message - welcome message
-    if (isFirstMessage || !message) {
-      aiResponse = `### Hey! I'm Moneko—your AI money coach 👋
+    const welcomeMessage = `### Hey! I'm Moneko—your AI money coach 👋
 
 I know that talking about money can feel overwhelming, but you're in a safe, judgment-free space. My entire purpose is to help you feel clear and confident about your financial future, one step at a time
 
@@ -56,6 +52,48 @@ I know that talking about money can feel overwhelming, but you're in a safe, jud
 - **Personalized plan** - I'll build a strategy just for you
 
 **Ready to get started?** Just tell me what financial goal you'd like to work on!`;
+
+    // Handle special case: return both welcome message and response to user message
+    if (withWelcomeAndResponse && message) {
+      // Process user's goal using Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const generationConfig = {
+        responseMimeType: "text/plain",
+        maxOutputTokens: 1000,
+      };
+
+      const result = await model.generateContent(
+        {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: message }],
+            },
+          ],
+          systemInstruction: SYSTEM_PROMPT,
+        },
+        generationConfig,
+      );
+
+      const aiResponse = result.response.text();
+
+      return new Response(
+        JSON.stringify({ 
+          welcome: welcomeMessage,
+          response: aiResponse,
+          coach: "moneko"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let aiResponse: string;
+
+    // Handle first message - welcome message only
+    if (isFirstMessage || !message) {
+      aiResponse = welcomeMessage;
     } else {
       // Process user's goal using Gemini
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });

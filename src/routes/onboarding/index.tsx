@@ -10,7 +10,7 @@ export const Route = createFileRoute('/onboarding/')({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      message: (search.message as string) || undefined,
+      q: (search.q as string) || undefined,
     };
   },
   head: () => {
@@ -41,7 +41,7 @@ export const Route = createFileRoute('/onboarding/')({
 function RouteComponent() {
   const {user} = useAuth();
   const navigate = useNavigate();
-  const { message } = Route.useSearch();
+  const { q } = Route.useSearch();
 
   // useEffect(() => {
   //   if (user) {
@@ -49,5 +49,5 @@ function RouteComponent() {
   //   }
   // }, [user, navigate]);
 
-  return <AIIntroComponent initialMessage={message} />
+  return <AIIntroComponent initialMessage={q} />
 }

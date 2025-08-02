@@ -162,9 +162,94 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
     }
   }, [user?.id, hasUpdatedGuestGoals, updateGuestGoals]);
 
-  // Initialize with welcome message and process initial message if provided
+  // Initialize with welcome message or process initial message if provided
   useEffect(() => {
     const initializeChat = async () => {
+      // If there's an initial message, get both welcome and response
+      if (initialMessage?.trim()) {
+        const userMessage: ConversationMessage = {
+          content: initialMessage,
+          role: "user",
+          timestamp: Date.now(),
+          chat_session_id: "intro-session",
+        };
+        
+        // Show user message immediately and start loading indicators
+        setMessages([userMessage]);
+        setIsSendingMessage(true);
+        setLoadingDuration(0);
+        
+        // Start loading timer
+        if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = setInterval(() => {
+          setLoadingDuration(prev => prev + 1);
+        }, 1000);
+        
+        // Get both welcome message and response from the backend
+        try {
+          const response = await fetch(`${supabase.supabaseUrl}/functions/v1/ai-onboarding-coach`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabase.supabaseKey}`,
+            },
+            body: JSON.stringify({ 
+              message: initialMessage, 
+              withWelcomeAndResponse: true 
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            const initialMessages = [userMessage];
+            
+            // Add welcome message
+            const welcomeMessage: ConversationMessage = {
+              content: data.welcome,
+              role: "assistant",
+              timestamp: Date.now() + 1,
+              chat_session_id: "intro-session",
+            };
+            initialMessages.push(welcomeMessage);
+            
+            // Add AI response to user's message
+            const aiMessage: ConversationMessage = {
+              content: data.response || "I'm sorry, I couldn't generate a response.",
+              role: "assistant",
+              timestamp: Date.now() + 2,
+              chat_session_id: "intro-session",
+            };
+            initialMessages.push(aiMessage);
+            
+            setMessages(initialMessages);
+          }
+        } catch (aiError) {
+          console.error('Failed to process initial message:', aiError);
+          // Add error message if API fails
+          const errorMessage: ConversationMessage = {
+            content: "Sorry, I had trouble connecting. Please check your connection or try again.",
+            role: "assistant",
+            timestamp: Date.now() + 1,
+            chat_session_id: "intro-session",
+            metadata: { isError: true }
+          };
+          setMessages([userMessage, errorMessage]);
+        } finally {
+          // Stop loading indicators
+          setIsSendingMessage(false);
+          setLoadingDuration(0);
+          
+          if (loadingTimerRef.current) {
+            clearInterval(loadingTimerRef.current);
+            loadingTimerRef.current = null;
+          }
+        }
+        
+        return;
+      }
+
+      // No initial message, so load the welcome message only
       try {
         const response = await fetch(`${supabase.supabaseUrl}/functions/v1/ai-onboarding-coach`, {
           method: 'POST',
@@ -188,46 +273,7 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
           chat_session_id: "intro-session",
         };
 
-        const initialMessages = [welcomeMessage];
-
-        // If there's an initial message, add it as a user message and process it
-        if (initialMessage?.trim()) {
-          const userMessage: ConversationMessage = {
-            content: initialMessage,
-            role: "user",
-            timestamp: Date.now() + 1,
-            chat_session_id: "intro-session",
-          };
-          
-          initialMessages.push(userMessage);
-          
-          // Process the initial message through the AI coach
-          try {
-            const aiResponse = await fetch(`${supabase.supabaseUrl}/functions/v1/ai-onboarding-coach`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabase.supabaseKey}`,
-              },
-              body: JSON.stringify({ message: initialMessage }),
-            });
-
-            if (aiResponse.ok) {
-              const aiData = await aiResponse.json();
-              const aiMessage: ConversationMessage = {
-                content: aiData.response || "I'm sorry, I couldn't generate a response.",
-                role: "assistant",
-                timestamp: Date.now() + 2,
-                chat_session_id: "intro-session",
-              };
-              initialMessages.push(aiMessage);
-            }
-          } catch (aiError) {
-            console.error('Failed to process initial message:', aiError);
-          }
-        }
-
-        setMessages(initialMessages);
+        setMessages([welcomeMessage]);
       } catch (error) {
         console.error('Failed to initialize chat:', error);
         // Fallback message
@@ -245,20 +291,7 @@ Sound good?`,
           chat_session_id: "intro-session",
         };
         
-        const initialMessages = [fallbackMessage];
-        
-        // Still add initial message if provided, even with fallback
-        if (initialMessage?.trim()) {
-          const userMessage: ConversationMessage = {
-            content: initialMessage,
-            role: "user",
-            timestamp: Date.now() + 1,
-            chat_session_id: "intro-session",
-          };
-          initialMessages.push(userMessage);
-        }
-        
-        setMessages(initialMessages);
+        setMessages([fallbackMessage]);
       }
     };
 
