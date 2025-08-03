@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock, faArrowUp } from "@fortawesome/free-solid-svg-icons";
-import { Modal } from "../ui/Modal";
+import { Modal } from "@/components/ui/modal";
 
 // Enhanced Update Progress Modal
 export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate, onOptimisticUpdate }: {
