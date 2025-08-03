@@ -47,6 +47,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
+import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
 
 
 
@@ -108,13 +109,15 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
+  // AI Chat context
+  const { isOpen: aiChatOpen, selectedAI, openChat, closeChat } = useAIChat();
+  
   // Use route matching instead of local state for active menu
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [aiChatOpen, setAiChatOpen] = useState(false);
-  const [selectedAI, setSelectedAI] = useState<'advisor' | 'analyst' | 'educator'>('advisor');
+
   const { user, signOut, isLoading } = useAuth();
   const { data: courses = [] } = useUserCourses(
     user?.id ?? "",
@@ -276,52 +279,23 @@ export function Dashboard() {
       id: "ai-advisor",
       label: "Financial Advisor",
       aiType: 'advisor' as const,
-      onClick: () => {
-        setSelectedAI('advisor');
-        setAiChatOpen(true);
-      }
+      onClick: () => openChat('advisor')
     },
     {
       id: "ai-analyst",
       label: "Market Analyst", 
       aiType: 'analyst' as const,
-      onClick: () => {
-        setSelectedAI('analyst');
-        setAiChatOpen(true);
-      }
+      onClick: () => openChat('analyst')
     },
     {
       id: "ai-educator",
       label: "Financial Educator",
       aiType: 'educator' as const,
-      onClick: () => {
-        setSelectedAI('educator');
-        setAiChatOpen(true);
-      }
+      onClick: () => openChat('educator')
     },
   ];
 
-  // AI options configuration
-  const aiOptions = [
-    {
-      id: 'advisor' as const,
-      name: 'Financial Advisor',
-      description: 'Get personalized financial advice and planning guidance',
-      color: 'from-blue-500 to-indigo-600'
-    },
-    {
-      id: 'analyst' as const,
-      name: 'Market Analyst',
-      description: 'Analyze market trends and investment opportunities',
-      color: 'from-green-500 to-emerald-600'
-    },
-    {
-      id: 'educator' as const,
-      name: 'Financial Educator',
-      description: 'Learn financial concepts and improve your knowledge',
-      color: 'from-purple-500 to-violet-600'
-    }
-  ];
+
 
   // Effect to handle menu expansion based on current route (simplified since no submenus)
   useEffect(() => {
@@ -618,7 +592,7 @@ export function Dashboard() {
                 {/* AI Agents */}
                 <div className="space-y-1">
                   {aiAgents.map((agent) => {
-                    const aiOption = aiOptions.find(ai => ai.id === agent.aiType);
+                    const aiOption = AI_OPTIONS.find(ai => ai.id === agent.aiType);
                     
                     return (
                       <div key={agent.id}>
@@ -1031,7 +1005,7 @@ export function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setAiChatOpen(false)}
+              onClick={() => closeChat()}
             />
             
             {/* Drawer */}
@@ -1045,24 +1019,24 @@ export function Dashboard() {
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${aiOptions.find(ai => ai.id === selectedAI)?.color} shadow-sm`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${AI_OPTIONS.find(ai => ai.id === selectedAI)?.color} shadow-sm`}>
                     <OptimizedImage 
                       src={logo} 
-                      alt={`${aiOptions.find(ai => ai.id === selectedAI)?.name} Avatar`} 
+                      alt={`${AI_OPTIONS.find(ai => ai.id === selectedAI)?.name} Avatar`} 
                       className="h-6 w-6"
                     />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {aiOptions.find(ai => ai.id === selectedAI)?.name}
-                    </h2>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {AI_OPTIONS.find(ai => ai.id === selectedAI)?.name}
+                    </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Conversation History
                     </p>
                   </div>
                 </div>
                 <motion.button
-                  onClick={() => setAiChatOpen(false)}
+                  onClick={() => closeChat()}
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
