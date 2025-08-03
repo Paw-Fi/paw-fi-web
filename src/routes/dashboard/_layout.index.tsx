@@ -74,7 +74,6 @@ import { getConversations } from "@/services/conversation-service";
 import basicCourse from "@/data/basic-lessons.json";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
-import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
 import { useGamification } from "@/hooks/use-gamification";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -1160,7 +1159,6 @@ function DashboardHome() {
           </motion.div>
         </div>
       </motion.div>
-      <FloatingChatButton/>
 
         {/* Rewards Modal */}
         {showRewardsModal && (

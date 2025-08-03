@@ -24,6 +24,10 @@ import {
   faHouseChimney,
   faHome,
   faChartBar,
+  faRobot,
+  faComments,
+  faChevronUp,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -41,6 +45,8 @@ import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
+import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
+import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 
 
 
@@ -106,6 +112,9 @@ export function Dashboard() {
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [selectedAI, setSelectedAI] = useState<'advisor' | 'analyst' | 'educator'>('advisor');
   const { user, signOut, isLoading } = useAuth();
   const { data: courses = [] } = useUserCourses(
     user?.id ?? "",
@@ -252,68 +261,73 @@ export function Dashboard() {
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
     { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
-
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
       id: "learning",
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
-    },    
-    // Only show membership and settings if user is logged in
-    ...(user ? [
-      {
-        id: "user-settings",
-        label: "Settings",
-        icon: faCog,
-        path: "/dashboard/user-settings",
-        submenu: [
-          {
-            id: "profile",
-            label: "Profile",
-            icon: faUser,
-            path: "/dashboard/user-settings/",
-          },
-          {
-            id: "membership",
-            label: "Membership",
-            icon: faUser,
-            path: "/dashboard/user-settings/membership",
-          },
-        ],
-      },
-    ] : []),
+    },
   ];
 
-  // Effect to handle menu expansion based on current route
-  useEffect(() => {
-    const path = location.pathname;
-    
-    // First check if we're on a main menu path
-    const currentMenuItem = menuItems.find((item) => item.path === path);
-    if (currentMenuItem?.submenu) {
-      setExpandedMenu(currentMenuItem);
-      return;
-    }
-    
-    // If not, check if we're on a submenu path
-    for (const menuItem of menuItems) {
-      if (menuItem.submenu) {
-        // Check if current path is in this menu's submenu
-        const isInSubmenu = menuItem.submenu.some(subItem => 
-          path === subItem.path || path.startsWith(subItem.path + '/')
-        );
-        
-        if (isInSubmenu) {
-          setExpandedMenu(menuItem);
-          return;
-        }
+  // AI Agents - separate from menu items
+  const aiAgents = [
+    {
+      id: "ai-advisor",
+      label: "Financial Advisor",
+      aiType: 'advisor' as const,
+      onClick: () => {
+        setSelectedAI('advisor');
+        setAiChatOpen(true);
       }
+    },
+    {
+      id: "ai-analyst",
+      label: "Market Analyst", 
+      aiType: 'analyst' as const,
+      onClick: () => {
+        setSelectedAI('analyst');
+        setAiChatOpen(true);
+      }
+    },
+    {
+      id: "ai-educator",
+      label: "Financial Educator",
+      aiType: 'educator' as const,
+      onClick: () => {
+        setSelectedAI('educator');
+        setAiChatOpen(true);
+      }
+    },
+  ];
+
+  // AI options configuration
+  const aiOptions = [
+    {
+      id: 'advisor' as const,
+      name: 'Financial Advisor',
+      description: 'Get personalized financial advice and planning guidance',
+      color: 'from-blue-500 to-indigo-600'
+    },
+    {
+      id: 'analyst' as const,
+      name: 'Market Analyst',
+      description: 'Analyze market trends and investment opportunities',
+      color: 'from-green-500 to-emerald-600'
+    },
+    {
+      id: 'educator' as const,
+      name: 'Financial Educator',
+      description: 'Learn financial concepts and improve your knowledge',
+      color: 'from-purple-500 to-violet-600'
     }
-    
-    // If we're not in any submenu, clear the expanded menu
+  ];
+
+  // Effect to handle menu expansion based on current route (simplified since no submenus)
+  useEffect(() => {
+    // Clear expanded menu since we no longer use submenus
     setExpandedMenu(null);
-  }, [location.pathname]); // Only depend on pathname, not the entire menuItems array
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -517,7 +531,7 @@ export function Dashboard() {
         className={classNames(
           "flex-shrink-0 transition-all duration-300 ease-in-out",
           mobileMenuOpen ? "block" : "hidden md:block",
-          "w-full md:w-56 md:max-h-full md:overflow-y-auto"
+          "w-full md:w-64 md:max-h-full md:overflow-y-auto"
         )}
         initial={{ x: -64, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -540,7 +554,7 @@ export function Dashboard() {
             </div>
 
             {/* Navigation Menu */}
-            <nav className="flex-1 space-y-2 px-4">
+            <nav className="flex-1 space-y-2 px-4 h-full">
               {menuItems.map((item) => (
                 <div key={item.id}>
                   <Link 
@@ -593,6 +607,58 @@ export function Dashboard() {
                 </div>
               ))}
 
+              {/* Chat Section */}
+              <div className="mt-24">
+                <div className="px-4 pb-2">
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Chat
+                  </h3>
+                </div>
+                
+                {/* AI Agents */}
+                <div className="space-y-1">
+                  {aiAgents.map((agent) => {
+                    const aiOption = aiOptions.find(ai => ai.id === agent.aiType);
+                    
+                    return (
+                      <div key={agent.id}>
+                        <motion.div
+                          className="flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            agent.onClick();
+                          }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 25,
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`flex size-10 items-center justify-center rounded-full bg-gradient-to-br ${aiOption?.color} shadow-sm`}>
+                              <OptimizedImage 
+                                src={logo} 
+                                alt={`${agent.label} Avatar`} 
+                                className="size-6"
+                              />
+                            </div>
+                           <div className="flex flex-col flex-1">
+                           <span className="text-md font-medium flex-1">
+                              {agent.label}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                             kalsdjkl klaskl sdd sadsad as
+                            </span>
+                           </div>
+                          </div>
+                        </motion.div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
                {/* Show Guide Button - Only visible when guide is hidden */}
                {isGuideHidden && (
                     <motion.div
@@ -617,38 +683,12 @@ export function Dashboard() {
                       </div>
                     </motion.div>
                   )}
-              {user && (
-                <>
-                 
-                  
-                  <motion.div
-                    className={
-                      "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                    }
-                    onClick={() => handleSignOut()}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
-                      >
-                        <FontAwesomeIcon
-                          className={`size-5 text-red-600 dark:text-red-400`}
-                          icon={faSignOut}
-                        />
-                      </div>
-                      <span className="text-md font-medium text-red-600 dark:text-red-400">
-                        Logout
-                      </span>
-                    </div>
-                  </motion.div>
-                </>
-              )}
+
             </nav>
           </div>
 
           {/* User Profile Section */}
-          <div className="border-t border-gray-100 dark:border-gray-700 p-4">
+          <div className="border-t border-gray-100 dark:border-gray-700 p-4 relative">
             {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
                 <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600"></div>
@@ -658,17 +698,137 @@ export function Dashboard() {
                 </div>
               </div>
             ) : user ? (
-              <div className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden">
-                <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
-                  {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
-                    {user.user_metadata?.full_name || "User"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-                </div>
-              </div>
+              <>
+                <motion.div 
+                  className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-all duration-200"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
+                    {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
+                      {user.user_metadata?.full_name || "User"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                  </div>
+                 
+                </motion.div>
+
+                {/* User Menu Popup */}
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {/* Settings Option */}
+                      <Link 
+                        to="/dashboard/user-settings" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faCog}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Settings
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Profile Option */}
+                      <Link 
+                        to="/dashboard/user-settings" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faUser}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Profile
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Membership Option */}
+                      <Link 
+                        to="/dashboard/user-settings/membership" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faUser}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Membership
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-200 dark:border-gray-700" />
+
+                      {/* Logout Option */}
+                      <motion.div
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 cursor-pointer"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                          handleSignOut();
+                        }}
+                        whileHover={{ x: 2 }}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                          <FontAwesomeIcon
+                            className="h-4 w-4 text-red-600 dark:text-red-400"
+                            icon={faSignOut}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          Logout
+                        </span>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
             ) : (
               <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
@@ -861,6 +1021,91 @@ export function Dashboard() {
           </div>}
         </div>
       </div>
+      {/* AI Chat Drawer */}
+      <AnimatePresence>
+        {aiChatOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAiChatOpen(false)}
+            />
+            
+            {/* Drawer */}
+            <motion.div
+              className="fixed right-0 top-0 h-full w-[45rem] bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-50 flex flex-col"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${aiOptions.find(ai => ai.id === selectedAI)?.color} shadow-sm`}>
+                    <OptimizedImage 
+                      src={logo} 
+                      alt={`${aiOptions.find(ai => ai.id === selectedAI)?.name} Avatar`} 
+                      className="h-6 w-6"
+                    />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {aiOptions.find(ai => ai.id === selectedAI)?.name}
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Conversation History
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setAiChatOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <FontAwesomeIcon
+                    icon={faTimes}
+                    className="h-5 w-5 text-gray-500 dark:text-gray-400"
+                  />
+                </motion.button>
+              </div>
+
+              {/* Chat Interface Content */}
+              <div className="flex-1 overflow-hidden">
+                {selectedAI === 'advisor' && (
+                  <FinancialAdvisorChatInterface />
+                )}
+                
+                {selectedAI === 'educator' && (
+                  <FinancialEducatorChatInterface />
+                )}
+                
+                {selectedAI === 'analyst' && (
+                  <div className="h-full p-4 flex items-center justify-center">
+                    <div className="text-center">
+                      <FontAwesomeIcon
+                        icon={faComments}
+                        className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3"
+                      />
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        Market Analyst chat coming soon
+                      </p>
+                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                        This AI assistant is currently in development
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {!isGuideHidden && <FloatingGuideWindow onClose={() => setIsGuideHidden(true)} />}
     </>
   );
