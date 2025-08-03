@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
 import { memo, useCallback, useState, useMemo } from "react";
+import travelBgImage from "@/assets/images/tracker/spotlight-travel.svg";
 
 const trackerSearchSchema = z.object({
   filter: z.enum(['all', 'on-track', 'needs-attention', 'completed']).optional().default('all'),
@@ -253,7 +254,7 @@ function GoalsTracker() {
     initial: { opacity: 0 },
     animate: { 
       opacity: 1,
-      transition: { 
+      transition: {   
         duration: 0.3, 
         staggerChildren: 0.1
       }
@@ -476,34 +477,36 @@ const SpotlightCard = memo(function SpotlightCard({
   
   return (
     <Link to={`/dashboard/tracker/${goal.id}`}>
+      
       <motion.div 
-        className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
+        className={`relative overflow-hidden bg-[#d6cffe] rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
         whileHover={{ y: -2, scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        style={{ backgroundImage: `url(${travelBgImage})`, backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
       >
         {/* Decorative Elements */}
-        <div className="absolute top-4 right-6 text-2xl opacity-30">{decorativeElements[0]}</div>
+        {/* <div className="absolute top-4 right-6 text-2xl opacity-30">{decorativeElements[0]}</div>
         <div className="absolute top-8 right-12 text-sm opacity-25">{decorativeElements[1]}</div>
         <div className="absolute bottom-6 left-6 text-lg opacity-20">{decorativeElements[2]}</div>
         <div className="absolute bottom-4 right-8 text-xs opacity-25">{decorativeElements[3]}</div>
-        
+         */}
         <div className="relative z-10">
           {/* Large Icon */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <div className="w-16 h-16 bg-white/50 backdrop-blur-sm rounded-2xl flex items-center justify-center">
               <FontAwesomeIcon icon={icon} className="w-8 h-8 text-gray-700" />
             </div>
-          </div>
+          </div> */}
           
           {/* Main Content */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-6">
             {/* Days Display */}
-            <div className="text-4xl font-bold text-gray-900">
+            <div className="text-4xl font-bold text-gray-900 text-right">
               {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
             </div>
             
             {/* Goal Title */}
-            <div className="text-gray-800 font-medium text-lg leading-tight">
+            <div className="text-gray-800 font-medium text-lg leading-tight text-right pl-24 line-clamp-2 text-ellipsis">
               Until {goal.title}
             </div>
             

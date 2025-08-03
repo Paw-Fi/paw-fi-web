@@ -16,11 +16,13 @@ import {
   faTrash,
   faUpLong,
   faFlag,
-  faBrain
+  faBrain,
+  faChevronRight
 } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import type { Insight } from "@/components/goal-tracker/types";
 import { useAuth } from "@/contexts/auth-context";
+import classNames from "classnames";
 
 interface GoalInsightsProps {
   insights: Insight[];
@@ -44,7 +46,6 @@ export function GoalInsights({
   onOptimisticUpdate
 }: GoalInsightsProps) {
   const { user } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [expandedInsights, setExpandedInsights] = useState<Set<string>>(new Set());
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
@@ -438,293 +439,159 @@ export function GoalInsights({
           </motion.div>
         )}
 
-        {/* Insights Display */}
-        <div className="space-y-4">
-          {/* Preview Mode - Top Insights */}
-          {!isExpanded && topInsights.map((insight, index) => {
-            const typeConfig = insightTypeConfigs[insight.type] || insightTypeConfigs.recommendation;
-            const priorityConfig = getPriorityConfig(insight.priority);
+        {/* Insights Display - Always Show All */}
+        <div className="space-y-6">
+          {/* Filters and Sort */}
+          <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+            {/* Type Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter:</span>
+              <div className="flex gap-2">
+                {insightTypes.map((type) => (
+                  <motion.button
+                    key={type}
+                    onClick={() => setSelectedFilter(type)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors capitalize ${
+                      selectedFilter === type
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {type}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
 
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 p-4"
+            {/* Sort */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20"
               >
-                <div className="flex items-start gap-3">
-                  <div className={`flex-shrink-0 w-8 h-8 ${typeConfig.bgColor} rounded-lg flex items-center justify-center`}>
-                    <FontAwesomeIcon icon={typeConfig.icon} className={`w-4 h-4 ${typeConfig.color}`} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                        {insight.title}
-                      </h4>
-                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                        <div className={`px-2 py-0.5 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
-                          {insight.priority}
+                <option value="priority">Priority</option>
+                <option value="date">Date</option>
+                <option value="type">Type</option>
+              </select>
+            </div>
+
+            {/* Stats */}
+            <div className="ml-auto flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <span>{filteredAndSortedInsights.length} insights shown</span>
+              <span>•</span>
+              <span>{insights.length} total</span>
+            </div>
+          </div>
+
+          {/* All Insights */}
+          <div className="space-y-4">
+            {filteredAndSortedInsights.map((insight, index) => {
+              const typeConfig = insightTypeConfigs[insight.type] || insightTypeConfigs.recommendation;
+              const priorityConfig = getPriorityConfig(insight.priority);
+              const isInsightExpanded = expandedInsights.has((insight as any).id || '');
+              const actions = getInsightActions(insight);
+
+              return (
+                <motion.div
+                  key={(insight as any).id || index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`bg-white dark:bg-gray-700/50 rounded-xl border-2 ${typeConfig.borderColor} hover:shadow-lg transition-all group`}
+                >
+                  {/* Insight Header */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-4 flex-1">
+                    
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {insight.title}
+                            </h3>
+                            
+                            <div className={`px-2 py-1 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
+                              {priorityConfig.label}
+                            </div>
+                            
+                            <div className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} rounded-full text-xs font-medium`}>
+                              {typeConfig.label}
+                            </div>
+                            
+                         
+                          
+                         
                         </div>
                       </div>
+
+                      {/* Expand Button */}
+                      <motion.button
+                        onClick={() => toggleInsightExpansion((insight as any).id || '')}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                      >
+                        <motion.div
+                          animate={{ rotate: isInsightExpanded ? 90 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-gray-400" />
+                        </motion.div>
+                      </motion.button>
                     </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-2">
-                      {insight.content.length > 120 
-                        ? `${insight.content.substring(0, 120)}...` 
-                        : insight.content
+
+                    {/* Content Preview */}
+                    <p className={classNames("text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2",
+                      {
+                        "h-28": isInsightExpanded,
+                        "h-12": !isInsightExpanded
                       }
+                    )}>
+                      {insight.content}
                     </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                        {insight.actionable && (
-                          <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                            <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                            Actionable
+
+                    {/* Expanded Content */}
+                    {isInsightExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600"
+                      >
+                        {(insight as any).ai_confidence_score && (
+                          <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                Moneko's Confidence
+                              </span>
+                              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                {Math.round((insight as any).ai_confidence_score * 100)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                              <motion.div
+                                className="h-2 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(insight as any).ai_confidence_score * 100}%` }}
+                                transition={{ duration: 1, delay: 0.5 }}
+                              />
+                            </div>
                           </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
 
-          {/* Expanded Mode - All Insights with Full Features */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                {/* Filters and Sort */}
-                <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  {/* Type Filter */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter:</span>
-                    <div className="flex gap-2">
-                      {insightTypes.map((type) => (
-                        <motion.button
-                          key={type}
-                          onClick={() => setSelectedFilter(type)}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors capitalize ${
-                            selectedFilter === type
-                              ? 'bg-pink-600 text-white'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                          }`}
-                        >
-                          {type}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sort */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sort:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
-                      className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20"
-                    >
-                      <option value="priority">Priority</option>
-                      <option value="date">Date</option>
-                      <option value="type">Type</option>
-                    </select>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="ml-auto flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                    <span>{filteredAndSortedInsights.length} insights shown</span>
-                    <span>•</span>
-                    <span>{insights.length} total</span>
-                  </div>
-                </div>
-
-                {/* All Insights */}
-                <div className="space-y-4">
-                  {filteredAndSortedInsights.map((insight, index) => {
-                    const typeConfig = insightTypeConfigs[insight.type] || insightTypeConfigs.recommendation;
-                    const priorityConfig = getPriorityConfig(insight.priority);
-                    const isInsightExpanded = expandedInsights.has((insight as any).id || '');
-                    const actions = getInsightActions(insight);
-
-                    return (
-                      <motion.div
-                        key={(insight as any).id || index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={`bg-white dark:bg-gray-700/50 rounded-xl border-2 ${typeConfig.borderColor} hover:shadow-lg transition-all group`}
-                      >
-                        {/* Insight Header */}
-                        <div className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className={`flex-shrink-0 w-12 h-12 ${typeConfig.bgColor} rounded-xl flex items-center justify-center`}>
-                                <FontAwesomeIcon icon={typeConfig.icon} className={`w-6 h-6 ${typeConfig.color}`} />
-                              </div>
-                              
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {insight.title}
-                                  </h3>
-                                  
-                                  <div className={`px-2 py-1 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
-                                    {priorityConfig.label}
-                                  </div>
-                                  
-                                  <div className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} rounded-full text-xs font-medium`}>
-                                    {typeConfig.label}
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
-                                    <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
-                                    Moneko
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                  <div className="flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                                    {getTimeSinceCreated((insight as any).created_at || '')}
-                                  </div>
-                                  
-                                  {(insight as any).ai_confidence_score && (
-                                    <div className="flex items-center gap-1">
-                                      <FontAwesomeIcon icon={faBullseye} className="w-3 h-3" />
-                                      {Math.round((insight as any).ai_confidence_score * 100)}% confidence
-                                    </div>
-                                  )}
-                                  
-                                  {insight.actionable && (
-                                    <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                      <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                                      Actionable
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Expand Button */}
-                            <motion.button
-                              onClick={() => toggleInsightExpansion((insight as any).id || '')}
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                            >
-                              <motion.div
-                                animate={{ rotate: isInsightExpanded ? 90 : 0 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4 text-gray-400" />
-                              </motion.div>
-                            </motion.button>
-                          </div>
-
-                          {/* Content Preview */}
-                          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                            {isInsightExpanded ? insight.content : `${insight.content.substring(0, 200)}${insight.content.length > 200 ? '...' : ''}`}
-                          </p>
-
-                          {/* Expanded Content */}
-                          {isInsightExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              transition={{ duration: 0.3 }}
-                              className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600"
-                            >
-                              {(insight as any).ai_confidence_score && (
-                                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                      Moneko's Confidence
-                                    </span>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                      {Math.round((insight as any).ai_confidence_score * 100)}%
-                                    </span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                                    <motion.div
-                                      className="h-2 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full"
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${(insight as any).ai_confidence_score * 100}%` }}
-                                      transition={{ duration: 1, delay: 0.5 }}
-                                    />
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Action Buttons */}
-                              <div className="flex items-center gap-3">
-                                {actions.map((action) => (
-                                  <motion.button
-                                    key={action.id}
-                                    onClick={() => handleInsightAction((insight as any).id || '', action.id)}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg transition-colors ${
-                                      action.type === 'primary'
-                                        ? 'bg-pink-600 hover:bg-pink-700 text-white'
-                                        : action.type === 'danger'
-                                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300'
-                                    }`}
-                                  >
-                                    <FontAwesomeIcon icon={action.icon} className="w-3 h-3" />
-                                    {action.label}
-                                  </motion.button>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </div>
+                    
                       </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Expand/Collapse Button */}
-        {insights.length > 0 && (
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <motion.button
-              onClick={() => setIsExpanded(!isExpanded)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors group"
-            >
-              <span>
-                {isExpanded 
-                  ? `Show Less` 
-                  : insights.length > 3 
-                    ? `View All ${insights.length} Insights` 
-                    : `View All Insights`
-                }
-              </span>
-              <motion.div
-                animate={{ rotate: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
-              </motion.div>
-            </motion.button>
-          </div>
-        )}
       </div>
     </motion.div>
   );
