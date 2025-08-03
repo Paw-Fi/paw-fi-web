@@ -470,7 +470,7 @@ function GoalDetail() {
                 <AnimatedNumber 
                   value={progressData.currentAmount} 
                   prefix="$" 
-                  className="text-6xl font-bold text-gray-900 dark:text-white"
+                  className="text-5xl font-bold text-gray-900 dark:text-white"
                   isAnimated={numbersAnimated}
                 />
                 <div className="text-lg text-gray-500 dark:text-gray-400 mt-2">
@@ -483,7 +483,6 @@ function GoalDetail() {
                   onClick={() => setShowUpdateProgressModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
                   Update Progress
                 </button>
                 
@@ -491,9 +490,7 @@ function GoalDetail() {
                   onClick={() => setShowTrackerModal(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  <FontAwesomeIcon icon={faBullseye} className="w-4 h-4" />
                   Tracker
-                  <FontAwesomeIcon icon={faChevronDown} className="w-3 h-3" />
                 </button>
               </div>
             </div>

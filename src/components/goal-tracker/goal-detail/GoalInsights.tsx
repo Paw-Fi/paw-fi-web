@@ -23,6 +23,7 @@ import { useState } from "react";
 import type { Insight } from "@/components/goal-tracker/types";
 import { useAuth } from "@/contexts/auth-context";
 import classNames from "classnames";
+import monekoIcon from "@/assets/images/icon.svg";
 
 interface GoalInsightsProps {
   insights: Insight[];
@@ -371,15 +372,12 @@ export function GoalInsights({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="bg-gradient-to-br from-white via-white to-indigo-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-indigo-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-sm"
+      className=""
     >
       <div className="relative p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 dark:from-indigo-400/30 dark:to-indigo-500/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-indigo-500/20 dark:border-indigo-400/30">
-              <FontAwesomeIcon icon={faMagicWandSparkles} className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
             
             <div>
               <div className="flex items-center gap-3 mb-1">
@@ -415,9 +413,9 @@ export function GoalInsights({
                 <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
               </motion.div>
             ) : (
-              <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
+                <img src={monekoIcon} alt="Moneko Icon" className="size-8" />
             )}
-            <span>{isGeneratingNew ? 'Thinking...' : 'Review Again'}</span>
+            <span>{isGeneratingNew ? 'Thinking...' : 'Ask Moneko Again'}</span>
           </motion.button>
         </div>
 
@@ -442,7 +440,7 @@ export function GoalInsights({
         {/* Insights Display - Always Show All */}
         <div className="space-y-6">
           {/* Filters and Sort */}
-          <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+          <div className="flex flex-wrap items-center gap-4 p-4 ">
             {/* Type Filter */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter:</span>

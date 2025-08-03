@@ -13,8 +13,8 @@ import {
   faPlus 
 } from "@fortawesome/free-solid-svg-icons";
 import { motion } from "framer-motion";
-import { Modal } from "../ui/Modal";
 import { useUserActivities } from "../../hooks/useUserActivities";
+import { Modal } from "../ui/modal";
 
 // Tracker Modal Component
 export function TrackerModal({ 
