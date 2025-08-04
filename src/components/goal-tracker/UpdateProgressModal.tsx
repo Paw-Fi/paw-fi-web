@@ -4,12 +4,11 @@ import { faClock, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/components/ui/modal";
 
 // Enhanced Update Progress Modal
-export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate, onOptimisticUpdate }: {
+export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }: {
   isOpen: boolean;
   onClose: () => void;
   goal: any;
   onProgressUpdate: (data: any) => void;
-  onOptimisticUpdate: (data: any) => void;
 }) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -28,20 +27,12 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate, o
     try {
       const amountValue = parseFloat(amount);
       
-      // Optimistic update
-      const newAmount = goal.current_amount + amountValue;
-      const newProgressPercentage = (newAmount / goal.target_amount) * 100;
-      
-      onOptimisticUpdate({
-        current_amount: newAmount,
-        progress_percentage: Math.min(100, newProgressPercentage),
-        updated_at: new Date().toISOString()
-      });
-
+      // Call the progress update function - it handles optimistic updates internally
       await onProgressUpdate({
         goalId: goal.id,
+        updateType: 'amount_added' as const,
         amountChange: amountValue,
-        note: note || undefined
+        userNote: note || undefined
       });
 
       // Reset form and close modal

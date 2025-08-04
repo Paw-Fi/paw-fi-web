@@ -9,10 +9,20 @@ interface ActivityListProps {
   activities: Activity[];
   isLoading: boolean;
   limit?: number;
+  goalId?: string;
 }
 
-export function ActivityList({ activities, isLoading, limit }: ActivityListProps) {
-  const displayActivities = limit ? activities.slice(0, limit) : activities;
+export function ActivityList({ activities, isLoading, limit, goalId }: ActivityListProps) {
+  // Filter activities by goalId if provided
+  const filteredActivities = goalId 
+    ? activities.filter(activity => 
+        activity.goalId === goalId ||
+        activity.metadata?.goalId === goalId ||
+        activity.type === 'goal_progress_updated'
+      )
+    : activities;
+    
+  const displayActivities = limit ? filteredActivities.slice(0, limit) : filteredActivities;
 
   if (isLoading) {
     return (
@@ -31,7 +41,7 @@ export function ActivityList({ activities, isLoading, limit }: ActivityListProps
     );
   }
 
-  if (activities.length === 0) {
+  if (filteredActivities.length === 0) {
     return <EmptyActivityState />;
   }
 

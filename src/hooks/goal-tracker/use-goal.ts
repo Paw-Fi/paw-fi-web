@@ -76,9 +76,12 @@ async function fetchGoalDetails(goalId: string, userId: string): Promise<{
 }
 
 // Update goal progress
-async function updateGoalProgress(request: ProgressUpdateRequest): Promise<any> {
+async function updateGoalProgress(request: ProgressUpdateRequest, userId: string): Promise<any> {
   const { data, error } = await supabase.functions.invoke('goal-progress-tracker', {
-    body: request,
+    body: {
+      ...request,
+      userId
+    },
   });
 
   if (error) {
@@ -161,7 +164,7 @@ export function useGoal(goalId: string, userId?: string) {
 
   // Optimistic update for goal progress
   const updateProgressMutation = useMutation({
-    mutationFn: updateGoalProgress,
+    mutationFn: (request: ProgressUpdateRequest) => updateGoalProgress(request, userId!),
     onMutate: async (newProgress: ProgressUpdateRequest) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: goalQueryKeys.detail(goalId) });
@@ -200,6 +203,8 @@ export function useGoal(goalId: string, userId?: string) {
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.detail(goalId) });
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.metrics(userId || '') });
+      // Invalidate user activities to show the new progress update activity
+      queryClient.invalidateQueries({ queryKey: ['user-activities', userId] });
     },
   });
 

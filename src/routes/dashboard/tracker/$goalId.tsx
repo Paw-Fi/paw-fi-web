@@ -5,8 +5,6 @@ import {
   faEdit, 
   faTrash, 
   faFlag,
-  faCalendarAlt,
-  faDollarSign,
   faEllipsisV,
   faChevronDown,
   faChevronUp,
@@ -15,8 +13,6 @@ import {
   faClock,
   faRocket,
   faChartLine,
-  faArrowUp,
-  faInfoCircle,
   faMagicWandSparkles,
   faCheck,
   faTimes,
@@ -40,7 +36,8 @@ import { AllInsightsModal } from "@/components/goal-tracker/AllInsightsModal";
 import { InteractiveProjectionChart } from "@/components/goal-tracker/InteractiveProjectionChart";
 import { TrackerModal } from "@/components/goal-tracker/TrackerModal";
 import { UpdateProgressModal } from "@/components/goal-tracker/UpdateProgressModal";
-import { ActivityTimelineComponent } from "@/components/goal-tracker/ActivityTimelineComponent";
+import { ActivityList } from "@/components/shared/ActivityList";
+import { useUserActivities } from "@/hooks/useUserActivities";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -153,6 +150,9 @@ function GoalDetail() {
     deleteGoal,
     refetch
   } = useGoal(goalId, user?.id);
+
+  // Get user activities for the activity timeline
+  const { activities, isLoading: activitiesLoading } = useUserActivities();
 
   // Optimistic state for goal updates - always called, even with null data
   const [optimisticGoal, setOptimisticGoal] = useOptimistic(
@@ -688,7 +688,11 @@ function GoalDetail() {
                       </div>
                     </div>
                     
-                    <ActivityTimelineComponent goalId={goalId} />
+                    <ActivityList 
+                      activities={activities || []} 
+                      isLoading={activitiesLoading} 
+                      goalId={goalId} 
+                    />
                   </div>
                 </motion.div>
               )}
@@ -930,7 +934,6 @@ function GoalDetail() {
         onClose={() => setShowUpdateProgressModal(false)}
         goal={currentGoal}
         onProgressUpdate={updateProgress}
-        onOptimisticUpdate={setOptimisticGoal}
       />
       
       <TrackerModal 
