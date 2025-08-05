@@ -159,7 +159,7 @@ serve(async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({
         success: true,
         insights: [],
-        message: "Recent insights already exist",
+        message: `📊 **Recent insights available!** I've already analyzed your goal progress recently. Check your goal dashboard for the latest insights.\n\n\`\`GOAL:${goalId}\`\``,
         debug: { recentInsightsCount: recentInsights.length }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -272,10 +272,16 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Successfully created ${newInsights?.length || 0} insights`);
 
+    const insightCount = newInsights?.length || 0;
+    const responseMessage = insightCount > 0 
+      ? `💡 **Generated ${insightCount} new insight${insightCount === 1 ? '' : 's'}!** I've analyzed your goal progress and created personalized recommendations to help you stay on track.\n\n\`\`GOAL:${goalId}\`\``
+      : `📊 **Analysis complete!** I've reviewed your goal progress. Check your goal dashboard for detailed insights.\n\n\`\`GOAL:${goalId}\`\``;
+
     return new Response(JSON.stringify({
       success: true,
       insights: newInsights || [],
       progressAnalysis,
+      message: responseMessage,
       debug: {
         message: "Insights generated and stored successfully",
         timestamp: new Date().toISOString(),

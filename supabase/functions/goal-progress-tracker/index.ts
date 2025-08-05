@@ -288,11 +288,28 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Generate appropriate message based on the update type and progress
+    let responseMessage = "";
+    const progressPercentageRounded = Math.round(newProgressPercentage * 100) / 100;
+    
+    if (newProgressPercentage >= 100) {
+      responseMessage = `🎉 **Congratulations!** You've completed your goal "${goal.title}"! You've reached 100% of your $${goal.target_amount.toLocaleString()} target.`;
+    } else if (updateType === RewardActions.MILESTONE_COMPLETED) {
+      responseMessage = `✅ **Milestone completed!** Great progress on "${goal.title}". You're now at ${progressPercentageRounded}% of your $${goal.target_amount.toLocaleString()} target.`;
+    } else {
+      const amountAdded = amountChange || 0;
+      const amountText = amountAdded > 0 ? `Added $${amountAdded.toLocaleString()}` : `Updated progress`;
+      responseMessage = `💰 **${amountText}** to "${goal.title}". You're now at ${progressPercentageRounded}% of your $${goal.target_amount.toLocaleString()} target.`;
+    }
+    
+    responseMessage += `\n\n\`\`GOAL:${goalId}\`\``;
+
     return new Response(JSON.stringify({
       success: true,
       goal: updatedGoal,
       milestone: updatedMilestone,
       progressUpdate: progressUpdate,
+      message: responseMessage,
       metrics: {
         previousAmount: goal.current_amount,
         newAmount,

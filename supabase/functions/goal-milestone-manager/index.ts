@@ -146,7 +146,51 @@ serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify(data), {
+    // Generate appropriate message based on the action
+    let responseMessage = "";
+    let goalId = "";
+    
+    switch (action) {
+      case 'create':
+        if (data && data.goal_id) {
+          goalId = data.goal_id;
+          responseMessage = `📋 **Milestone created!** Added "${data.title}" to your goal. This will help you stay on track!`;
+        }
+        break;
+      case 'update':
+        if (data && data.goal_id) {
+          goalId = data.goal_id;
+          if (data.status === 'completed') {
+            responseMessage = `✅ **Milestone completed!** Great job completing "${data.title}". You're making excellent progress!`;
+          } else {
+            responseMessage = `📝 **Milestone updated!** Your milestone "${data.title}" has been successfully updated.`;
+          }
+        }
+        break;
+      case 'delete':
+        // For delete, we need to get the goal_id from payload since data will be null
+        goalId = payload.goal_id;
+        responseMessage = `🗑️ **Milestone deleted!** The milestone has been removed from your goal.`;
+        break;
+      case 'reorder':
+        // For reorder, get goal_id from the first item in payload
+        if (payload && payload.length > 0 && payload[0].goal_id) {
+          goalId = payload[0].goal_id;
+          responseMessage = `🔄 **Milestones reordered!** Your milestone order has been updated successfully.`;
+        }
+        break;
+    }
+    
+    // Add goal button if we have a goalId
+    if (goalId && responseMessage) {
+      responseMessage += `\n\n\`\`GOAL:${goalId}\`\``;
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: data,
+      message: responseMessage || undefined
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

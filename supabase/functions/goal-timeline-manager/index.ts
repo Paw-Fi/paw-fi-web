@@ -195,9 +195,28 @@ serve(async (req: Request) => {
 
     console.log(`[goal-timeline-manager] Successfully processed ${action} for goal ${goalId}`);
 
+    // Generate appropriate message based on the action
+    let responseMessage = "";
+    const newDate = new Date(data.target_date).toLocaleDateString();
+    
+    switch (action) {
+      case 'update_timeline':
+      case 'adjust_target':
+        responseMessage = `📅 **Timeline updated!** Your goal "${data.title}" target date has been updated to ${newDate}.`;
+        break;
+      case 'extend_timeline':
+        responseMessage = `⏰ **Timeline extended!** Your goal "${data.title}" has been extended to ${newDate}. You've got more time to reach your target!`;
+        break;
+      default:
+        responseMessage = `📅 **Goal timeline updated!** Your goal "${data.title}" target date is now ${newDate}.`;
+    }
+    
+    responseMessage += `\n\n\`\`GOAL:${goalId}\`\``;
+
     return new Response(JSON.stringify({
       success: true,
       goal: data,
+      message: responseMessage,
       activity_logged: activityResult.success,
       activity_id: activityResult.activity_id,
     }), {

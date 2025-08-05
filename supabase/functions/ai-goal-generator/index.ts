@@ -326,6 +326,7 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({
       success: true,
       ...result,
+      message: `🎉 Great! I've created your **${result.goal.title}** goal with a target of $${result.goal.target_amount.toLocaleString()} by ${new Date(result.goal.target_date).toLocaleDateString()}. I've also generated ${result.milestones.length} milestones to help you stay on track.\n\n\`\`GOAL:${result.goal.id}\`\``,
       debug: {
         message: "Goal generated and stored successfully",
         timestamp: new Date().toISOString(),
