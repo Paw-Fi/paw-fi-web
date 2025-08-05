@@ -79,6 +79,7 @@ import { useGamification } from "@/hooks/use-gamification";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Activity, useUserActivities } from "@/hooks/useUserActivities";
+import { Timeline } from "@/components/timeline/Timeline";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -869,7 +870,7 @@ function DashboardHome() {
                         <div className="p-4 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl">
                           <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Activity</h4>
                           
-                          <ActivityList activities={activities} isLoading={isActivitiesLoading} limit={5} />
+                          <Timeline/>
 
                           {/* Error State */}
                           {activitiesError && (

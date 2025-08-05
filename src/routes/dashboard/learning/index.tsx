@@ -277,7 +277,7 @@ export function UnifiedLearningPage() {
         
         /* Variable Font Support */
         * {
-          font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+          font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         }
         
         /* Reduced Motion Support */
@@ -495,7 +495,7 @@ export function UnifiedLearningPage() {
                                 )}
                               </div>
                               <motion.h3 
-                                className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-200"
+                              className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-200"
                                 style={{
                                   fontVariationSettings: "'wght' 600",
                                   fontSize: "clamp(1.25rem, 2vw, 1.5rem)", // Design system text-title

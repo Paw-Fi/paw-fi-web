@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Activity } from '@/hooks/useUserActivities';
 import { TimelineSection } from './TimelineSection';
+import { TodaysActivitySection } from './TodaysActivitySection';
 
 interface GroupedActivities {
   today: Activity[];
@@ -15,68 +16,39 @@ interface TimelineMainProps {
   groupedActivities: GroupedActivities;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  selectedDate?: string | null;
+  onClearDateFilter?: () => void;
+  onLoadMoreActivities?: () => void;
+  isLoadingMore?: boolean;
 }
 
 export function TimelineMain({ 
   groupedActivities, 
   searchQuery, 
-  onSearchChange 
+  onSearchChange,
+  selectedDate,
+  onClearDateFilter,
+  onLoadMoreActivities,
+  isLoadingMore = false
 }: TimelineMainProps) {
   const hasActivities = Object.values(groupedActivities).some(group => group.length > 0);
 
   return (
     <main className="flex-1 p-6 md:p-10 overflow-y-auto">
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8 sticky top-0  dark:bg-slate-900/80 backdrop-blur-sm z-20 py-4"
-      >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Activity Timeline
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              A log of your financial journey.
-            </p>
-          </div>
-          <div className="relative">
-            <FontAwesomeIcon 
-              icon={faSearch} 
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input 
-              type="text" 
-              placeholder="Search activities..." 
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="
-                w-full md:w-64 dark:bg-slate-800 bg-slate-100 border-none rounded-lg 
-                py-3 pl-12 pr-4 text-sm text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-blue-500
-              "
-            />
-          </div>
-        </div>
-      </motion.header>
 
       <div className="relative">
+        {/* Today's Activity Section - Always show */}
+        <TodaysActivitySection activities={groupedActivities.today} />
+        
         {hasActivities ? (
           <>
-            {groupedActivities.today.length > 0 && (
-              <TimelineSection
-                title="Today"
-                activities={groupedActivities.today}
-                index={0}
-              />
-            )}
+            {/* Remove the regular Today section since we have the dedicated one above */}
             
             {groupedActivities.yesterday.length > 0 && (
               <TimelineSection
                 title="Yesterday"
                 activities={groupedActivities.yesterday}
-                index={1}
+                index={0}
               />
             )}
             
@@ -84,7 +56,7 @@ export function TimelineMain({
               <TimelineSection
                 title="Last Week"
                 activities={groupedActivities.lastWeek}
-                index={2}
+                index={1}
               />
             )}
             
@@ -92,31 +64,43 @@ export function TimelineMain({
               <TimelineSection
                 title="Earlier"
                 activities={groupedActivities.earlier}
-                index={3}
+                index={2}
               />
+            )}
+            
+            {/* Global Load More Button */}
+            {onLoadMoreActivities && (
+              <div className="mt-12 flex justify-center">
+                <button
+                  onClick={onLoadMoreActivities}
+                  disabled={isLoadingMore}
+                  className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Loading more activities...
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                      Show more activity
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
-          >
-            <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-              <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-              No Activities Found
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          /* Empty state is now handled by TodaysActivitySection when there are no activities at all */
+          <div className="text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400">
               {searchQuery 
                 ? `No activities match "${searchQuery}".`
-                : "Your timeline is empty. Start by setting a goal!"
+                : "No historical activities found."
               }
             </p>
-          </motion.div>
+          </div>
         )}
       </div>
     </main>

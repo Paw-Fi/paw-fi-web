@@ -1,10 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useUserActivities } from '@/hooks/useUserActivities';
 import { TimelineMain } from './TimelineMain';
+import { ActivityContributionGraph } from './ActivityContributionGraph';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export function Timeline() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [monthsToShow, setMonthsToShow] = useState(1); // Start with current month
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { activities, isLoading, error } = useUserActivities();
 
   const groupedActivities = useMemo(() => {
@@ -12,9 +16,31 @@ export function Timeline() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Calculate the cutoff date based on months to show
+    const cutoffDate = new Date(now.getFullYear(), now.getMonth() - monthsToShow + 1, 1);
 
     let filtered = activities;
 
+    // Filter by time range (months to show) first, unless a specific date is selected
+    if (!selectedDate) {
+      filtered = filtered.filter(activity => {
+        const activityDate = new Date(activity.created_at);
+        return activityDate >= cutoffDate;
+      });
+    }
+
+    // Filter by selected date
+    if (selectedDate) {
+      const selectedDateObj = new Date(selectedDate);
+      const nextDay = new Date(selectedDateObj.getTime() + 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(activity => {
+        const activityDate = new Date(activity.created_at);
+        return activityDate >= selectedDateObj && activityDate < nextDay;
+      });
+    }
+
+    // Then filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(activity => 
@@ -37,7 +63,27 @@ export function Timeline() {
     };
 
     return groups;
-  }, [activities, searchQuery]);
+  }, [activities, searchQuery, selectedDate, monthsToShow]);
+
+  const handleLoadMoreActivities = async () => {
+    setIsLoadingMore(true);
+    // Simulate loading delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setMonthsToShow(prev => prev + 1);
+    setIsLoadingMore(false);
+  };
+
+  const hasMoreActivities = useMemo(() => {
+    if (selectedDate) return false; // Don't show load more when filtering by date
+    
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - monthsToShow);
+    
+    return activities.some(activity => {
+      const activityDate = new Date(activity.created_at);
+      return activityDate < cutoffDate;
+    });
+  }, [activities, monthsToShow, selectedDate]);
 
   if (isLoading) {
     return (
@@ -71,11 +117,22 @@ export function Timeline() {
   }
 
   return (
-    <div className="min-h-screen  dark:bg-slate-900">
+    <div className="min-h-screen dark:bg-slate-900">
+      <div className="p-6 md:p-10">
+        <ActivityContributionGraph
+          activities={activities}
+          onDateSelect={setSelectedDate}
+          selectedDate={selectedDate}
+        />
+      </div>
       <TimelineMain 
         groupedActivities={groupedActivities}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedDate={selectedDate}
+        onClearDateFilter={() => setSelectedDate(null)}
+        onLoadMoreActivities={hasMoreActivities ? handleLoadMoreActivities : undefined}
+        isLoadingMore={isLoadingMore}
       />
     </div>
   );

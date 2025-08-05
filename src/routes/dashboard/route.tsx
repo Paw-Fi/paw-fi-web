@@ -48,6 +48,7 @@ import { OptimizedImage } from "@/components/seo/optimized-image";
 import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
+import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
 
 
 
@@ -282,10 +283,10 @@ export function Dashboard() {
       onClick: () => openChat('advisor')
     },
     {
-      id: "ai-analyst",
-      label: "Market Analyst", 
-      aiType: 'analyst' as const,
-      onClick: () => openChat('analyst')
+        id: "ai-tracker",
+        label: "Goal Tracker", 
+      aiType: 'tracker' as const,
+      onClick: () => openChat('tracker')
     },
     {
       id: "ai-educator",
@@ -1058,21 +1059,8 @@ export function Dashboard() {
                   <FinancialEducatorChatInterface />
                 )}
                 
-                {selectedAI === 'analyst' && (
-                  <div className="h-full p-4 flex items-center justify-center">
-                    <div className="text-center">
-                      <FontAwesomeIcon
-                        icon={faComments}
-                        className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3"
-                      />
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">
-                        Market Analyst chat coming soon
-                      </p>
-                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-                        This AI assistant is currently in development
-                      </p>
-                    </div>
-                  </div>
+                {selectedAI === 'tracker' && (
+                 <GoalTrackerChatInterface/>
                 )}
               </div>
             </motion.div>

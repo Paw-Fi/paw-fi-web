@@ -125,7 +125,7 @@ This design system implements the **Structured Expression** paradigm for Monekoâ
 ```css
 /* Variable font implementation */
 .text-dynamic {
-  font-family: 'Inter Variable', system-ui, sans-serif;
+  font-family: 'Poppins', system-ui, sans-serif;
   font-variation-settings: 
     'wght' var(--font-weight, 400),
     'slnt' var(--font-slant, 0);
@@ -156,7 +156,7 @@ This design system implements the **Structured Expression** paradigm for Monekoâ
 ### Accessibility Standards
 - **Contrast**: Minimum 4.5:1 for normal text, 3:1 for large text
 - **Scaling**: Support 200% zoom without horizontal scrolling
-- **Font Choice**: System fonts (Inter Variable) for optimal rendering
+- **Font Choice**: System fonts (Poppins) for optimal rendering
 
 ---
 

@@ -16,7 +16,9 @@ import {
   faMagicWandSparkles,
   faCheck,
   faTimes,
-  faCalculator
+  faCalculator,
+  faComments,
+  faBell
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoal } from "@/hooks/goal-tracker/use-goal";
@@ -38,6 +40,9 @@ import { TrackerModal } from "@/components/goal-tracker/TrackerModal";
 import { UpdateProgressModal } from "@/components/goal-tracker/UpdateProgressModal";
 import { ActivityList } from "@/components/shared/ActivityList";
 import { useUserActivities } from "@/hooks/useUserActivities";
+import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
+import { GoalTrackerChatWidget } from "@/components/goal-tracker/GoalTrackerChatWidget";
+import { ProactiveReminders } from "@/components/goal-tracker/ProactiveReminders";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -118,7 +123,7 @@ function GoalDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // Main UI state
-  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'calculator' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'calculator' | 'activity' | 'chat' | 'reminders'>('overview');
   const [showTrackerModal, setShowTrackerModal] = useState(false);
   const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | 'milestones'>('activity');
   const [showAdjustTimelineModal, setShowAdjustTimelineModal] = useState(false);
@@ -525,7 +530,9 @@ function GoalDetail() {
                 { id: 'overview', label: 'Overview', icon: faChartLine },
                 { id: 'milestones', label: 'Milestones', icon: faFlag },
                 { id: 'calculator', label: 'Calculator', icon: faCalculator },
-                { id: 'activity', label: 'Activity', icon: faClock }
+                { id: 'activity', label: 'Activity', icon: faClock },
+                { id: 'chat', label: 'AI Chat', icon: faComments },
+                { id: 'reminders', label: 'Reminders', icon: faBell }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -692,6 +699,70 @@ function GoalDetail() {
                       activities={activities || []} 
                       isLoading={activitiesLoading} 
                       goalId={goalId} 
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'chat' && (
+                <motion.div
+                  key="chat"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faComments} className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">AI Goal Tracker</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Chat with Alex to update progress, manage milestones, and get insights</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ height: '500px' }}>
+                      <GoalTrackerChatInterface
+                        goalId={goalId}
+                        goal={currentGoal}
+                        onProgressUpdate={refetch}
+                        onGoalUpdate={refetch}
+                        className="h-full"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'reminders' && (
+                <motion.div
+                  key="reminders"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faBell} className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Smart Reminders</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered notifications to keep you on track with your goals</p>
+                      </div>
+                    </div>
+                    
+                    <ProactiveReminders
+                      goals={[currentGoal].filter(Boolean)}
+                      onReminderAction={(reminderId, action) => {
+                        console.log('Reminder action:', reminderId, action);
+                      }}
+                      onOpenGoalChat={(goalId) => {
+                        setActiveTab('chat');
+                      }}
                     />
                   </div>
                 </motion.div>
@@ -1006,6 +1077,14 @@ function GoalDetail() {
           </div>
         </div>
       </Modal>
+
+      {/* Floating AI Chat Widget */}
+      <GoalTrackerChatWidget
+        goalId={goalId}
+        goal={currentGoal}
+        onProgressUpdate={refetch}
+        onGoalUpdate={refetch}
+      />
     </div>
     </div>
   );
