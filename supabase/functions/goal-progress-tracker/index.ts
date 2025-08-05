@@ -81,6 +81,13 @@ serve(async (req: Request): Promise<Response> => {
     // Handle different update types
     switch (updateType) { 
 
+      case RewardActions.GOAL_PROGRESS_UPDATED:
+        // Handle basic amount additions/subtractions
+        if (amountChange !== undefined) {
+          newAmount += amountChange;
+        }
+        break;
+
       case RewardActions.MILESTONE_COMPLETED:
         if (!milestoneId) {
           return new Response(
@@ -214,7 +221,7 @@ serve(async (req: Request): Promise<Response> => {
     if (newProgressPercentage >= 100 && goal.status !== 'completed') {
       activityType = 'goal_completed';
       activityAction = RewardActions.GOAL_COMPLETED;
-    } else if (updateType === 'milestone_completed') {
+    } else if (updateType === RewardActions.MILESTONE_COMPLETED) {
       activityType = 'milestone_completed';
       activityAction = RewardActions.MILESTONE_COMPLETED;
     }

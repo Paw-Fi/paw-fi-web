@@ -11,6 +11,7 @@ import { OptimizedImage } from "@/components/seo/optimized-image";
 import { AI_ROLES } from "./ai-roles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBullseye, faChartLine } from "@fortawesome/free-solid-svg-icons";
+import classNames from "classnames";
 
 type Message = ConversationMessage;
 
@@ -158,28 +159,49 @@ export function GoalTrackerChatInterface({
         userId: user?.id,
         metadata: {
           executedFunction: aiResponse.function_executed || aiResponse.executedFunction,
-          functionResult: aiResponse.execution_result || aiResponse.functionResult,
-          success: aiResponse.execution_result?.success || aiResponse.success
+          functionResult: aiResponse.function_result || aiResponse.execution_result || aiResponse.functionResult,
+          success: aiResponse.function_result?.success || aiResponse.execution_result?.success || aiResponse.success,
+          cacheRefreshNeeded: aiResponse.cache_refresh_needed
         }
       };
       
       // Add AI message to UI
       setMessages(prev => [...prev, aiMessage]);
 
-      // Handle function execution results
+      // Handle function execution results and cache invalidation
       const executedFunction = aiResponse.function_executed || aiResponse.executedFunction;
+      const cacheRefreshNeeded = aiResponse.cache_refresh_needed;
+      
       if (executedFunction) {
         setLastExecutedFunction(executedFunction);
         
+        // If cache refresh is needed, invalidate relevant queries
+        if (cacheRefreshNeeded) {
+          console.log('Invalidating cache due to function execution:', executedFunction);
+          
+          // Invalidate user goals cache
+          queryClient.invalidateQueries({ queryKey: ['user-goals', user?.id] });
+          
+          // Invalidate specific goal queries if in single goal mode
+          if (goalId) {
+            queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+          }
+          
+          // Invalidate financial health profile which may depend on goal data
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['financialHealthProfile', user.id] });
+          }
+        }
+        
         // Trigger appropriate callbacks based on function executed
         if (executedFunction.includes('progress') && onProgressUpdate) {
-          setTimeout(onProgressUpdate, 500); // Small delay for UI smoothness
+          setTimeout(onProgressUpdate, 1000); // Increased delay to allow cache invalidation
         }
         
         if ((executedFunction.includes('goal') || 
              executedFunction.includes('milestone') ||
              executedFunction.includes('timeline')) && onGoalUpdate) {
-          setTimeout(onGoalUpdate, 500);
+          setTimeout(onGoalUpdate, 1000); // Increased delay to allow cache invalidation
         }
       }
             
@@ -252,63 +274,9 @@ export function GoalTrackerChatInterface({
   };
 
   return (
-    <div className={className}>
-      <ChatConversationDisplay
-        messages={messages}
-        onMessageSend={handleSendMessage}
-        isSendingMessage={isSendingMessage}
-        agentName="Alex - Goal Tracker AI"
-        welcomeMessage={getWelcomeMessage()}
-        welcomeSubtitle={getWelcomeSubtitle()}
-        connectionError={connectionError || undefined}
-        isBackendProcessing={isConversationsLoading}
-        headerClassName="p-4"
-        agentIcon={
-          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600">
-            <FontAwesomeIcon 
-              icon={isGlobalMode ? faChartLine : faBullseye} 
-              className="w-5 h-5 text-white" 
-            />
-            {/* Notification badges */}
-            {isGlobalMode && userGoals?.some(g => !g.is_on_track) && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-            )}
-            {!isGlobalMode && goal && !goal.is_on_track && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-            )}
-          </div>
-        }
-        placeholder={
-          isGlobalMode 
-            ? "Ask Alex about your goals..." 
-            : goal 
-              ? `Ask Alex about "${goal.title}"...` 
-              : "Ask Alex about your goals..."
-        }
-        suggestedPrompts={
-          isGlobalMode ? [
-            "Show me all my goals",
-            "Which goals need attention?", 
-            "Create a new savings goal",
-            "What's my overall progress?",
-            "Update progress on my emergency fund"
-          ] : goal ? [
-            "Add $500 to my progress",
-            "How am I tracking towards my goal?",
-            "Create a new milestone",
-            "When will I reach my target?",
-            "Give me insights on my progress"
-          ] : [
-            "How do I update my goal progress?",
-            "What functions are available?",
-            "Help me manage my milestones",
-            "Show me goal insights"
-          ]
-        }
-      />
-      
-      {/* Context Display */}
-      {(isGlobalMode || goal) && (
+    <div className={classNames(className, "flex flex-col h-full flex-1")}>
+       {/* Context Display */}
+       {(isGlobalMode || goal) && (
         <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
             {isGlobalMode ? (
@@ -358,6 +326,33 @@ export function GoalTrackerChatInterface({
           </div>
         </div>
       )}
+      <ChatConversationDisplay
+        messages={messages}
+        onMessageSend={handleSendMessage}
+        isSendingMessage={isSendingMessage}
+        agentName="Alex - Goal Tracker AI"
+        welcomeMessage={getWelcomeMessage()}
+        welcomeSubtitle={getWelcomeSubtitle()}
+        connectionError={connectionError || undefined}
+        isBackendProcessing={isConversationsLoading}
+        headerClassName="p-4"
+        agentIcon={
+          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600">
+            <FontAwesomeIcon 
+              icon={isGlobalMode ? faChartLine : faBullseye} 
+              className="w-5 h-5 text-white" 
+            />
+            {/* Notification badges */}
+            {isGlobalMode && userGoals?.some(g => !g.is_on_track) && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+            )}
+            {!isGlobalMode && goal && !goal.is_on_track && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+            )}
+          </div>
+        }
+      />      
+     
     </div>
   );
 }

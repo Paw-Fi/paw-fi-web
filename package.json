@@ -55,6 +55,7 @@
     "react-redux": "^9.2.0",
     "react-textarea-autosize": "^8.5.9",
     "react-toastify": "^11.0.5",
+    "react-tooltip": "^5.29.1",
     "redaxios": "^0.5.1",
     "remark-gfm": "^4.0.1",
     "sass": "^1.87.0",

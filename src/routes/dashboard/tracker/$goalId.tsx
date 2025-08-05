@@ -495,7 +495,7 @@ function GoalDetail() {
                   onClick={() => setShowTrackerModal(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  Tracker
+                  Overview
                 </button>
               </div>
             </div>
@@ -531,8 +531,6 @@ function GoalDetail() {
                 { id: 'milestones', label: 'Milestones', icon: faFlag },
                 { id: 'calculator', label: 'Calculator', icon: faCalculator },
                 { id: 'activity', label: 'Activity', icon: faClock },
-                { id: 'chat', label: 'AI Chat', icon: faComments },
-                { id: 'reminders', label: 'Reminders', icon: faBell }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -703,70 +701,8 @@ function GoalDetail() {
                   </div>
                 </motion.div>
               )}
-
-              {activeTab === 'chat' && (
-                <motion.div
-                  key="chat"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <FontAwesomeIcon icon={faComments} className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">AI Goal Tracker</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Chat with Alex to update progress, manage milestones, and get insights</p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ height: '500px' }}>
-                      <GoalTrackerChatInterface
-                        goalId={goalId}
-                        goal={currentGoal}
-                        onProgressUpdate={refetch}
-                        onGoalUpdate={refetch}
-                        className="h-full"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'reminders' && (
-                <motion.div
-                  key="reminders"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-                        <FontAwesomeIcon icon={faBell} className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Smart Reminders</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered notifications to keep you on track with your goals</p>
-                      </div>
-                    </div>
-                    
-                    <ProactiveReminders
-                      goals={[currentGoal].filter(Boolean)}
-                      onReminderAction={(reminderId, action) => {
-                        console.log('Reminder action:', reminderId, action);
-                      }}
-                      onOpenGoalChat={(goalId) => {
-                        setActiveTab('chat');
-                      }}
-                    />
-                  </div>
-                </motion.div>
-              )}
+           
+             
             </AnimatePresence>
           </div>
         </div>
@@ -1077,14 +1013,7 @@ function GoalDetail() {
           </div>
         </div>
       </Modal>
-
-      {/* Floating AI Chat Widget */}
-      <GoalTrackerChatWidget
-        goalId={goalId}
-        goal={currentGoal}
-        onProgressUpdate={refetch}
-        onGoalUpdate={refetch}
-      />
+  
     </div>
     </div>
   );

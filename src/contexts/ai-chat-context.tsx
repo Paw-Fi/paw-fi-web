@@ -30,9 +30,9 @@ export const AI_OPTIONS: AIOption[] = [
     color: 'from-blue-500 to-blue-600'
   },
   {
-    id: 'analyst',
-    name: 'Market Analyst',
-    subtitle: 'Market insights & trends',
+    id: 'tracker',
+    name: 'Goal Tracker',
+    subtitle: 'Track and manage your financial goals',
     color: 'from-green-500 to-green-600'
   },
   {

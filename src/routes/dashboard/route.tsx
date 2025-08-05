@@ -24,10 +24,6 @@ import {
   faHouseChimney,
   faHome,
   faChartBar,
-  faRobot,
-  faComments,
-  faChevronUp,
-  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -40,7 +36,6 @@ import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWi
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
 import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
-import { useGamification } from "@/hooks/use-gamification";
 import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
@@ -49,6 +44,7 @@ import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advis
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
 import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
+import { RightSidebar } from "@/components/dashboard/RightSidebar";
 
 
 
@@ -273,29 +269,6 @@ export function Dashboard() {
       path: "/dashboard/learning",
     },
   ];
-
-  // AI Agents - separate from menu items
-  const aiAgents = [
-    {
-      id: "ai-advisor",
-      label: "Financial Advisor",
-      aiType: 'advisor' as const,
-      onClick: () => openChat('advisor')
-    },
-    {
-        id: "ai-tracker",
-        label: "Goal Tracker", 
-      aiType: 'tracker' as const,
-      onClick: () => openChat('tracker')
-    },
-    {
-      id: "ai-educator",
-      label: "Financial Educator",
-      aiType: 'educator' as const,
-      onClick: () => openChat('educator')
-    },
-  ];
-
 
 
   // Effect to handle menu expansion based on current route (simplified since no submenus)
@@ -581,58 +554,7 @@ export function Dashboard() {
                   </Link>
                 </div>
               ))}
-
-              {/* Chat Section */}
-              <div className="mt-24">
-                <div className="px-4 pb-2">
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Chat
-                  </h3>
-                </div>
-                
-                {/* AI Agents */}
-                <div className="space-y-1">
-                  {aiAgents.map((agent) => {
-                    const aiOption = AI_OPTIONS.find(ai => ai.id === agent.aiType);
-                    
-                    return (
-                      <div key={agent.id}>
-                        <motion.div
-                          className="flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            agent.onClick();
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 25,
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`flex size-10 items-center justify-center rounded-full bg-gradient-to-br ${aiOption?.color} shadow-sm`}>
-                              <OptimizedImage 
-                                src={logo} 
-                                alt={`${agent.label} Avatar`} 
-                                className="size-6"
-                              />
-                            </div>
-                           <div className="flex flex-col flex-1">
-                           <span className="text-md font-medium flex-1">
-                              {agent.label}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                             kalsdjkl klaskl sdd sadsad as
-                            </span>
-                           </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+        
 
                {/* Show Guide Button - Only visible when guide is hidden */}
                {isGuideHidden && (
@@ -994,6 +916,9 @@ export function Dashboard() {
            
         </motion.main>
           </div>}
+
+          {/* Right Sidebar */}
+          <RightSidebar className="hidden lg:block" />
         </div>
       </div>
       {/* AI Chat Drawer */}
