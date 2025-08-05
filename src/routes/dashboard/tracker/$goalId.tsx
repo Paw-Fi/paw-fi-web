@@ -205,6 +205,7 @@ function GoalDetail() {
     return () => clearTimeout(timer);
   }, []);
 
+
   // Early returns AFTER all hooks are called
   if (isLoading) {
     return <GoalDetailSkeleton />;
@@ -233,6 +234,7 @@ function GoalDetail() {
 
   const savingsGap = progressData.requiredMonthly - progressData.monthlyCapacity;
   const isOnTrack = savingsGap <= 0;
+  const isGoalCompleted = progressData.progressPercentage >= 100;
   
   // Toggle step expansion
   const toggleStepExpansion = (stepId: string) => {
@@ -311,8 +313,79 @@ function GoalDetail() {
   
   // Animation effect moved above early returns
 
+  // Generate confetti colors and pieces (similar to completion display)
+  const confettiColors = ["#7458FF", "#9181FF", "#16CDA2", "#FFD166", "#FF6B6B"];
+  const confettiPieces = Array.from({ length: 50 }).map((_, i) => {
+    const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+    const size = Math.random() * 10 + 5;
+    const isCircle = Math.random() > 0.5;
+    const left = `${Math.random() * 100}%`;
+    
+    return { color, size, isCircle, left, id: i };
+  });
+
+  // Confetti animation variants (from completion display)
+  const confettiAnimation = {
+    hidden: { opacity: 0, y: -10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: typeof window !== 'undefined' ? window.innerHeight : 800,
+      x: (Math.random() - 0.5) * 200,
+      rotate: Math.random() * 360,
+      transition: {
+        duration: Math.random() * 3 + 2,
+        repeat: Infinity,
+        delay: Math.random() * 2,
+        ease: "linear" as const
+      }
+    })
+  } as const;
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900 relative">
+      {/* Full-page confetti overlay - only show when goal is completed */}
+      {isGoalCompleted && (
+        <div className="pointer-events-none fixed inset-0 z-10 overflow-hidden">
+          {/* Animated confetti particles */}
+          {confettiPieces.map((confetti) => (
+            <motion.div
+              key={confetti.id}
+              className="absolute"
+              style={{
+                width: `${confetti.size}px`,
+                height: `${confetti.size}px`,
+                borderRadius: confetti.isCircle ? '50%' : '0',
+                backgroundColor: confetti.color,
+                top: '-10px',
+                left: confetti.left,
+                position: 'absolute'
+              }}
+              initial="hidden"
+              animate="visible"
+              variants={confettiAnimation}
+              custom={confetti.id}
+            />
+          ))}
+          
+          {/* Static confetti particles (from completion display) */}
+          <div className="absolute top-[10%] left-[15%] h-5 w-2 rotate-[-30deg] rounded-sm bg-purple-400"></div>
+          <div className="absolute top-[15%] left-[20%] h-4 w-4 rotate-12 rounded-sm bg-purple-500"></div>
+          <div className="absolute right-[10%] bottom-[15%] h-6 w-2 rotate-45 bg-purple-300"></div>
+          <div className="absolute top-[80%] right-[15%] h-4 w-4 rotate-12 rounded-full bg-purple-400"></div>
+
+          {/* Green particles */}
+          <div className="absolute bottom-[30%] left-[10%] h-5 w-5 rounded-full bg-green-400"></div>
+          <div className="absolute right-[20%] bottom-[45%] h-3 w-6 rotate-[-15deg] bg-teal-400"></div>
+
+          {/* Red/orange particles */}
+          <div className="absolute top-[30%] right-[5%] h-4 w-3 rotate-12 rounded-sm bg-red-300"></div>
+          <div className="absolute top-[45%] left-[10%] h-3 w-3 rotate-12 rounded-full bg-orange-300"></div>
+
+          {/* Yellow particles */}
+          <div className="absolute bottom-[10%] left-[30%] h-4 w-4 rotate-45 rounded-sm bg-yellow-300"></div>
+          <div className="absolute top-[60%] right-[40%] h-2 w-5 rotate-[-20deg] bg-yellow-400"></div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Hero Header */}
         <div className="mb-16">
@@ -484,12 +557,21 @@ function GoalDetail() {
               </div>
               
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowUpdateProgressModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Update Progress
-                </button>
+                {!isGoalCompleted && (
+                  <button
+                    onClick={() => setShowUpdateProgressModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Update Progress
+                  </button>
+                )}
+                
+                {isGoalCompleted && (
+                  <div className="flex items-center gap-2 px-6 py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl font-semibold">
+                    <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
+                    Goal Completed!
+                  </div>
+                )}
                 
                 <button 
                   onClick={() => setShowTrackerModal(true)}
@@ -707,12 +789,13 @@ function GoalDetail() {
           </div>
         </div>
 
-      {/* Next Steps - Now outside of tabs as requested in original design */}
-      <div className="mb-16">
-        <div className="flex items-center gap-3 mb-8">
-          <FontAwesomeIcon icon={faRocket} className="w-6 h-6 text-blue-500" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Next Step:</h2>
-        </div>
+      {/* Next Steps - Only show if goal is not completed */}
+      {!isGoalCompleted && (
+        <div className="mb-16">
+          <div className="flex items-center gap-3 mb-8">
+            <FontAwesomeIcon icon={faRocket} className="w-6 h-6 text-blue-500" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Next Step:</h2>
+          </div>
         <div className="space-y-3">
           {/* Increase Income */}
           <div className="py-6 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
@@ -932,7 +1015,135 @@ function GoalDetail() {
             </AnimatePresence>
           </div>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Goal Completed Celebration Section */}
+      {isGoalCompleted && (
+        <div className="mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative"
+          >
+            {/* Animated confetti particles */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 50}%`,
+                  }}
+                  animate={{
+                    y: [0, -100, 100],
+                    x: [(Math.random() - 0.5) * 100, (Math.random() - 0.5) * 200],
+                    rotate: [0, 360],
+                    opacity: [1, 0.8, 0],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    delay: Math.random() * 2,
+                    ease: "easeOut"
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-3xl p-12 text-center border border-green-200 dark:border-green-800">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.3 }}
+                className="mb-6"
+              >
+                <div className="inline-flex items-center justify-center w-24 h-24 bg-green-500 text-white rounded-full text-6xl mb-4">
+                  🎯
+                </div>
+              </motion.div>
+              
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-4xl font-bold text-gray-900 dark:text-white mb-4"
+              >
+                🎉 Congratulations! 🎉
+              </motion.h2>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-xl text-gray-700 dark:text-gray-300 mb-8"
+              >
+                You've successfully achieved your "{currentGoal.title}" goal!<br />
+                You've saved <span className="font-bold text-green-600 dark:text-green-400">${progressData.targetAmount.toLocaleString()}</span> and reached 100% of your target.
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+              >
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm">
+                  <div className="text-3xl mb-2">💰</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    ${progressData.targetAmount.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Saved</div>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm">
+                  <div className="text-3xl mb-2">📈</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    100%
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Goal Achieved</div>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm">
+                  <div className="text-3xl mb-2">🏆</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    Success!
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Mission Complete</div>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="space-y-4"
+              >
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">What's Next?</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => navigate({ to: '/dashboard/tracker' })}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <FontAwesomeIcon icon={faBullseye} className="w-5 h-5" />
+                    Create New Goal
+                  </button>
+                  
+                  <button
+                    onClick={() => navigate({ to: '/dashboard/tracker' })}
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
+                    View All Goals
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Goal Tracker Modal */}
       {/* Update Progress Modal */}
@@ -1013,6 +1224,7 @@ function GoalDetail() {
           </div>
         </div>
       </Modal>
+
   
     </div>
     </div>

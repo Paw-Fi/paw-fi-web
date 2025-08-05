@@ -128,7 +128,7 @@ export function GoalInsights({
 
   const filteredAndSortedInsights = insights
     .filter(insight => !dismissedInsights.has((insight as any).id || ''))
-    .filter(insight => selectedFilter === 'all' || insight.type === selectedFilter)
+    .filter(insight => selectedFilter === 'all' || (insight as any).insight_type === selectedFilter)
     .sort((a, b) => {
       switch (sortBy) {
         case 'priority':
@@ -139,7 +139,7 @@ export function GoalInsights({
         case 'date':
           return new Date((b as any).created_at || '').getTime() - new Date((a as any).created_at || '').getTime();
         case 'type':
-          return a.type.localeCompare(b.type);
+          return ((a as any).insight_type || '').localeCompare((b as any).insight_type || '');
         default:
           return 0;
       }
@@ -212,6 +212,14 @@ export function GoalInsights({
       });
 
       if (error) throw error;
+      
+      // Check if new insights were actually generated
+      if (data && data.insights && data.insights.length > 0) {
+        console.log(`Generated ${data.insights.length} new insights`);
+      } else {
+        console.log('No new insights generated - may have recent insights');
+      }
+      
       onInsightUpdate();
     } catch (error) {
       console.error('Failed to generate new insights:', error);
@@ -311,7 +319,7 @@ export function GoalInsights({
     return actions;
   };
 
-  const insightTypes = ['all', ...new Set(insights.map(i => i.type))];
+  const insightTypes = ['all', ...new Set(insights.map(i => (i as any).insight_type))];
 
   // Show only top 3 insights, prioritized by priority
   const topInsights = insights
@@ -488,7 +496,7 @@ export function GoalInsights({
           {/* All Insights */}
           <div className="space-y-4">
             {filteredAndSortedInsights.map((insight, index) => {
-              const typeConfig = insightTypeConfigs[insight.type] || insightTypeConfigs.recommendation;
+              const typeConfig = insightTypeConfigs[(insight as any).insight_type] || insightTypeConfigs.recommendation;
               const priorityConfig = getPriorityConfig(insight.priority);
               const isInsightExpanded = expandedInsights.has((insight as any).id || '');
               const actions = getInsightActions(insight);

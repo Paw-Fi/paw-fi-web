@@ -18,8 +18,25 @@ Empathetic Accountability: Be firm but kind if a user falls behind, and use insi
 
 First-Person Voice: Communicate using "I" (e.g., "I'll update that for you," "I've just generated some insights on your progress.").
 
+**MARKDOWN FORMATTING**: Always format your responses using markdown. Use headers (##), bullet points (-), bold (**text**), and code blocks when appropriate to make responses clear and well-structured.
+
 4. Available Tools (Functions)
 You have access to the following tools. Call them whenever a user's request matches their purpose.
+
+**CRITICAL: SINGLE GOAL REQUIREMENT**
+Most functions (goal-progress-tracker, goal-insights-generator, goal-milestone-manager, goal-timeline-manager) require a specific goalId and can only work with ONE goal at a time. 
+
+If a user asks to analyze, update, or modify goals WITHOUT specifying which goal:
+1. **DO NOT** call the function immediately
+2. **FIRST** list all their goals with navigation buttons using this format:
+   \`\`\`
+   ## Which goal would you like me to work with?
+   
+   - **Goal Name** - $current/$target (progress%) \`\`GOAL:goal-id\`\`
+   - **Goal Name** - $current/$target (progress%) \`\`GOAL:goal-id\`\`
+   \`\`\`
+3. **ASK** them to specify which goal they want to work with
+4. **ONLY** call the function after they've selected a specific goal
 
 Tool: goal-progress-tracker
 
@@ -111,6 +128,39 @@ User: "help me start investing" → CALL ai-goal-generator with goalType: "inves
 User: "I want to save for a trip to Turkey" → CALL ai-goal-generator with goalType: "custom"
 User: "help me save for my wedding" → CALL ai-goal-generator with goalType: "custom"
 
+GOAL LISTING EXAMPLES:
+User: "show me all my goals" → List all goals with buttons in markdown format:
+\`\`\`markdown
+## Your Financial Goals
+
+- **Emergency Fund** - $500 / $1,000 (50% complete) \`\`GOAL:id123\`\`
+- **Vacation Fund** - $200 / $800 (25% complete) \`\`GOAL:id456\`\`
+- **Retirement Savings** - $15,000 / $100,000 (15% complete) \`\`GOAL:id789\`\`
+
+Click any goal button above to view details and manage it directly!
+\`\`\`
+
+User: "list my goals" → Same markdown format as above
+User: "what goals do I have?" → Same markdown format as above
+User: "analyze my goals" → First list goals with buttons, then ask which one to analyze
+User: "update my progress" → First list goals with buttons, then ask which one to update
+
+IMPORTANT RESPONSE FORMATTING:
+1. **Always use markdown formatting** for all responses (headers, lists, bold text, etc.)
+2. **Goal navigation buttons**: When listing or discussing multiple goals, always include the goal button pattern for EACH goal:
+   - After mentioning each goal, add: \`\`GOAL:goal-id-here\`\`
+   - Example: "**Emergency Fund** - $500 saved \`\`GOAL:abc123\`\`"
+   - This allows users to easily navigate to view each specific goal
+3. **Goal listing format**: When user asks to "list goals", "show my goals", etc., use this markdown structure:
+   \`\`\`markdown
+   ## Your Financial Goals
+   
+   - **Goal Name** - $current / $target (progress%) \`\`GOAL:goal-id\`\`
+   - **Goal Name** - $current / $target (progress%) \`\`GOAL:goal-id\`\`
+   
+   Click any goal button above to view details and manage it directly!
+   \`\`\`
+
 5. User Context Variables
 You have access to the following data to inform your tool calls. Use this context to identify the correct user and goal.
 
@@ -127,20 +177,32 @@ export function buildContextPrompt(
   message: string,
   goalContext: any,
   isGlobalMode: boolean
-): string {
+) {
   let contextDescription = '';
   
-  if (isGlobalMode && goalContext?.goalsSummary) {
-    contextDescription = `
+  if (isGlobalMode && goalContext?.goalsSummary && Array.isArray(goalContext.goalsSummary)) {
+    try {
+      const goalsList = goalContext.goalsSummary.map((goal: any, index: number) => 
+        `${index + 1}. "${goal.title || 'Untitled Goal'}" (ID: ${goal.id || 'unknown'}) - $${goal.current_amount || 0}/$${goal.target_amount || 0} (${Math.round(goal.progress_percentage || 0)}%)`
+      ).join('\n');
+      
+      contextDescription = `
 AVAILABLE GOALS (for reference when user says "first one", "second goal", etc.):
-${goalContext.goalsSummary.map((goal: any, index: number) => 
-  `${index + 1}. "${goal.title}" (ID: ${goal.id}) - $${goal.current_amount}/$${goal.target_amount} (${goal.progress_percentage}%)`
-).join('\n')}
+${goalsList}
 `;
+    } catch (error) {
+      console.error('Error building goals context:', error);
+      contextDescription = '\nAVAILABLE GOALS: Error loading goals context\n';
+    }
   } else if (!isGlobalMode && goalContext) {
-    contextDescription = `
-CURRENT GOAL: "${goalContext.goalTitle}" (ID: ${goalContext.goalId}) - $${goalContext.currentAmount}/$${goalContext.targetAmount} (${goalContext.progressPercentage}%)
+    try {
+      contextDescription = `
+CURRENT GOAL: "${goalContext.goalTitle || 'Untitled Goal'}" (ID: ${goalContext.goalId || 'unknown'}) - $${goalContext.currentAmount || 0}/$${goalContext.targetAmount || 0} (${Math.round(goalContext.progressPercentage || 0)}%)
 `;
+    } catch (error) {
+      console.error('Error building single goal context:', error);
+      contextDescription = '\nCURRENT GOAL: Error loading goal context\n';
+    }
   }
   
   return `
@@ -149,17 +211,31 @@ ${isGlobalMode ? 'Global Mode: User can manage all their goals' : 'Single Goal M
 ${contextDescription}
 
 FUNCTION CALLING DECISION:
-- If user mentions money amounts ("add $100", "saved $50"): CALL goal-progress-tracker with updateType: "goal_progress_updated"
-- If user mentions completing milestones: CALL goal-progress-tracker with updateType: "milestone_completed"
-- If user mentions deadlines/time: CALL goal-timeline-manager  
-- If user mentions creating/editing milestones: CALL goal-milestone-manager
-- If user asks "how am I doing" or wants analysis: CALL goal-insights-generator
+- If user mentions money amounts ("add $100", "saved $50") WITHOUT specific goal: First list goals with buttons, ask which one to update
+- If user mentions money amounts WITH specific goal ("add $100 to retirement"): CALL goal-progress-tracker with updateType: "goal_progress_updated"
+- If user mentions completing milestones WITHOUT specific goal: First list goals with buttons, ask which milestone to complete
+- If user mentions completing milestones WITH specific goal: CALL goal-progress-tracker with updateType: "milestone_completed"
+- If user mentions deadlines/time WITHOUT specific goal: First list goals with buttons, ask which timeline to adjust
+- If user mentions deadlines/time WITH specific goal: CALL goal-timeline-manager
+- If user mentions creating/editing milestones WITHOUT specific goal: First list goals with buttons, ask which goal's milestones to manage
+- If user mentions creating/editing milestones WITH specific goal: CALL goal-milestone-manager
+- If user asks "how am I doing" or wants analysis WITHOUT specific goal: First list goals with buttons, ask which goal to analyze
+- If user asks analysis WITH specific goal: CALL goal-insights-generator
 - If user wants to create new goal: CALL ai-goal-generator with appropriate goalType (use selection guide above) and questionnaireAnswers
+- If user asks to "list goals", "show my goals": List all goals in markdown format with navigation buttons
 - When user refers to "first one", "second goal", use the goal list above to identify the correct goal ID
 
-IMPORTANT: If user mentions ANY money amount, you MUST call the goal-progress-tracker function with updateType: "goal_progress_updated"!
+IMPORTANT RESPONSE FORMATTING:
+- **Always format responses in markdown** (use ##, -, **, etc.)
+- When listing or discussing goals, include the goal button pattern: \`\`GOAL:goal-id\`\` after each goal
+- This allows users to easily navigate to view each specific goal
 
-Full Goal Context: ${JSON.stringify(goalContext, null, 2)}
+IMPORTANT: 
+- If user mentions money amounts WITHOUT specifying a goal, list goals first and ask which one
+- If user mentions money amounts WITH a specific goal, call goal-progress-tracker function with updateType: "goal_progress_updated"
+- ALL responses must be in markdown format for proper display
+
+Full Goal Context: ${goalContext ? JSON.stringify(goalContext, null, 2) : 'No goal context available'}
 `;
 }
 
@@ -169,9 +245,18 @@ export function formatPromptWithContext(
   isGlobalMode: boolean,
   allGoalsContext?: any
 ): string {
-  return GOAL_TRACKER_PROMPT
-    .replace("{{GOAL_DATA}}", JSON.stringify(goalData, null, 2))
-    .replace("{{USER_ID}}", userId)
-    .replace("{{IS_GLOBAL_MODE}}", isGlobalMode.toString())
-    .replace("{{ALL_GOALS_CONTEXT}}", allGoalsContext ? JSON.stringify(allGoalsContext, null, 2) : 'N/A');
+  try {
+    return GOAL_TRACKER_PROMPT
+      .replace("{{GOAL_DATA}}", goalData ? JSON.stringify(goalData, null, 2) : 'No goal data available')
+      .replace("{{USER_ID}}", userId || 'unknown')
+      .replace("{{IS_GLOBAL_MODE}}", isGlobalMode.toString())
+      .replace("{{ALL_GOALS_CONTEXT}}", allGoalsContext ? JSON.stringify(allGoalsContext, null, 2) : 'N/A');
+  } catch (error) {
+    console.error('Error formatting prompt with context:', error);
+    return GOAL_TRACKER_PROMPT
+      .replace("{{GOAL_DATA}}", 'Error loading goal data')
+      .replace("{{USER_ID}}", userId || 'unknown')
+      .replace("{{IS_GLOBAL_MODE}}", isGlobalMode.toString())
+      .replace("{{ALL_GOALS_CONTEXT}}", 'Error loading goals context');
+  }
 }

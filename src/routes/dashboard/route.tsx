@@ -887,7 +887,7 @@ export function Dashboard() {
       </AnimatePresence>
    
       {/* Main Content Area */}
-     {isLoading||isSubscriptionLoading ? null : <div className={classNames(
+     {isLoading||isSubscriptionLoading ? <div className="flex-1"/> : <div className={classNames(
        "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
        expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-20 lg:pt-0" : ""
      )}>

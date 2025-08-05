@@ -1,4 +1,14 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+
+// Message type for conversation history
+export interface ConversationMessage {
+  content: string;
+  role: "user" | "assistant";
+  timestamp: number;
+  chat_session_id: string;
+  userId?: string;
+  metadata?: Record<string, any>;
+}
 
 // AI options type
 export interface AIOption {
@@ -8,14 +18,22 @@ export interface AIOption {
   color: string;
 }
 
+type AI_ID = "advisor" | "tracker" | "educator";
+
 // AI chat context type
 interface AIChatContextType {
   isOpen: boolean;
-  selectedAI: string;
-  openChat: (aiId?: string) => void;
+  selectedAI: AI_ID;
+  openChat: (aiId?: AI_ID) => void;
   closeChat: () => void;
-  toggleChat: (aiId?: string) => void;
-  setSelectedAI: (aiId: string) => void;
+  toggleChat: (aiId?: AI_ID) => void;
+  setSelectedAI: (aiId: AI_ID) => void;
+  
+  // Conversation history management
+  messages: Record<AI_ID, ConversationMessage[]>;
+  addMessage: (aiId: AI_ID, message: ConversationMessage) => void;
+  clearMessages: (aiId: AI_ID) => void;
+  getMessages: (aiId: AI_ID) => ConversationMessage[];
 }
 
 // Create the context
@@ -51,9 +69,39 @@ interface AIChatProviderProps {
 // Provider component
 export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedAI, setSelectedAI] = useState<string>('advisor');
+  const [selectedAI, setSelectedAI] = useState<AI_ID>('advisor');
+  
+  // Initialize messages from localStorage if available
+  const [messages, setMessages] = useState<Record<AI_ID, ConversationMessage[]>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('ai-chat-messages');
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch (error) {
+        console.warn('Failed to load chat messages from localStorage:', error);
+      }
+    }
+    return {
+      advisor: [],
+      tracker: [],
+      educator: []
+    };
+  });
 
-  const openChat = (aiId?: string) => {
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('ai-chat-messages', JSON.stringify(messages));
+      } catch (error) {
+        console.warn('Failed to save chat messages to localStorage:', error);
+      }
+    }
+  }, [messages]);
+
+  const openChat = (aiId?: AI_ID) => {
     if (aiId) {
       setSelectedAI(aiId);
     }
@@ -64,12 +112,30 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     setIsOpen(false);
   };
 
-  const toggleChat = (aiId?: string) => {
+  const toggleChat = (aiId?: AI_ID) => {
     if (isOpen) {
       closeChat();
     } else {
       openChat(aiId);
     }
+  };
+
+  const addMessage = (aiId: AI_ID, message: ConversationMessage) => {
+    setMessages(prev => ({
+      ...prev,
+      [aiId]: [...prev[aiId], message]
+    }));
+  };
+
+  const clearMessages = (aiId: AI_ID) => {
+    setMessages(prev => ({
+      ...prev,
+      [aiId]: []
+    }));
+  };
+
+  const getMessages = (aiId: AI_ID) => {
+    return messages[aiId] || [];
   };
 
   const contextValue: AIChatContextType = {
@@ -78,7 +144,11 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     openChat,
     closeChat,
     toggleChat,
-    setSelectedAI
+    setSelectedAI,
+    messages,
+    addMessage,
+    clearMessages,
+    getMessages
   };
 
   return (

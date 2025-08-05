@@ -80,6 +80,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Activity, useUserActivities } from "@/hooks/useUserActivities";
 import { Timeline } from "@/components/timeline/Timeline";
+import { useAIChat } from "@/contexts/ai-chat-context";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -433,6 +434,8 @@ function DashboardHome() {
       activeConversations,
     };
   }, [conversations, conversationsLoading]);
+
+  const {openChat} = useAIChat();
 
   // Real calculator usage data (from available calculators)
   const availableCalculators = [
@@ -980,13 +983,13 @@ function DashboardHome() {
                           Financial goals
                         </div>
                       </div>
-                      <Link
-                        to="/dashboard/chat"
+                      <div
+                      onClick={() => openChat('advisor')}
                         className="inline-flex items-center w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
                       >
                         <FontAwesomeIcon icon={faComments} className="mr-2 h-4 w-4" />
                         Start Conversation
-                      </Link>
+                      </div>
                     </div>
                   )}
                 </div>

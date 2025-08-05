@@ -98,8 +98,8 @@ export function ActivityContributionGraph({
   const activeDays = calendarData.filter(day => day.count > 0).length;
 
   return (
-    <div className="mb-8 p-6 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-slate-700/50 shadow-lg">
-      <div className="mb-4">
+    <div className="p-6 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-slate-700/50 shadow-lg">
+      <div className="s">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
           Activity Overview
         </h2>

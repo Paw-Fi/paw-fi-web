@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
+import { useAIChat } from "@/contexts/ai-chat-context";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useEffect } from "react";
 import { iconContainer } from "./chat-conversation-display";
@@ -40,11 +41,11 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   const isUser = message.role === "user";
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { closeChat } = useAIChat();
   
   // Check if user has completed the financial assessment
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
-  const found = extractFirstJson(message.content);
   
   // Watch for quiz completion messages and refetch profile
   useEffect(() => {
@@ -94,21 +95,29 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     // Check if message contains QUESTIONNAIRE keyword
     const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
     
-    // Check for goal completion pattern ``GOAL:id``
-    const goalMatch = message.content.match(/``GOAL:([^`]+)``/);
+    // Check for goal completion pattern ``GOAL:id`` - find all matches
+    const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/g)];
     
     // Check for goal template patterns
-    const goalTemplates:GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
+    const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
     const detectedTemplate = goalTemplates.find(template => 
       message.content.includes(`\`\`${template}\`\``)
     );
+    
+    // Check for course card pattern - this was missing but referenced later
+    const courseCardMatch = message.content.match(/``COURSE_CARD:({[^}]+})``/);
+    const found = courseCardMatch && courseCardMatch.index !== undefined ? {
+      json: JSON.parse(courseCardMatch[1]),
+      start: courseCardMatch.index,
+      end: courseCardMatch.index + courseCardMatch[0].length
+    } : null;
     
     if (found) {
       const { json, start, end } = found;
       const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
       const outro = message.content.slice(end).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
       return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}  >
+        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
           {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
           <div className="my-3">
             <CourseCard
@@ -149,22 +158,61 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
       );
     }
     
-    // Handle goal completion button ``GOAL:id``
-    if (goalMatch && !isUser) {
-      const goalId = goalMatch[1];
+    // Handle multiple goal completion buttons ``GOAL:id``
+    if (goalMatches.length > 0 && !isUser) {
+      // Remove all goal patterns from text for clean display
       const messageText = message.content.replace(/``GOAL:[^`]+``/g, '').trim();
       
       return (
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
           <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => navigate({ to: `/dashboard/tracker/${goalId}` })}
-              className="bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
-              View Your Goal
-            </Button>
+          
+          {/* Render a button for each goal */}
+          <div className="mt-3 space-y-2">
+            {goalMatches.map((match, index) => {
+              const goalId = match[1];
+              
+              // Try to extract goal name from the line containing this goal ID
+              const escapedGoalId = goalId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              
+              // Updated regex pattern to handle various markdown formats
+              const goalPatterns = [
+                // Pattern for: - **Goal Name** - $current/$target (progress%) ``GOAL:id``
+                new RegExp('-\\s*\\*\\*([^*]+?)\\*\\*[^`]*``GOAL:' + escapedGoalId + '``', 'i'),
+                // Pattern for: **Goal Name** - $current/$target (progress%) ``GOAL:id``
+                new RegExp('\\*\\*([^*]+?)\\*\\*[^`]*``GOAL:' + escapedGoalId + '``', 'i'),
+                // Pattern for lines that just contain the goal name before the button
+                new RegExp('([^\\n]*?)\\s*``GOAL:' + escapedGoalId + '``', 'i')
+              ];
+              
+              let goalName = `Goal ${index + 1}`;
+              
+              // Try each pattern to extract the goal name
+              for (const pattern of goalPatterns) {
+                const nameMatch = message.content.match(pattern);
+                if (nameMatch && nameMatch[1]) {
+                  goalName = nameMatch[1].trim();
+                  // Clean up common markdown artifacts
+                  goalName = goalName.replace(/^-\s*/, ''); // Remove leading dash
+                  goalName = goalName.replace(/\s*-\s*\$.*$/, ''); // Remove trailing financial info
+                  break;
+                }
+              }
+              
+              return (
+                <Button
+                  key={goalId}
+                  onClick={() => {
+                    closeChat();
+                    navigate({ to: `/dashboard/tracker/${goalId}` });
+                  }}
+                  className="bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 w-full"
+                >
+                  <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
+                  View {goalName}
+                </Button>
+              );
+            })}
           </div>
         </div>
       );

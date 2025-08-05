@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
+import { useAIChat } from "@/contexts/ai-chat-context";
 import { useFinancialHealthProfile, formatProfileForAI } from "@/hooks/use-financial-health-profile";
 import { useUserGoals, createSingleGoalContext, createAllGoalsContext, UserGoal } from "@/hooks/goal-tracker/use-user-goals";
 import { ChatConversationDisplay, ConversationMessage } from "./chat-conversation-display";
@@ -33,12 +34,15 @@ export function GoalTrackerChatInterface({
   isExpanded = false
 }: GoalTrackerChatInterfaceProps) {
   const { user } = useAuth();
+  const { addMessage, getMessages, clearMessages } = useAIChat();
   const isAuthenticated = !!user;
   const queryClient = useQueryClient();
   const isGlobalMode = !goalId; // Global mode when no specific goalId provided
   
+  // Get persisted messages from context
+  const messages = getMessages('tracker');
+  
   // State
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastExecutedFunction, setLastExecutedFunction] = useState<string | null>(null);
@@ -80,8 +84,8 @@ export function GoalTrackerChatInterface({
       userId: user?.id
     };
     
-    // Optimistically add user message to UI
-    setMessages(prev => [...prev, userMessage]);
+    // Optimistically add user message to context
+    addMessage('tracker', userMessage);
     
     try {
       // Create intelligent context based on mode and available data
@@ -137,7 +141,12 @@ export function GoalTrackerChatInterface({
           goalContext,
           isGlobalMode,
           userId: user?.id,
-          profile: formatProfileForAI(user, profile)
+          profile: formatProfileForAI(user, profile),
+          conversationHistory: messages
+            .map(msg => ({
+              role: msg.role === 'assistant' ? 'model' : msg.role,
+              parts: [{ text: msg.content }]
+            }))
         },
       });
 
@@ -150,9 +159,10 @@ export function GoalTrackerChatInterface({
         throw new Error('No response received from AI function');
       }
       
-      // Create AI message from response
+      // Create AI message from response - prioritize function result message for actions like goal creation
+      const functionResultMessage = aiResponse.function_result?.data?.message || aiResponse.function_result?.message;
       const aiMessage: Message = {
-        content: aiResponse.message || aiResponse.response || "I'm sorry, I couldn't process that request.",
+        content: functionResultMessage || aiResponse.message || aiResponse.response || "I'm sorry, I couldn't process that request.",
         role: "assistant",
         timestamp: getConsistentTimestamp(),
         chat_session_id: userMessage.chat_session_id,
@@ -165,8 +175,8 @@ export function GoalTrackerChatInterface({
         }
       };
       
-      // Add AI message to UI
-      setMessages(prev => [...prev, aiMessage]);
+      // Add AI message to context
+      addMessage('tracker', aiMessage);
 
       // Handle function execution results and cache invalidation
       const executedFunction = aiResponse.function_executed || aiResponse.executedFunction;
@@ -179,17 +189,31 @@ export function GoalTrackerChatInterface({
         if (cacheRefreshNeeded) {
           console.log('Invalidating cache due to function execution:', executedFunction);
           
-          // Invalidate user goals cache
+          // Invalidate user goals cache (used by goal tracker index page)
           queryClient.invalidateQueries({ queryKey: ['user-goals', user?.id] });
           
-          // Invalidate specific goal queries if in single goal mode
+          // Invalidate goals list queries (used by tracker index and hooks)
+          queryClient.invalidateQueries({ queryKey: ['goals', 'list'] });
+          queryClient.invalidateQueries({ queryKey: ['goals', 'list', user?.id] });
+          
+          // Invalidate specific goal detail queries if in single goal mode
           if (goalId) {
-            queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+            queryClient.invalidateQueries({ queryKey: ['goals', 'detail', goalId] });
+          }
+          
+          // Invalidate goal metrics
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['goals', 'metrics', user.id] });
           }
           
           // Invalidate financial health profile which may depend on goal data
           if (user?.id) {
             queryClient.invalidateQueries({ queryKey: ['financialHealthProfile', user.id] });
+          }
+          
+          // Invalidate user activities to show new activities from AI actions
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['user-activities', user.id] });
           }
         }
         
@@ -218,7 +242,7 @@ export function GoalTrackerChatInterface({
         metadata: { isError: true }
       };
       
-      setMessages(prev => [...prev, errorMessage]);
+      addMessage('tracker', errorMessage);
       setConnectionError("Connection error. Please try again.");
     } finally {
       setIsSendingMessage(false);
@@ -271,6 +295,12 @@ export function GoalTrackerChatInterface({
     suggestions.push("get insights", "adjust timeline");
 
     return `I can help you ${suggestions.join(", ")}, and more!`;
+  };
+
+  const handleClearConversation = () => {
+    clearMessages('tracker');
+    setLastExecutedFunction(null);
+    setConnectionError(null);
   };
 
   return (
@@ -330,12 +360,14 @@ export function GoalTrackerChatInterface({
         messages={messages}
         onMessageSend={handleSendMessage}
         isSendingMessage={isSendingMessage}
+        initialSuggestedResponses={["I want to create a new goal", "I want to update my progress", "I want to manage milestones", "I want to adjust the timeline"]}
         agentName="Alex - Goal Tracker AI"
         welcomeMessage={getWelcomeMessage()}
         welcomeSubtitle={getWelcomeSubtitle()}
         connectionError={connectionError || undefined}
         isBackendProcessing={isConversationsLoading}
         headerClassName="p-4"
+        onClearConversation={handleClearConversation}
         agentIcon={
           <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600">
             <FontAwesomeIcon 

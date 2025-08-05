@@ -52,6 +52,11 @@ interface ChatConversationDisplayProps {
   // Navigation
   navigate?: any;
 
+  initialSuggestedResponses?: string[];
+  
+  // Clear conversation
+  onClearConversation?: () => void;
+
   
   // Chat container customization
   className?: string;
@@ -82,6 +87,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   onOpenQuizModal,
   onGoalTemplateClick,
   navigate,
+  initialSuggestedResponses,
+  onClearConversation,
   className = "",
   headerClassName = "",
   messagesClassName = ""
@@ -121,7 +128,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const [loadingMessage, setLoadingMessage] = useState<string>("Moneko is thinking...");
   
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
-  
+    ...initialSuggestedResponses || []
   ]);
 
   useEffect(() => {
@@ -251,6 +258,16 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
             </div>
             <p className="text-lg font-medium">{welcomeMessage}</p>
             <p className="text-sm text-slate-400 dark:text-slate-500">{welcomeSubtitle}</p>
+            
+            {/* Clear conversation button - only show if there are messages */}
+            {messages.length > 0 && onClearConversation && (
+              <button
+                onClick={onClearConversation}
+                className="mt-4 px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Clear Conversation
+              </button>
+            )}
           </div>
         )}
 

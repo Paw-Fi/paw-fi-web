@@ -118,7 +118,7 @@ export function Timeline() {
 
   return (
     <div className="min-h-screen dark:bg-slate-900">
-      <div className="p-6 md:p-10">
+      <div className="px-6 md:px-10">
         <ActivityContributionGraph
           activities={activities}
           onDateSelect={setSelectedDate}

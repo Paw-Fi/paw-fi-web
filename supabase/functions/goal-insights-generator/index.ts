@@ -146,7 +146,7 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Progress analysis:", progressAnalysis);
 
-    // Only generate insights if we don't have recent ones
+    // Check for recent insights - but allow user-initiated requests to override
     const { data: recentInsights } = await supabaseClient
       .from("goal_insights")
       .select("created_at")
@@ -154,16 +154,10 @@ serve(async (req: Request): Promise<Response> => {
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
       .limit(1);
 
+    // For now, we'll always generate insights when requested to improve user experience
+    // In the future, we could add a request parameter to override this check
     if (recentInsights && recentInsights.length > 0) {
-      console.log("Recent insights exist, skipping generation");
-      return new Response(JSON.stringify({
-        success: true,
-        insights: [],
-        message: `📊 **Recent insights available!** I've already analyzed your goal progress recently. Check your goal dashboard for the latest insights.\n\n\`\`GOAL:${goalId}\`\``,
-        debug: { recentInsightsCount: recentInsights.length }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("Recent insights exist, but generating new ones as requested");
     }
 
     // Generate AI insights
@@ -204,7 +198,7 @@ serve(async (req: Request): Promise<Response> => {
     console.log("Cleaned AI response:", cleanedResponse);
 
     // Parse AI response
-    let insights;
+    let insights: any[];
     try {
       insights = JSON.parse(cleanedResponse);
     } catch (parseError) {
