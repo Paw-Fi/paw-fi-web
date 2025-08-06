@@ -3,9 +3,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartLine, faChevronRight, faCog, faUser } from '@fortawesome/free-solid-svg-icons';
 
 export const Route = createFileRoute('/dashboard/user-settings/')({  
   component: UserSettings,
@@ -116,9 +118,10 @@ export function UserSettings() {
   return (
     <div className="bg-background dark:bg-dark-background text-foreground dark:text-dark-foreground min-h-screen p-4 sm:p-6 lg:p-8">
     <div className="w-full max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-dark-foreground">Your Profile</h1>
+      <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-dark-foreground">Settings</h1>     
       
       <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
         <form onSubmit={handleUpdateProfile} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">

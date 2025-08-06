@@ -5,7 +5,7 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
@@ -19,11 +19,11 @@ import {
   faSignOut,
   faBars,
   faTimes,
-  faLightbulb,
   faHandHoldingDollar,
   faHouseChimney,
   faHome,
   faChartBar,
+  faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -35,7 +35,6 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWindow";
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
-import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
 import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
@@ -47,12 +46,6 @@ import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-in
 import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
-
-
-
-const NON_PROTECTED_ROUTES = [
-  "/dashboard/chat",
-];
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -639,7 +632,7 @@ export function Dashboard() {
 
                       {/* Profile Option */}
                       <Link 
-                        to="/dashboard/user-settings" 
+                        to="/dashboard/user-settings/profile" 
                         className="block"
                         onClick={() => {
                           setUserMenuOpen(false);
@@ -678,7 +671,7 @@ export function Dashboard() {
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
                             <FontAwesomeIcon
                               className="h-4 w-4 text-gray-600 dark:text-gray-400"
-                              icon={faUser}
+                              icon={faIdCard}
                             />
                           </div>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

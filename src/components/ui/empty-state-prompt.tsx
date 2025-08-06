@@ -21,7 +21,6 @@ export function EmptyStatePrompt({
   title,
   description,
   buttonText,
-  navigationPath = "/dashboard/chat"
 }: EmptyStatePromptProps) {
   const defaultContent = {
     courses: {

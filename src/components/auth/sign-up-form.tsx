@@ -33,7 +33,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
           setVerificationSent(true);
         } else {
           // If no confirmation needed, navigate to redirect URL or chat
-          navigate({ to: redirectUrl || '/dashboard/chat' });
+          navigate({ to: redirectUrl || '/dashboard' });
         }
       }
     } catch (error: any) {

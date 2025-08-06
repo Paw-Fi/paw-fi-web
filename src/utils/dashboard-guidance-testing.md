@@ -237,7 +237,6 @@ if (typeof window === 'undefined') {
 - `/dashboard/tracker/` (first visit) → Tracker agent welcome
 - `/dashboard/learning/` (first visit) → Educator welcome  
 - `/dashboard/portfolio/` (first visit) → Advisor account setup
-- `/dashboard/chat/` (first visit) → Advisor introduction
 - `/dashboard/` (idle 30s) → Feature discovery prompts
 
 ### Behavior-Based Guidance

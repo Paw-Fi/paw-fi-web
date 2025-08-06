@@ -295,7 +295,7 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
             Register a free account to view this personalized lesson and access more features.
           </p>
           <div className="w-full flex flex-col gap-2">
-            <Link to="/register" search={{ redirect: "/dashboard/chat" }} className="w-full">
+            <Link to="/register" search={{ redirect: "/dashboard" }} className="w-full">
               <Button fullWidth className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition">
                 Register for Free
               </Button>

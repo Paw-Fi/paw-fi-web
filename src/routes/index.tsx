@@ -435,7 +435,7 @@ export default function HomePage() {
               <div>
                 <div className="h-full rounded-3xl border border-gray-200/30 bg-white/60 dark:border-gray-700/30 dark:bg-gray-800/60 p-8 shadow-2xl shadow-gray-900/20 dark:shadow-black/30 backdrop-blur-xl">
                   <Link
-                    to={`dashboard/essentials/${basicLessonsData.course_id}`}
+                    to={`dashboard/learning/${basicLessonsData.course_id}`}
                     role="button"
                     className="group flex h-full w-full flex-col items-center justify-center text-center"
                   >
@@ -523,7 +523,7 @@ export default function HomePage() {
             <motion.ul className="space-y-2" variants={staggerContainer}>
               <motion.li variants={fadeInUp} custom={0.4}>
                 <Link
-                  to="/dashboard/essentials"
+                  to="/dashboard/learning"
                   className="text-gray-400 hover:text-white"
                 >
                   AI Learning
@@ -531,7 +531,7 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.5}>
                 <Link
-                  to={`dashboard/essentials/${basicLessonsData.course_id}`}
+                  to={`/dashboard/learning/${basicLessonsData.course_id}`}
                   className="text-gray-400 hover:text-white"
                 >
                   Expert Courses
@@ -547,7 +547,7 @@ export default function HomePage() {
               </motion.li>
               <motion.li variants={fadeInUp} custom={0.7}>
                 <Link
-                  to="/dashboard/chat"
+                  to="/dashboard"
                   className="text-gray-400 hover:text-white"
                 >
                   Chat with AI

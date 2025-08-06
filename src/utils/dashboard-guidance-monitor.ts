@@ -156,7 +156,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   // === CHAT SCENARIOS ===
   {
     id: 'chat_first_time',
-    route: '/dashboard/chat/',
+    route: '/dashboard/',
     agentId: 'advisor',
     message: 'Hi there! I\'m your AI Financial Advisor. Ask me about investments, budgeting, or any money questions you have!',
     priority: 'high',

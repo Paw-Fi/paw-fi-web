@@ -54,25 +54,7 @@ const getPageConfig = (path: string, user: any): PageConfig => {
     ctaText: user ? "View our plans" : "Sign In to Access Your Portfolio",
     ctaLink: user ? "/pricing" : "/login"
   };
-
-  // Customize based on path
-  if (path === "/dashboard/chat") {
-    config = {
-      ...config,
-      backgroundImage: dashboardHomeImage,
-      title: "Unlock AI Financial Coaching",
-      description: user ? "Subscribe to chat with our AI financial advisor" : "Sign in to get personalized financial guidance from our AI",
-      features: [
-        { icon: faComments, text: "Personalized AI Financial Advisor" },
-        { icon: faLightbulb, text: "Custom Investment Strategies" },
-        { icon: faChartLine, text: "Goal-Based Financial Planning" },
-        { icon: faHeartbeat, text: "Real-time Financial Health Check" },
-        { icon: faClipboardList, text: "Action-oriented Recommendations" },
-        { icon: faMoneyBill, text: "Budgeting & Spending Insights" }
-      ],
-      ctaText: user ? "Upgrade to Chat with AI" : "Sign In to Start Chatting"
-    };
-  } else if (path.startsWith("/dashboard/learning")) {
+  if (path.startsWith("/dashboard/learning")) {
     config = {
       ...config,
       backgroundImage: dashboardLearningImage,

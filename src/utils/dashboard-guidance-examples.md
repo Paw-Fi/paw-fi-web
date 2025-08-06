@@ -107,10 +107,6 @@ const [showGuidanceSettings, setShowGuidanceSettings] = useState(false);
 - **Course Completion**: Next course recommendations from educator
 - **No Learning Activity**: Gentle prompts from dashboard
 
-### Chat (`/dashboard/chat/`)
-- **First Visit**: Introduction to AI capabilities from advisor
-- **Long Time No Use**: Encouragement to ask questions
-
 ### Portfolio (`/dashboard/portfolio/`)
 - **First Visit**: How to connect accounts from advisor
 - **Weekly Review**: Portfolio analysis suggestions

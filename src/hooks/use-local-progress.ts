@@ -130,7 +130,7 @@ export const useLocalProgress = () => {
         id: 'chat',
         title: 'Chat with AI',
         description: 'Generate personalized learning lessons through AI conversation',
-        path: '/dashboard/chat',
+        path: '/dashboard',
         isCompleted: chatCompleted,
         isNextStep: portfolioCompleted && !chatCompleted,
       },

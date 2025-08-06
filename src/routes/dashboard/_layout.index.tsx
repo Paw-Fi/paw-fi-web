@@ -958,13 +958,13 @@ function DashboardHome() {
                         </div>
                       )}
 
-                      <Link
-                        to="/dashboard/chat"
-                        className="inline-flex items-center w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                      <div
+                        onClick={() => openChat('advisor')}
+                        className="inline-flex cursor-pointer items-center w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
                       >
                         <FontAwesomeIcon icon={faComments} className="mr-2 h-4 w-4" />
                         Continue Conversation
-                      </Link>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
