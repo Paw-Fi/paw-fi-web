@@ -9,7 +9,7 @@
 -- ====================
 CREATE TABLE IF NOT EXISTS public.financial_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   
   -- Basic Goal Information
   title VARCHAR(255) NOT NULL,
@@ -262,6 +262,15 @@ CREATE POLICY "Users can update insights for their goals" ON public.goal_insight
       WHERE id = goal_insights.goal_id AND user_id = auth.uid()
     )
   );
+
+-- Allow users to read guest goals (NULL user_id) for migration
+CREATE POLICY "Users can read guest goals for migration" ON financial_goals
+FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
+
+-- Allow users to claim guest goals (update NULL user_id to their own user_id)
+CREATE POLICY "Users can claim guest goals for migration" ON financial_goals
+FOR UPDATE USING (user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id);
 
 -- ====================
 -- DATABASE FUNCTIONS

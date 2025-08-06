@@ -133,17 +133,20 @@ export function Dashboard() {
   };
 
   // Guest goals migration utility functions
-  const getGuestGoalIds = useCallback((): string[] => {
+  const getGuestGoalIds = ()=> {
     const goalIds = getCookie('moneko-guest-goals');
     return goalIds ? JSON.parse(goalIds) : [];
-  }, [getCookie]);
+  }
 
-  const clearGuestGoalIds = useCallback(() => {
+  const clearGuestGoalIds = () => {
     document.cookie = 'moneko-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  }, []);
+  }
 
   // Migrate guest goals to authenticated user
-  const migrateGuestGoals = useCallback(async (userId: string) => {
+  const migrateGuestGoals = async (userId: string) => {
+    if(!userId){
+      return;
+    }
     const guestGoalIds = getGuestGoalIds();
     
     if (guestGoalIds.length === 0) {
@@ -155,34 +158,16 @@ export function Dashboard() {
       
       // Update each guest goal with the user ID and log activity
       for (const goalId of guestGoalIds) {
-        // First, get the goal details for activity logging
-        const { data: goalData, error: fetchError } = await supabase
-          .from('financial_goals')
-          .select('*')
-          .eq('id', goalId)
-          .is('user_id', null)
-          .single();
-        
-        if (fetchError) {
-          console.error(`Failed to fetch guest goal ${goalId}:`, fetchError);
-          continue;
-        }
-        
-        if (!goalData) {
-          console.warn(`Guest goal ${goalId} not found or already migrated`);
-          continue;
-        }
-        
         // Update the goal with user ID
-        const { error: updateError } = await supabase
+        const { data:goalData,error: updateError } = await supabase
           .from('financial_goals')
           .update({ user_id: userId })
           .eq('id', goalId)
           .is('user_id', null);
-        
+        console.log("data",goalData)
         if (updateError) {
           console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
-          continue;
+          return;
         }
         refetch();
         
@@ -213,20 +198,20 @@ export function Dashboard() {
       
       // Clear guest goal IDs after successful migration
       clearGuestGoalIds();
+      setHasCheckedGuestGoals(true);
       console.log(`Completed migration of ${guestGoalIds.length} guest goals with activity logging`);
       
     } catch (error) {
       console.error('Failed to migrate guest goals:', error);
     }
-  }, [getGuestGoalIds, clearGuestGoalIds]);
+  }
 
   // Handle guest goal migration on login
   useEffect(() => {
     if (user?.id && !hasCheckedGuestGoals) {
       migrateGuestGoals(user.id);
-      setHasCheckedGuestGoals(true);
     }
-  }, [user?.id, hasCheckedGuestGoals, migrateGuestGoals]);
+  }, [user]);
 
 
   // Helper function to check if a route is active

@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { GoalType } from '../goal-tracker/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useLocation, useRouter } from '@tanstack/react-router';
 
 export interface ConversationMessage {
   content: string;
@@ -99,8 +100,9 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const {user} = useAuth();
   const {isActive} = useSubscription(user?.id || '');
+  const location = useLocation();
 
-  const isConversationMaxedOut = !isActive&&messages.length>=8;
+  const isConversationMaxedOut = location.pathname!='/onboarding' && !isActive&&messages.length>=8;
   
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {

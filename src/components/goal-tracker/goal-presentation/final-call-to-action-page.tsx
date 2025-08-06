@@ -13,10 +13,12 @@ import {
   faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from '@tanstack/react-router';
 
 interface FinalCallToActionPageProps {
   isLoggedIn: boolean;
   goalTitle: string;
+  goalId: string;
   onComplete: () => void;
   onRegister: () => void;
 }
@@ -24,9 +26,12 @@ interface FinalCallToActionPageProps {
 export function FinalCallToActionPage({ 
   isLoggedIn, 
   goalTitle, 
+  goalId,
   onComplete, 
   onRegister 
 }: FinalCallToActionPageProps) {
+
+  const navigate = useNavigate();
   const features = [
     {
       icon: faChartLine,
@@ -259,7 +264,7 @@ export function FinalCallToActionPage({
           Already have an account?
         </p>
         <Button
-          onClick={onComplete}
+          onClick={()=>  navigate({ to: '/login', search: { redirect: '/dashboard/tracker/' + goalId } })}
           variant="outline"
           className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
         >

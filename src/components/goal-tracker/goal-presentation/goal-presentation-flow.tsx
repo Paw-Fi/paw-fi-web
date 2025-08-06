@@ -71,6 +71,7 @@ export function GoalPresentationFlow({
       case 'final':
         return <FinalCallToActionPage 
           isLoggedIn={isLoggedIn}
+          goalId={goalData.goal?.id || ''}
           goalTitle={goalData.goal?.title || 'Your Financial Goal'}
           onComplete={onComplete}
           onRegister={onRegister}

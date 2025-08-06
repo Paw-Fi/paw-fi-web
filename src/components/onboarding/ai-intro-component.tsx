@@ -100,12 +100,12 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
         
         if (fetchError) {
           console.error(`Failed to fetch guest goal ${goalId}:`, fetchError);
-          continue;
+          return;
         }
         
         if (!goalData) {
           console.warn(`Guest goal ${goalId} not found or already migrated`);
-          continue;
+          return;
         }
         
         // Update the goal with user ID
@@ -392,14 +392,14 @@ Sound good?`,
     setIsPresentationModalOpen(false);
     setGoalData(null);
     // Navigate to tracker dashboard for logged-in users
-    navigate({ to: '/dashboard/tracker' });
+    navigate({ to: '/dashboard/tracker/' + goalData?.goal?.id });
   };
 
   const handleRegistrationPrompt = () => {
     setIsPresentationModalOpen(false);
     setGoalData(null);
     // Navigate to registration/login page
-    navigate({ to: '/register', search: { redirect: '/dashboard/tracker' } });
+    navigate({ to: '/register', search: { redirect: '/dashboard/tracker/' + goalData?.goal?.id } });
   };
 
   const handleCloseModal = () => {
@@ -459,7 +459,7 @@ Sound good?`,
       <Modal
         isOpen={isQuestionnaireModalOpen}
         onClose={handleCloseModal}      
-        width="standard"
+        width="wide"
         fullHeight={true}
         disableOverlayClick
       >
