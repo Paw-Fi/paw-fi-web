@@ -15,6 +15,7 @@ import {
   type Conversation,
 } from "@/services/conversation-service";
 import { useAuth } from "@/contexts/auth-context";
+import { useAIChat } from "@/contexts/ai-chat-context";
 import { useFinancialHealthProfile, FinancialHealthProfile, formatProfileForAI } from "@/hooks/use-financial-health-profile";
 import { ChatConversationDisplay, ConversationMessage } from "./chat-conversation-display";
 import { supabase } from "@/lib/supabase";
@@ -72,6 +73,7 @@ interface ChatInterfaceProps {
 
 export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { closeChat } = useAIChat();
   const isAuthenticated = !!user;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -81,7 +83,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [connectionError, setConnectionError] = useState<string | undefined>(undefined);
-  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [hasUpdatedGuestSession, setHasUpdatedGuestSession] = useState(false);
   
@@ -230,7 +231,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
       setConnectionError("Connection error. Please try again.");
     } finally {
       setIsSendingMessage(false);
-      set("Moneko is thinking...");
       setLoadingDuration(0);
       
       if (loadingTimerRef.current) {
@@ -238,13 +238,6 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         loadingTimerRef.current = null;
       }
     }
-  };
-  
-  // Handle quiz completion
-  const handleQuizComplete = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
-    setIsQuizModalOpen(false);
-    handleSendMessage("I've completed the questionnaire", profile);
-    await queryClient.invalidateQueries({ queryKey: ["dashboard-views"] });
   };
   
   // Cleanup
@@ -262,19 +255,100 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   
   return (
     <>
-      <ChatConversationDisplay
-        messages={messages}
-        onMessageSend={handleSendMessage}
-        isSendingMessage={isSendingMessage}
-        welcomeMessage={welcomeMessage}
-        welcomeSubtitle="Ask me anything to get started!"
-        connectionError={connectionError}
-        isBackendProcessing={isBackendProcessing}
-        loadingDuration={loadingDuration}
-        onOpenQuizModal={() => setIsQuizModalOpen(true)}
-        navigate={navigate}
-        headerClassName="p-4"        
-      />
+      <div className="h-full bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 dark:from-emerald-950 dark:via-teal-950 dark:to-green-950 flex flex-col">
+        {/* Floating close button */}
+        <div className="absolute top-4 right-4 z-50">
+          <button
+            onClick={closeChat}
+            className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+          >
+            <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Header */}
+        <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-white to-emerald-50 dark:from-slate-800 dark:to-slate-700">
+          <div className="px-6 py-6">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100 bg-clip-text text-transparent mb-2">
+                Financial Education
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Learn personal finance with your AI educator Leo
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Chat Container - Takes remaining space */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <ChatConversationDisplay
+            messages={messages}
+            onMessageSend={handleSendMessage}
+            isSendingMessage={isSendingMessage}
+            welcomeMessage={welcomeMessage}
+            welcomeSubtitle="Ask me anything to get started!"
+            connectionError={connectionError}
+            isBackendProcessing={isBackendProcessing}
+            loadingDuration={loadingDuration}
+            navigate={navigate}
+            className="flex-1"
+          />
+        </div>
+        
+        {/* Dynamic footer with learning progress data */}
+        <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+          <div className="px-6 py-4">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+              {user && conversationsData ? (
+                // Show learning session data
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span className="font-medium">Learning Session Active</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                    <span>{messages.length} messages exchanged</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Progress saved</span>
+                  </div>
+                  {profile && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>Personalized guidance</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Default indicators for guests or new users
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span>Interactive Learning</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                    <span>Personalized Lessons</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Expert Knowledge</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Progress Tracking</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Registration Modal */}
       <Modal
@@ -304,23 +378,7 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
         </div>
       </Modal>
 
-      {/* Financial Health Quiz Modal */}
-      <Modal
-        isOpen={isQuizModalOpen}
-        onClose={() => setIsQuizModalOpen(false)}
-        title="Financial Health Assessment"
-        description="Complete this assessment to get personalized financial advice"
-        width="wide"
-        fullHeight={true}
-        disableOverlayClick
-      >
-        {user && (
-          <FinancialHealthQuiz
-            user={user}
-            onDashboardCreated={handleQuizComplete}
-          />
-        )}
-      </Modal>
+     
     </>
   );
 }

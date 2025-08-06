@@ -80,10 +80,11 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 
   const MessageBubble = ({ children }: { children: React.ReactNode }) => (
     <div
-      className={`relative max-w-xs lg:max-w-md xl:max-w-lg rounded-2xl px-4 py-3 shadow-md ${isUser
-          ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-none"
-          : "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-none"
-        }`}>
+      className={`relative max-w-[75%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+        isUser
+          ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-md ml-auto"
+          : "bg-white/90 dark:bg-slate-700/90 text-slate-800 dark:text-slate-100 rounded-bl-md border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm"
+      }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
         {(formatTimeProp || defaultFormatTime)(message.timestamp)}
@@ -287,7 +288,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   };
 
   return (
-    <div className={`flex items-end gap-3 w-full ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <Avatar />}
       <MessageBubble>{renderMessageContent()}</MessageBubble>
       {isUser && <Avatar />}

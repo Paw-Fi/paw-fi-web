@@ -51,5 +51,47 @@ function RouteComponent() {
     }
   }, [user, navigate,profile]);
 
-  return <AIIntroComponent initialMessage={q} />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-200/20 dark:bg-purple-700/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-700/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-200/10 dark:bg-pink-700/5 rounded-full blur-3xl"></div>
+      </div>
+      
+      {/* Main chat container */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+          <div className="w-full max-w-5xl mx-auto">
+            <AIIntroComponent initialMessage={q} />
+          </div>
+        </div>
+        
+        {/* Informative footer */}
+        <div className="flex-shrink-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-t border-slate-200/60 dark:border-slate-700/60">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Secure & Private</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>AI-Powered Guidance</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span>Personalized Plans</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                <span>Expert-Backed Advice</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }

@@ -58,13 +58,13 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut }: ChatInputPro
           "cursor-not-allowed": isLoading,
         }
       )}>
-        <div className="flex-grow relative">
+        <div className="flex-grow relative h-min translate-y-1">
           <TextareaAutosize
             ref={inputRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Ask Moneko anything..."
-            className={classNames("w-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-4 py-2.5 pr-24 text-sm text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200",
+            className={classNames("w-full h-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-4 py-2.5 pr-24 text-sm text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200",
               {
                 "cursor-not-allowed": isLoading,
                 "opacity-50": isLoading,

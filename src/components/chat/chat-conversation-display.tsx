@@ -13,6 +13,10 @@ import { GoalType } from '../goal-tracker/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useLocation, useRouter } from '@tanstack/react-router';
+import FinancialHealthQuiz from '../financial-health/FinancialHealthQuiz';
+import { Modal } from '../ui/modal';
+import { FinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface ConversationMessage {
   content: string;
@@ -25,7 +29,7 @@ export interface ConversationMessage {
 
 interface ChatConversationDisplayProps {
   messages: ConversationMessage[];
-  onMessageSend: (content: string) => Promise<void> | void;
+  onMessageSend: (content: string,manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => Promise<void> | void;
   isSendingMessage?: boolean;
   
   // Optional customization
@@ -46,8 +50,6 @@ interface ChatConversationDisplayProps {
   // Voice modal (optional)
   onOpenVoiceModal?: () => void;
   
-  // Quiz modal (optional)  
-  onOpenQuizModal?: () => void;
   
   // Goal template handling (for AI onboarding)
   onGoalTemplateClick?: (goalType: GoalType) => void;
@@ -87,7 +89,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   isBackendProcessing = false,
   loadingDuration = 0,
   onOpenVoiceModal,
-  onOpenQuizModal,
   onGoalTemplateClick,
   navigate,
   initialSuggestedResponses,
@@ -98,9 +99,12 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+
   const {user} = useAuth();
   const {isActive} = useSubscription(user?.id || '');
   const location = useLocation();
+  const queryClient = useQueryClient();
 
   const isConversationMaxedOut = location.pathname!='/onboarding' && !isActive&&messages.length>=8;
   
@@ -184,9 +188,17 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         setLoadingMessage("Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱");
       }
     }, [loadingDuration]);
+
+    const handleDashboardCreated=async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>)=>{
+      setIsQuizModalOpen(false);
+      onMessageSend("I've completed the questionnaire", profile);
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-views"] });
+
+    }
   
 
   return (
+    <>
     <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
 
       {/* Error Messages */}
@@ -207,76 +219,97 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         {/* Backend Processing Skeleton */}
         {isBackendProcessing && (
           <div className="space-y-6 p-4 sm:p-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className={`flex animate-pulse items-end gap-3 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
-              >
-                {i % 2 !== 0 && (
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
-                )}
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div
-                  className={`w-3/5 rounded-2xl p-4 ${
-                    i % 2 === 0 
-                      ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" 
-                      : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"
-                  }`}
+                  key={i}
+                  className={`flex animate-pulse items-end gap-3 sm:gap-4 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
                 >
+                  {i % 2 !== 0 && (
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                  )}
                   <div
-                    className={`mb-2 h-4 rounded ${
+                    className={`w-3/5 rounded-2xl p-4 ${
                       i % 2 === 0 
-                        ? "bg-purple-300/50 dark:bg-purple-600/50" 
-                        : "bg-slate-300/50 dark:bg-slate-600/50"
-                    } w-3/4`}
-                  ></div>
-                  <div
-                    className={`h-4 rounded ${
-                      i % 2 === 0 
-                        ? "bg-purple-300/50 dark:bg-purple-600/50" 
-                        : "bg-slate-300/50 dark:bg-slate-600/50"
-                    } w-full`}
-                  ></div>
+                        ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" 
+                        : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"
+                    }`}
+                  >
+                    <div
+                      className={`mb-2 h-4 rounded ${
+                        i % 2 === 0 
+                          ? "bg-purple-300/50 dark:bg-purple-600/50" 
+                          : "bg-slate-300/50 dark:bg-slate-600/50"
+                      } w-3/4`}
+                    ></div>
+                    <div
+                      className={`h-4 rounded ${
+                        i % 2 === 0 
+                          ? "bg-purple-300/50 dark:bg-purple-600/50" 
+                          : "bg-slate-300/50 dark:bg-slate-600/50"
+                      } w-full`}
+                    ></div>
+                  </div>
+                  {i % 2 === 0 && (
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                  )}
                 </div>
-                {i % 2 === 0 && (
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
         )}
 
         {/* Empty State */}
         {!isBackendProcessing && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 dark:text-slate-400">
-            <div className="mb-4 rounded-full bg-white/30 p-4 backdrop-blur-md dark:bg-slate-800/30">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="mx-auto h-16 w-16 text-slate-400 dark:text-slate-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1"
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="mb-6 relative"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
+                <div className="relative p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-100/80 to-indigo-100/80 dark:from-purple-900/30 dark:to-indigo-900/30 backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 sm:h-16 sm:w-16 text-purple-600 dark:text-purple-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">AI</span>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+                className="space-y-3"
+              >
+                <h3 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200">{welcomeMessage}</h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">{welcomeSubtitle}</p>
+              </motion.div>
+              
+              {/* Clear conversation button - only show if there are messages */}
+              {messages.length > 0 && onClearConversation && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  onClick={onClearConversation}
+                  className="mt-6 px-4 py-2 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-200"
+                >
+                  Clear Conversation
+                </motion.button>
+              )}
             </div>
-            <p className="text-lg font-medium">{welcomeMessage}</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500">{welcomeSubtitle}</p>
-            
-            {/* Clear conversation button - only show if there are messages */}
-            {messages.length > 0 && onClearConversation && (
-              <button
-                onClick={onClearConversation}
-                className="mt-4 px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Clear Conversation
-              </button>
-            )}
-          </div>
         )}
 
         {/* Messages */}
@@ -303,7 +336,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
               >
                 <ChatMessageItem 
                   message={message} 
-                  onOpenQuizModal={onOpenQuizModal}
+                  onOpenQuizModal={() => setIsQuizModalOpen(true)}
                   onGoalTemplateClick={onGoalTemplateClick}
                 />
               </motion.div>
@@ -319,11 +352,11 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
               transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
             >
               <div className="flex justify-start">
-                <div className="flex items-center gap-3 max-w-xs lg:max-w-md">
+                <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
                   <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 shrink-0">
                     {agentIcon || iconContainer("size-6")}
                   </div>
-                  <div className="bg-white/80 dark:bg-slate-700 rounded-2xl p-4">
+                  <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
                     <div className="flex items-center space-x-3">
                       {loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
                         <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
@@ -331,9 +364,9 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                         </div>
                       ) : (
                         <div className="flex items-center space-x-2">
-                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.3s]"></div>
-                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:-0.15s]"></div>
-                          <div className="h-2 w-2 animate-pulse rounded-full bg-slate-400"></div>
+                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
+                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
+                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400"></div>
                         </div>
                       )}
                     </div>
@@ -362,5 +395,23 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         isMaxedOut={isConversationMaxedOut}
       />
     </div>
+     {/* Financial Health Quiz Modal */}
+     <Modal
+     isOpen={isQuizModalOpen}
+     onClose={() => setIsQuizModalOpen(false)}
+     title="Financial Health Assessment"
+     description="Complete this assessment to get personalized financial advice"
+     width="wide"
+     fullHeight={true}
+     disableOverlayClick
+   >
+     {user && (
+       <FinancialHealthQuiz
+         user={user}
+         onDashboardCreated={handleDashboardCreated}
+       />
+     )}
+   </Modal>
+    </>
   );
 };

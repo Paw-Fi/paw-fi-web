@@ -34,7 +34,7 @@ export function GoalTrackerChatInterface({
   isExpanded = false
 }: GoalTrackerChatInterfaceProps) {
   const { user } = useAuth();
-  const { addMessage, getMessages, clearMessages } = useAIChat();
+  const { addMessage, getMessages, clearMessages, closeChat } = useAIChat();
   const isAuthenticated = !!user;
   const queryClient = useQueryClient();
   const isGlobalMode = !goalId; // Global mode when no specific goalId provided
@@ -304,87 +304,149 @@ export function GoalTrackerChatInterface({
   };
 
   return (
-    <div className={classNames(className, "flex flex-col h-full flex-1")}>
-       {/* Context Display */}
-       {(isGlobalMode || goal) && (
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
-            {isGlobalMode ? (
-              // Global mode context
+    <div className="h-full bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-950 dark:via-amber-950 dark:to-yellow-950 flex flex-col">
+      {/* Floating close button */}
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={closeChat}
+          className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+        >
+          <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Header */}
+      <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-white to-orange-50 dark:from-slate-800 dark:to-slate-700">
+        <div className="px-6 py-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-orange-800 to-amber-900 dark:from-white dark:via-orange-200 dark:to-amber-100 bg-clip-text text-transparent mb-2">
+              Goal Tracker
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Track and achieve your financial goals with AI coach Alex
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Container - Takes remaining space */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <ChatConversationDisplay
+          messages={messages}
+          onMessageSend={handleSendMessage}
+          isSendingMessage={isSendingMessage}
+          initialSuggestedResponses={["I want to create a new goal", "I want to update my progress", "I want to manage milestones", "I want to adjust the timeline"]}
+          agentName="Alex - Goal Tracker AI"
+          welcomeMessage={getWelcomeMessage()}
+          welcomeSubtitle={getWelcomeSubtitle()}
+          connectionError={connectionError || undefined}
+          isBackendProcessing={isConversationsLoading}
+          onClearConversation={handleClearConversation}
+          className="flex-1"
+          agentIcon={
+            <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-600">
+              <FontAwesomeIcon 
+                icon={isGlobalMode ? faChartLine : faBullseye} 
+                className="w-5 h-5 text-white" 
+              />
+              {/* Notification badges */}
+              {isGlobalMode && userGoals?.some(g => !g.is_on_track) && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+              {!isGlobalMode && goal && !goal.is_on_track && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+            </div>
+          }
+        />
+      </div>
+      
+      {/* Dynamic footer with goal data */}
+      <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+        <div className="px-6 py-4">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+            {isGlobalMode && userGoals && userGoals.length > 0 ? (
+              // Global mode: Show actual goal data
               <>
-                <div className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faChartLine} className="w-3 h-3" />
-                  <span>All Goals</span>
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faChartLine} className="w-3 h-3 text-orange-600" />
+                  <span className="font-medium">All Goals</span>
                 </div>
-                {userGoals && userGoals.length > 0 && (
-                  <>
-                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                    <span>{userGoals.filter(g => g.status === 'active').length} active</span>
-                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                    <span>
-                      {Math.round(userGoals.reduce((sum, g) => sum + g.progress_percentage, 0) / userGoals.length)}% avg progress
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span>{userGoals.filter(g => g.status === 'active').length} active</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  <span>{Math.round(userGoals.reduce((sum, g) => sum + g.progress_percentage, 0) / userGoals.length)}% avg progress</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span>${userGoals.reduce((sum, g) => sum + g.current_amount, 0).toLocaleString()} saved</span>
+                </div>
+                {lastExecutedFunction && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✓ {lastExecutedFunction.replace(/-/g, ' ')}
                     </span>
-                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                    <span>
-                      ${userGoals.reduce((sum, g) => sum + g.current_amount, 0).toLocaleString()} saved
+                  </div>
+                )}
+              </>
+            ) : !isGlobalMode && goal ? (
+              // Single goal mode: Show specific goal data
+              <>
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faBullseye} className="w-3 h-3 text-orange-600" />
+                  <span className="font-medium">{goal.title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span>${(goal.current_amount || 0).toLocaleString()} saved</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  <span>{Math.round(goal.progress_percentage || 0)}% complete</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span>${(goal.target_amount || 0).toLocaleString()} target</span>
+                </div>
+                {lastExecutedFunction && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✓ {lastExecutedFunction.replace(/-/g, ' ')}
                     </span>
-                  </>
+                  </div>
                 )}
               </>
             ) : (
-              // Single goal mode context
+              // Default indicators when no data
               <>
-                <div className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faBullseye} className="w-3 h-3" />
-                  <span>{goal.title}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span>Goal Tracking</span>
                 </div>
-                <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                <span>${(goal.current_amount || 0).toLocaleString()} / ${(goal.target_amount || 0).toLocaleString()}</span>
-                <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                <span>{Math.round(goal.progress_percentage || 0)}% complete</span>
-              </>
-            )}
-            
-            {lastExecutedFunction && (
-              <>
-                <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                <span className="text-green-600 dark:text-green-400">
-                  ✓ {lastExecutedFunction.replace(/-/g, ' ')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  <span>Progress Updates</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span>Smart Insights</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span>AI Coaching</span>
+                </div>
               </>
             )}
           </div>
         </div>
-      )}
-      <ChatConversationDisplay
-        messages={messages}
-        onMessageSend={handleSendMessage}
-        isSendingMessage={isSendingMessage}
-        initialSuggestedResponses={["I want to create a new goal", "I want to update my progress", "I want to manage milestones", "I want to adjust the timeline"]}
-        agentName="Alex - Goal Tracker AI"
-        welcomeMessage={getWelcomeMessage()}
-        welcomeSubtitle={getWelcomeSubtitle()}
-        connectionError={connectionError || undefined}
-        isBackendProcessing={isConversationsLoading}
-        headerClassName="p-4"
-        onClearConversation={handleClearConversation}
-        agentIcon={
-          <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600">
-            <FontAwesomeIcon 
-              icon={isGlobalMode ? faChartLine : faBullseye} 
-              className="w-5 h-5 text-white" 
-            />
-            {/* Notification badges */}
-            {isGlobalMode && userGoals?.some(g => !g.is_on_track) && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-            )}
-            {!isGlobalMode && goal && !goal.is_on_track && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-            )}
-          </div>
-        }
-      />      
-     
+      </div>
     </div>
   );
 }

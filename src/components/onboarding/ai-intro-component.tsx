@@ -424,35 +424,39 @@ Sound good?`,
   const questionnaireTemplate = selectedGoalType ? getQuestionnaireTemplate(selectedGoalType) : null;
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      <div className="flex-1 flex flex-col">
-        <div className="text-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto"
-          >
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Welcome to Moneko
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Let Moneko, your AI money coach, guide you to financial success
-            </p>
-          </motion.div>
+    <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden ${className}`}>
+      {/* Modern Header with proper constraints */}
+      <div className="flex-shrink-0 border-b border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-white/90 to-purple-50/90 dark:from-slate-800/90 dark:to-slate-700/90">
+        <div className="px-6 sm:px-8 lg:px-10">
+          <div className="py-6 sm:py-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center"
+            >
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-800 to-indigo-900 dark:from-white dark:via-purple-200 dark:to-indigo-100 bg-clip-text text-transparent mb-3">
+                Welcome to Moneko
+              </h1>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Let Moneko, your AI money coach, guide you to financial success
+              </p>
+            </motion.div>
+          </div>
         </div>
+      </div>
 
-        <div className="flex-1">
-          <ChatConversationDisplay
-            messages={messages}
-            onMessageSend={handleSendMessage}
-            isSendingMessage={isSendingMessage}
-            welcomeMessage="Hi! I'm Moneko, your AI money coach 👋 Tell me what financial goal you'd like to work on!"
-            welcomeSubtitle="I'll help you create a personalized plan step by step."
-            loadingDuration={loadingDuration}
-            onGoalTemplateClick={handleGoalTemplateClick}
-            className="h-full"
-          />
-        </div>
+      {/* Modern Chat Container with proper constraints */}
+      <div className="flex flex-col" style={{ height: '600px' }}>
+        <ChatConversationDisplay
+          messages={messages}
+          onMessageSend={handleSendMessage}
+          isSendingMessage={isSendingMessage}
+          welcomeMessage="Hi! I'm Moneko, your AI money coach 👋 Tell me what financial goal you'd like to work on!"
+          welcomeSubtitle="I'll help you create a personalized plan step by step."
+          loadingDuration={loadingDuration}
+          onGoalTemplateClick={handleGoalTemplateClick}
+          className="flex-1"
+        />
       </div>
 
       {/* Questionnaire Modal */}

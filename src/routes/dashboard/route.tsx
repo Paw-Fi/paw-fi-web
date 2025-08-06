@@ -41,7 +41,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
-import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
+import { useAIChat } from "@/contexts/ai-chat-context";
 import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
 import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
@@ -918,46 +918,14 @@ export function Dashboard() {
             
             {/* Drawer */}
             <motion.div
-              className="fixed right-0 top-0 h-full w-screen lg:w-[45rem] bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-50 flex flex-col"
+              className="fixed right-0 top-0 h-full w-screen lg:w-[50rem] z-50 flex flex-col overflow-hidden"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${AI_OPTIONS.find(ai => ai.id === selectedAI)?.color} shadow-sm`}>
-                    <OptimizedImage 
-                      src={logo} 
-                      alt={`${AI_OPTIONS.find(ai => ai.id === selectedAI)?.name} Avatar`} 
-                      className="h-6 w-6"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {AI_OPTIONS.find(ai => ai.id === selectedAI)?.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Conversation History
-                    </p>
-                  </div>
-                </div>
-                <motion.button
-                  onClick={() => closeChat()}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <FontAwesomeIcon
-                    icon={faTimes}
-                    className="h-5 w-5 text-gray-500 dark:text-gray-400"
-                  />
-                </motion.button>
-              </div>
-
-              {/* Chat Interface Content */}
-              <div className="flex-1 overflow-hidden">
+              {/* Chat Interface Content - Full Height with proper styling */}
+              <div className="h-full w-full">
                 {selectedAI === 'advisor' && (
                   <FinancialAdvisorChatInterface />
                 )}
