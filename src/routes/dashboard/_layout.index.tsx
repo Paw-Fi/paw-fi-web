@@ -509,7 +509,7 @@ function DashboardHome() {
 
 
   return (
-    <ProtectedRouteSubscription>
+    <>
       <motion.div
         className="max-w-7xl mx-auto py-12 text-foreground dark:text-dark-foreground"
       >
@@ -1339,7 +1339,7 @@ function DashboardHome() {
           </motion.div>
         </>
       )}
-    </ProtectedRouteSubscription>
+    </>
   );
 }
 

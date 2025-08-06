@@ -1,20 +1,23 @@
-import React, { useState, useRef, FormEvent } from 'react';
+import { useState, useRef, FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagicWandSparkles, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 
 import { Button } from '../ui/button';
 import classNames from 'classnames';
+import { Link } from '@tanstack/react-router';
 
 
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
   isLoading: boolean;
+  placeholder?: string;
+  isMaxedOut?: boolean;
 }
 
-export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading, isMaxedOut }: ChatInputProps) {
   const [message, setMessage] = useState('');
   
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -27,6 +30,26 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
       inputRef.current?.focus();
     }
   };
+  if(isMaxedOut)
+  {
+    return (
+      <div className="my-2">
+        <div className="flex items-center justify-center p-4 rounded-2xl border border-orange-300/50 bg-orange-50/80 dark:bg-orange-900/20 dark:border-orange-700/50">
+          <div className="text-center">
+            <p className="text-orange-800 dark:text-orange-200 mb-2">
+              Conversation limit reached!
+            </p>
+            <Link 
+              to="/pricing"
+              className="inline-block px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-colors duration-200"
+            >
+              Upgrade to Premium
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="my-2">

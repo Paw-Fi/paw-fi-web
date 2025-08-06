@@ -10,6 +10,8 @@ import { OptimizedImage } from "@/components/seo/optimized-image";
 import { getPredictedResponses } from '@/services/conversation-service';
 import { supabase } from '@/lib/supabase';
 import { GoalType } from '../goal-tracker/types';
+import { useAuth } from '@/contexts/auth-context';
+import { useSubscription } from '@/hooks/use-subscription';
 
 export interface ConversationMessage {
   content: string;
@@ -95,6 +97,10 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const {user} = useAuth();
+  const {isActive} = useSubscription(user?.id || '');
+
+  const isConversationMaxedOut = !isActive&&messages.length>=8;
   
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
@@ -343,14 +349,15 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         <ChatSuggestions
           suggestions={suggestedResponses}
           onSuggestionClick={handleSuggestionClick}
-          isSendingMessage={isSendingMessage}
+          isSendingMessage={isSendingMessage||isConversationMaxedOut}
         />
       )}
 
       {/* Input */}
       <ChatInput 
         onSendMessage={onMessageSend} 
-        isLoading={isSendingMessage} 
+        isLoading={isSendingMessage||isConversationMaxedOut} 
+        isMaxedOut={isConversationMaxedOut}
       />
     </div>
   );

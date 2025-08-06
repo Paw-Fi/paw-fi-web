@@ -45,6 +45,7 @@ import { FinancialEducatorChatInterface } from "@/components/chat/financial-educ
 import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
 import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
 import { RightSidebar } from "@/components/dashboard/RightSidebar";
+import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 
 
 
@@ -436,11 +437,10 @@ export function Dashboard() {
   // </div>
   // }
 
-  const showBlockModal=(!NON_PROTECTED_ROUTES.includes(location.pathname) && !user) || (!NON_PROTECTED_ROUTES.includes(location.pathname)&&!isActive)
 
 
   return (
-    <>
+    <ProtectedRouteSubscription>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
       <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20 p-2 sm:p-4 font-sans">
@@ -887,7 +887,7 @@ export function Dashboard() {
       </AnimatePresence>
    
       {/* Main Content Area */}
-     {isLoading||isSubscriptionLoading ? <div className="flex-1"/> : <div className={classNames(
+     <div className={classNames(
        "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
        expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-20 lg:pt-0" : ""
      )}>
@@ -907,15 +907,11 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-        >            
-              {showBlockModal ? (
-                <DashboardBlockModal />
-              ) : (
-                <Outlet />
-              )}
+        >                         
+                <Outlet />             
            
         </motion.main>
-          </div>}
+          </div>
 
           {/* Right Sidebar */}
           <RightSidebar className="hidden lg:block" />
@@ -994,6 +990,6 @@ export function Dashboard() {
       </AnimatePresence>
 
       {!isGuideHidden && <FloatingGuideWindow onClose={() => setIsGuideHidden(true)} />}
-    </>
+    </ProtectedRouteSubscription>
   );
 }
