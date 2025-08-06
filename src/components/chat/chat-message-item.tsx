@@ -41,10 +41,15 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   const isUser = message.role === "user";
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { closeChat } = useAIChat();
+  const { closeChat, openChat } = useAIChat();
   
   // Check if user has completed the financial assessment
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
+
+  const handleCourseClick = (courseId: string) => () => {
+    closeChat();
+    navigate({ to: `/dashboard/learning/${courseId}` });
+  };
 
   
   // Watch for quiz completion messages and refetch profile
@@ -92,11 +97,15 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   );
 
   const renderMessageContent = () => {
+
     // Check if message contains QUESTIONNAIRE keyword
     const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
     
     // Check for goal completion pattern ``GOAL:id`` - find all matches
     const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/g)];
+    
+    // Check for AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
+    const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/g)];
     
     // Check for goal template patterns
     const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
@@ -105,30 +114,98 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     );
     
     // Check for course card pattern - this was missing but referenced later
-    const courseCardMatch = message.content.match(/``COURSE_CARD:({[^}]+})``/);
-    const found = courseCardMatch && courseCardMatch.index !== undefined ? {
-      json: JSON.parse(courseCardMatch[1]),
-      start: courseCardMatch.index,
-      end: courseCardMatch.index + courseCardMatch[0].length
-    } : null;
+    const courseCardMatch = message.content.includes('```json') && message.content.includes('```');
     
-    if (found) {
-      const { json, start, end } = found;
-      const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
-      const outro = message.content.slice(end).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
+    if (courseCardMatch) {
+      const start = message.content.indexOf('```json');
+      const jsonStart = start + 7; // Skip '```json'
+      const jsonEnd = message.content.indexOf('```', jsonStart); // Find closing ```
+      
+      if (start === -1 || jsonEnd === -1) {
+        // Fallback if parsing fails - just render as markdown
+        return (
+          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+            <ReactMarkdown>{message.content.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
+          </div>
+        );
+      }
+      
+      try {
+        const jsonString = message.content.slice(jsonStart, jsonEnd).trim();
+        const json = JSON.parse(jsonString);
+        const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name || "");
+        const outro = message.content.slice(jsonEnd + 3).trim().replace("{{username}}", user?.user_metadata?.full_name || ""); // +3 to skip closing ```
+        
+        return (
+          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+            {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
+            <div className="my-3">
+              <CourseCard
+                title={json.title || ""}
+                icon={json.icon || ""}
+                description={json.description || ""}
+                lessonCount={json.lesson_count || 0}
+                onClick={handleCourseClick(json.id)}
+              />
+            </div>
+            {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
+          </div>
+        );
+      } catch (error) {
+        console.error('Error parsing course JSON:', error);
+        // Fallback if JSON parsing fails - just render as markdown
+        return (
+          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+            <ReactMarkdown>{message.content.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
+          </div>
+        );
+      }
+    }
+    
+    // Handle AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
+    if (buttonMatches.length > 0 && !isUser) {
+      // Remove all button patterns from text for clean display
+      const messageText = message.content.replace(/``BUTTON:[^`]+``/g, '').trim();
+      
+      const aiButtonLabels: Record<string, { label: string; aiId: 'advisor' | 'educator';}> = {
+        advisor: { 
+          label: "Chat with Ollie", 
+          aiId: 'advisor', 
+        },
+        educator: { 
+          label: "Chat with Leo", 
+          aiId: 'educator', 
+        }
+      };
+      
       return (
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
-          <div className="my-3">
-            <CourseCard
-              title={json.title || ""}
-              icon={json.icon || ""}
-              description={json.description || ""}
-              lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: `/dashboard/learning/${json.id}` })}
-            />
+          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
+          
+          <div className="mt-3 space-y-2">
+            {buttonMatches.map((match, index) => {
+              const aiType = match[1]; // advisor or educator
+              const buttonInfo = aiButtonLabels[aiType];
+              
+              if (!buttonInfo) return null;
+              
+              return (
+                <Button
+                  key={index}
+                  onClick={() => {
+                    closeChat();
+                    openChat(buttonInfo.aiId)
+                  }}
+                  className="w-full bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faLightbulb} className="h-4 w-4" />
+                    <span>{buttonInfo.label}</span>
+                  </div>
+                </Button>
+              );
+            })}
           </div>
-          {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
         </div>
       );
     }
@@ -167,53 +244,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
           <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
           
-          {/* Render a button for each goal */}
-          <div className="mt-3 space-y-2">
-            {goalMatches.map((match, index) => {
-              const goalId = match[1];
-              
-              // Try to extract goal name from the line containing this goal ID
-              const escapedGoalId = goalId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              
-              // Updated regex pattern to handle various markdown formats
-              const goalPatterns = [
-                // Pattern for: - **Goal Name** - $current/$target (progress%) ``GOAL:id``
-                new RegExp('-\\s*\\*\\*([^*]+?)\\*\\*[^`]*``GOAL:' + escapedGoalId + '``', 'i'),
-                // Pattern for: **Goal Name** - $current/$target (progress%) ``GOAL:id``
-                new RegExp('\\*\\*([^*]+?)\\*\\*[^`]*``GOAL:' + escapedGoalId + '``', 'i'),
-                // Pattern for lines that just contain the goal name before the button
-                new RegExp('([^\\n]*?)\\s*``GOAL:' + escapedGoalId + '``', 'i')
-              ];
-              
-              let goalName = `Goal ${index + 1}`;
-              
-              // Try each pattern to extract the goal name
-              for (const pattern of goalPatterns) {
-                const nameMatch = message.content.match(pattern);
-                if (nameMatch && nameMatch[1]) {
-                  goalName = nameMatch[1].trim();
-                  // Clean up common markdown artifacts
-                  goalName = goalName.replace(/^-\s*/, ''); // Remove leading dash
-                  goalName = goalName.replace(/\s*-\s*\$.*$/, ''); // Remove trailing financial info
-                  break;
-                }
-              }
-              
-              return (
-                <Button
-                  key={goalId}
-                  onClick={() => {
-                    closeChat();
-                    navigate({ to: `/dashboard/tracker/${goalId}` });
-                  }}
-                  className="bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 w-full"
-                >
-                  <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
-                  View {goalName}
-                </Button>
-              );
-            })}
-          </div>
+          
         </div>
       );
     }

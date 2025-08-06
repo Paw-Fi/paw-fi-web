@@ -366,24 +366,6 @@ function GoalDetail() {
               custom={confetti.id}
             />
           ))}
-          
-          {/* Static confetti particles (from completion display) */}
-          <div className="absolute top-[10%] left-[15%] h-5 w-2 rotate-[-30deg] rounded-sm bg-purple-400"></div>
-          <div className="absolute top-[15%] left-[20%] h-4 w-4 rotate-12 rounded-sm bg-purple-500"></div>
-          <div className="absolute right-[10%] bottom-[15%] h-6 w-2 rotate-45 bg-purple-300"></div>
-          <div className="absolute top-[80%] right-[15%] h-4 w-4 rotate-12 rounded-full bg-purple-400"></div>
-
-          {/* Green particles */}
-          <div className="absolute bottom-[30%] left-[10%] h-5 w-5 rounded-full bg-green-400"></div>
-          <div className="absolute right-[20%] bottom-[45%] h-3 w-6 rotate-[-15deg] bg-teal-400"></div>
-
-          {/* Red/orange particles */}
-          <div className="absolute top-[30%] right-[5%] h-4 w-3 rotate-12 rounded-sm bg-red-300"></div>
-          <div className="absolute top-[45%] left-[10%] h-3 w-3 rotate-12 rounded-full bg-orange-300"></div>
-
-          {/* Yellow particles */}
-          <div className="absolute bottom-[10%] left-[30%] h-4 w-4 rotate-45 rounded-sm bg-yellow-300"></div>
-          <div className="absolute top-[60%] right-[40%] h-2 w-5 rotate-[-20deg] bg-yellow-400"></div>
         </div>
       )}
       <div className="max-w-4xl mx-auto px-6 py-12">

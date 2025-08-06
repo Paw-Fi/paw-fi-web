@@ -764,7 +764,7 @@ function DashboardHome() {
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Complete Your Financial Profile</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">Get personalized insights by completing your financial health assessment</p>
                     <Link
-                      to="/dashboard/portfolio"
+                      to="/onboarding"
                       className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
                       <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />

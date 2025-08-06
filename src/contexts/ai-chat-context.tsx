@@ -72,6 +72,7 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
   const [selectedAI, setSelectedAI] = useState<AI_ID>('advisor');
   
   // Initialize messages from localStorage if available
+  // TODO: Remove this when we have a proper backend for chat history
   const [messages, setMessages] = useState<Record<AI_ID, ConversationMessage[]>>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -91,6 +92,7 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
   });
 
   // Save messages to localStorage whenever they change
+  // TODO: Remove this when we have a proper backend for chat history
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {

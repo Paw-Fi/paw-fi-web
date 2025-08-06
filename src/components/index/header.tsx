@@ -58,19 +58,13 @@ export const HomeHeader=()=>{
           Community
         </a>
       </div>
-    <div className="flex items-center gap-x-5">
+    <div className="flex items-center gap-x-5">     
       <Link
-        to="/dashboard/learning"
-        className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:text-primary dark:hover:text-dark-primary md:block"
-      >
-        Explore Tools
-      </Link>
-      <Link
-        to="/dashboard"
+        to="/onboarding"
         className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
       >
         <Button>
-          Build Portfolio <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+          Get Started <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
         </Button>
       </Link>
   </div>
