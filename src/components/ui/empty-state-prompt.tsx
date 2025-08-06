@@ -1,5 +1,6 @@
 "use client";
 
+import { useAIChat } from "@/contexts/ai-chat-context";
 import { Link } from "@tanstack/react-router";
 
 interface EmptyStatePromptProps {
@@ -49,6 +50,7 @@ export function EmptyStatePrompt({
   const finalTitle = title || content.title;
   const finalDescription = description || content.description;
   const finalButtonText = buttonText || content.buttonText;
+  const {openChat} = useAIChat();
 
   return (
     <div className="col-span-full">
@@ -75,9 +77,9 @@ export function EmptyStatePrompt({
           </p>
 
           {/* Action button */}
-          <Link
-            to={navigationPath}
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:ring-4 focus:ring-purple-300 focus:outline-none"
+          <div
+            onClick={() => openChat("educator")}
+            className="group cursor-pointer relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:ring-4 focus:ring-purple-300 focus:outline-none"
           >
             <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-300 group-hover:opacity-10"></span>
             <svg
@@ -102,7 +104,7 @@ export function EmptyStatePrompt({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-          </Link>
+          </div>
         </div>
       </div>
     </div>

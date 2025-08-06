@@ -5,7 +5,7 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
@@ -44,8 +44,9 @@ import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advis
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { useAIChat, AI_OPTIONS } from "@/contexts/ai-chat-context";
 import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
-import { RightSidebar } from "@/components/dashboard/RightSidebar";
+import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
+import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 
 
 
@@ -110,11 +111,27 @@ export function Dashboard() {
   // AI Chat context
   const { isOpen: aiChatOpen, selectedAI, openChat, closeChat } = useAIChat();
   
+  // Track chat usage
+  useEffect(() => {
+    if (aiChatOpen) {
+      trackUserAction('chat_used', { aiType: selectedAI });
+    }
+  }, [aiChatOpen, selectedAI]);
+  
   // Use route matching instead of local state for active menu
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const rightSidebarRef = useRef<RightSidebarRef>(null);
+
+  // Initialize dashboard guidance system
+  const { trackUserAction, updatePreferences, hideAllTooltips, resetGuidanceState, getGuidanceStats } = useDashboardGuidance({
+    enabled: true,
+    frequencyLevel: 'medium',
+    sidebarRef: rightSidebarRef
+  });
 
   const { user, signOut, isLoading } = useAuth();
   const { data: courses = [] } = useUserCourses(
@@ -170,6 +187,9 @@ export function Dashboard() {
           return;
         }
         refetch();
+        
+        // Track goal creation for guidance system
+        trackUserAction('goal_created', { goalId: goalData.id, goalTitle: goalData.title });
         
         // Log the goal creation activity with original creation timestamp
         try {
@@ -499,6 +519,13 @@ export function Dashboard() {
                       if (item.id === 'calculators') {
                         markCalculatorsVisited();
                       }
+                      // Track learning and portfolio visits
+                      if (item.id === 'learning') {
+                        trackUserAction('learning_visited');
+                      }
+                      if (item.id === 'portfolio') {
+                        trackUserAction('portfolio_visited');
+                      }
                     }}
                   >
                     <motion.div
@@ -541,30 +568,6 @@ export function Dashboard() {
               ))}
         
 
-               {/* Show Guide Button - Only visible when guide is hidden */}
-               {isGuideHidden && (
-                    <motion.div
-                      className={
-                        "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                      }
-                      onClick={showGuide}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
-                        >
-                          <FontAwesomeIcon
-                            className={`size-5 text-yellow-500 dark:text-yellow-400`}
-                            icon={faLightbulb}
-                          />
-                        </div>
-                        <span className="text-md font-medium text-gray-600 dark:text-gray-400">
-                          Show Guide
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
 
             </nav>
           </div>
@@ -899,7 +902,12 @@ export function Dashboard() {
           </div>
 
           {/* Right Sidebar */}
-          <RightSidebar className="hidden lg:block" />
+          <RightSidebar 
+            className="hidden lg:block" 
+            ref={rightSidebarRef}
+            isGuideHidden={isGuideHidden}
+            showGuide={showGuide}
+          />
         </div>
       </div>
       {/* AI Chat Drawer */}
@@ -917,7 +925,7 @@ export function Dashboard() {
             
             {/* Drawer */}
             <motion.div
-              className="fixed right-0 top-0 h-full w-[45rem] bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-50 flex flex-col"
+              className="fixed right-0 top-0 h-full w-screen lg:w-[45rem] bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-50 flex flex-col"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}

@@ -31,7 +31,8 @@ import {
   faRocket,
   faForward,
   faCopy,
-  faExternalLink
+  faExternalLink,
+  faClose
 } from '@fortawesome/free-solid-svg-icons';
 import {
   faTwitter,
@@ -43,6 +44,8 @@ import {
 import { createPortal } from 'react-dom';
 import { getCanonicalUrl } from "@/utils/canonical";
 import { supabase } from '@/lib/supabase';
+import { useSubscription } from '@/hooks/use-subscription';
+import { DashboardBlockModal } from '@/components/dashboard/DashboardBlockModal';
 
 export const Route = createFileRoute("/dashboard/learning/$courseId/")({
   component: ModernCourseDetailPage,
@@ -59,7 +62,6 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/")({
     return { course:courses?.[0] };
   },
   head: ({ params, loaderData }) => {
-    console.log("loaderData",loaderData)
     const { course } = loaderData;
     const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}`);
     const title = `${course?.title} | Moneko Learning`;
@@ -123,6 +125,8 @@ export default function ModernCourseDetailPage() {
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [savedCourse, setSavedCourse] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const{isActive}=useSubscription(user?.id);
   
   // Determine if this is the essentials course
   const isEssentialsCourse = courseId === basicCourse.course_id;
@@ -137,6 +141,7 @@ export default function ModernCourseDetailPage() {
     enabled: !!user,
     source: dataSource
   });
+
 
   const course = isEssentialsCourse ? basicCourse : courses.find((c: Course) => c.course_id === courseId) || null;
   
@@ -211,6 +216,16 @@ export default function ModernCourseDetailPage() {
   };
 
   const isFirstLesson=courseMetrics?.nextLesson?.id===course?.lessons[0].id;
+
+  const handleLessonClick=(lessonId:string)=>{
+    if(isActive){
+     navigate(`/dashboard/learning/${courseId}/lesson/${lessonId}`) 
+    }else{
+      setShowSubscriptionModal(true);
+    }
+  }
+    
+  
 
   if (isLoading || isLoadingCompleted) {
     return (
@@ -331,8 +346,8 @@ export default function ModernCourseDetailPage() {
                   {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
                     {courseMetrics.nextLesson ? (
-                      <Link
-                        to={`/dashboard/learning/${courseId}/lesson/${courseMetrics.nextLesson.lesson_id}`}
+                      <button
+                        onClick={() => handleLessonClick(courseMetrics.nextLesson?.lesson_id || '')}
                         className={`
                           group flex items-center gap-2 px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300
                           ${isEssentialsCourse
@@ -343,15 +358,15 @@ export default function ModernCourseDetailPage() {
                       >
                         <span>{isFirstLesson? "Start Learning" : "Continue Learning"}</span>
                         <FontAwesomeIcon icon={faPlay} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
+                      </button>
                     ) : courseMetrics.progress === 100 ? (
                       <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium shadow-lg">
                         <FontAwesomeIcon icon={faCircleCheck} className="h-5 w-5" />
                         <span>Course Completed!</span>
                       </button>
                     ) : (
-                      <Link
-                        to={`/dashboard/learning/${courseId}/lesson/${course.lessons[0].lesson_id}`}
+                      <button
+                        onClick={() => handleLessonClick(course.lessons[0].lesson_id)}
                         className={`
                           group flex items-center gap-2 px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300
                           ${isEssentialsCourse
@@ -363,7 +378,7 @@ export default function ModernCourseDetailPage() {
                         <FontAwesomeIcon icon={faRocket} className="h-5 w-5" />
                         <span>Start Course</span>
                         <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
+                      </button>
                     )}
 
                     {/* <button
@@ -525,17 +540,17 @@ export default function ModernCourseDetailPage() {
                     >
                      
 
-                      <Link
-                        to={isUnlocked ? `/dashboard/learning/${courseId}/lesson/${lesson.lesson_id}` : '#'}
+                      <button
+                        onClick={() => isUnlocked && handleLessonClick(lesson.lesson_id)}
                         className={`
-                          block relative overflow-hidden rounded-2xl transition-all duration-300
+                          block w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300
                           ${isUnlocked
                             ? 'bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl cursor-pointer'
                             : 'bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed opacity-75'
                           }
                           ${isNext ? 'ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-2 dark:ring-offset-gray-900' : ''}
                         `}
-                        onClick={(e) => !isUnlocked && e.preventDefault()}
+                        disabled={!isUnlocked}
                       >
                         <div className="p-6">
                           <div className="flex items-start gap-4">
@@ -629,7 +644,7 @@ export default function ModernCourseDetailPage() {
                             </div>
                           </div>
                         </div>
-                      </Link>
+                      </button>
                     </motion.div>
                   );
                 })}
@@ -837,6 +852,10 @@ export default function ModernCourseDetailPage() {
           </motion.div>
         )}
       </AnimatePresence>, document.body)}
+      
+      {/* Subscription Modal */}    
+          <DashboardBlockModal onClose={() => setShowSubscriptionModal(false)} isVisible={showSubscriptionModal} />       
+
     </motion.div>
   );
 }

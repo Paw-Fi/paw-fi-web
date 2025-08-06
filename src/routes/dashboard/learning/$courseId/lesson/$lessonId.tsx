@@ -21,13 +21,14 @@ import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
 import catPig from "@/assets/images/lessons/cat-pig.svg";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 import { ContentDisplay } from "@/components/learning/lesson/content-display";
 import { LessonCardTitle } from "@/components/learning/lesson/lesson-card-title";
 import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
+import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 
 import { getCanonicalUrl } from "@/utils/canonical";
 import { supabase } from "@/lib/supabase";
@@ -35,12 +36,22 @@ import { supabase } from "@/lib/supabase";
 export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$lessonId")({
   component: EssentialsLessonPage,
   loader: async ({ params }) => {
+    // Check if this is the basic course from JSON first
+    if (params.courseId === basicCourse.course_id) {
+      const lesson = basicCourse.lessons.find(l => l.lesson_id === params.lessonId);
+      if (!lesson) {
+        throw new Error("Lesson not found");
+      }
+      return { course: basicCourse, lesson };
+    }
+    
+    // Otherwise, query the database
     const { data: allCourses, error: courseError } = await supabase
     .from("user_courses")
     .select("*")
     .eq("course_id", params.courseId)
     .order("created_at", { ascending: false });
-    const course = allCourses.find(c => c.course_id === params.courseId);
+    const course = allCourses?.find((c: any) => c.course_id === params.courseId);
     if (!course) {
       throw new Error("Course not found");
     }
@@ -49,7 +60,7 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
     .select("*")
     .eq("lesson_id", params.lessonId)
     .order("created_at", { ascending: false });
-    const lesson = allLessons.find(l => l.lesson_id === params.lessonId);
+    const lesson = allLessons?.find((l: any) => l.lesson_id === params.lessonId);
     if (!lesson) {
       throw new Error("Lesson not found");
     }
@@ -57,11 +68,11 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
   },
   head: ({ params, loaderData }) => {
     console.log("loaderData",loaderData)
-    const { course, lesson } = loaderData;
+    const { course, lesson } = loaderData || {};
     const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}/lesson/${params.lessonId}`);
-    const title = `${lesson.title} | ${course.title} - Moneko Learning`;
-    const description = lesson.description || `Learn about ${lesson.title} as part of the ${course.title} course on Moneko.`;
-    const keywords = `${lesson.title}, ${course.title}, ${course.category}, financial education, Moneko, online lesson`;
+    const title = `${lesson?.title || 'Lesson'} | ${course?.title || 'Course'} - Moneko Learning`;
+    const description = lesson?.description || `Learn about ${lesson?.title || 'this lesson'} as part of the ${course?.title || 'course'} on Moneko.`;
+    const keywords = `${lesson?.title || ''}, ${course?.title || ''}, ${course?.category || ''}, financial education, Moneko, online lesson`;
     const imageUrl = course?.image || "https://moneko.io/og-img.png"; // Use course image if available
 
     const meta = seo({
@@ -75,13 +86,13 @@ export const Route = createFileRoute("/dashboard/learning/$courseId/lesson/$less
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "LearningResource",
-      "name": lesson.title,
+      "name": lesson?.title || "Lesson",
       "description": description,
       "url": pageUrl,
       "isPartOf": {
         "@type": "Course",
-        "name": course.title,
-        "url": getCanonicalUrl(`/dashboard/learning/${course.course_id}`)
+        "name": course?.title || "Course",
+        "url": getCanonicalUrl(`/dashboard/learning/${course?.course_id || params.courseId}`)
       },
       "provider": {
         "@type": "Organization",
@@ -170,12 +181,16 @@ export interface LessonPageProps {
 }
 
 function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
-  // Determine the correct route path based on dataSource
-  const routePath = dataSource === 'local' ? '/dashboard/essentials/$courseId/lesson/$lessonId' : '/dashboard/learning/$courseId/lesson/$lessonId';
-  const { courseId, lessonId } = useParams({ from: routePath });
+  // Use useParams with the correct route pattern
+  const { courseId, lessonId } = useParams({ 
+    from: '/dashboard/learning/$courseId/lesson/$lessonId'
+  });
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  
+  // Initialize guidance tracking
+  const { trackUserAction } = useDashboardGuidance();
 
   const {
     data: courses = [],
@@ -324,6 +339,12 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
       
       // Handle lesson unlocking differently based on data source
       if (dataSource === 'local') {
+        // Track lesson completion for guidance system
+        trackUserAction('lesson_completed', { 
+          lessonId: lesson.lesson_id, 
+          courseId: courseId,
+          lessonTitle: lesson.title 
+        });
         setIsComplete(true);
       } else if (dataSource === 'remote' && lesson && user?.id) {
         // Set loading state before API call
@@ -334,6 +355,12 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
           .then(success => {
             setIsUnlocking(false); // Reset loading state
             if (success) {
+              // Track lesson completion for guidance system
+              trackUserAction('lesson_completed', { 
+                lessonId: lesson.lesson_id, 
+                courseId: courseId,
+                lessonTitle: lesson.title 
+              });
               setIsComplete(true);
             } else {
               toast.error('Failed to unlock next lesson');

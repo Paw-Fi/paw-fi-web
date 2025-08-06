@@ -107,7 +107,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={classNames("fixed inset-0 z-30 flex items-center justify-center p-4",
+        className={classNames("fixed inset-0 z-[10000] flex items-center justify-center p-4",
         )}
       >
         {/* Backdrop */}

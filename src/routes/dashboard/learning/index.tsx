@@ -35,6 +35,7 @@ import { createPortal } from "react-dom";
 import { useGamification } from "@/hooks/use-gamification";
 import { FinancialGlassMetricsPanel } from "@/components/shared/FinancialGlassMetricsPanel";
 import { DashboardHeroSection } from "@/components/shared/DashboardHeroSection";
+import { useAIChat } from "@/contexts/ai-chat-context";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/dashboard/learning/")({
 export function UnifiedLearningPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'personalized' | 'essentials'>('all');
-  const [showAICoach, setShowAICoach] = useState(false);
+  const {openChat} = useAIChat();
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const { gamificationData } = useGamification();
 
@@ -312,7 +313,7 @@ export function UnifiedLearningPage() {
           {
             label: "Create AI Course",
             icon: faWandSparkles,
-            onClick: () => setShowAICoach(true),
+            onClick: () => openChat('educator'),
             variant: 'primary'
           },
           ...(aiCourses.length > 0 ? [{
@@ -432,7 +433,7 @@ export function UnifiedLearningPage() {
               <h3 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-3">No courses yet</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">Start your learning journey by creating your first AI-powered course!</p>
               <button
-                onClick={() => setShowAICoach(true)}
+                onClick={() => openChat('educator')}
                 className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Create Your First Course
@@ -611,7 +612,7 @@ export function UnifiedLearningPage() {
                     initial="initial"
                     animate="animate"
                     whileHover="hover"
-                    onClick={() => setShowAICoach(true)}
+                    onClick={() => openChat('educator')}
                     className="cursor-pointer"
                   >
                     <div className="h-full bg-gradient-to-br from-gray-50 dark:from-gray-800 to-gray-100 dark:to-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 flex items-center justify-center p-8">
@@ -637,7 +638,7 @@ export function UnifiedLearningPage() {
 
       {/* AI Coach Floating Button (Mobile) */}
       <motion.button
-        onClick={() => setShowAICoach(!showAICoach)}
+        onClick={() => openChat('educator')}
         className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center text-white z-40"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
@@ -647,50 +648,7 @@ export function UnifiedLearningPage() {
       >
         <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
       </motion.button>
-
-      {/* AI Coach Modal/Sidebar */}
-      {
-        createPortal(<AnimatePresence>
-          {showAICoach && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowAICoach(false)}
-                className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40"
-              />
-  
-              {/* AI Coach Panel */}
-              <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="fixed flex flex-col right-0 top-0 h-screen w-full lg:w-[40vw] bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-hidden"
-              >
-                {/* Header */}
-                <div className="bg-gradient-to-r py-3 w-full from-violet-600 to-purple-600 px-6 text-white flex flex-row items-center gap-4">
-                      <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                        <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-white">AI Learning Coach</h3>
-                        <p className="text-sm text-white/80">Create personalized courses instantly</p>
-                      </div>
-                </div>
-  
-  
-                {/* Chat Interface */}
-                 <div className="flex-1 h-full overflow-hidden">
-                 <FinancialEducatorChatInterface />
-                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>, document.body)
-      }
+    
       </motion.div>
     </>
   );

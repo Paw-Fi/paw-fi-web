@@ -17,6 +17,44 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
+// Random response arrays for different scenarios
+const RANDOM_RESPONSES = {
+  FINANCIAL_ADVISOR_FIRST: [
+    "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.",
+    "Hello {{username}}! Welcome to your personal financial journey.\n\nLet's start by understanding your unique financial situation. Click the ``QUESTIONNAIRE`` button below to complete your assessment and unlock personalized guidance tailored specifically for you.",
+    "Great to meet you, {{username}}! I'm here to help you achieve your financial dreams.\n\nTo provide you with the most relevant advice, I need to learn about your goals and current situation. Please click the ``QUESTIONNAIRE`` button below to get started with your personalized financial assessment.",
+    "Welcome {{username}}! I'm excited to be your financial guide on this journey.\n\nEvery great financial plan starts with understanding where you are today. Click the ``QUESTIONNAIRE`` button below to complete your assessment and let's build your personalized roadmap to success.",
+    "Hi there, {{username}}! Ready to take control of your financial future?\n\nThe first step is understanding your unique situation and goals. Click the ``QUESTIONNAIRE`` button below to complete your financial health assessment and unlock personalized strategies designed just for you."
+  ],
+  EDUCATOR_FIRST: [
+    "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking the ``QUESTIONNAIRE`` button below. This will help me create a personalized learning plan to boost your financial literacy.",
+    "Hello {{username}}! I'm excited to be your financial education companion.\n\nLet's discover the best way for you to learn about money and investing. Click the ``QUESTIONNAIRE`` button below to share your learning preferences and I'll create a customized educational journey just for you.",
+    "Great to see you, {{username}}! Ready to master the world of personal finance?\n\nEvery learner is unique, and I want to make sure your educational experience is perfectly suited to your style. Click the ``QUESTIONNAIRE`` button below to help me understand how you learn best.",
+    "Welcome to your financial education journey, {{username}}!\n\nI'm here to make learning about money engaging and effective for you. To create the most impactful learning experience, please click the ``QUESTIONNAIRE`` button below and tell me about your goals and preferences.",
+    "Hi {{username}}! I'm thrilled to help you become financially savvy.\n\nLet's start by understanding what you want to learn and how you prefer to absorb new information. Click the ``QUESTIONNAIRE`` button below to begin your personalized financial education assessment."
+  ],
+  FINANCIAL_ADVISOR_FOLLOWUP: [
+    "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.",
+    "I'd love to give you specific financial advice, but I need to understand your situation first. Please complete your financial assessment by clicking the ``QUESTIONNAIRE`` button below to unlock personalized recommendations.",
+    "For the best financial guidance tailored to your needs, let's start with your assessment. Click the ``QUESTIONNAIRE`` button below to share your financial goals and current situation with me.",
+    "To create a financial plan that truly works for you, I need to know more about your goals and circumstances. Please click the ``QUESTIONNAIRE`` button below to complete your personalized assessment.",
+    "Every great financial strategy starts with understanding your unique situation. Click the ``QUESTIONNAIRE`` button below to complete your assessment and I'll provide guidance specifically designed for your goals."
+  ],
+  EDUCATOR_FOLLOWUP: [
+    "I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click the ``QUESTIONNAIRE`` button below to begin!",
+    "I'm ready to design a learning experience that matches your style and goals.\n\nLet me understand how you learn best by completing a quick assessment. Click the ``QUESTIONNAIRE`` button below to get started with your personalized education plan!",
+    "Your financial education journey awaits! I can tailor lessons specifically for your learning preferences.\n\nTo create the perfect curriculum for you, please click the ``QUESTIONNAIRE`` button below and share your learning goals with me.",
+    "I have so many great lessons to share with you, but I want to make sure they're perfectly suited to your needs.\n\nClick the ``QUESTIONNAIRE`` button below to tell me about your learning style and goals, and I'll create a customized educational experience just for you.",
+    "Ready to dive deep into financial knowledge? I can craft lessons that match exactly how you learn best.\n\nTo get started with your personalized learning journey, click the ``QUESTIONNAIRE`` button below and complete your educational assessment."
+  ]
+};
+
+// Helper function to get a random response from an array
+function getRandomResponse(responses: string[]): string {
+  const randomIndex = Math.floor(Math.random() * responses.length);
+  return responses[randomIndex];
+}
+
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
@@ -154,26 +192,24 @@ serve(async (req: Request): Promise<Response> => {
       const isFirstMessage = !history || history.length <=1;
       
       if (isFirstMessage) {
-        // First message - welcome message
+        // First message - welcome message with random variation
         if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
         {
-          
-          aiResponse = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+          aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
         }
         else
         {
-          aiResponse = "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking the QUESTIONNAIRE button below. This will help me create a personalized learning plan to boost your financial literacy.";
+          aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
         }
       } else {
-        // Has conversation history - encourage completing assessment
+        // Has conversation history - encourage completing assessment with random variation
         if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
           {
-
-            aiResponse = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
           }
           else
           {
-            aiResponse = " I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click the ``QUESTIONNAIRE`` button below to begin!";
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
           }
         
       }

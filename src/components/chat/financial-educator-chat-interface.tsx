@@ -244,6 +244,7 @@ export function FinancialEducatorChatInterface(props: ChatInterfaceProps) {
   const handleQuizComplete = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
     setIsQuizModalOpen(false);
     handleSendMessage("I've completed the questionnaire", profile);
+    await queryClient.invalidateQueries({ queryKey: ["dashboard-views"] });
   };
   
   // Cleanup

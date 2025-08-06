@@ -18,7 +18,7 @@ export interface AIOption {
   color: string;
 }
 
-type AI_ID = "advisor" | "tracker" | "educator";
+export type AI_ID = "advisor" | "tracker" | "educator";
 
 // AI chat context type
 interface AIChatContextType {
