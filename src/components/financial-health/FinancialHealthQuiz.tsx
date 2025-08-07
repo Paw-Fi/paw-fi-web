@@ -30,7 +30,7 @@ import {
   CategoryInfo,
   DebtDetail,
   categories,
-  quizQuestions,
+  goalsQuestionTemplate as quizQuestions,
   debtTypes,
 } from '@/types/financial-quiz-constants';
 
@@ -285,17 +285,17 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     (category: QuestionCategory): boolean => {
       const questions = questionsByCategory[category] || [];
       return questions.every((question) => {
-        if (question.type === "multiple-choice") {
+        if (question.type === "multiple_choice") {
           return (
             Array.isArray(state.answers[question.id]) &&
             (state.answers[question.id] as string[]).length > 0
           );
         }
-        if (question.type === "debt-repeater") {
+        if (question.type === "debt_list") {
           // Debt repeater is considered complete if it exists (even if empty array)
           return Array.isArray(state.answers[question.id]);
         }
-        if (question.type === "number-input") {
+        if (question.type === "number") {
           // Number inputs are complete if they have a value (not empty string or undefined)
           const answer = state.answers[question.id];
           return answer !== undefined && answer !== "";
@@ -531,7 +531,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const renderInputFields = useCallback(
     (category: QuestionCategory) => {
       const inputQuestions = questionsByCategory[category]?.filter(
-        (q) => q.type === "number-input" || q.type === "slider"
+        (q) => q.type === "number" || q.type === "slider"
       );
 
       if (!inputQuestions || inputQuestions.length === 0) return null;
@@ -544,7 +544,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
             <h3 className="mb-1 text-sm font-medium text-gray-800">
               {question.question}
           {question.type === "slider" &&     <span className="text-md ml-2 font-bold text-green-500">
-              {(state.answers[question.id] as number) || (question.min || 0)}%
+              {(state.answers[question.id] as number) || (question.validation?.min || 0)}%
 
               </span>}
             </h3>
@@ -552,7 +552,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               <p className="mb-4 text-xs text-gray-600">{question.description}</p>
             )}
 
-            {question.type === "number-input" && (
+            {question.type === "number" && (
               <div className="relative rounded-lg border border-transparent">
                 {question.unit && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
@@ -566,8 +566,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     const value = e.target.value;
     handleAnswerChange(question.id, value === "" ? "" : Number(value));
   }}
-  min={question.min}
-  max={question.max}
+  min={question.validation?.min}
+  max={question.validation?.max}
   step={question.step || 1}
   placeholder={question.placeholder}
   className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
@@ -579,20 +579,20 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    {question.min || 0}%
+                    {question.validation?.min || 0}%
                   </span>
                   <span className="text-xs font-medium">
-                  {(((question?.max||0) - (question?.min||0)) / 2).toFixed(0)}%
+                  {(((question?.validation?.max||0) - (question?.validation?.min||0)) / 2).toFixed(0)}%
                   </span>
                   <span className="text-xs text-gray-500">
-                    {question.max}%
+                    {question.validation?.max}%
                   </span>
                 </div>
                 <RangeSlider
-                  min={question.min}
-                  max={question.max}
+                  min={question.validation?.min}
+                  max={question.validation?.max}
                   step={question.step || 1}
-                  value={Number(state.answers[question.id]) || (question.min || 0)}
+                  value={Number(state.answers[question.id]) || (question.validation?.min || 0)}
                   onChange={(value) => handleAnswerChange(question.id, value as number)}
                   className="w-full"
                   label=""
@@ -612,7 +612,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               <h3 className="mb-1 text-sm font-medium text-gray-800">
                 {question.question}
                {question.type === "slider" &&  <span className="text-md ml-2 font-bold text-green-500">
-              {(state.answers[question.id] as number) || (question.min || 0)}%
+              {(state.answers[question.id] as number) || (question.validation?.min || 0)}%
 
               </span>}
               </h3>
@@ -622,7 +622,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 </p>
               )}
 
-              {question.type === "number-input" && (
+              {question.type === "number" && (
                 <div className="relative">
                   {question.unit && (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
@@ -637,8 +637,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     // Only update if it's a valid number, otherwise, set it as an empty string
     handleAnswerChange(question.id, value === "" ? "" : Number(value));
   }}
-  min={question.min}
-  max={question.max}
+  min={question.validation?.min}
+  max={question.validation?.max}
   step={question.step || 1}
   placeholder={question.placeholder}
   className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
@@ -650,20 +650,20 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      {question?.min || 0}%
+                      {question?.validation?.min || 0}%
                     </span>
                     <span className="text-xs font-medium">
-                      {(((question?.max||0) - (question?.min||0)) / 2).toFixed(0)}%
+                      {(((question?.validation?.max||0) - (question?.validation?.min||0)) / 2).toFixed(0)}%
                     </span>
                     <span className="text-xs text-gray-500">
-                      {question?.max}%
+                      {question?.validation?.max}%
                     </span>
                   </div>
                   <RangeSlider
-                    min={question.min}
-                    max={question.max}
+                    min={question.validation?.min}
+                    max={question.validation?.max}
                     step={question.step || 1}
-                    value={Number(state.answers[question.id]) || (question.min || 0)}
+                    value={Number(state.answers[question.id]) || (question.validation?.min || 0)}
                     onChange={(value) => handleAnswerChange(question.id, value as number)}
                     className="w-full"
                     label=""
@@ -917,7 +917,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
 
                       {/* Render debt repeater */}
                       {questionsByCategory[state.activeCategory]
-                        ?.filter((q) => q.type === "debt-repeater")
+                        ?.filter((q) => q.type === "debt_list")
                         .map((question) => (
                           <div key={question.id} className="">
                             <h3 className="mb-1 text-sm font-medium text-gray-800">
@@ -941,8 +941,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                       {questionsByCategory[state.activeCategory]
                         ?.filter(
                           (q) =>
-                            q.type === "single-choice" ||
-                            q.type === "multiple-choice"
+                            q.type === "single_choice" ||
+                            q.type === "multiple_choice"
                         )
                         .map((question) => (
                           <div key={question.id} className="">
@@ -956,7 +956,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                             )}
 
                             {/* Single Choice Question */}
-                            {question.type === "single-choice" &&
+                            {question.type === "single_choice" &&
                               question.options && (
                                 <div
                                   className={`grid grid-cols-1 ${question.optionsPerRow === 4 ? "md:grid-cols-4" : question.optionsPerRow === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-2`}
@@ -979,7 +979,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                               )}
 
                             {/* Multiple Choice Question */}
-                            {question.type === "multiple-choice" &&
+                            {question.type === "multiple_choice" &&
                               question.options && (
                                 <div
                                   className={`grid grid-cols-1 ${question.optionsPerRow === 4 ? "md:grid-cols-4" : question.optionsPerRow === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-2`}

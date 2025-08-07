@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getQuestionnaireTemplate, getActiveQuestionnaireTemplates } from "@/data/questionnaire-templates";
-import type { QuestionnaireTemplate, GoalType } from "@/components/goal-tracker/types";
+import { getQuestionnaireTemplate } from "@/data/questionnaire-templates";
+import type { QuestionnaireTemplate, GoalType } from "@/data/questionnaire-templates";
 
 // Query key factory for questionnaire templates
 export const questionnaireQueryKeys = {

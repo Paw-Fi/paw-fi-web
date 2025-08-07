@@ -449,6 +449,14 @@ Sound good?`,
       <div className="flex flex-col" style={{ height: '600px' }}>
         <ChatConversationDisplay
           messages={messages}
+          chatConfig={
+           {
+            aiRole: "assistant",
+            useExternalMessages: true,
+            externalMessages: messages,
+            customMessageHandler: handleSendMessage,
+           }
+          }
           onMessageSend={handleSendMessage}
           isSendingMessage={isSendingMessage}
           welcomeMessage="Hi! I'm Moneko, your AI money coach 👋 Tell me what financial goal you'd like to work on!"

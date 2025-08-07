@@ -1,30 +1,3 @@
-export interface QuestionOption {
-  value: string;
-  label: string;
-  description?: string;
-}
-
-export interface QuestionValidation {
-  required?: boolean;
-  min?: number;
-  max?: number;
-}
-
-export interface Question {
-  id: string;
-  type: 'number' | 'currency' | 'percentage' | 'single_choice' | 'multiple_choice' | 'text' | 'date';
-  category: string;
-  question: string;
-  description?: string;
-  placeholder?: string;
-  options?: QuestionOption[];
-  validation?: QuestionValidation;
-  display_order: number;
-  layout?: {
-    colSpan?: number;
-  };
-}
-
 export interface AIModelConfig {
   model: string;
   temperature: number;
@@ -35,11 +8,7 @@ export interface QuestionnaireTemplate {
   goal_type: GoalType;
   template_name: string;
   description: string;
-  questions: Question[];
   ai_prompt_template: string;
-  ai_model_config: AIModelConfig;
-  is_active: boolean;
-  version: number;
 }
 
 // Retirement Goal Template - ENHANCED
@@ -47,112 +16,6 @@ const retirementTemplate: QuestionnaireTemplate = {
   goal_type: 'retirement',
   template_name: 'Retirement Planning Assessment',
   description: 'AI-driven assessment to create your personalized retirement savings strategy',
-  questions: [
-    {
-      id: 'current_age',
-      type: 'number',
-      category: 'demographics',
-      question: 'What is your current age?',
-      description: 'This helps us calculate your investment horizon',
-      validation: { min: 18, max: 80, required: true },
-      display_order: 1
-    },
-    {
-      id: 'retirement_age',
-      type: 'number',
-      category: 'timeline',
-      question: 'At what age would you like to retire?',
-      description: 'Your target retirement age affects how aggressively we need to save',
-      validation: { min: 50, max: 80, required: true },
-      display_order: 2
-    },
-    {
-      id: 'current_income',
-      type: 'currency',
-      category: 'financial',
-      question: 'What is your current annual pre-tax income?',
-      description: 'Used to calculate replacement income needed in retirement',
-      validation: { min: 0, required: true },
-      display_order: 3
-    },
-    {
-      id: 'current_savings',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much have you already saved for retirement?',
-      description: 'Include 401k, IRA, and other retirement accounts',
-      validation: { min: 0, required: true },
-      display_order: 4
-    },
-    {
-      id: 'existing_retirement_accounts',
-      type: 'multiple_choice',
-      category: 'financial',
-      question: 'In which types of accounts are your retirement savings held?',
-      options: [
-        { value: '401k_or_403b', label: 'Workplace Plan (401k, 403b)' },
-        { value: 'traditional_ira', label: 'Traditional IRA' },
-        { value: 'roth_ira', label: 'Roth IRA' },
-        { value: 'brokerage', label: 'Taxable Brokerage Account' },
-        { value: 'other', label: 'Other' }
-      ],
-      validation: { required: true },
-      display_order: 5
-    },
-    {
-      id: 'monthly_contribution',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you realistically save per month for retirement?',
-      description: 'Be honest about what you can sustain long-term',
-      validation: { min: 0, required: true },
-      display_order: 6
-    },
-    {
-      id: 'retirement_lifestyle',
-      type: 'single_choice',
-      category: 'preferences',
-      question: 'What kind of retirement lifestyle do you envision?',
-      options: [
-        { value: 'modest', label: 'Modest - Basic needs covered', description: '60-70% of current income' },
-        { value: 'comfortable', label: 'Comfortable - Maintain current lifestyle', description: '80-90% of current income' },
-        { value: 'luxury', label: 'Luxury - Enhanced lifestyle with travel', description: '100%+ of current income' }
-      ],
-      validation: { required: true },
-      display_order: 7
-    },
-    {
-      id: 'risk_tolerance',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'How do you feel about investment risk?',
-      options: [
-        { value: 'conservative', label: 'Conservative - Preserve capital', description: 'Lower returns, lower risk' },
-        { value: 'moderate', label: 'Moderate - Balanced approach', description: 'Moderate returns, moderate risk' },
-        { value: 'aggressive', label: 'Aggressive - Maximize growth', description: 'Higher returns, higher risk' }
-      ],
-      validation: { required: true },
-      display_order: 8
-    },
-    {
-      id: 'employer_match',
-      type: 'percentage',
-      category: 'financial',
-      question: 'Does your employer match retirement contributions? If so, what percentage?',
-      description: 'Free money - we will make sure you maximize this!',
-      validation: { min: 0, max: 100 },
-      display_order: 9
-    },
-    {
-      id: 'social_security_estimate',
-      type: 'currency',
-      category: 'financial',
-      question: 'What is your estimated monthly Social Security benefit at retirement? (Optional)',
-      description: 'You can get an estimate from the official SSA.gov website. Leave blank if unsure.',
-      validation: { min: 0, required: false },
-      display_order: 10
-    }
-  ],
   ai_prompt_template: `You are a fiduciary financial advisor and retirement planning specialist, persona 'The Strategist'—analytical, precise, and encouraging. Your advice must be actionable and follow a clear, logical hierarchy.
 
 USER QUESTIONNAIRE DATA:
@@ -181,9 +44,7 @@ Generate a response in the specified JSON format.
 - \`insights\`: Must include one about the power of compound interest and another about the importance of the savings hierarchy you outlined.
 
 Generate the response using the provided JSON structure.`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.7, max_tokens: 3000 },
-  is_active: true,
-  version: 1
+
 };
 
 // Home Buying Goal Template - ENHANCED
@@ -191,91 +52,6 @@ const homeBuyingTemplate: QuestionnaireTemplate = {
   goal_type: 'home_buying',
   template_name: 'Home Purchase Planning',
   description: 'Create a personalized home buying savings strategy with timeline and milestones',
-  questions: [
-    {
-      id: 'target_location',
-      type: 'text',
-      category: 'planning',
-      question: 'In which city and state are you planning to buy?',
-      description: 'e.g., "Austin, Texas". This helps estimate property taxes and closing costs.',
-      validation: { required: true },
-      display_order: 1
-    },
-    {
-      id: 'target_home_price',
-      type: 'currency',
-      category: 'financial',
-      question: 'What is your target home purchase price?',
-      description: 'Consider the price range in your desired area',
-      validation: { min: 50000, required: true },
-      display_order: 2
-    },
-    {
-      id: 'down_payment_percentage',
-      type: 'percentage',
-      category: 'financial',
-      question: 'What percentage do you want to put down?',
-      description: '20% avoids PMI, but lower is possible',
-      validation: { min: 3, max: 50, required: true },
-      display_order: 3
-    },
-    {
-      id: 'current_savings',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much have you already saved for this home?',
-      description: 'Include all funds designated for home purchase',
-      validation: { min: 0, required: true },
-      display_order: 4
-    },
-    {
-      id: 'monthly_savings_capacity',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you save per month toward this goal?',
-      description: 'Be realistic about your monthly budget',
-      validation: { min: 0, required: true },
-      display_order: 5
-    },
-    {
-      id: 'desired_timeline_years',
-      type: 'number',
-      category: 'timeline',
-      question: 'In how many years would you like to purchase your home?',
-      description: 'e.g., 1.5, 2, 3, 5 years',
-      validation: { required: true, min: 0.5 },
-      display_order: 6
-    },
-    {
-      id: 'credit_score_range',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'What is your current estimated credit score range?',
-      options: [
-        { value: 'excellent', label: 'Excellent (740+)' },
-        { value: 'good', label: 'Good (670-739)' },
-        { value: 'fair', label: 'Fair (580-669)' },
-        { value: 'poor', label: 'Needs Improvement (Below 580)' }
-      ],
-      validation: { required: true },
-      display_order: 7
-    },
-    {
-      id: 'additional_costs',
-      type: 'multiple_choice',
-      category: 'planning',
-      question: 'Which additional costs do you want to save for?',
-      options: [
-        { value: 'closing_costs', label: 'Closing costs (3-5% of home price)' },
-        { value: 'moving_expenses', label: 'Moving expenses' },
-        { value: 'immediate_repairs', label: 'Immediate repairs/improvements' },
-        { value: 'emergency_fund', label: 'Home emergency fund' },
-        { value: 'furniture', label: 'New furniture/appliances' }
-      ],
-      validation: { required: true },
-      display_order: 8
-    }
-  ],
   ai_prompt_template: `You are a meticulous mortgage and real estate financial planner. Your persona is 'The Inspector'—you leave no stone unturned. Your goal is to create a realistic and comprehensive home buying plan, focusing on total affordability, not just the down payment.
 
 USER QUESTIONNAIRE DATA:
@@ -304,84 +80,13 @@ USER QUESTIONNAIRE DATA:
     b.  An insight explaining Private Mortgage Insurance (PMI) if their down payment is below 20%, including how much it might cost per month.
 
 Generate a response in the specified JSON format, ensuring the \`rationale\` explains exactly how the \`targetAmount\` was calculated by summing the components.`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.7, max_tokens: 3000 },
-  is_active: true,
-  version: 1
+
 };
 // Wealth Building Goal Template - ENHANCED
 const wealthTemplate: QuestionnaireTemplate = {
   goal_type: 'wealth',
   template_name: 'Wealth Building Strategy',
   description: 'Develop a personalized wealth accumulation plan with investment strategy',
-  questions: [
-    {
-      id: 'wealth_target',
-      type: 'currency',
-      category: 'financial',
-      question: 'What is your wealth accumulation target?',
-      description: 'The total net worth you want to achieve.',
-      validation: { min: 10000, required: true },
-      display_order: 1
-    },
-    {
-      id: 'current_net_worth',
-      type: 'currency',
-      category: 'financial',
-      question: 'What is your current estimated net worth?',
-      description: 'Assets (savings, investments) minus liabilities (debts).',
-      validation: { required: true },
-      display_order: 2
-    },
-    {
-      id: 'monthly_investment',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you invest monthly toward wealth building?',
-      description: 'Amount available for investments after expenses.',
-      validation: { min: 0, required: true },
-      display_order: 3
-    },
-    {
-      id: 'time_horizon',
-      type: 'single_choice',
-      category: 'timeline',
-      question: 'What is your timeline for reaching this wealth target?',
-      options: [
-        { value: '5_years', label: '5 years' },
-        { value: '10_years', label: '10 years' },
-        { value: '15_years', label: '15 years' },
-        { value: '20_plus', label: '20+ years' }
-      ],
-      validation: { required: true },
-      display_order: 4
-    },
-    {
-      id: 'investment_experience',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'What is your investment experience level?',
-      options: [
-        { value: 'beginner', label: 'Beginner' },
-        { value: 'intermediate', label: 'Intermediate' },
-        { value: 'advanced', label: 'Advanced' }
-      ],
-      validation: { required: true },
-      display_order: 5
-    },
-    {
-      id: 'risk_tolerance',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'How do you feel about investment risk for this goal?',
-      options: [
-        { value: 'conservative', label: 'Conservative - I prioritize protecting my capital.' },
-        { value: 'moderate', label: 'Moderate - I accept some risk for balanced returns.' },
-        { value: 'aggressive', label: 'Aggressive - I am willing to take on higher risk for maximum growth.' }
-      ],
-      validation: { required: true },
-      display_order: 6
-    }
-  ],
   ai_prompt_template: `You are a data-driven wealth management strategist, persona 'The Architect'. Your primary role is to design a clear, robust, and actionable investment portfolio for long-term wealth creation. You MUST use the "Core-Satellite" portfolio model for your recommendations.
 
 USER QUESTIONNAIRE DATA:
@@ -449,10 +154,7 @@ You must generate a response in the following JSON format.
     }
   ]
 }
-`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.7, max_tokens: 4000 },
-  is_active: true,
-  version: 1
+`
 };
 
 // Investment Goal Template - ENHANCED
@@ -460,63 +162,6 @@ const investmentTemplate: QuestionnaireTemplate = {
   goal_type: 'investment',
   template_name: 'Investment Portfolio Planning',
   description: 'Create a targeted investment strategy for specific financial objectives',
-  questions: [
-    {
-      id: 'investment_purpose',
-      type: 'single_choice',
-      category: 'purpose',
-      question: 'What is the primary purpose of this investment?',
-      options: [
-        { value: 'education', label: 'Education funding' },
-        { value: 'major_purchase', label: 'Major purchase (car, vacation, etc.)' },
-        { value: 'business', label: 'Business investment' },
-        { value: 'income', label: 'Income generation' },
-        { value: 'growth', label: 'General long-term growth' }
-      ],
-      validation: { required: true },
-      display_order: 1
-    },
-    {
-      id: 'time_horizon_years',
-      type: 'number',
-      category: 'timeline',
-      question: 'In how many years will you need to access the majority of this money?',
-      description: 'Your timeline is crucial for determining risk.',
-      validation: { min: 0.5, required: true },
-      display_order: 2
-    },
-    {
-      id: 'investment_amount',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much do you want to invest initially?',
-      description: 'Your starting investment amount',
-      validation: { min: 100, required: true },
-      display_order: 3
-    },
-    {
-      id: 'regular_contributions',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much will you invest regularly (monthly)?',
-      description: 'Additional monthly contributions',
-      validation: { min: 0, required: true },
-      display_order: 4
-    },
-    {
-      id: 'risk_comfort',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'How comfortable are you with investment risk for this goal?',
-      options: [
-        { value: 'low', label: 'Low risk - I need to protect my initial investment.' },
-        { value: 'moderate', label: 'Moderate risk - I can accept some volatility for better returns.' },
-        { value: 'high', label: 'High risk - I am comfortable with significant volatility for high growth potential.' }
-      ],
-      validation: { required: true },
-      display_order: 5
-    }
-  ],
   ai_prompt_template: `You are an investment strategist, persona 'The Navigator'. Your task is to chart a clear and appropriate investment course based on a user's specific goal, timeline, and risk comfort. Your recommendations must be strictly aligned with the investment horizon.
 
 USER QUESTIONNAIRE DATA:
@@ -524,7 +169,7 @@ USER QUESTIONNAIRE DATA:
 
 **MANDATORY DIRECTIVES:**
 
-1.  **Timeline and Risk Alignment (CRITICAL):** Your primary rule is to match the investment strategy to the \`time_horizon_years\`.
+1.  **Timeline and Risk Alignment (CRITICAL):** Your primary rule is to match the investment strategy to the \`time_horizon_years\`. 
     * **Short-Term (Less than 3 years):** You MUST recommend capital preservation vehicles. Your strategy should focus on High-Yield Savings Accounts (HYSAs), Certificates of Deposit (CDs), or short-term government bond funds. DO NOT recommend stocks.
     * **Medium-Term (3-7 years):** You MUST recommend a balanced approach. Your strategy should be a conservative portfolio mix, such as 40-60% stocks and 40-60% bonds.
     * **Long-Term (7+ years):** You can recommend a more growth-oriented portfolio, with a higher allocation to stocks (60-90%) based on the user's \`risk_comfort\`.
@@ -571,9 +216,6 @@ You must generate a response in the following JSON format.
   ]
 }
 `,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.6, max_tokens: 3000 },
-  is_active: true,
-  version: 1
 };
 
 // Debt Payoff Goal Template - ENHANCED
@@ -581,46 +223,6 @@ const debtPayoffTemplate: QuestionnaireTemplate = {
   goal_type: 'debt_payoff',
   template_name: 'Debt Payoff Plan',
   description: 'Create a personalized strategy to become debt-free faster.',
-  questions: [
-    {
-      id: 'debts',
-      type: 'debt_list', // This implies a UI component that lets users add multiple debt items
-      category: 'financial',
-      question: 'List your individual debts below.',
-      description: 'Add each debt you want to pay off, including credit cards and loans. Be as accurate as possible.',
-      item_schema: [ // Defines the fields for each debt item in the list
-        { "id": "debt_name", "type": "text", "label": "Debt Name (e.g., 'Chase Credit Card')" },
-        { "id": "balance", "type": "currency", "label": "Current Balance" },
-        { "id": "interest_rate", "type": "percentage", "label": "Interest Rate (APR)" },
-        { "id": "min_payment", "type": "currency", "label": "Minimum Monthly Payment" }
-      ],
-      validation: { required: true, min_items: 1 },
-      display_order: 1
-    },
-    {
-      id: 'extra_payment_capacity',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much EXTRA can you pay towards your debt each month?',
-      description: 'This is the amount *above* your total minimum payments that you can commit.',
-      validation: { min: 0, required: true },
-      display_order: 2
-    },
-    {
-      id: 'payoff_preference',
-      type: 'single_choice',
-      category: 'strategy',
-      question: 'Which payoff method do you prefer?',
-      description: 'The "Avalanche" method saves more money on interest, while "Snowball" provides quick wins for motivation.',
-      options: [
-        { value: 'avalanche', label: 'Avalanche (Highest interest first)' },
-        { value: 'snowball', label: 'Snowball (Smallest balance first)' },
-        { value: 'recommend', label: 'Not sure, recommend one for me' }
-      ],
-      validation: { required: true },
-      display_order: 3
-    }
-  ],
   ai_prompt_template: `You are a debt management expert, persona 'The Liberator'. Your goal is to provide a crystal-clear, step-by-step action plan to help the user eliminate their debt. You are precise, motivating, and focused on the plan.
 
 USER QUESTIONNAIRE DATA:
@@ -693,9 +295,6 @@ USER QUESTIONNAIRE DATA:
   ]
 }
 `,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.6, max_tokens: 4000 },
-  is_active: true,
-  version: 1
 };
 
 // Emergency Fund Goal Template - ENHANCED
@@ -703,61 +302,6 @@ const emergencyFundTemplate: QuestionnaireTemplate = {
   goal_type: 'emergency_fund',
   template_name: 'Emergency Fund Builder',
   description: 'Build a financial safety net for unexpected life events.',
-  questions: [
-    {
-      id: 'monthly_essential_expenses',
-      type: 'currency',
-      category: 'financial',
-      question: 'What are your essential monthly living expenses?',
-      description: 'Include only what you absolutely need: rent/mortgage, utilities, food, transportation, insurance.',
-      validation: { min: 100, required: true },
-      display_order: 1
-    },
-    {
-      id: 'income_stability',
-      type: 'single_choice',
-      category: 'demographics',
-      question: 'How stable is your household income?',
-      options: [
-        { value: 'stable', label: 'Very Stable (e.g., salaried employee, dual-income)' },
-        { value: 'somewhat_stable', label: 'Somewhat Stable (e.g., consistent freelance work)' },
-        { value: 'variable', label: 'Variable or Unstable (e.g., commission-based, irregular work)' }
-      ],
-      validation: { required: true },
-      display_order: 2
-    },
-    {
-      id: 'target_months',
-      type: 'single_choice',
-      category: 'timeline',
-      question: 'How many months of expenses would you like to have saved?',
-      options: [
-        { value: '3', label: '3 Months (Standard safety net)' },
-        { value: '6', label: '6 Months (Conservative buffer)' },
-        { value: '12', label: '12 Months (Maximum security)' }
-      ],
-      validation: { required: true },
-      display_order: 3
-    },
-    {
-      id: 'current_emergency_savings',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much do you currently have in liquid savings for emergencies?',
-      description: 'Only include cash you can access quickly (e.g., in a savings account).',
-      validation: { min: 0, required: true },
-      display_order: 4
-    },
-    {
-      id: 'monthly_contribution',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you save per month for your emergency fund?',
-      description: 'Be realistic about what you can consistently set aside.',
-      validation: { min: 1, required: true },
-      display_order: 5
-    }
-  ],
   ai_prompt_template: `You are a pragmatic and encouraging financial coach, persona 'The Guardian'. Your purpose is to help the user build a robust financial safety net, providing them with peace of mind. Your tone is clear, calm, and motivating.
 
 USER QUESTIONNAIRE DATA:
@@ -774,100 +318,12 @@ USER QUESTIONNAIRE DATA:
 5.  **HYSA Recommendation:** The \`insights\` MUST include a recommendation to keep the fund in a High-Yield Savings Account (HYSA). Explain that this keeps the money safe from market risk but allows it to grow faster than a traditional savings account.
 
 Generate a response in the specified JSON format. Your tone must be consistently encouraging throughout.`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.5, max_tokens: 3000 },
-  is_active: true,
-  version: 1
 };
 // Passive Income Goal Template - ENHANCED
 const passiveIncomeTemplate: QuestionnaireTemplate = {
   goal_type: 'passive_income',
   template_name: 'Passive Income Strategy Builder',
   description: 'Create a personalized plan to generate sustainable income streams with minimal ongoing effort',
-  questions: [
-    {
-      id: 'target_monthly_income',
-      type: 'currency',
-      category: 'financial',
-      question: 'What monthly passive income target would you like to achieve?',
-      description: 'This is the amount you want to earn each month from investments and assets',
-      validation: { min: 100, required: true },
-      display_order: 1
-    },
-    {
-      id: 'current_investment_capital',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much capital do you currently have available to invest?',
-      description: 'Include savings, investment accounts, and funds you can dedicate to passive income generation',
-      validation: { min: 0, required: true },
-      display_order: 2
-    },
-    {
-      id: 'monthly_investment_capacity',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you invest monthly toward building passive income?',
-      description: 'Amount you can consistently add to your passive income investments',
-      validation: { min: 0, required: true },
-      display_order: 3
-    },
-    {
-      id: 'time_horizon',
-      type: 'single_choice',
-      category: 'timeline',
-      question: 'Over what timeframe do you want to reach your passive income target?',
-      options: [
-        { value: '2_years', label: '2 years' },
-        { value: '5_years', label: '5 years' },
-        { value: '10_years', label: '10 years' },
-        { value: '15_plus', label: '15+ years' }
-      ],
-      validation: { required: true },
-      display_order: 4
-    },
-    {
-      id: 'income_stream_preferences',
-      type: 'multiple_choice',
-      category: 'preferences',
-      question: 'Which passive income strategies interest you most?',
-      options: [
-        { value: 'dividend_stocks', label: 'Dividend-paying stocks' },
-        { value: 'reits', label: 'Real Estate Investment Trusts (REITs)' },
-        { value: 'bonds_cds', label: 'Bonds and CDs' },
-        { value: 'index_funds', label: 'Dividend-focused index funds/ETFs' },
-        { value: 'peer_lending', label: 'Peer-to-peer lending' }
-      ],
-      validation: { required: true },
-      display_order: 5
-    },
-    {
-      id: 'risk_tolerance',
-      type: 'single_choice',
-      category: 'risk_profile',
-      question: 'What is your risk tolerance for passive income investments?',
-      options: [
-        { value: 'conservative', label: 'Conservative - Prioritize capital preservation, accept lower yields (e.g., 3-5%)' },
-        { value: 'moderate', label: 'Moderate - Balance growth and income, accept some volatility (e.g., 5-7%)' },
-        { value: 'growth_focused', label: 'Growth-focused - Higher risk for higher income potential (e.g., 7-10%+)' }
-      ],
-      validation: { required: true },
-      display_order: 6
-    },
-    {
-      id: 'effort_level',
-      type: 'single_choice',
-      category: 'preferences',
-      question: 'What level of initial setup effort are you comfortable with?',
-      description: 'Some passive income requires more work upfront than others.',
-      options: [
-        { value: 'low', label: 'Low Effort - I prefer simple strategies like buying an ETF.' },
-        { value: 'medium', label: 'Medium Effort - I am willing to do research, like selecting individual stocks or bonds.' },
-        { value: 'high', label: 'High Effort - I am open to more complex setups if the return is justified (Note: This AI will not recommend active businesses).' }
-      ],
-      validation: { required: true },
-      display_order: 7
-    }
-  ],
   ai_prompt_template: `You are a specialist financial advisor, persona 'The Yield Hunter', focused EXCLUSIVELY on passive income generation through capital investment. Your expertise is in creating durable, income-producing asset portfolios. You are rigorous, specific, and allergic to "get rich quick" schemes.
 
 **CRITICAL DIRECTIVE:** The user wants PASSIVE INCOME - money earned from capital with minimal ongoing effort. Your entire response must adhere to this.
@@ -896,9 +352,6 @@ USER QUESTIONNAIRE DATA:
 * DO NOT recommend speculative, non-income-producing assets like cryptocurrency or growth stocks that don't pay dividends.
 
 You must generate a response in a clear, structured JSON format that includes a goal summary, a detailed strategy explaining your calculations and recommendations, a specific portfolio allocation, and actionable milestones focused on achieving monthly income targets (e.g., "Achieve $100/month in passive income").`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.6, max_tokens: 4000 },
-  is_active: true,
-  version: 1
 };
 
 // Custom Goal Template
@@ -907,53 +360,6 @@ const customGoalTemplate: QuestionnaireTemplate = {
   goal_type: 'custom',
   template_name: 'Custom Goal Planner',
   description: 'Define and create a savings plan for any personal financial goal.',
-  questions: [
-    {
-      id: 'goal_description',
-      type: 'text',
-      category: 'definition',
-      question: 'What is your financial goal? Please be specific.',
-      description: 'e.g., "Save for a wedding," "Buy a new MacBook Pro," "Fund a 3-week trip to Japan."',
-      validation: { required: true, min_length: 10 },
-      display_order: 1
-    },
-    {
-      id: 'target_amount',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much money do you need to achieve this goal?',
-      description: 'The total estimated cost of your goal.',
-      validation: { min: 1, required: true },
-      display_order: 2
-    },
-    {
-      id: 'target_date',
-      type: 'date',
-      category: 'timeline',
-      question: 'By when do you want to achieve this goal?',
-      description: 'Select your target deadline.',
-      validation: { required: true },
-      display_order: 3
-    },
-    {
-      id: 'current_savings',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much have you already saved for this specific goal?',
-      description: 'Enter 0 if you haven\'t started yet.',
-      validation: { min: 0, required: true },
-      display_order: 4
-    },
-    {
-      id: 'monthly_contribution',
-      type: 'currency',
-      category: 'financial',
-      question: 'How much can you realistically save each month towards this goal?',
-      description: 'Consistency is key to reaching your goal.',
-      validation: { min: 1, required: true },
-      display_order: 5
-    }
-  ],
   ai_prompt_template: `You are a versatile and adaptive financial planner, persona 'The Coach'. Your task is to take any user-defined financial goal and create a clear, structured, and motivating savings plan. You are excellent at providing clarity and actionable steps for any objective.
 
 USER QUESTIONNAIRE DATA:
@@ -978,9 +384,7 @@ USER QUESTIONNAIRE DATA:
 5.  **Investment Advice (Safety First):** If the timeline is less than 3 years, the strategy MUST recommend keeping the savings in a High-Yield Savings Account (HYSA) to protect it from market risk. For longer-term goals, you can suggest considering low-risk investments.
 
 Generate a response in the specified JSON format. Your tone should be highly motivating and personalized to their specific, unique goal.`,
-  ai_model_config: { model: 'gemini-2.5-flash', temperature: 0.7, max_tokens: 3000 },
-  is_active: true,
-  version: 1
+
 };
 
 // Export all templates
@@ -1001,10 +405,6 @@ export function getQuestionnaireTemplate(goalType: GoalType): QuestionnaireTempl
   return QUESTIONNAIRE_TEMPLATES[goalType];
 }
 
-// Helper function to get all active templates
-export function getActiveQuestionnaireTemplates(): QuestionnaireTemplate[] {
-  return Object.values(QUESTIONNAIRE_TEMPLATES).filter(template => template.is_active);
-}
 
 // Export types for use in other files
 export type GoalType ='retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'passive_income' | 'emergency_fund' | 'custom';

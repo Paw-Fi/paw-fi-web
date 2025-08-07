@@ -11,12 +11,14 @@ import { CategoryProgress } from "@/components/ui/category-progress";
 import { FormNavigation } from "@/components/ui/form-navigation";
 import { useCreateGoalWithAI } from "@/hooks/goal-tracker/use-create-goal";
 import { useSimulatedProgress } from "@/hooks/use-simulated-progress";
+import { supabase } from "@/lib/supabase";
+import { useCookie } from "@/utils/use-cookie";
 import type { 
   GoalType, 
   QuestionnaireTemplate, 
-  QuestionnaireData,
-  Question
-} from "@/components/goal-tracker/types";
+} from "@/data/questionnaire-templates";
+import type { FinancialProfileData, CategoryInfo, Question, QuestionCategory } from "@/types/financial-quiz-constants";
+import { categories as allCategories } from "@/types/financial-quiz-constants";
 
 interface QuestionnaireFlowProps {
   goalType: GoalType;
@@ -33,9 +35,24 @@ export function QuestionnaireFlow({
   onCancel,
   userId 
 }: QuestionnaireFlowProps) {
-  const [answers, setAnswers] = useState<QuestionnaireData>({});
+  const [answers, setAnswers] = useState<Partial<FinancialProfileData>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>('');
+  
+  // Cookie utilities for guest profile management
+  const { getCookie, setCookie } = useCookie();
+
+  // Guest financial health profile management functions
+  const getGuestProfileIds = (): string[] => {
+    const profileIds = getCookie('moneko-guest-profiles');
+    return profileIds ? JSON.parse(profileIds) : [];
+  };
+
+  const addGuestProfileId = (profileId: string) => {
+    const existingProfileIds = getGuestProfileIds();
+    const updatedProfileIds = [...existingProfileIds, profileId];
+    setCookie('moneko-guest-profiles', JSON.stringify(updatedProfileIds), { days: 365 });
+  };
   
   const { 
     createGoalWithAI, 
@@ -52,46 +69,30 @@ export function QuestionnaireFlow({
     [template.questions]
   );
 
-  // Group questions by category for compact display
-  const questionsByCategory = useMemo(() => {
-    const grouped: Record<string, Question[]> = {
-      'basic': [],
-      'financial': [],
-      'timeline': [],
-      'preferences': []
-    };
-    
-    questions.forEach((question, index) => {
-      // Simple categorization based on question type and content
-      if (index < Math.ceil(questions.length * 0.3)) {
-        grouped.basic.push(question);
-      } else if (index < Math.ceil(questions.length * 0.6)) {
-        grouped.financial.push(question);
-      } else if (index < Math.ceil(questions.length * 0.8)) {
-        grouped.timeline.push(question);
-      } else {
-        grouped.preferences.push(question);
-      }
-    });
-    
-    return grouped;
+  const categories: CategoryInfo[] = useMemo(() => {
+    const categoryIds = [...new Set(questions.map(q => q.category))];
+    return allCategories.filter(c => categoryIds.includes(c.id));
   }, [questions]);
 
-  const categories = [
-    { id: 'basic', title: 'Goal Basics', description: 'Tell us about your goal', color: 'bg-blue-100 text-blue-600' },
-    { id: 'financial', title: 'Financial Details', description: 'Money matters and targets', color: 'bg-green-100 text-green-600' },
-    { id: 'timeline', title: 'Timeline & Planning', description: 'When and how you want to achieve this', color: 'bg-purple-100 text-purple-600' },
-    { id: 'preferences', title: 'Your Preferences', description: 'Customize your approach', color: 'bg-orange-100 text-orange-600' }
-  ];
+  const questionsByCategory = useMemo(() => {
+    const grouped: Record<string, Question[]> = {};
+    categories.forEach(c => grouped[c.id] = []);
+    questions.forEach((question) => {
+      if (grouped[question.category]) {
+        grouped[question.category].push(question);
+      }
+    });
+    return grouped;
+  }, [questions, categories]);
 
-  const [activeCategory, setActiveCategory] = useState('basic');
+  const [activeCategory, setActiveCategory] = useState(categories[0]?.id || '');
 
   const validate = useCallback(() => {
     const newErrors: Record<string, string> = {};
     let isValid = true;
     
     questions.forEach((q) => {
-      const value = answers[q.id];
+      const value = answers[q.id as keyof FinancialProfileData];
       
       // Required field validation
       if (q.validation?.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -127,7 +128,7 @@ export function QuestionnaireFlow({
           break;
           
         case 'date':
-          if (!Date.parse(value)) {
+          if (typeof value === 'string' && !Date.parse(value)) {
             newErrors[q.id] = `${q.question} must be a valid date`;
             isValid = false;
           }
@@ -187,7 +188,7 @@ export function QuestionnaireFlow({
     return questions
       .filter(q => q.validation?.required)
       .every(q => {
-        const value = answers[q.id];
+        const value = answers[q.id as keyof FinancialProfileData];
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
       });
   }, [questions, answers]);
@@ -205,7 +206,7 @@ export function QuestionnaireFlow({
           questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
         );
         if (errorCategory) {
-          setActiveCategory(errorCategory);
+          setActiveCategory(errorCategory as QuestionCategory);
         }
       }
       
@@ -245,9 +246,46 @@ export function QuestionnaireFlow({
         userId,
       };
 
-
+      // Create the goal first
       const result = await createGoalWithAI(requestParams);
+      
+      // Show result modal immediately after goal creation
       onComplete(result);
+      
+      // Update financial health profile asynchronously in the background
+      // This runs after the result modal is shown, providing better UX
+      setTimeout(async () => {
+        try {
+          console.log('Creating/updating financial health profile with questionnaire answers...');
+          
+          // Use the correct parameter structure for the financial-health-profile function
+          const { data: profileData, error: profileError } = await supabase.functions.invoke('financial-health-profile', {
+            body: {
+              userId: userId, // null for guest users
+              quizAnswers: answers,
+              isPartialUpdate: true // Flag to indicate this is a partial update from questionnaire
+            }
+          });
+          
+          if (profileError) {
+            console.error('Failed to create/update financial health profile:', profileError);
+            // Don't fail the goal creation, just log the error
+          } else if (profileData?.success) {
+            console.log('Successfully created/updated financial health profile:', profileData);
+            
+            // For guest users, store the profile ID in cookies for later migration
+            if (!userId && profileData?.profile?.id) {
+              console.log('Storing guest financial health profile ID in cookie:', profileData.profile.id);
+              addGuestProfileId(profileData.profile.id);
+            }
+          } else {
+            console.warn('Financial health profile creation/update returned unsuccessful response:', profileData);
+          }
+        } catch (profileUpdateError) {
+          console.error('Error creating/updating financial health profile:', profileUpdateError);
+          // Background operation - don't affect user experience
+        }
+      }, 100); // Small delay to ensure modal transition is smooth
     } catch (error) {
       console.error('Failed to create goal:', error);
       console.error('Questionnaire answers that caused error:', answers);
@@ -299,7 +337,7 @@ export function QuestionnaireFlow({
               questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
             );
             if (errorCategory) {
-              setActiveCategory(errorCategory);
+              setActiveCategory(errorCategory as QuestionCategory);
             }
           }
         } else {
@@ -326,7 +364,7 @@ export function QuestionnaireFlow({
   const isCategoryComplete = useCallback((categoryId: string) => {
     const categoryQuestions = questionsByCategory[categoryId] || [];
     return categoryQuestions.every(q => {
-      const value = answers[q.id];
+      const value = answers[q.id as keyof FinancialProfileData];
       if (q.validation?.required) {
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
       }
@@ -449,7 +487,7 @@ export function QuestionnaireFlow({
                   description={question.description}
                   type={question.type}
                   options={question.options}
-                  value={answers[question.id]}
+                  value={answers[question.id as keyof FinancialProfileData]}
                   onChange={(value) => handleAnswerChange(question.id, value)}
                   error={errors[question.id]}
                   placeholder={question.placeholder}
@@ -521,8 +559,7 @@ function GeneratingGoalView({ progress, error, onCancel }: any) {
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-500 mb-8">
         {Math.round(progress)}% Complete
-      </p>
-      <Button onClick={onCancel} variant="outline">Cancel</Button>
+      </p>     
     </div>
   );
 }

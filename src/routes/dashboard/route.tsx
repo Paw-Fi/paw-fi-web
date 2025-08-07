@@ -136,6 +136,7 @@ export function Dashboard() {
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');
   const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
+  const [hasCheckedGuestProfiles, setHasCheckedGuestProfiles] = useState(false);
   const {refetch}=useGoals(user?.id)
   const showGuide = () => {
     setCookie('moneko-guide-hidden', 'false', { days: 365 });
@@ -150,6 +151,16 @@ export function Dashboard() {
 
   const clearGuestGoalIds = () => {
     document.cookie = 'moneko-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }
+
+  // Guest financial health profile migration utility functions
+  const getGuestProfileIds = () => {
+    const profileIds = getCookie('moneko-guest-profiles');
+    return profileIds ? JSON.parse(profileIds) : [];
+  }
+
+  const clearGuestProfileIds = () => {
+    document.cookie = 'moneko-guest-profiles=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }
 
   // Migrate guest goals to authenticated user
@@ -219,10 +230,54 @@ export function Dashboard() {
     }
   }
 
-  // Handle guest goal migration on login
+  // Migrate guest financial health profiles to authenticated user
+  const migrateGuestProfiles = async (userId: string) => {
+    if (!userId) {
+      return;
+    }
+    const guestProfileIds = getGuestProfileIds();
+    
+    if (guestProfileIds.length === 0) {
+      return;
+    }
+    
+    try {
+      console.log(`Migrating ${guestProfileIds.length} guest financial health profiles to user ${userId}`);
+      
+      // Update each guest profile with the user ID
+      for (const profileId of guestProfileIds) {
+        // Update the profile with user ID
+        const { error: updateError } = await supabase
+          .from('financial_health_profiles')
+          .update({ user_id: userId })
+          .eq('id', profileId)
+          .is('user_id', null);
+        
+        if (updateError) {
+          console.error(`Failed to migrate guest profile ${profileId}:`, updateError);
+          continue;
+        }
+        
+        console.log(`Successfully migrated guest financial health profile ${profileId} to user ${userId}`);
+      }
+      
+      // Clear guest profile IDs after successful migration
+      clearGuestProfileIds();
+      setHasCheckedGuestProfiles(true);
+      console.log(`Completed migration of ${guestProfileIds.length} guest financial health profiles`);
+      
+    } catch (error) {
+      console.error('Failed to migrate guest profiles:', error);
+    }
+  }
+
+  // Handle guest goal and profile migration on login
   useEffect(() => {
     if (user?.id && !hasCheckedGuestGoals) {
       migrateGuestGoals(user.id);
+    }
+    if (user?.id && !hasCheckedGuestProfiles) {
+      migrateGuestProfiles(user.id);
     }
   }, [user]);
 

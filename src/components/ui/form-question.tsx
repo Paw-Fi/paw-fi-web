@@ -7,27 +7,19 @@ import {
   faDollarSign,
   faPercent
 } from "@fortawesome/free-solid-svg-icons";
-
-interface QuestionOption {
-  value: string;
-  label: string;
-}
+import type { QuestionType, QuestionOption, QuestionValidation } from '@/types/financial-quiz-constants';
 
 interface FormQuestionProps {
   id: string;
   question: string;
   description?: string;
-  type: "text" | "email" | "number" | "currency" | "percentage" | "date" | "single_choice" | "multiple_choice";
+  type: QuestionType;
   options?: QuestionOption[];
   value: any;
   onChange: (value: any) => void;
   error?: string;
   placeholder?: string;
-  validation?: {
-    required?: boolean;
-    min?: number;
-    max?: number;
-  };
+  validation?: QuestionValidation;
   optionsPerRow?: 2 | 3 | 4;
 }
 
@@ -54,10 +46,21 @@ export function FormQuestion({
       case 'email':
         return (
           <input
-            type={type}
+            type={type === 'text' ? 'text' : 'email'}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
+            className={inputClasses}
+          />
+        );
+        
+      case 'text_area':
+        return (
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={4}
             className={inputClasses}
           />
         );
@@ -159,6 +162,62 @@ export function FormQuestion({
                 </button>
               );
             })}
+          </div>
+        );
+
+      case 'debt_list':
+        // For now, show a simple text input with instructions
+        return (
+          <div>
+            <textarea
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="List your debts (one per line): Name, Balance, Interest Rate, Min Payment"
+              rows={6}
+              className={inputClasses}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter each debt on a separate line with details separated by commas
+            </p>
+          </div>
+        );
+        
+      case 'rating_scale':
+        return (
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3, 4, 5].map(rating => (
+              <button
+                key={rating}
+                type="button"
+                onClick={() => onChange(rating)}
+                className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
+                  value === rating 
+                    ? 'bg-primary text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {rating}
+              </button>
+            ))}
+          </div>
+        );
+        
+      case 'slider':
+        return (
+          <div>
+            <input
+              type="range"
+              min={validation?.min || 0}
+              max={validation?.max || 100}
+              value={value || (validation?.min || 0)}
+              onChange={(e) => onChange(Number(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>{validation?.min || 0}</span>
+              <span className="font-medium">{value || (validation?.min || 0)}</span>
+              <span>{validation?.max || 100}</span>
+            </div>
           </div>
         );
 
