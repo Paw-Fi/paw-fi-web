@@ -13,6 +13,7 @@ export function extractTargetAmountFromAnswers(answers: any): number {
     'wealth_target',           // wealth template
     'investment_amount',       // investment template
     'total_debt_amount',       // debt_payoff template
+    'target_monthly_income',   // passive_income template (needs yield calculation)
     
     // Calculated target amounts
     'monthly_essential_expenses', // emergency_fund (needs multiplication)
@@ -46,6 +47,32 @@ export function extractTargetAmountFromAnswers(answers: any): number {
           const retirementTarget = amount * 10;
           console.log(`Calculated retirement target: ${amount} * 10 = ${retirementTarget}`);
           return retirementTarget;
+        }
+
+        // Special case for passive income - calculate required capital based on yield
+        if (field === 'target_monthly_income') {
+          // Get risk tolerance to determine realistic yield assumptions
+          const riskTolerance = answers['risk_tolerance'] || 'moderate';
+          let averageYield = 0.06; // Default 6% yield
+          
+          // Adjust yield based on risk tolerance
+          switch (riskTolerance) {
+            case 'conservative':
+              averageYield = 0.04; // 4% yield for conservative approach
+              break;
+            case 'moderate':
+              averageYield = 0.06; // 6% yield for moderate approach
+              break;
+            case 'growth_focused':
+              averageYield = 0.08; // 8% yield for growth-focused approach
+              break;
+          }
+          
+          // Calculate required capital: Monthly income * 12 / average yield
+          const annualPassiveIncome = amount * 12;
+          const requiredCapital = annualPassiveIncome / averageYield;
+          console.log(`Calculated passive income capital target: $${amount}/month * 12 / ${(averageYield * 100)}% = $${requiredCapital}`);
+          return Math.round(requiredCapital);
         }
         
         console.log(`Found target amount in field ${field}: ${amount}`);

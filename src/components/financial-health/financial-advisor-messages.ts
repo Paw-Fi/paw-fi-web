@@ -1,4 +1,4 @@
-import { QuestionCategory } from './FinancialHealthQuiz';
+import { QuestionCategory } from '@/types/financial-quiz-constants';
 
 export interface AdvisorMessage {
   category: QuestionCategory;

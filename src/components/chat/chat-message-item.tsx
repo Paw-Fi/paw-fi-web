@@ -109,7 +109,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/g)];
     
     // Check for goal template patterns
-    const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
+    const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
     const detectedTemplate = goalTemplates.find(template => 
       message.content.includes(`\`\`${template}\`\``)
     );

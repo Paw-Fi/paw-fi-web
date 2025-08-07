@@ -10,11 +10,6 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-// Available goal templates
-type GoalTemplate = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom';
-
-
-
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {

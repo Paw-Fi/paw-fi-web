@@ -9,6 +9,7 @@ import {
   faArrowRight,
   faCreditCard,
   faShield,
+  faMoneyBillTrendUp,
   IconDefinition
 } from "@fortawesome/free-solid-svg-icons";
 import { GOAL_TYPE_CONFIGS, type GoalType } from "@/components/goal-tracker/types";
@@ -22,6 +23,7 @@ const goalTypeIcons: Record<GoalType, IconDefinition> = {
   home_buying: faHome,
   wealth: faChartLine,
   investment: faCoins,
+  passive_income: faMoneyBillTrendUp,
   custom: faBullseye,
   debt_payoff: faCreditCard,
   emergency_fund: faShield,

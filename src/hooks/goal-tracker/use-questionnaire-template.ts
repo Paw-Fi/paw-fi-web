@@ -57,7 +57,7 @@ export function useQuestionnaireTemplate(goalType?: GoalType) {
 
 // Hook for prefetching all questionnaire templates
 export function usePrefetchQuestionnaireTemplates() {
-  const goalTypes: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
+  const goalTypes: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom', 'passive_income'];
   
   return goalTypes.map(goalType => 
     useQuestionnaireTemplate(goalType)

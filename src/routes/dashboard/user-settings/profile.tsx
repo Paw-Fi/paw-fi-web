@@ -10,6 +10,22 @@ import { getCanonicalUrl } from '@/utils/canonical';
 import { useFinancialHealthProfile, type FinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import {
+  FinancialProfileData,
+  defaultProfileData,
+  housingOptions,
+  debtInterestOptions,
+  insuranceOptions,
+  financialPriorityOptions,
+  investmentGoalOptions,
+  lumpSumOptions,
+  yesNoOptions,
+  marketDownturnOptions,
+  investmentKnowledgeOptions,
+  timeHorizonOptions,
+  liquidityOptions,
+  mapQuizAnswersToProfileData,
+} from '@/types/financial-quiz-constants';
 
 export const Route = createFileRoute('/dashboard/user-settings/profile')({
   component: FinancialProfileSettings,
@@ -34,160 +50,9 @@ export const Route = createFileRoute('/dashboard/user-settings/profile')({
   },
 });
 
-// Types from the quiz
-interface QuestionOption {
-  value: string;
-  label: string;
-}
+// Types and constants are now imported from shared module
 
-interface FinancialProfileData {
-  // Current Situation
-  'current-age': number;
-  'gross-monthly-income': number;
-  'net-monthly-income': number;
-  'total-monthly-expenses': number;
-  'cash-savings': number;
-  'pension-value': number;
-  'monthly-pension-contribution': number;
-  'other-investments': number;
-  'number-of-dependents': number;
-  'housing-situation': string;
-  'total-debt-amount': number;
-  'average-debt-interest': string;
-  'emergency-fund': number;
-  'insurance-coverage': string[];
-
-  // Financial Goals
-  'retirement-age': number;
-  'target-retirement': number;
-  'financial-priorities': string[];
-  'investment-goals': string[];
-  'expect-lump-sum': string;
-
-  // Risk Assessment
-  'predictable-income': string;
-  'high-risk-preference': string;
-  'risky-investments': string;
-  'market-downturn': string;
-  'investment-knowledge': string;
-
-  // Time Horizon
-  'time-horizon': string;
-
-  // Liquidity Needs
-  'liquidity-importance': string;
-}
-
-const defaultProfileData: FinancialProfileData = {
-  'current-age': 30,
-  'gross-monthly-income': 0,
-  'net-monthly-income': 0,
-  'total-monthly-expenses': 0,
-  'cash-savings': 0,
-  'pension-value': 0,
-  'monthly-pension-contribution': 0,
-  'other-investments': 0,
-  'number-of-dependents': 0,
-  'housing-situation': '',
-  'total-debt-amount': 0,
-  'average-debt-interest': '',
-  'emergency-fund': 0,
-  'insurance-coverage': [],
-  'retirement-age': 65,
-  'target-retirement': 0,
-  'financial-priorities': [],
-  'investment-goals': [],
-  'expect-lump-sum': '',
-  'predictable-income': '',
-  'high-risk-preference': '',
-  'risky-investments': '',
-  'market-downturn': '',
-  'investment-knowledge': '',
-  'time-horizon': '',
-  'liquidity-importance': ''
-};
-
-// Question options from the quiz
-const housingOptions: QuestionOption[] = [
-  { value: "rent", label: "Renting" },
-  { value: "own-mortgage", label: "Own with mortgage" },
-  { value: "own-paid", label: "Own outright (no mortgage)" },
-  { value: "other", label: "Other arrangement" },
-];
-
-const debtInterestOptions: QuestionOption[] = [
-  { value: "none", label: "I don't have any debt" },
-  { value: "low", label: "Low (under 7%)" },
-  { value: "medium", label: "Medium (8-15%)" },
-  { value: "high", label: "High (16%+)" },
-];
-
-const insuranceOptions: QuestionOption[] = [
-  { value: "health", label: "Health insurance" },
-  { value: "life", label: "Life insurance" },
-  { value: "disability", label: "Disability insurance" },
-  { value: "auto", label: "Auto insurance" },
-  { value: "home", label: "Home/renters insurance" },
-  { value: "umbrella", label: "Umbrella policy" },
-];
-
-const financialPriorityOptions: QuestionOption[] = [
-  { value: "debt-reduction", label: "Reducing debt" },
-  { value: "emergency-fund", label: "Building emergency fund" },
-  { value: "retirement", label: "Retirement savings" },
-  { value: "home", label: "Buying a home" },
-  { value: "education", label: "Education savings" },
-  { value: "income", label: "Increasing income" },
-  { value: "tax-efficiency", label: "Tax efficiency" },
-  { value: "estate-planning", label: "Estate planning" },
-];
-
-const investmentGoalOptions: QuestionOption[] = [
-  { value: "retirement", label: "Retirement" },
-  { value: "education", label: "Education" },
-  { value: "home", label: "Home purchase" },
-  { value: "wealth", label: "General wealth building" },
-  { value: "income", label: "Generate income" },
-];
-
-const lumpSumOptions: QuestionOption[] = [
-  { value: "no", label: "No" },
-  { value: "within-2-years", label: "Yes, within 2 years" },
-  { value: "2-10-years", label: "Yes, in 2-10 years" },
-  { value: "10-plus-years", label: "Yes, in 10+ years" },
-];
-
-const yesNoOptions: QuestionOption[] = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" }
-];
-
-const marketDownturnOptions: QuestionOption[] = [
-  { value: "sell", label: "Sell to prevent further losses" },
-  { value: "worried", label: "Worried but would not sell" },
-  { value: "wait", label: "Wait and see before making changes" },
-  { value: "buy-more", label: "Buy more investments at lower prices" },
-];
-
-const investmentKnowledgeOptions: QuestionOption[] = [
-  { value: "beginner", label: "Beginner - Limited knowledge" },
-  { value: "intermediate", label: "Intermediate - Understand basics" },
-  { value: "advanced", label: "Advanced - Comfortable with complex investments" },
-  { value: "expert", label: "Expert - Professional knowledge" },
-];
-
-const timeHorizonOptions: QuestionOption[] = [
-  { value: "short", label: "Short term (0-3 years)" },
-  { value: "medium", label: "Medium term (3-7 years)" },
-  { value: "long", label: "Long term (7+ years)" },
-];
-
-const liquidityOptions: QuestionOption[] = [
-  { value: "very-important", label: "Very important - Need frequent access" },
-  { value: "important", label: "Important - May need occasional access" },
-  { value: "somewhat-important", label: "Somewhat important - Rarely need access" },
-  { value: "not-important", label: "Not important - Can lock up funds long-term" },
-];
+// Question options are now imported from shared constants
 
 function FinancialProfileSettings() {
   const { user } = useAuth();
@@ -199,17 +64,8 @@ function FinancialProfileSettings() {
   // Load existing financial profile
   useEffect(() => {
     if (profile?.quiz_answers) {
-      // Map quiz answers to profile data
-      const answers = profile.quiz_answers;
-      const mappedData: Partial<FinancialProfileData> = {};
-      
-      // Map each field from quiz answers to profile data
-      Object.keys(defaultProfileData).forEach(key => {
-        if (answers[key] !== undefined) {
-          mappedData[key as keyof FinancialProfileData] = answers[key];
-        }
-      });
-      
+      // Use shared mapping function
+      const mappedData = mapQuizAnswersToProfileData(profile.quiz_answers);
       setProfileData(prev => ({ ...prev, ...mappedData }));
     }
   }, [profile]);
@@ -327,7 +183,7 @@ function FinancialProfileSettings() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-blue-800">
               You haven't completed the financial health assessment yet. 
-              <Link to="/financial-health-quiz" className="text-blue-600 hover:text-blue-800 underline ml-1">
+              <Link to="/dashboard/portfolio" className="text-blue-600 hover:text-blue-800 underline ml-1">
                 Take the quiz
               </Link> to create your financial profile, or manually enter your information below.
             </p>

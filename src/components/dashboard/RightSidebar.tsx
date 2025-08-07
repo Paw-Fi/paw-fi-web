@@ -5,7 +5,7 @@ import { OptimizedImage } from '@/components/seo/optimized-image';
 import logo from '@/assets/images/icon.svg';
 import { useRef, useImperativeHandle, forwardRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb } from '@fortawesome/free-solid-svg-icons';
+import { faLightbulb, faBullseye, faChartLine } from '@fortawesome/free-solid-svg-icons';
 
 interface ChatAgent {
   id: string;
@@ -13,6 +13,7 @@ interface ChatAgent {
   description: string;
   aiType:AI_ID;
   color: string;
+  icon?: any; // FontAwesome icon
   onClick: () => void;
 }
 
@@ -63,30 +64,31 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
     }
   }));
 
-  // Chat agents configuration
+  // Chat agents configuration - matching the visual style of chat interfaces
   const chatAgents: ChatAgent[] = [
     {
       id: 'ai-advisor',
       label: 'Financial Advisor',
-      description: 'Get personalized investment and financial planning guidance',
+      description: 'Get personalized investment and financial planning guidance with Ollie',
       aiType: 'advisor',
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-purple-400 to-indigo-500', // Matches FinancialAdvisorChatInterface
       onClick: () => openChat('advisor')
     },
     {
       id: 'ai-tracker',
       label: 'Goal Tracker',
-      description: 'Track and manage your financial goals with AI assistance',
+      description: 'Track and achieve your financial goals with AI coach Alex',
       aiType: 'tracker',
-      color: 'from-green-500 to-green-600',
+      color: 'from-orange-400 to-amber-600', // Matches GoalTrackerChatInterface
+      icon: faChartLine, // Different icon for global mode
       onClick: () => openChat('tracker')
     },
     {
       id: 'ai-educator',
       label: 'Financial Educator',
-      description: 'Learn financial concepts and improve your financial literacy',
+      description: 'Learn personal finance with your AI educator Leo',
       aiType: 'educator',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-emerald-400 to-teal-500', // Matches FinancialEducatorChatInterface colors
       onClick: () => openChat('educator')
     }
   ];
@@ -112,7 +114,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
               >
                 <motion.button
                   id={`chat-agent-${agent.id}`}
-                  className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${agent.color} shadow-sm hover:shadow-md transition-all duration-200`}
+                  className={`flex size-10 items-center justify-center rounded-full bg-gradient-to-br ${agent.color} shadow-sm hover:shadow-md transition-all duration-200`}
                   onClick={agent.onClick}
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
@@ -120,12 +122,19 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   data-tooltip-content={agent.description}
                   data-tooltip-place="left"
                 >
-                  <div className="relative">
-                    <OptimizedImage 
-                      src={logo} 
-                      alt={`${agent.label} Avatar`} 
-                      className="h-6 w-6"
-                    />                   
+                  <div className="relative flex items-center justify-center">
+                    {agent.icon ? (
+                      <FontAwesomeIcon 
+                        icon={agent.icon}
+                        className="w-5 h-5 text-white" 
+                      />
+                    ) : (
+                      <OptimizedImage 
+                        src={logo} 
+                        alt={`${agent.label} Avatar`} 
+                        className="size-6"
+                      />
+                    )}                   
                   </div>
                 </motion.button>
 

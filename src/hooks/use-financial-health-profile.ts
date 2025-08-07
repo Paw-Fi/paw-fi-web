@@ -58,9 +58,7 @@ export interface FinancialHealthProfile {
 // Fetcher function for financial health profile
 const fetchFinancialHealthProfile = async (userId: string | undefined): Promise<FinancialHealthProfile | null> => {
   if (!userId) return null;
-  
-  console.log('Fetching financial health profile for user:', userId);
-  
+    
   const { data, error } = await supabase.functions.invoke('get-financial-health-profile', {
     body: { userId }
   });

@@ -18,7 +18,7 @@ export type {
 export { GOAL_TYPE_CONFIGS } from '@/data/goal-type-configs';
 
 // Define GoalType and QuestionnaireData locally to avoid circular imports
-export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom';
+export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'passive_income' | 'custom';
 export type QuestionnaireData = Record<string, any>;
 
 // Additional types specific to the goal tracker components

@@ -1,20 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { useAIChat } from "@/contexts/ai-chat-context";
 import { useFinancialHealthProfile, formatProfileForAI } from "@/hooks/use-financial-health-profile";
 import { useUserGoals, createSingleGoalContext, createAllGoalsContext, UserGoal } from "@/hooks/goal-tracker/use-user-goals";
 import { ChatConversationDisplay, ConversationMessage } from "./chat-conversation-display";
 import { supabase } from "@/lib/supabase";
-import { OptimizedImage } from "@/components/seo/optimized-image";
 import { AI_ROLES } from "./ai-roles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBullseye, faChartLine } from "@fortawesome/free-solid-svg-icons";
-import classNames from "classnames";
-
-type Message = ConversationMessage;
 
 interface GoalTrackerChatInterfaceProps {
   goalId?: string; // Optional - when not provided, operates in global mode
@@ -35,16 +31,10 @@ export function GoalTrackerChatInterface({
 }: GoalTrackerChatInterfaceProps) {
   const { user } = useAuth();
   const { addMessage, getMessages, clearMessages, closeChat } = useAIChat();
-  const isAuthenticated = !!user;
   const queryClient = useQueryClient();
   const isGlobalMode = !goalId; // Global mode when no specific goalId provided
   
-  // Get persisted messages from context
-  const messages = getMessages('tracker');
-  
   // State
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastExecutedFunction, setLastExecutedFunction] = useState<string | null>(null);
     
   // Load financial health profile for authenticated users
@@ -57,16 +47,9 @@ export function GoalTrackerChatInterface({
     error: goalsError 
   } = useUserGoals();
   
-  // For now, Goal Tracker uses direct API without conversation persistence
-  // TODO: Integrate with conversation system when GOAL_TRACKER model is added
-  const isConversationsLoading = false;
-  
-  // Enhanced send message function for goal tracker
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isSendingMessage) return;
-    
-    setIsSendingMessage(true);
-    setConnectionError(null);
+  // Custom message handler for goal tracker that integrates with existing AI context
+  const handleGoalTrackerMessage = async (content: string) => {
+    const messages = getMessages('tracker');
     
     const getConsistentTimestamp = (): number => {
       if (typeof window === "undefined") {
@@ -76,7 +59,7 @@ export function GoalTrackerChatInterface({
     };
     
     // Create optimistic user message
-    const userMessage: Message = {
+    const userMessage: ConversationMessage = {
       content,
       role: "user",
       timestamp: getConsistentTimestamp(),
@@ -161,7 +144,7 @@ export function GoalTrackerChatInterface({
       
       // Create AI message from response - prioritize function result message for actions like goal creation
       const functionResultMessage = aiResponse.function_result?.data?.message || aiResponse.function_result?.message;
-      const aiMessage: Message = {
+      const aiMessage: ConversationMessage = {
         content: functionResultMessage || aiResponse.message || aiResponse.response || "I'm sorry, I couldn't process that request.",
         role: "assistant",
         timestamp: getConsistentTimestamp(),
@@ -233,7 +216,7 @@ export function GoalTrackerChatInterface({
       console.error('Goal tracker AI error:', error);
       
       // Add error message
-      const errorMessage: Message = {
+      const errorMessage: ConversationMessage = {
         content: "Sorry, I had trouble processing your request. Please check your connection and try again.",
         role: "assistant",
         timestamp: getConsistentTimestamp(),
@@ -243,10 +226,14 @@ export function GoalTrackerChatInterface({
       };
       
       addMessage('tracker', errorMessage);
-      setConnectionError("Connection error. Please try again.");
-    } finally {
-      setIsSendingMessage(false);
+      throw new Error(typeof error === 'string' ? error : 'Connection error. Please try again.');
     }
+  };
+
+  // Handle clearing conversation
+  const handleClearConversation = () => {
+    clearMessages('tracker');
+    setLastExecutedFunction(null);
   };
 
   // Generate dynamic welcome message based on mode and context
@@ -297,11 +284,6 @@ export function GoalTrackerChatInterface({
     return `I can help you ${suggestions.join(", ")}, and more!`;
   };
 
-  const handleClearConversation = () => {
-    clearMessages('tracker');
-    setLastExecutedFunction(null);
-    setConnectionError(null);
-  };
 
   return (
     <div className="h-full bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-950 dark:via-amber-950 dark:to-yellow-950 flex flex-col">
@@ -334,15 +316,18 @@ export function GoalTrackerChatInterface({
       {/* Chat Container - Takes remaining space */}
       <div className="flex-1 flex flex-col min-h-0">
         <ChatConversationDisplay
-          messages={messages}
-          onMessageSend={handleSendMessage}
-          isSendingMessage={isSendingMessage}
+          chatConfig={{
+            aiRole: 'GOAL_TRACKER',
+            enableGuestSessions: false,
+            enableSignupPrompt: false,
+            enableLoadingDuration: false,
+            useExternalMessages: true,
+            externalMessages: getMessages('tracker'),
+            customMessageHandler: handleGoalTrackerMessage,
+          }}
           initialSuggestedResponses={["I want to create a new goal", "I want to update my progress", "I want to manage milestones", "I want to adjust the timeline"]}
-          agentName="Alex - Goal Tracker AI"
           welcomeMessage={getWelcomeMessage()}
           welcomeSubtitle={getWelcomeSubtitle()}
-          connectionError={connectionError || undefined}
-          isBackendProcessing={isConversationsLoading}
           onClearConversation={handleClearConversation}
           className="flex-1"
           agentIcon={

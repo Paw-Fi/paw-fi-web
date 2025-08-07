@@ -288,7 +288,7 @@ serve(async (req: Request): Promise<Response> => {
         let goalType = functionArgs.goalType || functionArgs.payload?.goal_type || 'custom';
         
         // Map unsupported goal types to supported ones
-        const supportedGoalTypes:GoalType[] = ['emergency_fund', 'retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'custom'];
+        const supportedGoalTypes:GoalType[] = ['emergency_fund', 'retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'passive_income', 'custom'];
         if (!supportedGoalTypes.includes(goalType)) {
           console.log(`Mapping unsupported goal type '${goalType}' to 'custom'`);
           goalType = 'custom';

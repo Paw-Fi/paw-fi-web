@@ -44,7 +44,7 @@ export interface QuestionnaireTemplate {
 }
 
 // Helper function to get template by goal type
-export function getQuestionnaireTemplate(goalType: string): QuestionnaireTemplate | undefined {
+export function getQuestionnaireTemplate(goalType: GoalType): QuestionnaireTemplate | undefined {
   return QUESTIONNAIRE_TEMPLATES[goalType];
 }
 
@@ -54,5 +54,5 @@ export function getActiveQuestionnaireTemplates(): QuestionnaireTemplate[] {
 }
 
 // Export types for use in other files
-export type GoalType ='retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom';
+export type GoalType ='retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'passive_income' | 'custom';
 export type QuestionnaireData = Record<string, any>;

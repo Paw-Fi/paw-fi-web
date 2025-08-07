@@ -74,7 +74,7 @@ export const GOAL_FUNCTIONS_REGISTRY = {
       /(?:help me|can you)\s+(?:create|make|set up)\s+(?:a\s+)?(?:new\s+)?goal/i,
       /(?:new|another)\s+(?:savings\s+)?goal/i,
     ],
-    description: "Creates comprehensive new financial goals with AI assistance. Requires goalType (e.g., 'emergency_fund', 'retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'custom') and questionnaireAnswers object with user's financial information. Generates complete goal with strategy, milestones, and insights."
+    description: "Creates comprehensive new financial goals with AI assistance. Requires goalType (e.g., 'emergency_fund', 'retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'custom', 'passive_income') and questionnaireAnswers object with user's financial information. Generates complete goal with strategy, milestones, and insights."
   }
 };
 

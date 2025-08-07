@@ -12,8 +12,6 @@ import {
   faCalendarAlt,
   faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
-import { formatProfileForAI } from '@/hooks/use-financial-health-profile';
-import { profile } from 'console';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 

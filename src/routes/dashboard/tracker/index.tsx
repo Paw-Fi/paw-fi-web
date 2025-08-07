@@ -300,6 +300,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
           case 'investment': return faChartBar;
           case 'debt_payoff': return faCreditCard;
           case 'emergency_fund': return faShieldAlt;
+          case 'passive_income': return faWandSparkles;
           case 'custom': return faBullseye;
           default: break;
         }
@@ -458,6 +459,7 @@ const SpotlightCard = memo(function SpotlightCard({
       'wealth': 'bg-gradient-to-br from-green-200 to-green-300',
       'investment': 'bg-gradient-to-br from-indigo-200 to-indigo-300',
       'debt_payoff': 'bg-gradient-to-br from-red-200 to-red-300',
+      'passive_income': 'bg-gradient-to-br from-yellow-200 to-yellow-300',
       'emergency_fund': 'bg-gradient-to-br from-orange-200 to-orange-300',
       'custom': 'bg-gradient-to-br from-gray-200 to-gray-300'
     };
@@ -481,6 +483,7 @@ const SpotlightCard = memo(function SpotlightCard({
       'wealth': ['💎', '⭐', '✨', '●'],
       'investment': ['📈', '⭐', '●', '✦'],
       'debt_payoff': ['💳', '⚡', '●', '✦'],
+      'passive_income': ['💰', '⭐', '●', '✦'],
       'emergency_fund': ['🛡️', '⭐', '●', '✦'],
       'custom': ['🎯', '⭐', '●', '✦']
     };
