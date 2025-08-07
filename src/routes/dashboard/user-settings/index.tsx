@@ -170,7 +170,7 @@ export function UserSettings() {
               disabled={isUpdating}
               className="w-full sm:w-auto"
             >
-              {isUpdating ? 'Updating...' : 'Update Profile'}
+              {isUpdating ? 'Updating...' : 'Update Information'}
             </Button>
           </div>
         </form>

@@ -77,7 +77,7 @@ export function EmptyStatePrompt({
 
           {/* Action button */}
           <div
-            onClick={() => openChat("educator")}
+            onClick={() => openChat("advisor")}
             className="group cursor-pointer relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:ring-4 focus:ring-purple-300 focus:outline-none"
           >
             <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-300 group-hover:opacity-10"></span>

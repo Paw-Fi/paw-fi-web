@@ -57,11 +57,6 @@ interface ExtendedCalculationResults extends CalculationResults {
 
 // Categories are now imported from shared constants
 
-// DebtDetail interface is now imported from shared constants
-
-// Quiz questions are now imported from shared constants
-
-
 // Debt Repeater Component
 const DebtRepeater: React.FC<{
   debts: DebtDetail[];
@@ -86,8 +81,6 @@ const DebtRepeater: React.FC<{
       debt.id === id ? { ...debt, [field]: value } : debt
     ));
   };
-
-  // debtTypes is now imported from shared constants
 
   return (
     <div className="space-y-4">
@@ -206,8 +199,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const [state, setState] = useState<QuizState>({
     answers: {
       'debt-details': [], // Initialize debt details as empty array
+      'additional_income_sources': [], // Initialize multiple choice as empty array
     },
-    activeCategory: "current-situation",
+    activeCategory: "personal-information", // Use first category from new structure
     showResults: false,
     calculationResults: null,
     dashboardName: "My Financial Health Assessment",
@@ -220,18 +214,28 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
 
   // Group questions by category for easier rendering
   const questionsByCategory = useMemo(() => {
+    // Initialize with all categories from the constants
     const grouped: Record<QuestionCategory, QuizQuestion[]> = {
-      'current-situation': [],
-      'liquidity-needs': [],
-      'risk-assessment': [],
-      'time-horizon': [],
+      'personal-information': [],
+      'income-details': [],
+      'detailed-expenses': [],
+      'assets-and-savings': [],
+      'debts-and-liabilities': [],
       'financial-goals': [],
+      'risk-profile-and-investment': [],
+      'financial-behavior': [],
+      'goal-specific': [],
     };
     
     quizQuestions.forEach((question) => {
       if (grouped[question.category]) {
         grouped[question.category].push(question);
       }
+    });
+    
+    // Sort questions within each category by display_order
+    Object.keys(grouped).forEach(category => {
+      grouped[category as QuestionCategory].sort((a, b) => a.display_order - b.display_order);
     });
     
     return grouped;
@@ -284,21 +288,67 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const isCategoryComplete = useCallback(
     (category: QuestionCategory): boolean => {
       const questions = questionsByCategory[category] || [];
+      
+      // Debug logging for specific categories
+      if (category === "income-details" || category === "debts-and-liabilities" || category === "financial-goals") {
+        console.log(`Checking ${category} category completion:`);
+        questions.forEach(question => {
+          const answer = state.answers[question.id];
+          let isComplete = false;
+          
+          if (question.type === "multiple_choice") {
+            isComplete = Array.isArray(answer) && (answer as string[]).length > 0;
+          } else if (question.type === "single_choice") {
+            isComplete = answer !== undefined && answer !== "";
+          } else if (question.type === "debt_list") {
+            isComplete = Array.isArray(answer);
+          } else if (question.type === "number" || question.type === "currency" || question.type === "percentage" || question.type === "text") {
+            isComplete = answer !== undefined && answer !== "" && answer !== null;
+          } else {
+            isComplete = answer !== undefined;
+          }
+          
+          console.log(`Question ${question.id} (${question.type}):`, {
+            answer,
+            isComplete,
+            validation: question.validation
+          });
+        });
+      }
+      
       return questions.every((question) => {
         if (question.type === "multiple_choice") {
+          // Check if the question is required
+          const isRequired = question.validation?.required !== false;
+          const answer = state.answers[question.id];
+          
+          if (!isRequired) {
+            // Optional multiple choice questions are complete if they have an answer array (even empty)
+            return Array.isArray(answer);
+          }
+          
+          // Required multiple choice questions need at least one selection
           return (
-            Array.isArray(state.answers[question.id]) &&
-            (state.answers[question.id] as string[]).length > 0
+            Array.isArray(answer) &&
+            (answer as string[]).length > 0
           );
         }
         if (question.type === "debt_list") {
           // Debt repeater is considered complete if it exists (even if empty array)
           return Array.isArray(state.answers[question.id]);
         }
-        if (question.type === "number") {
-          // Number inputs are complete if they have a value (not empty string or undefined)
+        if (question.type === "number" || question.type === "currency" || question.type === "percentage" || question.type === "text") {
           const answer = state.answers[question.id];
-          return answer !== undefined && answer !== "";
+          // Check if the question is required
+          const isRequired = question.validation?.required !== false;
+          
+          if (!isRequired) {
+            // Optional fields are always considered complete
+            return true;
+          }
+          
+          // Required fields must have a valid value (not empty string or undefined)
+          return answer !== undefined && answer !== "" && answer !== null;
         }
         return state.answers[question.id] !== undefined;
       });
@@ -531,7 +581,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const renderInputFields = useCallback(
     (category: QuestionCategory) => {
       const inputQuestions = questionsByCategory[category]?.filter(
-        (q) => q.type === "number" || q.type === "slider"
+        (q) => q.type === "number" || q.type === "slider" || q.type === "currency" || q.type === "percentage" || q.type === "text"
       );
 
       if (!inputQuestions || inputQuestions.length === 0) return null;
@@ -552,9 +602,22 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               <p className="mb-4 text-xs text-gray-600">{question.description}</p>
             )}
 
-            {question.type === "number" && (
+            {(question.type === "number" || question.type === "currency" || question.type === "percentage") && (
               <div className="relative rounded-lg border border-transparent">
-                {question.unit && (
+                {/* Show $ symbol for currency questions */}
+                {question.type === "currency" && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    $
+                  </span>
+                )}
+                {/* Show % symbol for percentage questions */}
+                {question.type === "percentage" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    %
+                  </span>
+                )}
+                {/* Show custom unit for number questions */}
+                {question.type === "number" && question.unit && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                     {question.unit}
                   </span>
@@ -570,7 +633,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   max={question.validation?.max}
   step={question.step || 1}
   placeholder={question.placeholder}
-  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+  className={`w-full rounded-lg bg-transparent border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${(question.type === "currency" || question.unit) ? "pl-8" : ""} ${question.type === "percentage" ? "pr-8" : ""}`}
 />
               </div>
             )}
@@ -600,6 +663,18 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 />
               </div>
             )}
+
+            {question.type === "text" && (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={state.answers[question.id] as string || ""}
+                  onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                  placeholder={question.placeholder}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            )}
           </div>
         );
       }
@@ -622,9 +697,22 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 </p>
               )}
 
-              {question.type === "number" && (
+              {(question.type === "number" || question.type === "currency" || question.type === "percentage") && (
                 <div className="relative">
-                  {question.unit && (
+                  {/* Show $ symbol for currency questions */}
+                  {question.type === "currency" && (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      $
+                    </span>
+                  )}
+                  {/* Show % symbol for percentage questions */}
+                  {question.type === "percentage" && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      %
+                    </span>
+                  )}
+                  {/* Show custom unit for number questions */}
+                  {question.type === "number" && question.unit && (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                       {question.unit}
                     </span>
@@ -641,7 +729,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   max={question.validation?.max}
   step={question.step || 1}
   placeholder={question.placeholder}
-  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${question.unit ? "pl-8" : ""}`}
+  className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${(question.type === "currency" || question.unit) ? "pl-8" : ""} ${question.type === "percentage" ? "pr-8" : ""}`}
 />
                 </div>
               )}
@@ -668,6 +756,18 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                     className="w-full"
                     label=""
                     showValue={false}
+                  />
+                </div>
+              )}
+
+              {question.type === "text" && (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={state.answers[question.id] as string || ""}
+                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                    placeholder={question.placeholder}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   />
                 </div>
               )}

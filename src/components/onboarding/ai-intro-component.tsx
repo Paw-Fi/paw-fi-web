@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faSignInAlt } from "@fortawesome/free-solid-svg-icons";
 
 import { Button } from "@/components/ui/button";
 import { ChatConversationDisplay, ConversationMessage } from "@/components/chat/chat-conversation-display";
@@ -412,6 +414,10 @@ Sound good?`,
     setGoalData(null);
   };
 
+  const handleLogin = () => {
+    navigate({ to: '/login', search: { redirect: '/onboarding' } });
+  };
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -426,9 +432,25 @@ Sound good?`,
   return (
     <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden ${className}`}>
       {/* Modern Header with proper constraints */}
-      <div className="flex-shrink-0 border-b border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-white/90 to-purple-50/90 dark:from-slate-800/90 dark:to-slate-700/90">
+      <div className="flex-shrink-0 border-b border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-white/90 to-purple-50/90 dark:from-slate-800/90 dark:to-slate-700/90 relative">
         <div className="px-6 sm:px-8 lg:px-10">
           <div className="py-6 sm:py-8">
+            {/* Login Button - Only show for non-logged in users */}
+            { (
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+                <Button
+                  onClick={handleLogin}
+                  variant="outline"
+                  className="bg-white/80 hover:bg-white border-slate-300 text-slate-700 hover:text-slate-900 transition-all duration-200"
+                >
+                  <FontAwesomeIcon icon={faSignInAlt} className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                  <span className="sm:hidden">Login</span>
+                </Button>
+              </div>
+            )}
+            
+          
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -438,7 +460,10 @@ Sound good?`,
                 Welcome to Moneko
               </h1>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Let Moneko, your AI money coach, guide you to financial success
+                {user 
+                  ? "Continue your financial journey with your AI money coach" 
+                  : "Let Moneko, your AI money coach, guide you to financial success"
+                }
               </p>
             </motion.div>
           </div>

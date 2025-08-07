@@ -369,44 +369,78 @@ function DashboardHome() {
     };
   }, [subscription, features, invoices, isActive, subLoading]);
 
-  // Real financial profile insights
+  // Enhanced financial profile insights for widget
   const financialProfileInsights = useMemo(() => {
     if (profileLoading || !hasProfile || !financialProfile) {
       return {
         hasProfile: false,
-        age: null,
-        monthlyIncome: null,
-        monthlySavings: null,
-        totalAssets: null,
-        yearsToRetirement: null,
-        riskProfile: null,
-        topPriorities: [],
-        emergencyFund: null,
-        debtAmount: null,
+        completionPercentage: 0,
+        filledFields: [],
+        missingFields: [],
+        keyMetrics: {}
       };
     }
 
-    const profileData = financialProfile.profile_data;
+    const quizAnswers = financialProfile.quiz_answers as any;
     
+    // Define important fields for profile completion
+    const importantFields = [
+      { key: 'current_age', label: 'Age', value: quizAnswers.current_age },
+      { key: 'net_monthly_income', label: 'Monthly Income', value: quizAnswers.net_monthly_income, format: 'currency' },
+      { key: 'marital_status', label: 'Marital Status', value: quizAnswers.marital_status, format: 'text' },
+      { key: 'dependents', label: 'Dependents', value: quizAnswers.dependents },
+      { key: 'housing_cost', label: 'Housing Cost', value: quizAnswers.housing_cost, format: 'currency' },
+      { key: 'savings_rate', label: 'Savings Rate', value: quizAnswers.savings_rate, format: 'percentage' },
+      { key: 'emergency_fund', label: 'Emergency Fund', value: quizAnswers.emergency_fund, format: 'currency' },
+      { key: 'retirement_age', label: 'Retirement Age', value: quizAnswers.retirement_age },
+      { key: 'risk_tolerance', label: 'Risk Tolerance', value: quizAnswers.risk_tolerance, format: 'text' },
+      { key: 'investment_experience', label: 'Investment Experience', value: quizAnswers.investment_experience, format: 'text' },
+    ];
+
+    // Calculate filled vs missing fields
+    const filledFields = importantFields.filter(field => {
+      const value = field.value;
+      return value !== null && value !== undefined && value !== 0 && value !== '' && 
+             (Array.isArray(value) ? value.length > 0 : true);
+    });
+
+    const missingFields = importantFields.filter(field => {
+      const value = field.value;
+      return value === null || value === undefined || value === 0 || value === '' || 
+             (Array.isArray(value) ? value.length === 0 : false);
+    });
+
+    const completionPercentage = Math.round((filledFields.length / importantFields.length) * 100);
+
+    // Calculate key metrics from filled data
+    const keyMetrics: {
+      monthlyIncome?: number;
+      monthlySavings?: number;
+      emergencyFund?: number;
+      yearsToRetirement?: number;
+    } = {};
+    
+    if (quizAnswers.net_monthly_income) {
+      keyMetrics.monthlyIncome = quizAnswers.net_monthly_income;
+    }
+    if (quizAnswers.savings_rate && quizAnswers.net_monthly_income) {
+      keyMetrics.monthlySavings = Math.round(quizAnswers.net_monthly_income * (quizAnswers.savings_rate / 100));
+    }
+    if (quizAnswers.emergency_fund) {
+      keyMetrics.emergencyFund = quizAnswers.emergency_fund;
+    }
+    if (quizAnswers.current_age && quizAnswers.retirement_age) {
+      keyMetrics.yearsToRetirement = Math.max(0, quizAnswers.retirement_age - quizAnswers.current_age);
+    }
+
     return {
       hasProfile: true,
-      age: profileData.demographics.age,
-      monthlyIncome: profileData.demographics.income.net,
-      monthlyExpenses: profileData.demographics.expenses,
-      monthlySavings: profileData.calculated_metrics.monthly_savings,
-      totalAssets: profileData.calculated_metrics.total_assets,
-      yearsToRetirement: profileData.calculated_metrics.years_to_retirement,
-      riskProfile: profileData.risk_profile.investment_knowledge,
-      topPriorities: profileData.goals_and_timeline.financial_priorities.slice(0, 3),
-      emergencyFund: profileData.financial_situation.emergency_fund,
-      debtAmount: profileData.financial_situation.debt_amount,
-      retirementGoal: profileData.goals_and_timeline.target_retirement,
-      retirementAge: profileData.goals_and_timeline.retirement_age,
-      cashSavings: profileData.financial_situation.cash_savings,
-      investments: profileData.financial_situation.other_investments,
-      pensionValue: profileData.financial_situation.pension_value,
+      completionPercentage,
+      filledFields: filledFields.slice(0, 6), // Show top 6 filled fields
+      missingFields: missingFields.slice(0, 4), // Show top 4 missing fields
+      keyMetrics
     };
-  }, [financialProfile, hasProfile, profileLoading]);
+  }, [financialProfile, profileLoading, hasProfile]);
 
   // Real conversation insights
   const conversationInsights = useMemo(() => {
@@ -657,122 +691,172 @@ function DashboardHome() {
             {/* Left Column - Financial Overview & Portfolio */}
             <motion.div className="lg:col-span-8 space-y-8" variants={itemVariants}>
               
-              {/* Financial Health Overview */}
-              {financialProfileInsights.hasProfile ? (
-                <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl border-t-purple-500/80 dark:border-t-purple-400/80"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2),transparent_50%)]"></div>
-                  <div className="relative p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center">
-                        <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-indigo-600 dark:to-indigo-500 text-white shadow-xl">
-                          <FontAwesomeIcon icon={faHeartbeat} className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Health</h3>
-                          <p className="text-gray-600 dark:text-gray-400">Your complete financial snapshot</p>
-                        </div>
+              {/* Financial Profile Widget */}
+              <motion.div
+                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl border-t-purple-500/80 dark:border-t-purple-400/80"
+                variants={cardHoverVariants}
+                initial="rest"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2),transparent_50%)]"></div>
+                <div className="relative p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center">
+                      <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-indigo-600 dark:to-indigo-500 text-white shadow-xl">
+                        <FontAwesomeIcon icon={faUser} className="h-6 w-6" />
                       </div>
-                      {portfolioInsights.hasFinancialHealth && (
-                        <div className="text-right">
-                          <div className="text-3xl font-bold text-green-600">
-                            {portfolioInsights.financialScore}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">{portfolioInsights.financialStatus}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
-                        <FontAwesomeIcon icon={faDollarSign} className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                          ${financialProfileInsights.monthlyIncome?.toLocaleString() || 0}
-                        </div>
-                        <div className="text-sm text-blue-700 dark:text-blue-300">Monthly Income</div>
-                      </div>
-
-                      <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
-                        <FontAwesomeIcon icon={faPiggyBank} className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                          ${financialProfileInsights.monthlySavings?.toLocaleString() || 0}
-                        </div>
-                        <div className="text-sm text-green-700 dark:text-green-300">Monthly Savings</div>
-                      </div>
-
-                      <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
-                        <FontAwesomeIcon icon={faChartBar} className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                          ${financialProfileInsights.totalAssets?.toLocaleString() || 0}
-                        </div>
-                        <div className="text-sm text-purple-700 dark:text-purple-300">Total Assets</div>
-                      </div>
-
-                      <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-yellow-50 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                          {financialProfileInsights.yearsToRetirement || 0}
-                        </div>
-                        <div className="text-sm text-orange-700 dark:text-orange-300">Years to Retire</div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Profile</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          {financialProfileInsights.hasProfile 
+                            ? `${financialProfileInsights.completionPercentage}% complete` 
+                            : "Complete your profile for personalized AI recommendations"
+                          }
+                        </p>
                       </div>
                     </div>
-
-                    {financialProfileInsights.topPriorities.length > 0 && (
-                      <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl">
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Top Financial Priorities</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {financialProfileInsights.topPriorities.map((priority, index) => (
-                            <span 
-                              key={index}
-                              className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm rounded-full"
-                            >
-                              {priority}
-                            </span>
-                          ))}
+                    {financialProfileInsights.hasProfile && (
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                          {financialProfileInsights.completionPercentage}%
                         </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Complete</div>
                       </div>
                     )}
+                  </div>
 
-                    <div className="mt-6 flex items-center justify-between">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Risk Profile: <span className="font-semibold">{financialProfileInsights.riskProfile}</span>
+                  {financialProfileInsights.hasProfile ? (
+                    <>
+                      {/* Completion Progress Bar */}
+                      <div className="mb-6">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${financialProfileInsights.completionPercentage}%` }}
+                          ></div>
+                        </div>
                       </div>
+
+                      {/* Key Metrics Grid */}
+                      {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                          {financialProfileInsights.keyMetrics.monthlyIncome && (
+                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
+                              <FontAwesomeIcon icon={faDollarSign} className="h-4 w-4 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
+                              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-blue-700 dark:text-blue-300">Monthly Income</div>
+                            </div>
+                          )}
+
+                          {financialProfileInsights.keyMetrics.monthlySavings && (
+                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
+                              <FontAwesomeIcon icon={faPiggyBank} className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                                ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-green-700 dark:text-green-300">Monthly Savings</div>
+                            </div>
+                          )}
+
+                          {financialProfileInsights.keyMetrics.emergencyFund && (
+                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
+                              <FontAwesomeIcon icon={faShieldAlt} className="h-4 w-4 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
+                              <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-purple-700 dark:text-purple-300">Emergency Fund</div>
+                            </div>
+                          )}
+
+                          {financialProfileInsights.keyMetrics.yearsToRetirement && (
+                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-yellow-50 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700">
+                              <FontAwesomeIcon icon={faCalendarAlt} className="h-4 w-4 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+                              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                {financialProfileInsights.keyMetrics.yearsToRetirement}
+                              </div>
+                              <div className="text-xs text-orange-700 dark:text-orange-300">Years to Retire</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Profile Status */}
+                      <div className="space-y-4">
+                        {/* Filled Fields */}
+                        {financialProfileInsights.filledFields.length > 0 && (
+                          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl">
+                            <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2 flex items-center">
+                              <FontAwesomeIcon icon={faCheckCircle} className="mr-2 h-4 w-4" />
+                              Profile Information ({financialProfileInsights.filledFields.length} fields)
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {financialProfileInsights.filledFields.map((field) => (
+                                <span key={field.key} className="px-2 py-1 bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300 text-xs rounded-full">
+                                  {field.label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Missing Fields */}
+                        {financialProfileInsights.missingFields.length > 0 && (
+                          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
+                            <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center">
+                              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 h-4 w-4" />
+                              Missing Information ({financialProfileInsights.missingFields.length} fields)
+                            </h4>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {financialProfileInsights.missingFields.map((field) => (
+                                <span key={field.key} className="px-2 py-1 bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 text-xs rounded-full">
+                                  {field.label}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              Complete these fields to help our AI provide better personalized recommendations
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {financialProfileInsights.completionPercentage < 100 
+                            ? "Complete your profile for better AI recommendations" 
+                            : "Profile complete! Our AI can provide personalized advice"
+                          }
+                        </div>
+                        <Link
+                          to="/dashboard/user-settings/profile"
+                          className="flex items-center text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40"
+                        >
+                          <FontAwesomeIcon icon={faEdit} className="mr-2 h-4 w-4" />
+                          <span className="text-sm font-semibold">Update Profile</span>
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    /* No Profile State */
+                    <div className="text-center">
+                      <div className="mb-6 mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center shadow-lg">
+                        <FontAwesomeIcon icon={faUser} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Create Your Financial Profile</h4>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">Help our AI understand your financial situation to provide personalized recommendations tailored to your needs</p>
                       <Link
-                        to="/dashboard/portfolio"
-                        className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                        to="/dashboard/user-settings/profile"
+                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
-                        <span className="text-sm font-semibold mr-2">View Details</span>
-                        <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
+                        Create Profile
                       </Link>
                     </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-400/20 border-t-4 border-t-pink-500/80 dark:border-t-pink-400/80"
-                  variants={cardHoverVariants}
-                  initial="rest"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2),transparent_50%)]"></div>
-                  <div className="relative p-8 text-center">
-                    <div className="mb-6 mx-auto w-20 h-20 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center shadow-lg">
-                      <FontAwesomeIcon icon={faUser} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Complete Your Financial Profile</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">Get personalized insights by completing your financial health assessment</p>
-                    <Link
-                      to="/onboarding"
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
-                      Start Assessment
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
+                  )}
+                </div>
+              </motion.div>
 
               {/* Learning Progress Section */}
               <motion.div

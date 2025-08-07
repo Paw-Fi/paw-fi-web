@@ -3,9 +3,9 @@ import { Tooltip } from 'react-tooltip';
 import { AI_ID, useAIChat } from '@/contexts/ai-chat-context';
 import { OptimizedImage } from '@/components/seo/optimized-image';
 import logo from '@/assets/images/icon.svg';
-import { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb, faBullseye, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faLightbulb, faBullseye, faChartLine, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 interface ChatAgent {
   id: string;
@@ -31,6 +31,11 @@ export interface RightSidebarRef {
 
 export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ className = '', isGuideHidden = false, showGuide }, ref) => {
   const { openChat } = useAIChat();
+  const [openTooltips, setOpenTooltips] = useState<Record<string, boolean>>({});
+
+  const hideGuidance = (tooltipId: string) => {
+    setOpenTooltips(prev => ({ ...prev, [tooltipId]: false }));
+  };
   
   // Create refs for each tooltip
   const tooltipRefs = useRef<{ [key: string]: any }>({});
@@ -38,8 +43,10 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     showTooltip: (agentId: AI_ID, message: string, place: 'left' | 'right' | 'top' | 'bottom' = 'left') => {
-      const elementId = `ai-${agentId}`; // Maps to the actual agent.id values
-      const tooltipRef = tooltipRefs.current[`chat-tooltip-${elementId}`];
+      const elementId = `ai-${agentId}`;
+      const tooltipId = `chat-tooltip-${elementId}`;
+      setOpenTooltips(prev => ({ ...prev, [tooltipId]: true }));
+      const tooltipRef = tooltipRefs.current[tooltipId];
       if (tooltipRef) {
         tooltipRef.open({
           anchorSelect: `#chat-agent-${elementId}`,
@@ -49,18 +56,12 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
       }
     },
     hideTooltip: (agentId: AI_ID) => {
-      const elementId = `ai-${agentId}`; // Maps to the actual agent.id values
-      const tooltipRef = tooltipRefs.current[`chat-tooltip-${elementId}`];
-      if (tooltipRef) {
-        tooltipRef.close();
-      }
+      const elementId = `ai-${agentId}`;
+      const tooltipId = `chat-tooltip-${elementId}`;
+      hideGuidance(tooltipId);
     },
     hideAllTooltips: () => {
-      Object.values(tooltipRefs.current).forEach(tooltipRef => {
-        if (tooltipRef) {
-          tooltipRef.close();
-        }
-      });
+      setOpenTooltips({});
     }
   }));
 
@@ -104,7 +105,9 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
         <div className="h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
           <div className="flex flex-col items-center py-6 space-y-4">
           
-            {chatAgents.map((agent, index) => (
+            {chatAgents.map((agent, index) => {
+              const tooltipId = `chat-tooltip-${agent.id}`;
+              return (
               <motion.div
                 key={agent.id}
                 className="relative"
@@ -118,9 +121,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   onClick={agent.onClick}
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  data-tooltip-id={`chat-tooltip-${agent.id}`}
-                  data-tooltip-content={agent.description}
-                  data-tooltip-place="left"
+                  data-tooltip-id={tooltipId}
                 >
                   <div className="relative flex items-center justify-center">
                     {agent.icon ? (
@@ -142,11 +143,12 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                 <Tooltip
                   ref={(el) => {
                     if (el) {
-                      tooltipRefs.current[`chat-tooltip-${agent.id}`] = el;
+                      tooltipRefs.current[tooltipId] = el;
                     }
                   }}
-                  id={`chat-tooltip-${agent.id}`}
-                  imperativeModeOnly={false}
+                  id={tooltipId}
+                  isOpen={openTooltips[tooltipId]}
+                  clickable={true}
                   style={{
                     backgroundColor: 'rgb(17 24 39)',
                     color: 'rgb(243 244 246)',
@@ -159,18 +161,21 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   }}
                   place="left"
                   offset={8}
-                >
-                  <div>
-                    <div className="font-semibold text-white mb-1">
-                      {agent.label}
+                  render={({ content }) => (
+                    <div className="flex items-start">
+                        <div>
+                            <div className="font-semibold text-white mb-1">{agent.label}</div>
+                            <div className="text-gray-300 text-xs">{content || agent.description}</div>
+                        </div>
+                        <button onClick={() => hideGuidance(tooltipId)} className="ml-2 p-1 text-gray-400 hover:text-white">
+                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                        </button>
                     </div>
-                    <div className="text-gray-300 text-xs">
-                      {agent.description}
-                    </div>
-                  </div>
-                </Tooltip>
+                  )}
+                />
               </motion.div>
-            ))}
+            )})
+            }
               {/* Show Guide Button - Only visible when guide is hidden */}
               {isGuideHidden && showGuide && (
               <motion.button

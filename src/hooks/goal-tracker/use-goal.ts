@@ -199,7 +199,7 @@ export function useGoal(goalId: string, userId?: string) {
       // Here you might want to show a toast notification to the user
     },
     onSettled: () => {
-      // Always refetch after error or success
+      // Always refetch after error or success to ensure data consistency
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.detail(goalId) });
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goalQueryKeys.metrics(userId || '') });

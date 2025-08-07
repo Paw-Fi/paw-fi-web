@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { goalsQuestionTemplate, Question } from '@/types/financial-quiz-constants';
 import { getQuestionnaireTemplate } from "@/data/questionnaire-templates";
-import type { QuestionnaireTemplate, GoalType } from "@/data/questionnaire-templates";
+
+export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom' | 'passive_income';
 
 // Query key factory for questionnaire templates
 export const questionnaireQueryKeys = {
@@ -9,22 +11,14 @@ export const questionnaireQueryKeys = {
 };
 
 // Fetch questionnaire template for a goal type (now from local data)
-async function fetchQuestionnaireTemplate(goalType: GoalType): Promise<QuestionnaireTemplate> {
+async function fetchQuestionnaireTemplate(goalType: GoalType) {
   if (!goalType) {
     throw new Error('Goal type is required');
   }
-
   const template = getQuestionnaireTemplate(goalType);
-  
   if (!template) {
-    throw new Error(`No questionnaire template found for goal type: ${goalType}`);
+    throw new Error('No active questionnaire template found');
   }
-
-  if (!template.is_active) {
-    throw new Error(`Template for goal type ${goalType} is not active`);
-  }
-
-  // Return the template - no parsing needed since it's already a proper object
   return template;
 }
 

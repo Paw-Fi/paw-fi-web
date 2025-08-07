@@ -269,6 +269,7 @@ class DashboardGuidanceMonitor {
   private routeParams: Record<string, string> = {};
   private userState: UserGuidanceState;
   private onShowTooltip?: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void;
+  private onHideTooltip?: (agentId: AI_ID) => void;
   private pageStartTime: number = Date.now();
   private checkInterval: NodeJS.Timeout | null = null;
 
@@ -284,9 +285,13 @@ class DashboardGuidanceMonitor {
     return DashboardGuidanceMonitor.instance;
   }
 
-  // Initialize the monitor with callback for showing tooltips
-  initialize(onShowTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void) {
-    this.onShowTooltip = onShowTooltip;
+  // Initialize the monitor with callbacks
+  initialize(callbacks: {
+    onShowTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void;
+    onHideTooltip: (agentId: AI_ID) => void;
+  }) {
+    this.onShowTooltip = callbacks.onShowTooltip;
+    this.onHideTooltip = callbacks.onHideTooltip;
   }
 
   // Track route changes
@@ -608,9 +613,10 @@ class DashboardGuidanceMonitor {
   }
 
   // Public methods for manual control
-  hideAllTooltips() {
-    // This would call the hide function if we have access to it
-    console.log('Hiding all tooltips');
+  hideGuidance(agentId: AI_ID) {
+    if (this.onHideTooltip) {
+      this.onHideTooltip(agentId);
+    }
   }
 
   resetGuidanceState() {

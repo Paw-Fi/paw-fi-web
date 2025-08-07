@@ -287,16 +287,22 @@ BEGIN
       SELECT COALESCE(SUM(CASE 
         WHEN update_type = 'amount_added' THEN amount_change 
         WHEN update_type = 'manual_adjustment' THEN new_amount - COALESCE(previous_amount, 0)
+        WHEN update_type = 'goal_progress_updated' THEN amount_change 
         ELSE 0 
       END), 0)
       FROM public.goal_progress_updates 
       WHERE goal_id = NEW.goal_id
     ),
+    updated_at = NOW()
+  WHERE id = NEW.goal_id;
+  
+  -- Update progress_percentage after current_amount is updated
+  UPDATE public.financial_goals 
+  SET 
     progress_percentage = LEAST(
       (current_amount / NULLIF(target_amount, 0)) * 100, 
       100
-    ),
-    updated_at = NOW()
+    )
   WHERE id = NEW.goal_id;
   
   RETURN NEW;

@@ -107,7 +107,7 @@ export const GOAL_TYPE_CONFIGS: Record<string, GoalTypeConfig> = {
   },
   passive_income: {
     id: 'passive_income',
-    name: 'Passive Income Generation',
+    name: 'Passive Income',
     description: 'Build sustainable income streams that generate money with minimal ongoing effort through strategic investments and assets.',
     color: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
     difficulty: 'intermediate',

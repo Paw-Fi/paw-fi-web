@@ -45,11 +45,11 @@ function RouteComponent() {
   const { q } = Route.useSearch();
   const {profile}=useFinancialHealthProfile(user?.id)
 
-  useEffect(() => {
-    if (user&&profile) {
-      navigate({ to: '/dashboard' });
-    }
-  }, [user, navigate,profile]);
+  // useEffect(() => {
+  //   if (user&&profile) {
+  //     navigate({ to: '/dashboard' });
+  //   }
+  // }, [user, navigate,profile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "@/components/ui/modal";
+import { ActivityActions } from "@/utils/reward-actions-clone";
 
 // Enhanced Update Progress Modal
 export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }: {
@@ -30,7 +31,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
       // Call the progress update function - it handles optimistic updates internally
       await onProgressUpdate({
         goalId: goal.id,
-        updateType: 'amount_added' as const,
+        updateType: ActivityActions.GOAL_PROGRESS_UPDATED,
         amountChange: amountValue,
         userNote: note || undefined
       });

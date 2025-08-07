@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/lib/supabase';
 import { AuthContextType } from "@/contexts/auth-context";
+import { ComprehensiveFinancialProfile } from "@/types/financial-quiz-constants";
 
 // Define types for financial health profile data
 export interface FinancialHealthProfile {
@@ -107,44 +108,98 @@ export function useFinancialHealthProfile(userId: string | undefined) {
 }
 
 // Helper function to format profile data for AI context
-export function formatProfileForAI(user:AuthContextType['user'],profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null): string {
-  if (!profile) return '';
+export function formatProfileForAI(user: AuthContextType['user'], profile?: Pick<FinancialHealthProfile, 'profile_description' | 'quiz_answers'> | null): string {
+  if (!profile || !profile.quiz_answers) return '';
+  
+  const quizAnswers = profile.quiz_answers as ComprehensiveFinancialProfile;
+  
+  // Calculate total monthly expenses
+  const totalExpenses = (quizAnswers.housing_cost || 0) + 
+                       (quizAnswers.food_expenses || 0) + 
+                       (quizAnswers.transportation_expenses || 0) + 
+                       (quizAnswers.healthcare_expenses || 0) + 
+                       (quizAnswers.insurance_expenses || 0) + 
+                       (quizAnswers.entertainment_expenses || 0) + 
+                       (quizAnswers.other_monthly_expenses || 0);
+  
+  // Calculate monthly savings
+  const monthlySavings = (quizAnswers.net_monthly_income || 0) - totalExpenses;
+  
+  // Calculate total assets
+  const totalAssets = (quizAnswers.checking_account || 0) + 
+                     (quizAnswers.savings_account || 0) + 
+                     (quizAnswers.investment_accounts || 0) + 
+                     (quizAnswers.retirement_accounts || 0) + 
+                     (quizAnswers.real_estate_value || 0) + 
+                     (quizAnswers.other_assets || 0);
+  
+  // Calculate total debt
+  const totalDebt = (quizAnswers.credit_card_debt || 0) + 
+                   (quizAnswers.student_loan_debt || 0) + 
+                   (quizAnswers.mortgage_balance || 0) + 
+                   (quizAnswers.auto_loan_balance || 0) + 
+                   (quizAnswers.other_debt || 0);
+  
+  // Calculate years to retirement
+  const yearsToRetirement = quizAnswers.retirement_age && quizAnswers.current_age ? 
+                           Math.max(0, quizAnswers.retirement_age - quizAnswers.current_age) : null;
   
   return `
 FINANCIAL CASE FILE FOR USER:
 
 ## User Profile Summary:
-${user?`Name: ${user?.user_metadata?.full_name}`:``}
+${user ? `Name: ${user?.user_metadata?.full_name}` : ''}
 ${profile.profile_description}
 
-## Key Financial Data:
-- Age: ${profile.profile_data.demographics.age}
-- Dependents: ${profile.profile_data.demographics.dependents}
-- Housing: ${profile.profile_data.demographics.housing}
-- Monthly Income: $${profile.profile_data.demographics.income.net.toLocaleString()}
-- Monthly Expenses: $${profile.profile_data.demographics.expenses.toLocaleString()}
-- Monthly Savings: $${profile.profile_data.calculated_metrics.monthly_savings.toLocaleString()}
+## Personal Information:
+- Age: ${quizAnswers.current_age || 'Not provided'}
+- Dependents: ${quizAnswers.dependents || 0}
+- Marital Status: ${quizAnswers.marital_status || 'Not provided'}
 
-## Financial Situation:
-- Cash Savings: $${profile.profile_data.financial_situation.cash_savings.toLocaleString()}
-- Retirement Savings: $${profile.profile_data.financial_situation.pension_value.toLocaleString()}
-- Total Assets: $${profile.profile_data.calculated_metrics.total_assets.toLocaleString()}
-- Emergency Fund: $${profile.profile_data.financial_situation.emergency_fund.toLocaleString()}
-- Debt Amount: $${profile.profile_data.financial_situation.debt_amount.toLocaleString()}
+## Income & Cash Flow:
+- Gross Monthly Income: $${(quizAnswers.gross_monthly_income || 0).toLocaleString()}
+- Net Monthly Income: $${(quizAnswers.net_monthly_income || 0).toLocaleString()}
+- Income Stability: ${quizAnswers.income_stability || 'Not provided'}
+- Monthly Expenses: $${totalExpenses.toLocaleString()}
+- Monthly Savings: $${monthlySavings.toLocaleString()}
+- Savings Rate: ${quizAnswers.savings_rate || 0}%
 
-## Goals & Timeline:
-- Target Retirement Age: ${profile.profile_data.goals_and_timeline.retirement_age}
-- Years to Retirement: ${profile.profile_data.calculated_metrics.years_to_retirement}
-- Target Retirement Fund: $${profile.profile_data.goals_and_timeline.target_retirement.toLocaleString()}
-- Financial Priorities: ${profile.profile_data.goals_and_timeline.financial_priorities.join(', ')}
-- Investment Goals: ${profile.profile_data.goals_and_timeline.investment_goals.join(', ')}
+## Assets & Investments:
+- Emergency Fund: $${(quizAnswers.emergency_fund || 0).toLocaleString()}
+- Checking Account: $${(quizAnswers.checking_account || 0).toLocaleString()}
+- Savings Account: $${(quizAnswers.savings_account || 0).toLocaleString()}
+- Investment Accounts: $${(quizAnswers.investment_accounts || 0).toLocaleString()}
+- Retirement Accounts: $${(quizAnswers.retirement_accounts || 0).toLocaleString()}
+- Real Estate Value: $${(quizAnswers.real_estate_value || 0).toLocaleString()}
+- Total Assets: $${totalAssets.toLocaleString()}
 
-## Risk Profile:
-- Investment Knowledge: ${profile.profile_data.risk_profile.investment_knowledge}
-- Risk Preference: ${profile.profile_data.risk_profile.high_risk_preference === 'yes' ? 'High' : 'Low'}
-- Market Downturn Response: ${profile.profile_data.risk_profile.market_downturn}
-- Liquidity Importance: ${profile.profile_data.risk_profile.liquidity_importance}
+## Debts & Liabilities:
+- Credit Card Debt: $${(quizAnswers.credit_card_debt || 0).toLocaleString()}
+- Student Loan Debt: $${(quizAnswers.student_loan_debt || 0).toLocaleString()}
+- Mortgage Balance: $${(quizAnswers.mortgage_balance || 0).toLocaleString()}
+- Auto Loan Balance: $${(quizAnswers.auto_loan_balance || 0).toLocaleString()}
+- Other Debt: $${(quizAnswers.other_debt || 0).toLocaleString()}
+- Total Debt: $${totalDebt.toLocaleString()}
 
-Use this information to provide personalized financial advice and create relevant lessons for this user.
+## Financial Goals:
+- Target Retirement Age: ${quizAnswers.retirement_age || 'Not set'}
+${yearsToRetirement !== null ? `- Years to Retirement: ${yearsToRetirement}` : ''}
+- Desired Retirement Income: $${(quizAnswers.desired_retirement_income || 0).toLocaleString()}/month
+- Short-term Goals: ${quizAnswers.short_term_goals?.join(', ') || 'None set'}
+- Medium-term Goals: ${quizAnswers.medium_term_goals?.join(', ') || 'None set'}
+- Long-term Goals: ${quizAnswers.long_term_goals?.join(', ') || 'None set'}
+
+## Risk Profile & Investment:
+- Risk Tolerance: ${quizAnswers.risk_tolerance || 'Not assessed'}
+- Investment Experience: ${quizAnswers.investment_experience || 'Not provided'}
+- Investment Timeline: ${quizAnswers.investment_timeline || 'Not specified'}
+- Investment Priorities: ${quizAnswers.investment_priorities?.join(', ') || 'Not set'}
+
+## Financial Behavior:
+- Spending Tracking: ${quizAnswers.spending_tracking || 'Not specified'}
+- Budget Adherence: ${quizAnswers.budget_adherence || 'Not specified'}
+- Financial Stress Level: ${quizAnswers.financial_stress_level || 'Not provided'}/10
+
+Use this comprehensive financial information to provide personalized financial advice and create relevant lessons for this user.
 `;
 }

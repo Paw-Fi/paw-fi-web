@@ -25,55 +25,135 @@ const supabaseClient = createClient(
  * @returns A structured object for the AI prompt.
  */
 function buildProfileData(answers: Record<string, any>) {
-  const netIncome = answers['net-monthly-income'] || 0;
-  const expenses = answers['total-monthly-expenses'] || 0;
-  const age = answers['current-age'] || 0;
-  const retirementAge = answers['retirement-age'] || 0;
-  const cash = answers['cash-savings'] || 0;
-  const pension = answers['pension-value'] || 0;
-  const investments = answers['other-investments'] || 0;
+  // Use snake_case field names to match frontend quiz structure
+  const netIncome = answers['net_monthly_income'] || 0;
+  const grossIncome = answers['gross_monthly_income'] || 0;
+  const age = answers['current_age'] || 0;
+  const retirementAge = answers['retirement_age'] || 0;
+  const dependents = answers['dependents'] || 0;
+  const maritalStatus = answers['marital_status'] || 'single';
+  
+  // Calculate total monthly expenses from individual expense categories
+  const housingCost = answers['housing_cost'] || 0;
+  const foodExpenses = answers['food_expenses'] || 0;
+  const transportationExpenses = answers['transportation_expenses'] || 0;
+  const healthcareExpenses = answers['healthcare_expenses'] || 0;
+  const insuranceExpenses = answers['insurance_expenses'] || 0;
+  const entertainmentExpenses = answers['entertainment_expenses'] || 0;
+  const otherExpenses = answers['other_monthly_expenses'] || 0;
+  const totalExpenses = housingCost + foodExpenses + transportationExpenses + 
+                       healthcareExpenses + insuranceExpenses + entertainmentExpenses + otherExpenses;
+  
+  // Assets and savings
+  const emergencyFund = answers['emergency_fund'] || 0;
+  const checkingAccount = answers['checking_account'] || 0;
+  const savingsAccount = answers['savings_account'] || 0;
+  const investmentAccounts = answers['investment_accounts'] || 0;
+  const retirementAccounts = answers['retirement_accounts'] || 0;
+  const realEstateValue = answers['real_estate_value'] || 0;
+  const otherAssets = answers['other_assets'] || 0;
+  
+  // Debts
+  const creditCardDebt = answers['credit_card_debt'] || 0;
+  const studentLoanDebt = answers['student_loan_debt'] || 0;
+  const mortgageBalance = answers['mortgage_balance'] || 0;
+  const autoLoanBalance = answers['auto_loan_balance'] || 0;
+  const otherDebt = answers['other_debt'] || 0;
+  const totalDebt = creditCardDebt + studentLoanDebt + mortgageBalance + autoLoanBalance + otherDebt;
+  
+  // Goals
+  const shortTermGoals = answers['short_term_goals'] || [];
+  const mediumTermGoals = answers['medium_term_goals'] || [];
+  const longTermGoals = answers['long_term_goals'] || [];
+  const desiredRetirementIncome = answers['desired_retirement_income'] || 0;
+  
+  // Risk and investment profile
+  const riskTolerance = answers['risk_tolerance'] || 'moderate';
+  const investmentExperience = answers['investment_experience'] || 'beginner';
+  const investmentTimeline = answers['investment_timeline'] || 'long';
+  const investmentPriorities = answers['investment_priorities'] || [];
+  
+  // Financial behavior
+  const savingsRate = answers['savings_rate'] || 0;
+  const spendingTracking = answers['spending_tracking'] || 'occasionally';
+  const budgetAdherence = answers['budget_adherence'] || 'sometimes';
+  const financialStressLevel = answers['financial_stress_level'] || 5;
 
   return {
     demographics: {
       age: age || 'Not specified',
-      dependents: answers['number-of-dependents'] ?? 'Not specified',
-      housing: answers['housing-situation'] || 'Not specified',
+      dependents: dependents,
+      marital_status: maritalStatus,
+      housing_type: answers['housing_type'] || 'Not specified',
       income: {
-        gross: answers['gross-monthly-income'] || 0,
-        net: netIncome,
+        gross_monthly: grossIncome,
+        net_monthly: netIncome,
+        stability: answers['income_stability'] || 'stable',
+        additional_sources: answers['additional_income_sources'] || [],
+        annual_bonus: answers['annual_bonus'] || 0,
       },
-      expenses: expenses,
+      expenses: {
+        total_monthly: totalExpenses,
+        housing: housingCost,
+        food: foodExpenses,
+        transportation: transportationExpenses,
+        healthcare: healthcareExpenses,
+        insurance: insuranceExpenses,
+        entertainment: entertainmentExpenses,
+        other: otherExpenses,
+      },
     },
     financial_situation: {
-      cash_savings: cash,
-      pension_value: pension,
-      other_investments: investments,
-      monthly_pension_contribution: answers['monthly-pension-contribution'] || 0,
-      emergency_fund: answers['emergency-fund'] || 0,
-      debt_amount: answers['total-debt-amount'] || 0,
-      debt_interest: answers['average-debt-interest'] || 'none',
-      insurance_coverage: answers['insurance-coverage'] || [],
+      assets: {
+        emergency_fund: emergencyFund,
+        checking_account: checkingAccount,
+        savings_account: savingsAccount,
+        investment_accounts: investmentAccounts,
+        retirement_accounts: retirementAccounts,
+        real_estate_value: realEstateValue,
+        other_assets: otherAssets,
+        total_assets: emergencyFund + checkingAccount + savingsAccount + investmentAccounts + retirementAccounts + realEstateValue + otherAssets,
+      },
+      debts: {
+        credit_card_debt: creditCardDebt,
+        credit_card_interest_rate: answers['credit_card_interest_rate'] || 0,
+        student_loan_debt: studentLoanDebt,
+        student_loan_interest_rate: answers['student_loan_interest_rate'] || 0,
+        mortgage_balance: mortgageBalance,
+        mortgage_interest_rate: answers['mortgage_interest_rate'] || 0,
+        auto_loan_balance: autoLoanBalance,
+        auto_loan_interest_rate: answers['auto_loan_interest_rate'] || 0,
+        other_debt: otherDebt,
+        other_debt_interest_rate: answers['other_debt_interest_rate'] || 0,
+        total_debt: totalDebt,
+      },
     },
     goals_and_timeline: {
       retirement_age: retirementAge || 'Not specified',
-      target_retirement: answers['target-retirement'] || 0,
-      financial_priorities: answers['financial-priorities'] || [],
-      investment_goals: answers['investment-goals'] || [],
-      time_horizon: answers['time-horizon'] || 'Not specified',
-      expect_lump_sum: answers['expect-lump-sum'] || 'no',
+      desired_retirement_income: desiredRetirementIncome,
+      short_term_goals: shortTermGoals,
+      medium_term_goals: mediumTermGoals,
+      long_term_goals: longTermGoals,
+      major_purchase_timeline: answers['major_purchase_timeline'] || 'Not specified',
     },
     risk_profile: {
-      predictable_income: answers['predictable-income'] || 'Not specified',
-      high_risk_preference: answers['high-risk-preference'] || 'Not specified',
-      risky_investments: answers['risky-investments'] || 'Not specified',
-      market_downturn: answers['market-downturn'] || 'Not specified',
-      investment_knowledge: answers['investment-knowledge'] || 'beginner',
-      liquidity_importance: answers['liquidity-importance'] || 'Not specified',
+      risk_tolerance: riskTolerance,
+      investment_experience: investmentExperience,
+      investment_timeline: investmentTimeline,
+      investment_priorities: investmentPriorities,
+    },
+    financial_behavior: {
+      savings_rate: savingsRate,
+      spending_tracking: spendingTracking,
+      budget_adherence: budgetAdherence,
+      financial_stress_level: financialStressLevel,
     },
     calculated_metrics: {
-      monthly_savings: netIncome - expenses,
+      monthly_savings: netIncome - totalExpenses,
       years_to_retirement: retirementAge > age ? retirementAge - age : 0,
-      total_assets: cash + pension + investments,
+      net_worth: (emergencyFund + checkingAccount + savingsAccount + investmentAccounts + retirementAccounts + realEstateValue + otherAssets) - totalDebt,
+      debt_to_income_ratio: grossIncome > 0 ? (totalDebt / (grossIncome * 12)) : 0,
+      emergency_fund_months: totalExpenses > 0 ? emergencyFund / totalExpenses : 0,
     },
   };
 }

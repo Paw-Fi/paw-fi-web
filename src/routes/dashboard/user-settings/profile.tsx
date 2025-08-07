@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-toastify';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
-import { useFinancialHealthProfile, type FinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { additionalIncomeOptions, budgetAdherenceOptions, ComprehensiveFinancialProfile, defaultProfile, housingTypeOptions, incomeStabilityOptions, investmentExperienceOptions, investmentPriorityOptions, longTermGoalOptions, maritalStatusOptions, mediumTermGoalOptions, riskToleranceOptions, shortTermGoalOptions, spendingTrackingOptions } from '@/types/financial-quiz-constants';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faArrowLeft, 
@@ -47,218 +49,9 @@ export const Route = createFileRoute('/dashboard/user-settings/profile')({
   },
 });
 
-// Enhanced Financial Profile Data Interface
-interface ComprehensiveFinancialProfile {
-  // Personal Information
-  current_age: number;
-  dependents: number;
-  marital_status: 'single' | 'married' | 'divorced' | 'widowed';
-  
-  // Income Details
-  gross_monthly_income: number;
-  net_monthly_income: number;
-  income_stability: 'very_stable' | 'stable' | 'somewhat_unstable' | 'very_unstable';
-  additional_income_sources: string[];
-  annual_bonus: number;
-  
-  // Detailed Expenses
-  housing_cost: number;
-  housing_type: 'rent' | 'mortgage' | 'owned_outright' | 'living_with_family';
-  food_expenses: number;
-  transportation_expenses: number;
-  healthcare_expenses: number;
-  insurance_expenses: number;
-  entertainment_expenses: number;
-  other_monthly_expenses: number;
-  
-  // Assets & Savings
-  emergency_fund: number;
-  checking_account: number;
-  savings_account: number;
-  investment_accounts: number;
-  retirement_accounts: number;
-  real_estate_value: number;
-  other_assets: number;
-  
-  // Debts & Liabilities
-  credit_card_debt: number;
-  credit_card_interest_rate: number;
-  student_loan_debt: number;
-  student_loan_interest_rate: number;
-  mortgage_balance: number;
-  mortgage_interest_rate: number;
-  auto_loan_balance: number;
-  auto_loan_interest_rate: number;
-  other_debt: number;
-  other_debt_interest_rate: number;
-  
-  // Financial Goals
-  retirement_age: number;
-  desired_retirement_income: number;
-  short_term_goals: string[];
-  medium_term_goals: string[];
-  long_term_goals: string[];
-  major_purchase_timeline: string;
-  
-  // Risk Profile & Investment
-  risk_tolerance: 'conservative' | 'moderate' | 'aggressive' | 'very_aggressive';
-  investment_experience: 'none' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  investment_timeline: 'short' | 'medium' | 'long';
-  investment_priorities: string[];
-  
-  // Financial Behavior
-  savings_rate: number;
-  spending_tracking: 'never' | 'occasionally' | 'monthly' | 'weekly' | 'daily';
-  budget_adherence: 'never' | 'sometimes' | 'usually' | 'always';
-  financial_stress_level: number; // 1-10 scale
-}
-
-const defaultProfile: ComprehensiveFinancialProfile = {
-  current_age: 0,
-  dependents: 0,
-  marital_status: 'single',
-  gross_monthly_income: 0,
-  net_monthly_income: 0,
-  income_stability: 'stable',
-  additional_income_sources: [],
-  annual_bonus: 0,
-  housing_cost: 0,
-  housing_type: 'rent',
-  food_expenses: 0,
-  transportation_expenses: 0,
-  healthcare_expenses: 0,
-  insurance_expenses: 0,
-  entertainment_expenses: 0,
-  other_monthly_expenses: 0,
-  emergency_fund: 0,
-  checking_account: 0,
-  savings_account: 0,
-  investment_accounts: 0,
-  retirement_accounts: 0,
-  real_estate_value: 0,
-  other_assets: 0,
-  credit_card_debt: 0,
-  credit_card_interest_rate: 0,
-  student_loan_debt: 0,
-  student_loan_interest_rate: 0,
-  mortgage_balance: 0,
-  mortgage_interest_rate: 0,
-  auto_loan_balance: 0,
-  auto_loan_interest_rate: 0,
-  other_debt: 0,
-  other_debt_interest_rate: 0,
-  retirement_age: 0,
-  desired_retirement_income: 0,
-  short_term_goals: [],
-  medium_term_goals: [],
-  long_term_goals: [],
-  major_purchase_timeline: '',
-  risk_tolerance: 'moderate',
-  investment_experience: 'beginner',
-  investment_timeline: 'long',
-  investment_priorities: [],
-  savings_rate: 0,
-  spending_tracking: 'occasionally',
-  budget_adherence: 'sometimes',
-  financial_stress_level: 5,
-};
-
-// Option constants
-const maritalStatusOptions = [
-  { value: 'single', label: 'Single' },
-  { value: 'married', label: 'Married' },
-  { value: 'divorced', label: 'Divorced' },
-  { value: 'widowed', label: 'Widowed' },
-];
-
-const incomeStabilityOptions = [
-  { value: 'very_stable', label: 'Very Stable (salaried, guaranteed)' },
-  { value: 'stable', label: 'Stable (regular but may fluctuate)' },
-  { value: 'somewhat_unstable', label: 'Somewhat Unstable (commission, gig work)' },
-  { value: 'very_unstable', label: 'Very Unstable (seasonal, irregular)' },
-];
-
-const additionalIncomeOptions = [
-  { value: 'rental_income', label: 'Rental Income' },
-  { value: 'investment_dividends', label: 'Investment Dividends' },
-  { value: 'freelance_work', label: 'Freelance Work' },
-  { value: 'side_business', label: 'Side Business' },
-  { value: 'government_benefits', label: 'Government Benefits' },
-  { value: 'alimony', label: 'Alimony/Child Support' },
-];
-
-const housingTypeOptions = [
-  { value: 'rent', label: 'Renting' },
-  { value: 'mortgage', label: 'Own with Mortgage' },
-  { value: 'owned_outright', label: 'Own Outright' },
-  { value: 'living_with_family', label: 'Living with Family' },
-];
-
-const shortTermGoalOptions = [
-  { value: 'emergency_fund', label: 'Build Emergency Fund' },
-  { value: 'vacation', label: 'Plan a Vacation' },
-  { value: 'car_purchase', label: 'Buy a Car' },
-  { value: 'debt_payoff', label: 'Pay Off Debt' },
-  { value: 'home_down_payment', label: 'Save for Home Down Payment' },
-];
-
-const mediumTermGoalOptions = [
-  { value: 'home_purchase', label: 'Buy a Home' },
-  { value: 'career_change', label: 'Career Change/Education' },
-  { value: 'start_business', label: 'Start a Business' },
-  { value: 'major_renovation', label: 'Major Home Renovation' },
-  { value: 'children_education', label: 'Children\'s Education Fund' },
-];
-
-const longTermGoalOptions = [
-  { value: 'comfortable_retirement', label: 'Comfortable Retirement' },
-  { value: 'early_retirement', label: 'Early Retirement (FIRE)' },
-  { value: 'legacy_wealth', label: 'Build Legacy Wealth' },
-  { value: 'charity_giving', label: 'Major Charitable Giving' },
-  { value: 'multiple_properties', label: 'Own Multiple Properties' },
-];
-
-const riskToleranceOptions = [
-  { value: 'conservative', label: 'Conservative - Prefer stability over returns' },
-  { value: 'moderate', label: 'Moderate - Balanced approach' },
-  { value: 'aggressive', label: 'Aggressive - Higher risk for higher returns' },
-  { value: 'very_aggressive', label: 'Very Aggressive - Maximum growth potential' },
-];
-
-const investmentExperienceOptions = [
-  { value: 'none', label: 'None - Never invested before' },
-  { value: 'beginner', label: 'Beginner - Basic understanding' },
-  { value: 'intermediate', label: 'Intermediate - Some experience' },
-  { value: 'advanced', label: 'Advanced - Comfortable with complex investments' },
-  { value: 'expert', label: 'Expert - Professional knowledge' },
-];
-
-const investmentPriorityOptions = [
-  { value: 'growth', label: 'Long-term Growth' },
-  { value: 'income', label: 'Regular Income/Dividends' },
-  { value: 'stability', label: 'Capital Preservation' },
-  { value: 'tax_efficiency', label: 'Tax Efficiency' },
-  { value: 'liquidity', label: 'Easy Access to Funds' },
-  { value: 'diversification', label: 'Risk Diversification' },
-];
-
-const spendingTrackingOptions = [
-  { value: 'never', label: 'Never track spending' },
-  { value: 'occasionally', label: 'Check occasionally' },
-  { value: 'monthly', label: 'Review monthly' },
-  { value: 'weekly', label: 'Track weekly' },
-  { value: 'daily', label: 'Track daily' },
-];
-
-const budgetAdherenceOptions = [
-  { value: 'never', label: 'Don\'t follow a budget' },
-  { value: 'sometimes', label: 'Try but often overspend' },
-  { value: 'usually', label: 'Usually stick to budget' },
-  { value: 'always', label: 'Strictly follow budget' },
-];
-
 function FinancialProfileSettings() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { profile, isLoading, refetch } = useFinancialHealthProfile(user?.id);
   const [profileData, setProfileData] = useState<ComprehensiveFinancialProfile>(defaultProfile);
   const [isSaving, setIsSaving] = useState(false);
@@ -270,12 +63,74 @@ function FinancialProfileSettings() {
     if (profile?.quiz_answers) {
       // Map existing data to new structure (with backwards compatibility)
       const existingData = profile.quiz_answers as any;
+      
+      // The quiz now uses snake_case field names that match the backend
+      // But we still support old kebab-case for backwards compatibility
       const mappedData: Partial<ComprehensiveFinancialProfile> = {
-        current_age: existingData['current-age'] || 0,
-        gross_monthly_income: existingData['gross-monthly-income'] || 0,
-        net_monthly_income: existingData['net-monthly-income'] || 0,
-        // Add more mappings as needed for backwards compatibility
+        // Personal Information
+        current_age: existingData['current_age'] || existingData['current-age'] || 0,
+        marital_status: existingData['marital_status'] || existingData['marital-status'] || 'single',
+        dependents: existingData['dependents'] || 0,
+        
+        // Income Details
+        gross_monthly_income: existingData['gross_monthly_income'] || existingData['gross-monthly-income'] || 0,
+        net_monthly_income: existingData['net_monthly_income'] || existingData['net-monthly-income'] || 0,
+        income_stability: existingData['income_stability'] || existingData['income-stability'] || 'stable',
+        additional_income_sources: existingData['additional_income_sources'] || existingData['additional-income-sources'] || [],
+        annual_bonus: existingData['annual_bonus'] || existingData['annual-bonus'] || 0,
+        
+        // Expenses
+        housing_cost: existingData['housing_cost'] || existingData['housing-cost'] || 0,
+        housing_type: existingData['housing_type'] || existingData['housing-type'] || 'rent',
+        food_expenses: existingData['food_expenses'] || existingData['food-expenses'] || 0,
+        transportation_expenses: existingData['transportation_expenses'] || existingData['transportation-expenses'] || 0,
+        healthcare_expenses: existingData['healthcare_expenses'] || existingData['healthcare-expenses'] || 0,
+        insurance_expenses: existingData['insurance_expenses'] || existingData['insurance-expenses'] || 0,
+        entertainment_expenses: existingData['entertainment_expenses'] || existingData['entertainment-expenses'] || 0,
+        other_monthly_expenses: existingData['other_monthly_expenses'] || existingData['other-monthly-expenses'] || 0,
+        
+        // Assets & Savings
+        emergency_fund: existingData['emergency_fund'] || existingData['emergency-fund'] || 0,
+        checking_account: existingData['checking_account'] || existingData['checking-account'] || 0,
+        savings_account: existingData['savings_account'] || existingData['savings-account'] || 0,
+        investment_accounts: existingData['investment_accounts'] || existingData['investment-accounts'] || 0,
+        retirement_accounts: existingData['retirement_accounts'] || existingData['retirement-accounts'] || 0,
+        real_estate_value: existingData['real_estate_value'] || existingData['real-estate-value'] || 0,
+        other_assets: existingData['other_assets'] || existingData['other-assets'] || 0,
+        
+        // Debts & Liabilities
+        credit_card_debt: existingData['credit_card_debt'] || existingData['credit-card-debt'] || 0,
+        credit_card_interest_rate: existingData['credit_card_interest_rate'] || existingData['credit-card-interest-rate'] || 0,
+        student_loan_debt: existingData['student_loan_debt'] || existingData['student-loan-debt'] || 0,
+        student_loan_interest_rate: existingData['student_loan_interest_rate'] || existingData['student-loan-interest-rate'] || 0,
+        mortgage_balance: existingData['mortgage_balance'] || existingData['mortgage-balance'] || 0,
+        mortgage_interest_rate: existingData['mortgage_interest_rate'] || existingData['mortgage-interest-rate'] || 0,
+        auto_loan_balance: existingData['auto_loan_balance'] || existingData['auto-loan-balance'] || 0,
+        auto_loan_interest_rate: existingData['auto_loan_interest_rate'] || existingData['auto-loan-interest-rate'] || 0,
+        other_debt: existingData['other_debt'] || existingData['other-debt'] || 0,
+        other_debt_interest_rate: existingData['other_debt_interest_rate'] || existingData['other-debt-interest-rate'] || 0,
+        
+        // Financial Goals
+        retirement_age: existingData['retirement_age'] || existingData['retirement-age'] || 65,
+        desired_retirement_income: existingData['desired_retirement_income'] || existingData['desired-retirement-income'] || 0,
+        short_term_goals: existingData['short_term_goals'] || existingData['short-term-goals'] || [],
+        medium_term_goals: existingData['medium_term_goals'] || existingData['medium-term-goals'] || [],
+        long_term_goals: existingData['long_term_goals'] || existingData['long-term-goals'] || [],
+        major_purchase_timeline: existingData['major_purchase_timeline'] || existingData['major-purchase-timeline'] || '',
+        
+        // Risk Profile & Investment
+        risk_tolerance: existingData['risk_tolerance'] || existingData['risk-tolerance'] || 'moderate',
+        investment_experience: existingData['investment_experience'] || existingData['investment-experience'] || 'beginner',
+        investment_timeline: existingData['investment_timeline'] || existingData['investment-timeline'] || 'long',
+        investment_priorities: existingData['investment_priorities'] || existingData['investment-priorities'] || [],
+        
+        // Financial Behavior
+        savings_rate: existingData['savings_rate'] || existingData['savings-rate'] || 0,
+        spending_tracking: existingData['spending_tracking'] || existingData['spending-tracking'] || 'occasionally',
+        budget_adherence: existingData['budget_adherence'] || existingData['budget-adherence'] || 'sometimes',
+        financial_stress_level: existingData['financial_stress_level'] || existingData['financial-stress-level'] || 5,
       };
+      
       setProfileData(prev => ({ ...prev, ...mappedData }));
     }
   }, [profile]);
@@ -345,6 +200,12 @@ function FinancialProfileSettings() {
       setHasChanges(false);
       setIsEditMode(false);
       toast.success('Financial profile updated successfully!');
+      
+      // Invalidate queries to refresh dashboard and other components
+      queryClient.invalidateQueries({ 
+        queryKey: ['financialHealthProfile', user.id] 
+      });
+      
       await refetch();
     } catch (error) {
       console.error('Error saving financial profile:', error);
@@ -755,40 +616,7 @@ function FinancialProfileSettings() {
 
   // Edit Mode Component (Current form layout but improved)
   const EditMode = () => (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Edit Financial Profile</h2>
-        <div className="flex gap-3">
-          <Button
-            onClick={() => {
-              setIsEditMode(false);
-              setHasChanges(false);
-              // Reset to original data
-              if (profile?.quiz_answers) {
-                const existingData = profile.quiz_answers as any;
-                const mappedData: Partial<ComprehensiveFinancialProfile> = {
-                  current_age: existingData['current-age'] || 0,
-                  gross_monthly_income: existingData['gross-monthly-income'] || 0,
-                  net_monthly_income: existingData['net-monthly-income'] || 0,
-                };
-                setProfileData(prev => ({ ...prev, ...mappedData }));
-              }
-            }}
-            variant="outline"
-          >
-            <FontAwesomeIcon icon={faTimes} className="mr-2" />
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveProfile}
-            disabled={isSaving || !hasChanges}
-            className="bg-primary hover:bg-secondary text-white"
-          >
-            <FontAwesomeIcon icon={faSave} className="mr-2" />
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-8">  
 
       {/* Personal Information */}
       <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
@@ -1622,6 +1450,85 @@ function FinancialProfileSettings() {
                 : "Your comprehensive financial overview"}
             </p>
           </div>
+          {isEditMode&& <div className="flex gap-3">
+          <Button
+            onClick={() => {
+              setIsEditMode(false);
+              setHasChanges(false);
+              // Reset to original data using the same mapping logic
+              if (profile?.quiz_answers) {
+                const existingData = profile.quiz_answers as any;
+                const mappedData: Partial<ComprehensiveFinancialProfile> = {
+                  // Personal Information
+                  current_age: existingData['current_age'] || existingData['current-age'] || 0,
+                  marital_status: existingData['marital_status'] || existingData['marital-status'] || 'single',
+                  dependents: existingData['dependents'] || 0,
+                  
+                  // Income Details
+                  gross_monthly_income: existingData['gross_monthly_income'] || existingData['gross-monthly-income'] || 0,
+                  net_monthly_income: existingData['net_monthly_income'] || existingData['net-monthly-income'] || 0,
+                  income_stability: existingData['income_stability'] || existingData['income-stability'] || 'stable',
+                  additional_income_sources: existingData['additional_income_sources'] || existingData['additional-income-sources'] || [],
+                  annual_bonus: existingData['annual_bonus'] || existingData['annual-bonus'] || 0,
+                  
+                  // All other fields following the same pattern...
+                  housing_cost: existingData['housing_cost'] || existingData['housing-cost'] || 0,
+                  housing_type: existingData['housing_type'] || existingData['housing-type'] || 'rent',
+                  food_expenses: existingData['food_expenses'] || existingData['food-expenses'] || 0,
+                  transportation_expenses: existingData['transportation_expenses'] || existingData['transportation-expenses'] || 0,
+                  healthcare_expenses: existingData['healthcare_expenses'] || existingData['healthcare-expenses'] || 0,
+                  insurance_expenses: existingData['insurance_expenses'] || existingData['insurance-expenses'] || 0,
+                  entertainment_expenses: existingData['entertainment_expenses'] || existingData['entertainment-expenses'] || 0,
+                  other_monthly_expenses: existingData['other_monthly_expenses'] || existingData['other-monthly-expenses'] || 0,
+                  emergency_fund: existingData['emergency_fund'] || existingData['emergency-fund'] || 0,
+                  checking_account: existingData['checking_account'] || existingData['checking-account'] || 0,
+                  savings_account: existingData['savings_account'] || existingData['savings-account'] || 0,
+                  investment_accounts: existingData['investment_accounts'] || existingData['investment-accounts'] || 0,
+                  retirement_accounts: existingData['retirement_accounts'] || existingData['retirement-accounts'] || 0,
+                  real_estate_value: existingData['real_estate_value'] || existingData['real-estate-value'] || 0,
+                  other_assets: existingData['other_assets'] || existingData['other-assets'] || 0,
+                  credit_card_debt: existingData['credit_card_debt'] || existingData['credit-card-debt'] || 0,
+                  credit_card_interest_rate: existingData['credit_card_interest_rate'] || existingData['credit-card-interest-rate'] || 0,
+                  student_loan_debt: existingData['student_loan_debt'] || existingData['student-loan-debt'] || 0,
+                  student_loan_interest_rate: existingData['student_loan_interest_rate'] || existingData['student-loan-interest-rate'] || 0,
+                  mortgage_balance: existingData['mortgage_balance'] || existingData['mortgage-balance'] || 0,
+                  mortgage_interest_rate: existingData['mortgage_interest_rate'] || existingData['mortgage-interest-rate'] || 0,
+                  auto_loan_balance: existingData['auto_loan_balance'] || existingData['auto-loan-balance'] || 0,
+                  auto_loan_interest_rate: existingData['auto_loan_interest_rate'] || existingData['auto-loan-interest-rate'] || 0,
+                  other_debt: existingData['other_debt'] || existingData['other-debt'] || 0,
+                  other_debt_interest_rate: existingData['other_debt_interest_rate'] || existingData['other-debt-interest-rate'] || 0,
+                  retirement_age: existingData['retirement_age'] || existingData['retirement-age'] || 65,
+                  desired_retirement_income: existingData['desired_retirement_income'] || existingData['desired-retirement-income'] || 0,
+                  short_term_goals: existingData['short_term_goals'] || existingData['short-term-goals'] || [],
+                  medium_term_goals: existingData['medium_term_goals'] || existingData['medium-term-goals'] || [],
+                  long_term_goals: existingData['long_term_goals'] || existingData['long-term-goals'] || [],
+                  major_purchase_timeline: existingData['major_purchase_timeline'] || existingData['major-purchase-timeline'] || '',
+                  risk_tolerance: existingData['risk_tolerance'] || existingData['risk-tolerance'] || 'moderate',
+                  investment_experience: existingData['investment_experience'] || existingData['investment-experience'] || 'beginner',
+                  investment_timeline: existingData['investment_timeline'] || existingData['investment-timeline'] || 'long',
+                  investment_priorities: existingData['investment_priorities'] || existingData['investment-priorities'] || [],
+                  savings_rate: existingData['savings_rate'] || existingData['savings-rate'] || 0,
+                  spending_tracking: existingData['spending_tracking'] || existingData['spending-tracking'] || 'occasionally',
+                  budget_adherence: existingData['budget_adherence'] || existingData['budget-adherence'] || 'sometimes',
+                  financial_stress_level: existingData['financial_stress_level'] || existingData['financial-stress-level'] || 5,
+                };
+                setProfileData(prev => ({ ...prev, ...mappedData }));
+              }
+            }}
+            variant="outline"
+          >
+            <FontAwesomeIcon icon={faTimes} className="mr-2" />
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveProfile}
+            disabled={isSaving || !hasChanges}
+            className="bg-primary hover:bg-secondary text-white"
+          >
+            <FontAwesomeIcon icon={faSave} className="mr-2" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>}
         </div>
 
         {!profile && !isLoading && !isEditMode && (

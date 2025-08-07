@@ -985,64 +985,69 @@ function getProgressColor(percentage: number): string {
 export function calculateFinancialHealthScore(answers: QuizAnswers): number {
   let score = 0;
   
-  // Emergency Fund (30 points max)
-  const emergencyFund = Number(answers['emergency-fund']) || 0;
-  const emergencyScore = Math.min(30, (emergencyFund / 6) * 30);
+  // Emergency Fund (30 points max) - using new field names
+  const emergencyFundMonths = Number(answers['emergency_fund_months']) || 0;
+  const emergencyScore = Math.min(30, (emergencyFundMonths / 6) * 30);
   score += emergencyScore;
   
-  // Savings Rate (30 points max)
-  const netIncome = Number(answers['net-monthly-income']) || 0;
-  const fixedExpenses = Number(answers['fixed-monthly-expenses']) || 0;
-  const variableExpenses = Number(answers['variable-monthly-expenses']) || 0;
-  const monthlySavings = netIncome - fixedExpenses - variableExpenses;
+  // Savings Rate (30 points max) - using new field names
+  const netIncome = Number(answers['net_monthly_income']) || 0;
+  const housingExpenses = Number(answers['housing_expenses']) || 0;
+  const foodExpenses = Number(answers['food_expenses']) || 0;
+  const transportationExpenses = Number(answers['transportation_expenses']) || 0;
+  const healthcareExpenses = Number(answers['healthcare_expenses']) || 0;
+  const insuranceExpenses = Number(answers['insurance_expenses']) || 0;
+  const entertainmentExpenses = Number(answers['entertainment_expenses']) || 0;
+  const otherExpenses = Number(answers['other_expenses']) || 0;
+  
+  const totalExpenses = housingExpenses + foodExpenses + transportationExpenses + 
+                       healthcareExpenses + insuranceExpenses + entertainmentExpenses + otherExpenses;
+  const monthlySavings = netIncome - totalExpenses;
   const savingsRate = netIncome > 0 ? (monthlySavings / netIncome) * 100 : 0;
-  const savingsScore = Math.min(30, (savingsRate / 20) * 30);
+  const savingsScore = Math.min(30, Math.max(0, savingsRate / 20) * 30);
   score += savingsScore;
   
-  // Debt Health (20 points max)
-  const debtDetails = answers['debt-details'] as DebtDetail[] || [];
-  const grossIncome = Number(answers['gross-monthly-income']) || 0;
+  // Debt Health (20 points max) - using new field names
+  const totalDebtAmount = Number(answers['total_debt_amount']) || 0;
+  const creditCardDebt = Number(answers['credit_card_debt']) || 0;
+  const grossIncome = Number(answers['gross_monthly_income']) || 0;
   let debtScore = 20;
   
-  if (debtDetails.length > 0) {
-    const totalDebt = debtDetails.reduce((sum, debt) => sum + debt.amount, 0);
-    const monthlyDebtPayments = debtDetails.reduce((sum, debt) => {
-      // Estimate monthly payment as 2% of total debt amount
-      return sum + (debt.amount * 0.02);
-    }, 0);
-    
+  if (totalDebtAmount > 0) {
+    // Estimate monthly debt payments as 3% of total debt
+    const monthlyDebtPayments = totalDebtAmount * 0.03;
     const debtToIncomeRatio = grossIncome > 0 ? (monthlyDebtPayments / grossIncome) : 0;
-    const goodDebt = debtDetails.filter(debt => debt.interestRate <= 8);
-    const badDebt = debtDetails.filter(debt => debt.interestRate > 8);
     
     // Penalize high debt-to-income ratio
     if (debtToIncomeRatio > 0.45) debtScore -= 15;
     else if (debtToIncomeRatio > 0.30) debtScore -= 10;
     else if (debtToIncomeRatio > 0.15) debtScore -= 5;
     
-    // Penalize bad debt more heavily
-    if (badDebt.length > 0) {
-      const badDebtTotal = badDebt.reduce((sum, debt) => sum + debt.amount, 0);
-      const badDebtRatio = totalDebt > 0 ? badDebtTotal / totalDebt : 0;
-      debtScore -= Math.min(10, badDebtRatio * 20);
+    // Penalize credit card debt more heavily (typically high interest)
+    if (creditCardDebt > 0) {
+      const creditCardRatio = totalDebtAmount > 0 ? creditCardDebt / totalDebtAmount : 0;
+      debtScore -= Math.min(8, creditCardRatio * 15);
     }
   }
   
   score += Math.max(0, debtScore);
   
-  // Retirement Progress (20 points max)
-  const currentAge = Number(answers['current-age']) || 30;
-  const retirementAge = Number(answers['retirement-age']) || 65;
-  const totalAssets = (Number(answers['cash-savings']) || 0) + (Number(answers['pension-value']) || 0) + (Number(answers['other-investments']) || 0);
-  const targetRetirement = Number(answers['target-retirement']) || 1000000;
+  // Asset Building Progress (20 points max) - using new field names
+  const currentAge = Number(answers['current_age']) || 30;
+  const retirementAge = Number(answers['retirement_age']) || 65;
+  const cashSavings = Number(answers['cash_savings']) || 0;
+  const investmentAccounts = Number(answers['investment_accounts']) || 0;
+  const retirementAccounts = Number(answers['retirement_accounts']) || 0;
+  const totalAssets = cashSavings + investmentAccounts + retirementAccounts;
+  const targetRetirement = Number(answers['target_retirement_amount']) || (netIncome * 12 * 10); // 10x annual income default
   
-  const yearsToRetirement = retirementAge - currentAge;
+  const yearsToRetirement = Math.max(1, retirementAge - currentAge);
   const expectedProgress = yearsToRetirement > 0 ? (1 - (yearsToRetirement / 35)) : 1; // Assuming 35-year career
   const actualProgress = targetRetirement > 0 ? totalAssets / targetRetirement : 0;
-  const progressRatio = expectedProgress > 0 ? actualProgress / expectedProgress : 0;
+  const progressRatio = expectedProgress > 0 ? Math.min(2, actualProgress / expectedProgress) : 0; // Cap at 2x expected
   
-  const retirementScore = Math.min(20, progressRatio * 20);
-  score += retirementScore;
+  const assetScore = Math.min(20, progressRatio * 20);
+  score += assetScore;
   
   return Math.max(0, Math.min(100, score));
 }
