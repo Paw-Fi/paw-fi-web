@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,6 +14,8 @@ import { iconContainer } from "./chat-conversation-display";
 import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
 import { useNavigate } from "@tanstack/react-router";
 import { GoalType } from "../goal-tracker/types";
+import { parseMessageForLists, ListSection } from "@/utils/chat-list-parser";
+import { ListModal } from "./list-modal";
 
 interface Message {
   content: string;
@@ -43,12 +45,27 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   const { user } = useAuth();
   const { closeChat, openChat } = useAIChat();
   
+  // Modal state for list display
+  const [selectedListSection, setSelectedListSection] = useState<ListSection | null>(null);
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  
   // Check if user has completed the financial assessment
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
   const handleCourseClick = (courseId: string) => () => {
     closeChat();
     navigate({ to: `/dashboard/learning/${courseId}` });
+  };
+
+  // Handle list modal interactions
+  const handleListClick = (listSection: ListSection) => {
+    setSelectedListSection(listSection);
+    setIsListModalOpen(true);
+  };
+
+  const handleCloseListModal = () => {
+    setIsListModalOpen(false);
+    setSelectedListSection(null);
   };
 
   
@@ -98,35 +115,41 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   );
 
   const renderMessageContent = () => {
+    console.log("renderMessageContent", message.content)
+    // Parse message for lists if it's an assistant message
+    let parsedMessage = { processedContent: message.content, extractedLists: [] as ListSection[] };
+    if (!isUser) {
+      parsedMessage = parseMessageForLists(message.content);
+    }
 
     // Check if message contains QUESTIONNAIRE keyword
-    const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
+    const hasQuestionnaireKeyword = parsedMessage.processedContent.includes('``QUESTIONNAIRE``');
     
     // Check for goal completion pattern ``GOAL:id`` - find all matches
-    const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/g)];
+    const goalMatches = [...parsedMessage.processedContent.matchAll(/``GOAL:([^`]+)``/g)];
     
     // Check for AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
-    const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/g)];
+    const buttonMatches = [...parsedMessage.processedContent.matchAll(/``BUTTON:([^`]+)``/g)];
     
     // Check for goal template patterns
     const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
     const detectedTemplate = goalTemplates.find(template => 
-      message.content.includes(`\`\`${template}\`\``)
+      parsedMessage.processedContent.includes(`\`\`${template}\`\``)
     );
     
     // Check for course card pattern - this was missing but referenced later
-    const courseCardMatch = message.content.includes('```json') && message.content.includes('```');
+    const courseCardMatch = parsedMessage.processedContent.includes('```json') && parsedMessage.processedContent.includes('```');
     
     if (courseCardMatch) {
-      const start = message.content.indexOf('```json');
+      const start = parsedMessage.processedContent.indexOf('```json');
       const jsonStart = start + 7; // Skip '```json'
-      const jsonEnd = message.content.indexOf('```', jsonStart); // Find closing ```
+      const jsonEnd = parsedMessage.processedContent.indexOf('```', jsonStart); // Find closing ```
       
       if (start === -1 || jsonEnd === -1) {
         // Fallback if parsing fails - just render as markdown
         return (
           <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-            <ReactMarkdown>{message.content.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
+            <ReactMarkdown>{parsedMessage.processedContent.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
           </div>
         );
       }
@@ -259,14 +282,68 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         investment: "Investment Portfolio",
         debt_payoff: "Debt Payoff",
         emergency_fund: "Emergency Fund",
+        passive_income: "Passive Income",
         custom: "Custom Goal"
       };
       
-      const messageText = message.content.replace(new RegExp(`\`\`${detectedTemplate}\`\``, 'g'), '').trim();
+      const messageText = parsedMessage.processedContent.replace(new RegExp(`\`\`${detectedTemplate}\`\``, 'g'), '').trim();
       
       return (
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
+          <ReactMarkdown
+            components={{
+              a: ({ href, children }) => {
+                // Handle section cards
+                if (href?.startsWith('#section-')) {
+                  const sectionId = href.substring(1);
+                  const listSection = parsedMessage.extractedLists.find(list => list.id === sectionId);
+                  if (listSection && listSection.type === 'section') {
+                    return (
+                      <span className="block my-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer group" onClick={() => handleListClick(listSection)}>
+                        <span className="flex items-start gap-3">
+                          <span className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-lg shrink-0">
+                            <span className="text-lg">📋</span>
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block font-semibold text-slate-800 dark:text-slate-100 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+                              {listSection.title}
+                            </span>
+                            <span className="block text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                              {listSection.description}
+                            </span>
+                            <span className="flex items-center gap-2 mt-2 text-xs text-purple-600 dark:text-purple-400">
+                              <span>Click to view details</span>
+                              <svg className="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </span>
+                          </span>
+                        </span>
+                      </span>
+                    );
+                  }
+                }
+                // Handle regular list summary links
+                if (href?.startsWith('#list-')) {
+                  const listId = href.substring(1);
+                  const listSection = parsedMessage.extractedLists.find(list => list.id === listId);
+                  if (listSection) {
+                    return (
+                      <button
+                        onClick={() => handleListClick(listSection)}
+                        className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 underline font-medium cursor-pointer bg-transparent border-none p-0 inline"
+                      >
+                        {children}
+                      </button>
+                    );
+                  }
+                }
+                return <a href={href}>{children}</a>;
+              }
+            }}
+          >
+            {messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}
+          </ReactMarkdown>
           <div className="mt-3">
             <Button
               onClick={() => onGoalTemplateClick(detectedTemplate)}
@@ -282,17 +359,77 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     
     return (
       <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-        <ReactMarkdown>{message.content.trim().replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
+        <ReactMarkdown
+          components={{
+            a: ({ href, children }) => {
+              // Handle section cards
+              if (href?.startsWith('#section-')) {
+                const sectionId = href.substring(1);
+                const listSection = parsedMessage.extractedLists.find(list => list.id === sectionId);
+                if (listSection && listSection.type === 'section') {
+                  return (
+                    <div className="my-4 px-4 pb-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer group" onClick={() => handleListClick(listSection)}>
+                      <div className="flex items-start gap-3">
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+                            {listSection.title}
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                            {listSection.description}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-purple-600 dark:text-purple-400">
+                            <span>Click to view details</span>
+                            <svg className="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              }
+              // Handle regular list summary links
+              if (href?.startsWith('#list-')) {
+                const listId = href.substring(1);
+                const listSection = parsedMessage.extractedLists.find(list => list.id === listId);
+                if (listSection) {
+                  return (
+                    <button
+                      onClick={() => handleListClick(listSection)}
+                      className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 underline font-medium cursor-pointer bg-transparent border-none p-0 inline"
+                    >
+                      {children}
+                    </button>
+                  );
+                }
+              }
+              return <a href={href}>{children}</a>;
+            }
+          }}
+        >
+          {parsedMessage.processedContent.trim().replace("{{username}}", user?.user_metadata?.full_name|| "")}
+        </ReactMarkdown>
       </div>
     );
   };
 
   return (
-    <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && <Avatar />}
-      <MessageBubble>{renderMessageContent()}</MessageBubble>
-      {isUser && <Avatar />}
-    </div>
+    <>
+      <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
+        {!isUser && <Avatar />}
+        <MessageBubble>{renderMessageContent()}</MessageBubble>
+        {isUser && <Avatar />}
+      </div>
+      
+      {/* List Modal - only render when needed */}
+      <ListModal
+        isOpen={isListModalOpen}
+        onClose={handleCloseListModal}
+        listSection={selectedListSection}
+      />
+    </>
   );
 };
 

@@ -24,7 +24,7 @@ import {
   faChevronUp,
   faTimes
 } from "@fortawesome/free-solid-svg-icons";
-import type { GoalMilestone, MilestoneType, MilestoneFrequency, MilestonePriority } from "@/components/goal-tracker/types";
+import type { GoalMilestone, MilestoneType, MilestoneFrequency, MilestonePriority, MilestoneStatus } from "@/components/goal-tracker/types/milestone-types";
 import { useState, useEffect, useOptimistic } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -61,7 +61,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
   const [formData, setFormData] = useState<MilestoneFormData>({
     title: '',
     description: '',
-    milestone_type: 'savings',
+    milestone_type: 'amount',
     due_date: '',
     priority: 'medium'
   });
@@ -95,7 +95,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
     setFormData({
       title: '',
       description: '',
-      milestone_type: 'savings',
+      milestone_type: 'amount',
       due_date: '',
       priority: 'medium'
     });
@@ -144,7 +144,10 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           is_ai_generated: false,
-          display_order: orderedMilestones.length
+          display_order: orderedMilestones.length,
+          current_amount: 0,
+          start_date: new Date().toISOString(),
+          progress_percentage: 0
         } as GoalMilestone;
 
         setOptimisticMilestones({ type: 'add', milestone: tempMilestone });
@@ -176,7 +179,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
   const toggleMilestoneComplete = async (milestone: GoalMilestone) => {
     if (!user?.id) return;
 
-    const newStatus = milestone.status === 'completed' ? 'pending' : 'completed';
+    const newStatus: MilestoneStatus = milestone.status === 'completed' ? 'pending' : 'completed';
     const updates = { 
       status: newStatus,
       updated_at: new Date().toISOString()
@@ -269,9 +272,10 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
   const getMilestoneIcon = (type: MilestoneType) => {
     switch (type) {
-      case 'savings': return faDollarSign;
+      case 'amount': return faDollarSign;
       case 'habit': return faRepeat;
       case 'action': return faFlag;
+      case 'date': return faCalendarAlt;
       default: return faBullseye;
     }
   };
@@ -371,7 +375,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                     onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
                   >
-                    <option value="savings">Savings</option>
+                    <option value="amount">Amount</option>
                     <option value="habit">Habit</option>
                     <option value="action">Action</option>
                   </select>
@@ -391,7 +395,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                     <option value="critical">Critical</option>
                   </select>
                 </div>
-                {formData.milestone_type === 'savings' && (
+                {formData.milestone_type === 'amount' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Amount ($)

@@ -415,7 +415,7 @@ Sound good?`,
   };
 
   const handleLogin = () => {
-    navigate({ to: '/login', search: { redirect: '/onboarding' } });
+    navigate({ to: '/login', search: { redirect: '/dashboard' } });
   };
 
   // Cleanup
