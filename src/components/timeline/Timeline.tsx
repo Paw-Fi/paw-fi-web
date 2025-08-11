@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useUserActivities } from '@/hooks/useUserActivities';
+import { useDashboardActivities } from '@/hooks/useDashboardData';
 import { TimelineMain } from './TimelineMain';
 import { ActivityContributionGraph } from './ActivityContributionGraph';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -9,7 +9,7 @@ export function Timeline() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [monthsToShow, setMonthsToShow] = useState(1); // Start with current month
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const { activities, isLoading, error } = useUserActivities();
+  const { activities, isLoading, error } = useDashboardActivities();
 
   const groupedActivities = useMemo(() => {
     const now = new Date();

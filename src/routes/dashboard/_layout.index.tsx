@@ -63,10 +63,8 @@ import {
   faUser,
   faWallet,
 } from "@fortawesome/free-solid-svg-icons";
-import { useDashboard } from "@/hooks/use-dashboard";
-import { useUserCourses } from "@/services/course-service";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSubscription } from "@/hooks/use-subscription";
-import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { ActivityList } from '@/components/shared/ActivityList';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -75,10 +73,8 @@ import basicCourse from "@/data/basic-lessons.json";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
-import { useGamification } from "@/hooks/use-gamification";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
-import { Activity, useUserActivities } from "@/hooks/useUserActivities";
 import { Timeline } from "@/components/timeline/Timeline";
 import { useAIChat } from "@/contexts/ai-chat-context";
 
@@ -146,11 +142,23 @@ function DashboardHome() {
   const { user } = useAuth();
   // Rewards modal state
   const [showRewardsModal, setShowRewardsModal] = useState(false);
-  // Real data hooks - NO MOCK DATA
-  const { dashboardData, views, status: dashboardStatus } = useDashboard(user?.id);
-  const { data: remoteCourses = [], isLoading: coursesLoading } = useUserCourses(user?.id || "", { enabled: !!user });
+  
+  // UNIFIED DATA HOOK - eliminates code duplication across dashboard
+  const {
+    dashboardData,
+    dashboardViews: views,
+    dashboardStatus,
+    remoteCourses,
+    coursesLoading,
+    gamificationData,
+    profileData: financialProfile,
+    profileLoading,
+    isLoading: dashboardDataLoading,
+    hasError: dashboardDataError,
+    errors: dashboardErrors
+  } = useDashboardData();
+  
   const { subscription, features, paymentMethod, invoices, isLoading: subLoading, isActive } = useSubscription(user?.id);
-  const { profile: financialProfile, isLoading: profileLoading, hasProfile } = useFinancialHealthProfile(user?.id);
   
   // Get completed lessons data using the same method as course detail page
   const { data: completedLessons = [], isLoading: isLoadingCompleted } = useCompletedLessons(user?.id);
@@ -159,6 +167,9 @@ function DashboardHome() {
   const courses = useMemo(() => {
     return [basicCourse as any, ...remoteCourses];
   }, [remoteCourses]);
+  
+  // Check if user has profile for proper display
+  const hasProfile = !!financialProfile;
   
   // Fetch real conversation data
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
@@ -226,8 +237,6 @@ function DashboardHome() {
     return `Good evening, ${name}!`;
   };
 
-  // Subscribe to user activities
-  const { activities, isLoading: isActivitiesLoading, error: activitiesError } = useUserActivities();
 
   // Calculate real learning progress from actual course data using consistent logic
   const learningInsights = useMemo(() => {
@@ -522,8 +531,6 @@ function DashboardHome() {
       category: "Retirement",
     },
   ];
-
-  const { gamificationData } = useGamification();
 
   const currentStreak = gamificationData.streak;
   const currentXP = gamificationData.xp;
@@ -959,13 +966,7 @@ function DashboardHome() {
                           
                           <Timeline/>
 
-                          {/* Error State */}
-                          {activitiesError && (
-                            <div className="text-center py-4">
-                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-red-500 mb-2" />
-                              <p className="text-sm text-red-600">Failed to load activities</p>
-                            </div>
-                          )}
+                         
                         </div>
                       
                     </div>

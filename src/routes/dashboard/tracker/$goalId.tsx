@@ -236,6 +236,11 @@ function GoalDetail() {
   const isOnTrack = savingsGap <= 0;
   const isGoalCompleted = progressData.progressPercentage >= 100;
   
+  // Calculate timeline extension needed (fix for Infinity bug)
+  const timelineExtensionMonths = savingsGap > 0 && progressData.monthlyCapacity > 0 
+    ? Math.ceil(Math.abs(savingsGap) / progressData.monthlyCapacity) 
+    : 6; // Default fallback of 6 months
+  
   // Toggle step expansion
   const toggleStepExpansion = (stepId: string) => {
     const newExpanded = new Set(expandedSteps);
@@ -790,7 +795,7 @@ function GoalDetail() {
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Increase Your Income</h4>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Ask for a raise of ${Math.ceil(savingsGap * 1.3)}/month (accounting for taxes)
+                    Ask for a raise of ${Math.ceil(Math.max(0, savingsGap) * 1.3)}/month (accounting for taxes)
                   </p>
                 </div>
               </div>
@@ -811,7 +816,7 @@ function GoalDetail() {
                     <ul className="space-y-3 text-gray-700 dark:text-gray-300">
                       <li className="flex items-start gap-3">
                         <span className="text-green-500 mt-1 text-xs">●</span>
-                        Ask for a raise of ${Math.ceil(savingsGap * 1.3)}/month (accounting for taxes)
+                        Ask for a raise of ${Math.ceil(Math.max(0, savingsGap) * 1.3)}/month (accounting for taxes)
                       </li>
                       <li className="flex items-start gap-3">
                         <span className="text-green-500 mt-1 text-xs">●</span>
@@ -843,7 +848,7 @@ function GoalDetail() {
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Cut Monthly Expense</h4>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Review subscriptions and cancel ${Math.ceil(Math.abs(savingsGap) * 0.3)}/month worth
+                    Review subscriptions and cancel ${Math.ceil(Math.max(0, Math.abs(savingsGap)) * 0.3)}/month worth
                   </p>
                 </div>
               </div>
@@ -864,7 +869,7 @@ function GoalDetail() {
                     <ul className="space-y-3 text-gray-700 dark:text-gray-300">
                       <li className="flex items-start gap-3">
                         <span className="text-blue-500 mt-1 text-xs">●</span>
-                        Review subscriptions and cancel ${Math.ceil(savingsGap * 0.3)}/month worth
+                        Review subscriptions and cancel ${Math.ceil(Math.max(0, Math.abs(savingsGap)) * 0.3)}/month worth
                       </li>
                       <li className="flex items-start gap-3">
                         <span className="text-blue-500 mt-1 text-xs">●</span>
@@ -896,7 +901,7 @@ function GoalDetail() {
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Adjust Your Timeline</h4>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Extend target date by Infinity months
+                    Extend target date by {timelineExtensionMonths} months
                   </p>
                 </div>
               </div>
@@ -917,7 +922,7 @@ function GoalDetail() {
                     <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-6">
                       <li className="flex items-start gap-3">
                         <span className="text-purple-500 mt-1 text-xs">●</span>
-                        Extend target date by Infinity months
+                        Extend target date by {timelineExtensionMonths} months
                       </li>
                       <li className="flex items-start gap-3">
                         <span className="text-purple-500 mt-1 text-xs">●</span>
