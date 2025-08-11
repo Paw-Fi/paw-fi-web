@@ -630,7 +630,7 @@ function FinancialProfileSettings() {
               onChange={(e) => handleNumberInputChange('current_age', e.target.value)}
               min={18}
               max={100}
-              placeholder="Enter your age"
+              placeholder=""
             />
           </div>
           <div>
@@ -659,7 +659,7 @@ function FinancialProfileSettings() {
               onChange={(e) => handleNumberInputChange('dependents', e.target.value)}
               min={0}
               max={20}
-              placeholder="0"
+              placeholder=""
             />
           </div>
         </div>
@@ -680,7 +680,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={100}
-                placeholder="5,000"
+                placeholder="Monthly income before taxes"
               />
             </div>
           </div>
@@ -695,7 +695,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={100}
-                placeholder="3,800"
+                placeholder="Monthly take-home pay"
               />
             </div>
           </div>
@@ -710,7 +710,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={1000}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -724,7 +724,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={100}
                 step={1}
-                placeholder="20"
+                placeholder="Percentage of income saved"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -788,7 +788,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={50}
-                placeholder="1,500"
+                placeholder="Monthly housing payment"
               />
             </div>
           </div>
@@ -821,7 +821,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="600"
+                placeholder="Monthly grocery budget"
               />
             </div>
           </div>
@@ -836,7 +836,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="300"
+                placeholder="Car payment, gas, public transit"
               />
             </div>
           </div>
@@ -851,7 +851,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="200"
+                placeholder="Medical expenses per month"
               />
             </div>
           </div>
@@ -866,7 +866,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="150"
+                placeholder="Health, auto, life insurance"
               />
             </div>
           </div>
@@ -881,7 +881,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="200"
+                placeholder="Dining, movies, hobbies"
               />
             </div>
           </div>
@@ -896,7 +896,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={25}
-                placeholder="100"
+                placeholder="Miscellaneous monthly expenses"
               />
             </div>
           </div>
@@ -918,7 +918,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={500}
-                placeholder="10,000"
+                placeholder="3-6 months of expenses"
               />
             </div>
           </div>
@@ -933,7 +933,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={100}
-                placeholder="2,000"
+                placeholder="Current checking balance"
               />
             </div>
           </div>
@@ -948,7 +948,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={500}
-                placeholder="15,000"
+                placeholder="High-yield savings balance"
               />
             </div>
           </div>
@@ -963,7 +963,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={1000}
-                placeholder="25,000"
+                placeholder="Brokerage, mutual funds"
               />
             </div>
           </div>
@@ -978,7 +978,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={1000}
-                placeholder="50,000"
+                placeholder="401k, IRA, pension balance"
               />
             </div>
           </div>
@@ -993,7 +993,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={5000}
-                placeholder="250,000"
+                placeholder="Current home value"
               />
             </div>
           </div>
@@ -1008,7 +1008,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={1000}
-                placeholder="5,000"
+                placeholder="Cars, jewelry, collectibles"
               />
             </div>
           </div>
@@ -1030,7 +1030,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={100}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -1044,7 +1044,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={50}
                 step={0.1}
-                placeholder="18.5"
+                placeholder="Annual percentage rate"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -1060,7 +1060,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={500}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -1074,7 +1074,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={15}
                 step={0.1}
-                placeholder="4.5"
+                placeholder="Annual percentage rate"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -1090,7 +1090,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={1000}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -1104,7 +1104,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={10}
                 step={0.1}
-                placeholder="3.5"
+                placeholder="Annual percentage rate"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -1120,7 +1120,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={500}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -1134,7 +1134,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={15}
                 step={0.1}
-                placeholder="5.5"
+                placeholder="Annual percentage rate"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -1150,7 +1150,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={100}
-                placeholder="0"
+                placeholder=""
               />
             </div>
           </div>
@@ -1164,7 +1164,7 @@ function FinancialProfileSettings() {
                 min={0}
                 max={30}
                 step={0.1}
-                placeholder="0"
+                placeholder=""
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
             </div>
@@ -1184,7 +1184,7 @@ function FinancialProfileSettings() {
               onChange={(e) => handleNumberInputChange('retirement_age', e.target.value)}
               min={50}
               max={100}
-              placeholder="65"
+              placeholder="Target retirement age"
             />
           </div>
           <div>
@@ -1198,7 +1198,7 @@ function FinancialProfileSettings() {
                 className="pl-8"
                 min={0}
                 step={500}
-                placeholder="5,000"
+                placeholder="Desired monthly income in retirement"
               />
             </div>
           </div>
