@@ -84,6 +84,7 @@ export function useUserActivities() {
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 3, // Retry failed requests 3 times for network resilience
   });
 
   // Set up real-time subscription

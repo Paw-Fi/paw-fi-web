@@ -2,76 +2,44 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, Variants } from "framer-motion";
 import {
   faArrowRight,
-  faAward,
-  faBook,
   faBookOpen,
   faBolt,
-  faBrain,
   faBullseye,
   faCalculator,
   faCalendarAlt,
-  faChartBar,
   faChartLine,
   faCheckCircle,
-  faChevronDown,
   faChevronRight,
-  faClock,
-  faCog,
-  faCommentDots,
   faComments,
   faCreditCard,
   faDollarSign,
-  faDumbbell,
   faEdit,
-  faEnvelope,
   faExclamationTriangle,
-  faEye,
-  faFileAlt,
-  faFileInvoiceDollar,
   faFire,
-  faFlagCheckered,
   faGift,
   faGraduationCap,
-  faHeart,
-  faHeartbeat,
-  faHistory,
   faHome,
-  faInfoCircle,
-  faKey,
-  faLeaf,
   faLightbulb,
   faLock,
   faMoneyBillWave,
   faPercent,
   faPiggyBank,
   faPlus,
-  faQuestionCircle,
-  faRocket,
   faShieldAlt,
-  faSignOutAlt,
-  faSpinner,
-  faStar,
-  faTasks,
   faTimes,
-  faTimesCircle,
   faTrophy,
   faUnlock,
   faUser,
-  faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSubscription } from "@/hooks/use-subscription";
-import { ActivityList } from '@/components/shared/ActivityList';
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
-import { getConversations } from "@/services/conversation-service";
+import { type Conversation } from "@/services/conversation-service";
 import basicCourse from "@/data/basic-lessons.json";
-import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
-import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
@@ -147,18 +115,14 @@ function DashboardHome() {
   const {
     dashboardData,
     dashboardViews: views,
-    dashboardStatus,
     remoteCourses,
     coursesLoading,
     gamificationData,
     profileData: financialProfile,
     profileLoading,
-    isLoading: dashboardDataLoading,
-    hasError: dashboardDataError,
-    errors: dashboardErrors
   } = useDashboardData();
   
-  const { subscription, features, paymentMethod, invoices, isLoading: subLoading, isActive } = useSubscription(user?.id);
+  const { subscription, features, invoices, isLoading: subLoading, isActive } = useSubscription(user?.id);
   
   // Get completed lessons data using the same method as course detail page
   const { data: completedLessons = [], isLoading: isLoadingCompleted } = useCompletedLessons(user?.id);
@@ -172,60 +136,19 @@ function DashboardHome() {
   const hasProfile = !!financialProfile;
   
   // Fetch real conversation data
-  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
+  const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
     queryKey: ['conversations', user?.id],
-    queryFn: () => [],
+    queryFn: async () => {
+      if (!user) return [];
+      // For now return empty array - conversation functionality to be implemented
+      // TODO: Replace with actual conversation service call when backend is ready
+      return [] as Conversation[];
+    },
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate real portfolio insights from actual dashboard data
-  const portfolioInsights = useMemo(() => {
-    if (!dashboardData || !Array.isArray(dashboardData)) {
-      return {
-        hasPortfolio: views.length > 0,
-        totalViews: views.length,
-        totalWidgets: 0,
-        financialScore: null,
-        financialStatus: null,
-        savingsGoals: 0,
-        nextActions: 0,
-        hasFinancialHealth: false,
-      };
-    }
-
-    const financialHealthWidget = dashboardData.find(widget => widget.type === 'financialHealthScorecard');
-    const savingsGoalsWidget = dashboardData.find(widget => widget.type === 'enhancedSavingsGoals');
-    const nextActionWidget = dashboardData.find(widget => widget.type === 'nextBestAction');
-    const debtWidget = dashboardData.find(widget => widget.type === 'debtVisualizer');
-    const cashFlowWidget = dashboardData.find(widget => widget.type === 'quickCashFlowSummary');
-    const retirementWidget = dashboardData.find(widget => widget.type === 'retirementReadiness');
-    
-    return {
-      hasPortfolio: views.length > 0,
-      totalViews: views.length,
-      totalWidgets: dashboardData.length,
-      financialScore: financialHealthWidget?.data?.overallScore || null,
-      financialStatus: financialHealthWidget?.data?.overallStatus || null,
-      savingsGoals: savingsGoalsWidget?.data?.items?.length || 0,
-      nextActions: Array.isArray(nextActionWidget?.data) ? nextActionWidget.data.length : 0,
-      hasFinancialHealth: !!financialHealthWidget,
-      hasDebts: !!debtWidget && Array.isArray(debtWidget.data) && debtWidget.data.length > 0,
-      hasCashFlow: !!cashFlowWidget,
-      hasRetirementPlan: !!retirementWidget,
-      widgets: {
-        financial: financialHealthWidget,
-        savings: savingsGoalsWidget,
-        actions: nextActionWidget,
-        debt: debtWidget,
-        cashFlow: cashFlowWidget,
-        retirement: retirementWidget,
-      }
-    };
-  }, [dashboardData, views]);
-
-
-
+  
 
   // Time-based greeting
   const getGreeting = () => {
@@ -951,7 +874,7 @@ function DashboardHome() {
                               </div>
                             </div>
                             <Link
-                              to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}`}
+                              to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}
                               className="ml-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                             >
                               Continue
@@ -1033,7 +956,8 @@ function DashboardHome() {
                         <div className="p-3 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl">
                           <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Recent Session</div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {new Date(conversationInsights.recentConversation.updated_at).toLocaleDateString()}
+                            {conversationInsights.recentConversation.updated_at && 
+                              new Date(conversationInsights.recentConversation.updated_at).toLocaleDateString()}
                             {conversationInsights.recentConversation.is_active && (
                               <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
                                 Active
