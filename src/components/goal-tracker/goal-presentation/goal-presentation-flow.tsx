@@ -38,7 +38,6 @@ export function GoalPresentationFlow({
   onRegister 
 }: GoalPresentationFlowProps) {
   const [currentPage, setCurrentPage] = useState<PresentationPage>('summary');
-  
   const currentPageIndex = PAGES.findIndex(page => page.id === currentPage);
   const canGoBack = currentPageIndex > 0;
   const canGoNext = currentPageIndex < PAGES.length - 1;
@@ -60,13 +59,14 @@ export function GoalPresentationFlow({
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'summary':
-        return <GoalSummaryPage goalData={goalData} />;
+        return <GoalSummaryPage goalData={goalData} isLoggedIn={isLoggedIn} />;
       case 'insights':
-        return <KeyInsightsPage insights={goalData.insights || []} />;
+        return <KeyInsightsPage insights={goalData.insights || []} isLoggedIn={isLoggedIn} />;
       case 'next-steps':
         return <NextStepsPage 
           milestones={goalData.milestones || []} 
           strategy={goalData.strategy || ''} 
+          isLoggedIn={isLoggedIn}
         />;
       case 'final':
         return <FinalCallToActionPage 
@@ -77,7 +77,7 @@ export function GoalPresentationFlow({
           onRegister={onRegister}
         />;
       default:
-        return <GoalSummaryPage goalData={goalData} />;
+        return <GoalSummaryPage goalData={goalData} isLoggedIn={isLoggedIn} />;
     }
   };
   
@@ -138,22 +138,22 @@ export function GoalPresentationFlow({
         </AnimatePresence>
         
         {/* Navigation */}
-        {currentPage !== 'final' && (
-          <div className="flex justify-between items-center">
-            <Button
-              onClick={handleBack}
-              disabled={!canGoBack}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-              Back
-            </Button>
-            
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {currentPageIndex + 1} of {PAGES.length}
-            </div>
-            
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={handleBack}
+            disabled={!canGoBack}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+            Back
+          </Button>
+          
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {currentPageIndex + 1} of {PAGES.length}
+          </div>
+          
+          {currentPage !== 'final' ? (
             <Button
               onClick={handleNext}
               disabled={!canGoNext}
@@ -163,8 +163,10 @@ export function GoalPresentationFlow({
               Next
               <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
             </Button>
-          </div>
-        )}
+          ) : (
+            <div className="w-20" /> // Placeholder to maintain layout balance
+          )}
+        </div>
     </div>
   );
 }

@@ -1,9 +1,5 @@
 "use client";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
-import { motion } from "framer-motion";
-
 interface ChatSuggestionsProps {
   suggestions: string[];
   onSuggestionClick: (suggestion: string) => void;

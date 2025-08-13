@@ -37,7 +37,7 @@ export interface GoalCreationResult {
     rationale: string;
   };
   strategy: string;
-  milestones: Milestone[];
+  milestones: DBMilestone[];
   insights: Insight[];
   projections?: {
     monthlyRequired: number;
@@ -57,6 +57,30 @@ export interface Milestone {
   habitTargetValue?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
   aiRationale: string;
+}
+
+// Database milestone interface that matches the actual API response
+export interface DBMilestone {
+  id?: string;
+  goal_id?: string;
+  title: string;
+  description: string;
+  milestone_type: string;
+  target_amount?: number | null;
+  current_amount?: number;
+  habit_description?: string | null;
+  frequency?: string | null;
+  habit_target_value?: number | null;
+  start_date?: string;
+  due_date: string;
+  completed_date?: string | null;
+  status?: string;
+  progress_percentage?: number;
+  is_ai_generated?: boolean;
+  display_order?: number;
+  priority: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Insight {

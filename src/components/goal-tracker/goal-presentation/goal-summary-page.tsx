@@ -7,7 +7,7 @@ import {
   faDollarSign,
   faExclamationCircle,
   faLightbulb,
-  faRocket
+  faRocket,
 } from '@fortawesome/free-solid-svg-icons';
 import type { GoalCreationResult } from '@/components/goal-tracker/types';
 import ReactMarkdown from 'react-markdown';
@@ -15,9 +15,10 @@ import remarkGfm from 'remark-gfm';
 
 interface GoalSummaryPageProps {
   goalData: GoalCreationResult;
+  isLoggedIn: boolean;
 }
 
-export function GoalSummaryPage({ goalData }: GoalSummaryPageProps) {
+export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) {
   const { goal, projections } = goalData;
   
   // Calculate time to goal
@@ -120,12 +121,15 @@ export function GoalSummaryPage({ goalData }: GoalSummaryPageProps) {
           >
             <div className="flex items-center mb-4">
               <div className={`w-10 h-10 rounded-lg bg-current bg-opacity-10 flex items-center justify-center mr-3`}>
-                <FontAwesomeIcon icon={card.icon} className="w-5 h-5" />
+                <FontAwesomeIcon icon={card.icon} className="w-5 h-5 text-white" />
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white">{card.title}</h3>
             </div>
             <p className="text-2xl font-bold mb-2">{card.value}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">{card.subtitle}</p>
+            {!isLoggedIn && index >= 2 && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Advanced metrics available after sign up</p>
+            )}
           </motion.div>
         ))}
       </motion.div>
@@ -135,15 +139,24 @@ export function GoalSummaryPage({ goalData }: GoalSummaryPageProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 relative"
       >
         <div className="flex items-center mb-4">
           <FontAwesomeIcon icon={faLightbulb} className="w-6 h-6 text-yellow-500 mr-3" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Strategy</h2>
         </div>
-        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} >{goalData.strategy}</ReactMarkdown>
-        </article>  
+        <article className={`prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6 ${!isLoggedIn ? 'line-clamp-2' : ''}`}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} >
+            {goalData.strategy}
+          </ReactMarkdown>
+        </article>
+        {!isLoggedIn && (
+          <div className="px-4 pb-4 text-center">
+            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
+              Full strategy available after sign up
+            </span>
+          </div>
+        )}
       </motion.div>
       
       {/* What Needs Attention */}
@@ -152,14 +165,14 @@ export function GoalSummaryPage({ goalData }: GoalSummaryPageProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 relative"
         >
           <div className="flex items-center mb-6">
             <FontAwesomeIcon icon={faExclamationCircle} className="w-6 h-6 text-red-500 mr-3" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">What Needs Your Attention</h2>
           </div>
           <div className="space-y-4">
-            {urgentMilestones.map((milestone, index) => (
+            {urgentMilestones.slice(0, isLoggedIn ? urgentMilestones.length : 2).map((milestone, index) => (
               <div 
                 key={milestone.id || index}
                 className="flex items-start p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
@@ -178,9 +191,19 @@ export function GoalSummaryPage({ goalData }: GoalSummaryPageProps) {
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     {milestone.description}
                   </p>
+                  {!isLoggedIn && index >= 1 && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Detailed action plan available after sign up</p>
+                  )}
                 </div>
               </div>
             ))}
+            {!isLoggedIn && urgentMilestones.length > 2 && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                  +{urgentMilestones.length - 2} more priority action{urgentMilestones.length > 3 ? 's' : ''} available after sign up
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
