@@ -139,7 +139,7 @@ localStorage.setItem('dashboard-guidance-state', JSON.stringify({
     '/dashboard/tracker/': Date.now() - (48 * 60 * 60 * 1000), // 2 days ago
   },
   scenariosShown: {
-    'tracker_main_first_visit': { count: 1, lastShown: Date.now() - (7 * 24 * 60 * 60 * 1000) },
+    'advisor': { count: 1, lastShown: Date.now() - (7 * 24 * 60 * 60 * 1000) },
     'learning_first_visit': { count: 1, lastShown: Date.now() - (5 * 24 * 60 * 60 * 1000) }
   },
   userJourney: {

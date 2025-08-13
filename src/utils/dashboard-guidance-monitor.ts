@@ -47,7 +47,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   // === ONBOARDING FLOW ===
   {
     id: 'first_goal_created',
-    route: '/dashboard/tracker/{goalId}',
+    route: '/dashboard/advisor/{goalId}',
     agentId: 'advisor',
     message: 'Congratulations on creating your first goal! Ask me anything about optimizing your savings strategy or investment options.',
     priority: 'high',
@@ -58,12 +58,12 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
     maxShowCount: 1
   },
 
-  // === GOAL TRACKER SCENARIOS ===
+  // === GOAL advisor SCENARIOS ===
   {
-    id: 'tracker_main_first_visit',
-    route: '/dashboard/tracker/',
-    agentId: 'tracker',
-    message: 'Welcome to your Goal Tracker! Click here to get help setting up your first financial goal.',
+    id: 'advisor_main_first_visit',
+    route: '/dashboard/advisor/',
+    agentId: 'advisor',
+    message: 'Welcome to your Goal Advisor! Click here to get help setting up your first financial goal.',
     priority: 'high',
     conditions: [
       { type: 'first_visit', value: true }
@@ -72,9 +72,9 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   },
 
   {
-    id: 'tracker_no_goals_return',
-    route: '/dashboard/tracker/',
-    agentId: 'tracker',
+    id: 'advisor_no_goals_return',
+    route: '/dashboard/advisor/',
+    agentId: 'advisor',
     message: 'Ready to start your financial journey? I can help you create a personalized savings goal!',
     priority: 'medium',
     conditions: [
@@ -88,7 +88,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
 
   {
     id: 'goal_needs_attention',
-    route: '/dashboard/tracker/{goalId}',
+    route: '/dashboard/advisor/{goalId}',
     agentId: 'advisor',
     message: 'I notice you might be falling behind on this goal. Let me help you create an action plan to get back on track!',
     priority: 'high',
@@ -102,8 +102,8 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
 
   {
     id: 'goal_milestone_celebration',
-    route: '/dashboard/tracker/{goalId}',
-    agentId: 'tracker',
+    route: '/dashboard/advisor/{goalId}',
+    agentId: 'advisor',
     message: '🎉 Awesome progress! You\'re doing great. Want tips on how to accelerate your savings even more?',
     priority: 'medium',
     conditions: [
@@ -211,7 +211,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   {
     id: 'timeline_explanation',
     route: '/dashboard/timeline/',
-    agentId: 'tracker',
+    agentId: 'advisor',
     message: 'Your financial timeline shows all your progress updates and milestones. Great way to see your journey!',
     priority: 'medium',
     conditions: [
@@ -252,7 +252,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   {
     id: 'engagement_boost',
     route: '/dashboard/',
-    agentId: 'tracker',
+    agentId: 'advisor',
     message: 'It\'s been a while! How are your financial goals progressing? Let me help you get back on track.',
     priority: 'medium',
     conditions: [
@@ -385,7 +385,7 @@ class DashboardGuidanceMonitor {
   }
 
   private matchesRoute(scenarioRoute: string): boolean {
-    // Handle parameter routes like /dashboard/tracker/{goalId}
+    // Handle parameter routes like /dashboard/advisor/{goalId}
     const routePattern = scenarioRoute.replace(/\{[^}]+\}/g, '[^/]+');
     const regex = new RegExp(`^${routePattern}$`);
     return regex.test(this.currentRoute);

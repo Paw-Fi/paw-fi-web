@@ -74,16 +74,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
       aiType: 'advisor',
       color: 'from-purple-400 to-indigo-500', // Matches FinancialAdvisorChatInterface
       onClick: () => openChat('advisor')
-    },
-    {
-      id: 'ai-tracker',
-      label: 'Goal Tracker',
-      description: 'Track and achieve your financial goals with AI coach Alex',
-      aiType: 'tracker',
-      color: 'from-orange-400 to-amber-600', // Matches GoalTrackerChatInterface
-      icon: faChartLine, // Different icon for global mode
-      onClick: () => openChat('tracker')
-    },
+    },   
     {
       id: 'ai-educator',
       label: 'Financial Educator',

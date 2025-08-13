@@ -18,7 +18,7 @@ export interface AIOption {
   color: string;
 }
 
-export type AI_ID = "advisor" | "tracker" | "educator";
+export type AI_ID = "advisor" | "educator";
 
 // AI chat context type
 interface AIChatContextType {
@@ -46,12 +46,6 @@ export const AI_OPTIONS: AIOption[] = [
     name: 'Financial Advisor',
     subtitle: 'Investment & planning guidance',
     color: 'from-blue-500 to-blue-600'
-  },
-  {
-    id: 'tracker',
-    name: 'Goal Tracker',
-    subtitle: 'Track and manage your financial goals',
-    color: 'from-green-500 to-green-600'
   },
   {
     id: 'educator',

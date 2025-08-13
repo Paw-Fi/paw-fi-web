@@ -5,8 +5,9 @@ import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
-import { prompt as FA_PROMPT } from "./fa-prompt.ts";
+import { prompt as FA_PROMPT, formatPromptWithContext, buildContextPrompt } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
+import { processGoalTrackingRequest, getGeminiFunctionDeclarations } from "./goal-tracker.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -92,7 +93,17 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
-    const { message, userProfile, userId, conversationId, model: chatModel } = requestData;
+    const { 
+      message, 
+      userProfile, 
+      userId, 
+      conversationId, 
+      model: chatModel,
+      goalContext,
+      isGlobalMode,
+      goalId,
+      goal 
+    } = requestData;
     let history = requestData.history;
     console.log("requestData", requestData)
     
@@ -216,6 +227,97 @@ serve(async (req: Request): Promise<Response> => {
     } else {
       // User has profile, generate AI response using Gemini
       
+      // Check if this is a Financial Advisor request that might need goal tracking
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+        // Check if message contains goal-related keywords or patterns
+        const goalKeywords = [
+          /(?:saved?|add(?:ed)?|put in|deposit(?:ed)?|contributed?).*\$\d+/i,
+          /(?:create|make|set up).*goal/i,
+          /(?:how.*doing|show.*progress|analyze.*progress)/i,
+          /(?:milestone|deadline|timeline|target date)/i,
+          /(?:retirement|emergency|house|debt|invest)/i
+        ];
+        
+        const hasGoalKeywords = goalKeywords.some(pattern => pattern.test(message));
+        
+        // If goal-related request, try goal tracking first
+        if (hasGoalKeywords) {
+          console.log('Attempting goal tracking for Financial Advisor request');
+          
+          try {
+            const goalTrackingResult = await processGoalTrackingRequest(
+              {
+                message,
+                userId: userId || '',
+                goalContext,
+                isGlobalMode: isGlobalMode || false,
+                goalId,
+                goal,
+                conversationHistory: []
+              },
+              supabase,
+              genAI
+            );
+            
+            // If goal tracking was successful and a function was executed, return that response
+            if (goalTrackingResult.function_executed) {
+              console.log('Goal tracking function executed:', goalTrackingResult.function_executed);
+              
+              // Save both user and AI messages to database
+              if (currentConversationId) {
+                const messagesToInsert = [
+                  {
+                    chat_session_id: currentConversationId,
+                    content: message,
+                    role: 'user',
+                    metadata: null,
+                    timestamp: new Date().toISOString()
+                  },
+                  {
+                    chat_session_id: currentConversationId,
+                    content: goalTrackingResult.response,
+                    role: 'assistant',
+                    metadata: { 
+                      function_executed: goalTrackingResult.function_executed,
+                      function_result: goalTrackingResult.function_result 
+                    },
+                    timestamp: new Date().toISOString()
+                  }
+                ];
+                
+                const { error: batchInsertError } = await supabase
+                  .from('chat_messages')
+                  .insert(messagesToInsert);
+                  
+                if (batchInsertError) {
+                  console.error('Error saving goal tracking messages:', batchInsertError);
+                }
+              }
+              
+              return new Response(
+                JSON.stringify({
+                  response: goalTrackingResult.response,
+                  conversationId: currentConversationId,
+                  function_executed: goalTrackingResult.function_executed,
+                  function_result: goalTrackingResult.function_result,
+                  next_actions: goalTrackingResult.next_actions,
+                  cache_refresh_needed: goalTrackingResult.cache_refresh_needed
+                }),
+                {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                }
+              );
+            }
+            
+            // If no function was executed but we got a response, fall through to normal processing
+            console.log('Goal tracking processed but no function executed, continuing with normal flow');
+          } catch (goalError) {
+            console.error('Goal tracking error, falling back to normal processing:', goalError);
+            // Fall through to normal processing
+          }
+        }
+      }
+      
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
       const formattedHistory = (history || [])
         .filter((msg: any) => {
@@ -259,8 +361,22 @@ serve(async (req: Request): Promise<Response> => {
         },
       ];
       
-      // Log the final contents sent to Gemini
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      // Initialize model with function calling for Financial Advisor if goals are available
+      let model;
+      
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+        // Add function calling capabilities for Financial Advisor with goals
+        const functionDeclarations = getGeminiFunctionDeclarations();
+        model = genAI.getGenerativeModel({ 
+          model: "gemini-2.5-flash-lite",
+          tools: [{
+            function_declarations: functionDeclarations
+          }]
+        });
+        console.log('Financial Advisor model initialized with goal tracking functions');
+      } else {
+        model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+      }
       const generationConfig = {
         responseMimeType: "text/plain",
         maxOutputTokens: 8000,
@@ -290,6 +406,11 @@ serve(async (req: Request): Promise<Response> => {
       }
       if(userActivities){
         systemInstruction = `${systemInstruction}\n\nMost recent activities of this user: ${userActivities}`;
+      }
+      
+      // Append goal context to Financial Advisor's system instruction
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+        systemInstruction = `${systemInstruction}\n\n=== USER'S CURRENT GOALS ===\n${JSON.stringify(goalContext, null, 2)}`;
       }
 
       // Initial generation

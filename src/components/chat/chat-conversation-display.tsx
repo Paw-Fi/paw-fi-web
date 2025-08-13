@@ -21,6 +21,8 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import FinancialHealthQuiz from '../financial-health/FinancialHealthQuiz';
 import { Modal } from '../ui/modal';
+import { Button } from '../ui/button';
+import { useAIChat } from '@/contexts/ai-chat-context';
 import { FinancialHealthProfile, useFinancialHealthProfile, formatProfileForAI } from '@/hooks/use-financial-health-profile';
 
 export interface ConversationMessage {
@@ -68,6 +70,11 @@ export interface ChatConfig {
   useExternalMessages?: boolean;
   externalMessages?: ConversationMessage[];
   customMessageHandler?: (content: string) => Promise<void>;
+  // UI customization
+  showHeader?: boolean;
+  showFooter?: boolean;
+  showFloatingCloseButton?: boolean;
+  showSignupModal?: boolean;
 }
 
 interface ChatConversationDisplayProps {
@@ -98,6 +105,20 @@ interface ChatConversationDisplayProps {
   className?: string;
   headerClassName?: string;
   messagesClassName?: string;
+  
+  // Header/Footer customization
+  headerTitle?: string;
+  headerSubtitle?: string;
+  headerGradientColors?: string;
+  headerBackgroundColors?: string;
+  backgroundGradient?: string;
+  footerContent?: React.ReactNode;
+  signupModalConfig?: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    buttonText: string;
+  };
 }
 
 export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
@@ -120,7 +141,14 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   disableMsgParse = false,
   className = "",
   headerClassName = "",
-  messagesClassName = ""
+  messagesClassName = "",
+  headerTitle,
+  headerSubtitle,
+  headerGradientColors,
+  headerBackgroundColors,
+  backgroundGradient,
+  footerContent,
+  signupModalConfig
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -128,6 +156,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user } = useAuth();
+  const { closeChat } = useAIChat();
   const { isActive } = useSubscription(user?.id || '');
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -140,6 +169,16 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [hasUpdatedGuestSession, setHasUpdatedGuestSession] = useState(false);
+  
+  // Shared handlers
+  const handleSignupClick = () => {
+    setShowSignupPrompt(false);
+    navigate?.({ to: "/register", search: { redirect: "/dashboard" } });
+  };
+  
+  const handleGuestSessionUpdate = () => {
+    // Handle guest session updates if needed
+  };
   
   // Use external messages if provided, otherwise use internal state
   const messages = chatConfig.useExternalMessages ? (chatConfig.externalMessages || []) : internalMessages;
@@ -429,16 +468,49 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 
   return (
     <>
-    <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
+      {/* Optional background wrapper */}
+      <div className={backgroundGradient || "h-full flex flex-col"}>
+        {/* Optional floating close button */}
+        {chatConfig.showFloatingCloseButton && (
+          <div className="absolute top-4 right-4 z-50">
+            <button
+              onClick={closeChat}
+              className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            >
+              <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
-      {/* Error Messages */}
-      {connectionError && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            {connectionError}
-          </p>
-        </div>
-      )}
+        {/* Optional header */}
+        {chatConfig.showHeader && headerTitle && (
+          <div className={`flex-shrink-0 border-b border-slate-200 dark:border-slate-700 ${headerBackgroundColors || "bg-gradient-to-r from-white to-emerald-50 dark:from-slate-800 dark:to-slate-700"}`}>
+            <div className="px-6 py-6">
+              <div className="text-center">
+                <h1 className={`text-3xl font-bold ${headerGradientColors || "bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"} bg-clip-text text-transparent mb-2`}>
+                  {headerTitle}
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {headerSubtitle}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat Container */}
+        <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
+
+          {/* Error Messages */}
+          {connectionError && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {connectionError}
+              </p>
+            </div>
+          )}
 
       {/* Messages Area */}
       <div 
@@ -625,7 +697,19 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         isLoading={isSendingMessage||isConversationMaxedOut} 
         isMaxedOut={isConversationMaxedOut}
       />
-    </div>
+        </div>
+
+        {/* Optional footer */}
+        {chatConfig.showFooter && footerContent && (
+          <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+            <div className="px-6 py-4">
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                {footerContent}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
      {/* Financial Health Quiz Modal */}
      <Modal
      isOpen={isQuizModalOpen}
@@ -644,8 +728,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
      )}
    </Modal>
 
-   {/* Signup Modal (for educator interface) */}
-   {chatConfig.enableSignupPrompt && (
+   {/* Configurable Signup Modal */}
+   {chatConfig.showSignupModal && signupModalConfig && (
      <Modal
        isOpen={showSignupPrompt}
        onClose={() => setShowSignupPrompt(false)}
@@ -655,30 +739,22 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
      >
        <div className="flex flex-col items-center w-full">
          <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
-           {/* We'll need to import FontAwesome or use a different icon */}
-           <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-             <path d="M12 14l9-5-9-5-9 5 9 5z"/>
-             <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-           </svg>
+           {signupModalConfig.icon}
          </div>
          <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
-           Your personalized lesson is ready!
+           {signupModalConfig.title}
          </h2>
          <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
-           Register a free account to view this personalized lesson and access more features.
+           {signupModalConfig.description}
          </p>
          <div className="w-full flex flex-col gap-2">
-           <button 
-             onClick={() => {
-               // Trigger the signup prompt callback to handle navigation
-               chatConfig.onSignupPromptShow?.();
-               setShowSignupPrompt(false);
-             }}
-             className="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-lg hover:bg-primary/90 transition"
+           <Button 
+             fullWidth 
+             className="!bg-primary !text-white !font-bold !py-3 !rounded-xl !shadow-lg hover:!bg-primary/90 transition"
+             onClick={handleSignupClick}
            >
-             Register for Free
-           </button>
+             {signupModalConfig.buttonText}
+           </Button>
          </div>
        </div>
      </Modal>

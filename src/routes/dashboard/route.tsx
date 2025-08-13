@@ -987,11 +987,7 @@ export function Dashboard() {
                 
                 {selectedAI === 'educator' && (
                   <FinancialEducatorChatInterface />
-                )}
-                
-                {selectedAI === 'tracker' && (
-                 <GoalTrackerChatInterface/>
-                )}
+                )}                
               </div>
             </motion.div>
           </>

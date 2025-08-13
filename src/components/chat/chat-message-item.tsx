@@ -103,14 +103,16 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   );
 
   const renderMessageContent = () => {
+    console.log(message.content)
     // Check if message contains QUESTIONNAIRE keyword
-    const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
+    const hasQuestionnaireKeyword = message.content.toUpperCase().includes('``QUESTIONNAIRE``');
     
     // Check for goal completion pattern ``GOAL:id`` - find all matches
-    const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/g)];
+    const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/gi)];
+    console.log(goalMatches)
     
     // Check for AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
-    const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/g)];
+    const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/gi)];
     
     // Check for goal template patterns
     const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
@@ -243,13 +245,11 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     // Handle multiple goal completion buttons ``GOAL:id``
     if (goalMatches.length > 0 && !isUser) {
       // Remove all goal patterns from text for clean display
-      const messageText = message.content.replace(/``GOAL:[^`]+``/g, '').trim();
-      
+      const messageText = message.content.replace(/``GOAL:[^`]+``/gi, '').trim();
+
       return (
         <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-          
-          
+          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>  
         </div>
       );
     }
@@ -287,12 +287,8 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     
     // Parse the message for long content sections
     const parsedMessage = parseMessageContent(message.content);
+    console.log(message.content)
     
-    // Debug logging
-    if (!isUser) {
-      console.log('Original message content:', message.content);
-      console.log('Parsed message:', parsedMessage);
-    }
     
     if (parsedMessage.hasLongContent && !isUser && !disableMsgParse) {
       return (

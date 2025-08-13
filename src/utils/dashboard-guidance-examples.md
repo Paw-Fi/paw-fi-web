@@ -124,7 +124,7 @@ const [showGuidanceSettings, setShowGuidanceSettings] = useState(false);
 {
   id: 'custom_scenario',
   route: '/dashboard/your-route',
-  agentId: 'advisor', // or 'tracker' or 'educator'
+  agentId: 'advisor', // or 'educator'
   message: 'Your helpful guidance message here',
   priority: 'medium',
   conditions: [
