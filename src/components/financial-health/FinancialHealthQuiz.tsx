@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import RangeSlider from "@/components/ui/RangeSlider";
-import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronLeft,
   faChevronRight,
   faCheck,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuizDashboard } from "./useQuizDashboard";
 import { supabase } from "@/lib/supabase";
@@ -20,14 +20,12 @@ import { toast } from "react-toastify";
 import { User } from "@/contexts/auth-context";
 import { FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { FinancialAdvisorMessageGenerator, AdvisorMessage } from "./financial-advisor-messages";
+import { PresetProfileSelector } from "./PresetProfileSelector";
 
 // Import shared types and constants
 import {
   QuestionCategory,
-  QuestionType,
-  QuestionOption,
   QuizQuestion,
-  CategoryInfo,
   DebtDetail,
   categories,
   goalsQuestionTemplate as quizQuestions,
@@ -45,6 +43,8 @@ interface QuizState {
   currentTip: number;
   advisorMessage: AdvisorMessage | null;
   showAdvisorMessage: boolean;
+  showPresetBanner: boolean;
+  appliedProfileName: string;
 }
 
 interface ExtendedCalculationResults extends CalculationResults {
@@ -187,7 +187,6 @@ const resultVariants = {
 
 export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => void, user: User}) {
   const {onDashboardCreated, user} = props;
-  const navigate = useNavigate();
   const { createDashboardFromQuiz } = useQuizDashboard();
   const [financialProfile, setFinancialProfile] = useState<Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null>(null);
 
@@ -210,6 +209,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     currentTip: 0,
     advisorMessage: null,
     showAdvisorMessage: false,
+    showPresetBanner: false,
+    appliedProfileName: "",
   });
 
   // Group questions by category for easier rendering
@@ -434,6 +435,22 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     []
   );
 
+  // Handle preset profile application
+  const handlePresetProfileSelect = useCallback((profileAnswers: Record<string, any>, profileName: string) => {
+    setState((prev) => ({
+      ...prev,
+      answers: {
+        ...prev.answers,
+        ...profileAnswers,
+        // Preserve debt-details and multiple choice arrays structure
+        'debt-details': profileAnswers['debt-details'] || [],
+        'additional_income_sources': profileAnswers['additional_income_sources'] || [],
+      },
+      showPresetBanner: true,
+      appliedProfileName: profileName,
+    }));
+  }, []);
+
 
   // Handle quiz submission
   const handleSubmitQuiz = useCallback(async () => {
@@ -560,10 +577,37 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
       const widgets = generateDashboardWidgets(state.calculationResults);
       
       // Create dashboard using the quiz dashboard hook
-      await createDashboardFromQuiz(
+      const dashboardViewId = await createDashboardFromQuiz(
         state.dashboardName,
         widgets
       );
+      
+      // If dashboard was created successfully, store the dashboard ID in the financial profile
+      if (dashboardViewId) {
+        try {
+          // Update the financial health profile to include the dashboard ID
+          const { error: updateError } = await supabase
+            .from('financial_health_profiles')
+            .update({
+              profile_data: {
+                ...financialProfile?.profile_data,
+                dashboard_view_id: dashboardViewId
+              },
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+            
+          if (updateError) {
+            console.error('Error updating financial profile with dashboard ID:', updateError);
+            // Don't fail the entire operation if profile update fails
+          } else {
+            console.log('Successfully stored dashboard ID in financial profile:', dashboardViewId);
+          }
+        } catch (profileUpdateError) {
+          console.error('Error updating profile with dashboard ID:', profileUpdateError);
+          // Don't fail the entire operation if profile update fails
+        }
+      }
       
       setStatus('complete');
       if (financialProfile) {
@@ -575,7 +619,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
       setError('Failed to create portfolio. Please try again.');
       setStatus('idle');
     }
-  }, [state.calculationResults, state.dashboardName, createDashboardFromQuiz, navigate, onDashboardCreated]);
+  }, [state.calculationResults, state.dashboardName, createDashboardFromQuiz, user.id, financialProfile, onDashboardCreated]);
 
   // Render input fields (number-input, slider) with responsive layout
   const renderInputFields = useCallback(
@@ -975,6 +1019,44 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                   transition={{ duration: 0.5 }}
                 />
               </div>
+              
+              {/* Preset Profile Selector - only show on first category */}
+              {state.activeCategory === "personal-information" && (
+                <div className="mt-4">
+                  <PresetProfileSelector onProfileSelect={handlePresetProfileSelect} />
+                </div>
+              )}
+              
+              {/* Profile Applied Banner */}
+              {state.showPresetBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-green-800">
+                        "{state.appliedProfileName}" profile applied successfully!
+                      </h4>
+                      <p className="text-xs text-green-700 mt-1">
+                        All questions have been pre-filled. You can still modify any answers before submitting.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setState(prev => ({ ...prev, showPresetBanner: false }))}
+                    className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="text-sm" />
+                  </button>
+                </motion.div>
+              )}
             </div>
 
             {/* Main content area */}

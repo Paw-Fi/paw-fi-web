@@ -447,7 +447,7 @@ Sound good?`,
                   <span className="hidden sm:inline">Sign In</span>
                   <span className="sm:hidden">Login</span>
                 </Button>
-                <Button onClick={()=>{
+                {/* <Button onClick={()=>{
                   setIsPresentationModalOpen(true)
                   setSelectedGoalType("saving")
                   setGoalData({
@@ -720,7 +720,7 @@ Sound good?`,
                 })
                 }}>
                   test
-                </Button>
+                </Button> */}
               </div>
             )}
             
@@ -747,7 +747,6 @@ Sound good?`,
       {/* Modern Chat Container with proper constraints */}
       <div className="flex flex-col" style={{ height: '600px' }}>
         <ChatConversationDisplay
-          messages={messages}
           chatConfig={
            {
             aiRole: "assistant",
@@ -756,12 +755,10 @@ Sound good?`,
             customMessageHandler: handleSendMessage,
            }
           }
-          onMessageSend={handleSendMessage}
-          isSendingMessage={isSendingMessage}
           welcomeMessage="Hi! I'm Moneko, your AI money coach 👋 Tell me what financial goal you'd like to work on!"
           welcomeSubtitle="I'll help you create a personalized plan step by step."
-          loadingDuration={loadingDuration}
           onGoalTemplateClick={handleGoalTemplateClick}
+          disableMsgParse={true}
           className="flex-1"
         />
       </div>

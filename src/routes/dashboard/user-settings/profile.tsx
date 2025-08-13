@@ -171,42 +171,149 @@ function FinancialProfileSettings() {
 
     setIsSaving(true);
     try {
-      if (profile) {
-        // Update existing profile
-        const { error } = await supabase
-          .from('financial_health_profiles')
-          .update({
-            quiz_answers: profileData,
-            profile_data: profile.profile_data,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', profile.id);
-
-        if (error) throw error;
-      } else {
-        // Create new profile
-        const { error } = await supabase
-          .from('financial_health_profiles')
-          .insert({
-            user_id: user.id,
-            profile_description: 'Comprehensive financial profile',
-            quiz_answers: profileData,
-            profile_data: {}
-          });
-
-        if (error) throw error;
-      }
-
-      setHasChanges(false);
-      setIsEditMode(false);
-      toast.success('Financial profile updated successfully!');
+      // Call the financial-health-profile edge function to update profile and regenerate calculations
+      console.log('Calling financial-health-profile edge function for profile update...');
+      console.log('Profile data:', profileData);
       
-      // Invalidate queries to refresh dashboard and other components
-      queryClient.invalidateQueries({ 
-        queryKey: ['financialHealthProfile', user.id] 
+      const { data, error: edgeFunctionError } = await supabase.functions.invoke('financial-health-profile', {
+        body: { 
+          quizAnswers: profileData,
+          userId: user.id,
+          isPartialUpdate: false // Full update since we have complete profile data
+        }
       });
       
-      await refetch();
+      if (edgeFunctionError) {
+        console.error('Error calling financial-health-profile:', edgeFunctionError);
+        throw edgeFunctionError;
+      }
+      
+      if (data?.success) {
+        console.log('✅ Financial profile updated and calculations regenerated');
+        
+        // Now run the quiz calculations to update widgets
+        const { calculateResults, generateDashboardWidgets } = await import('@/components/financial-health/quiz-calculations');
+        const { getAllDashboardViews, updateDashboardViewWithWidgets, createDashboardWithWidgets } = await import('@/lib/api/dashboard');
+        
+        const calculationResults = calculateResults(profileData);
+        const widgets = generateDashboardWidgets(calculationResults);
+        
+        try {
+          // Check if there's a stored dashboard ID in the profile data
+          const storedDashboardId = profile?.profile_data?.dashboard_view_id;
+          
+          if (storedDashboardId) {
+            // Try to update the existing dashboard
+            console.log('Updating existing financial health dashboard:', storedDashboardId);
+            try {
+              await updateDashboardViewWithWidgets(user.id, {
+                viewId: storedDashboardId,
+                name: undefined, // Keep existing name - don't update it
+                description: 'Updated financial health dashboard based on your profile',
+                widgets: widgets
+              });
+              console.log('✅ Dashboard widgets updated successfully');
+            } catch (updateError) {
+              // Dashboard might have been deleted, create a new one
+              console.warn('Failed to update dashboard (may have been deleted), creating new one:', updateError);
+              await createNewFinancialDashboard();
+            }
+          } else {
+            // No stored dashboard ID, check for existing dashboard using string matching
+            console.log('No stored dashboard ID found, checking for existing financial health dashboard');
+            
+            // Get all dashboard views to search for financial health dashboard
+            const dashboardViews = await getAllDashboardViews(user.id);
+            
+            // Look for existing financial health dashboard (created from quiz or previous profile update)
+            const existingFinancialDashboard = dashboardViews.find(view => 
+              view.name.toLowerCase().includes('financial health') || 
+              view.name.toLowerCase().includes('assessment') ||
+              view.description?.toLowerCase().includes('financial health') ||
+              view.description?.toLowerCase().includes('profile')
+            );
+            
+            if (existingFinancialDashboard) {
+              console.log('Found existing financial health dashboard:', existingFinancialDashboard.id);
+              
+              try {
+                // Update the existing dashboard
+                await updateDashboardViewWithWidgets(user.id, {
+                  viewId: existingFinancialDashboard.id,
+                  name: undefined, // Keep existing name
+                  description: 'Updated financial health dashboard based on your profile',
+                  widgets: widgets
+                });
+                
+                // Store this dashboard ID in the profile for future use
+                await supabase
+                  .from('financial_health_profiles')
+                  .update({
+                    profile_data: {
+                      ...profile.profile_data,
+                      dashboard_view_id: existingFinancialDashboard.id
+                    }
+                  })
+                  .eq('id', profile.id);
+                  
+                console.log('✅ Updated existing dashboard and stored ID in profile');
+              } catch (updateError) {
+                console.warn('Failed to update existing dashboard, creating new one:', updateError);
+                await createNewFinancialDashboard();
+              }
+            } else {
+              // No existing dashboard found, create a new one
+              console.log('No existing financial health dashboard found, creating new one');
+              await createNewFinancialDashboard();
+            }
+          }
+          
+          async function createNewFinancialDashboard() {
+            const dashboardName = profile?.profile_description || 'My Financial Health Assessment';
+            const result = await createDashboardWithWidgets({
+              viewName: dashboardName,
+              description: 'Financial health dashboard based on your profile',
+              widgets: widgets,
+              userId: user.id
+            });
+            
+            // Store the new dashboard ID back to the profile for future updates
+            if (result?.view?.id) {
+              console.log('Storing dashboard ID in profile:', result.view.id);
+              // Update the profile_data to include dashboard_view_id
+              await supabase
+                .from('financial_health_profiles')
+                .update({
+                  profile_data: {
+                    ...profile.profile_data,
+                    dashboard_view_id: result.view.id
+                  }
+                })
+                .eq('id', profile.id);
+            }
+          }
+        } catch (dashboardError) {
+          console.warn('Dashboard update failed, but profile was saved:', dashboardError);
+          // Don't throw here - profile save was successful
+        }
+
+        setHasChanges(false);
+        setIsEditMode(false);
+        toast.success('Financial profile updated successfully! Dashboard widgets have been refreshed.');
+        
+        // Invalidate queries to refresh dashboard and other components
+        queryClient.invalidateQueries({ 
+          queryKey: ['financialHealthProfile', user.id] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['dashboards', user.id] 
+        });
+        
+        await refetch();
+      } else {
+        console.error('Edge function returned unsuccessful response:', data);
+        throw new Error(data?.error || 'Failed to update financial profile');
+      }
     } catch (error) {
       console.error('Error saving financial profile:', error);
       toast.error('Failed to save financial profile. Please try again.');

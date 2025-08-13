@@ -91,6 +91,9 @@ interface ChatConversationDisplayProps {
   // Clear conversation
   onClearConversation?: () => void;
   
+  // Message parsing control
+  disableMsgParse?: boolean;
+  
   // Chat container customization
   className?: string;
   headerClassName?: string;
@@ -114,6 +117,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   navigate,
   initialSuggestedResponses,
   onClearConversation,
+  disableMsgParse = false,
   className = "",
   headerClassName = "",
   messagesClassName = ""
@@ -564,6 +568,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                   message={message} 
                   onOpenQuizModal={() => setIsQuizModalOpen(true)}
                   onGoalTemplateClick={onGoalTemplateClick}
+                  disableMsgParse={disableMsgParse}
                 />
               </motion.div>
             );

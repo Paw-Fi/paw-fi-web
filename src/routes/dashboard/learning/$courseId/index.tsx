@@ -218,8 +218,15 @@ export default function ModernCourseDetailPage() {
   const isFirstLesson=courseMetrics?.nextLesson?.id===course?.lessons[0].id;
 
   const handleLessonClick=(lessonId:string)=>{
+    console.log("lessonId",isActive)
     if(isActive){
-     navigate(`/dashboard/learning/${courseId}/lesson/${lessonId}`) 
+      navigate({
+        to: '/dashboard/learning/$courseId/lesson/$lessonId',
+        params: {
+          courseId,
+          lessonId,
+        },
+      })
     }else{
       setShowSubscriptionModal(true);
     }

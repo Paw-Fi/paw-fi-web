@@ -30,6 +30,7 @@ interface ChatMessageItemProps {
   onOpenQuizModal?: () => void;
   onGoalTemplateClick?: (goalType: GoalType) => void;
   formatTime?: (timestamp: number) => string;
+  disableMsgParse?: boolean;
 }
 
 
@@ -39,6 +40,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   onOpenQuizModal,
   onGoalTemplateClick,
   formatTime: formatTimeProp,
+  disableMsgParse = false,
 }) => {
   const isUser = message.role === "user";
   const navigate = useNavigate();
@@ -292,7 +294,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
       console.log('Parsed message:', parsedMessage);
     }
     
-    if (parsedMessage.hasLongContent && !isUser) {
+    if (parsedMessage.hasLongContent && !isUser && !disableMsgParse) {
       return (
         <>
           <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
