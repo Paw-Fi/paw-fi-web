@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { CourseCard } from "@/components/ui/course-card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLightbulb, faClipboardCheck, faEye } from "@fortawesome/free-solid-svg-icons";
@@ -21,7 +22,7 @@ interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: number;
-  chat_session_id: string; // Keeping as per original, map if needed for backend
+  chat_session_id: string;
   metadata?: Record<string, any>;
 }
 
@@ -32,8 +33,6 @@ interface ChatMessageItemProps {
   formatTime?: (timestamp: number) => string;
   disableMsgParse?: boolean;
 }
-
-
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
@@ -47,8 +46,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   const { user } = useAuth();
   const { closeChat, openChat } = useAIChat();
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
-  // Check if user has completed the financial assessment
+
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
   const handleCourseClick = (courseId: string) => () => {
@@ -56,11 +54,8 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     navigate({ to: `/dashboard/learning/${courseId}` });
   };
 
-  
-  // Watch for quiz completion messages and refetch profile
   useEffect(() => {
     if (isUser && message.content.toLowerCase().includes("completed the questionnaire") && user?.id) {
-      // Add a small delay then refetch profile to ensure it's been created
       setTimeout(() => {
         refetchProfile();
       }, 1000);
@@ -102,160 +97,133 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     </div>
   );
 
-  const renderMessageContent = () => {
-    console.log(message.content)
-    // Check if message contains QUESTIONNAIRE keyword
-    const hasQuestionnaireKeyword = message.content.toUpperCase().includes('``QUESTIONNAIRE``');
-    
-    // Check for goal completion pattern ``GOAL:id`` - find all matches
-    const goalMatches = [...message.content.matchAll(/``GOAL:([^`]+)``/gi)];
-    console.log(goalMatches)
-    
-    // Check for AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
-    const buttonMatches = [...message.content.matchAll(/``BUTTON:([^`]+)``/gi)];
-    
-    // Check for goal template patterns
-    const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
-    const detectedTemplate = goalTemplates.find(template => 
-      message.content.includes(`\`\`${template}\`\``)
-    );
-    
-    // Check for course card pattern - this was missing but referenced later
-    const courseCardMatch = message.content.includes('```json') && message.content.includes('```');
-    
+  // Pre-process content to convert special formats to HTML
+  const processedContent = useMemo(() => {
+    let content = message.content;
+
+    // Don't process user messages or when parsing is disabled
+    if (isUser || disableMsgParse) {
+      return content.replace("{{username}}", user?.user_metadata?.full_name || "");
+    }
+
+    // Handle course cards
+    const courseCardMatch = content.includes('```json') && content.includes('```');
     if (courseCardMatch) {
-      const start = message.content.indexOf('```json');
-      const jsonStart = start + 7; // Skip '```json'
-      const jsonEnd = message.content.indexOf('```', jsonStart); // Find closing ```
-      
-      if (start === -1 || jsonEnd === -1) {
-        // Fallback if parsing fails - just render as markdown
-        return (
-          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-            <ReactMarkdown>{message.content.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
-          </div>
-        );
+      const start = content.indexOf('```json');
+      const jsonStart = start + 7;
+      const jsonEnd = content.indexOf('```', jsonStart);
+      if (start !== -1 && jsonEnd !== -1) {
+        try {
+          const jsonString = content.slice(jsonStart, jsonEnd).trim();
+          const json = JSON.parse(jsonString);
+          const intro = content.slice(0, start).trim();
+          const after = content.slice(jsonEnd + 3).trim();
+          
+          content = `${intro}
+<course-card data-course='${JSON.stringify(json)}'></course-card>
+${after}`;
+        } catch (error) {
+          console.error('Error parsing course JSON:', error);
+        }
       }
-      
+    }
+
+    // Convert AI buttons to HTML elements
+    content = content.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type="$1"></ai-button>');
+
+    // Convert questionnaire trigger to HTML element
+    content = content.replace(/``QUESTIONNAIRE``/gi, '<questionnaire-button></questionnaire-button>');
+
+    // Convert goal templates to HTML elements
+    const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
+    goalTemplates.forEach(template => {
+      const regex = new RegExp('``' + template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '``', 'g');
+      content = content.replace(regex, `<goal-template data-type="${template}"></goal-template>`);
+    });
+
+    // Remove goal matches (keeping original logic)
+    content = content.replace(/``GOAL:[^`]+``/gi, '');
+
+    // Handle long content parsing
+    const parsedMessage = parseMessageContent(content);
+    if (parsedMessage.hasLongContent) {
+      content = `${parsedMessage.shortContent}
+<view-details-button data-sections='${JSON.stringify(parsedMessage.sections)}'></view-details-button>`;
+    }
+
+    return content.replace("{{username}}", user?.user_metadata?.full_name || "");
+  }, [message.content, isUser, disableMsgParse, user?.user_metadata?.full_name]);
+
+  // Custom components for rehypeRaw
+  const customComponents = useMemo(() => ({
+    a: ({ node, ...props }: any) => (
+      <a {...props} target="_blank" className="text-primary font-bold no-underline" />
+    ),
+    
+    "course-card": ({ node, ...props }: any) => {
       try {
-        const jsonString = message.content.slice(jsonStart, jsonEnd).trim();
-        const json = JSON.parse(jsonString);
-        const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name || "");
-        const outro = message.content.slice(jsonEnd + 3).trim().replace("{{username}}", user?.user_metadata?.full_name || ""); // +3 to skip closing ```
-        
+        const courseData = JSON.parse(props['data-course'] || '{}');
         return (
-          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-            {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
-            <div className="my-3">
-              <CourseCard
-                title={json.title || ""}
-                icon={json.icon || ""}
-                description={json.description || ""}
-                lessonCount={json.lesson_count || 0}
-                onClick={handleCourseClick(json.id)}
-              />
-            </div>
-            {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
+          <div className="my-3">
+            <CourseCard
+              title={courseData.title || ""}
+              icon={courseData.icon || ""}
+              description={courseData.description || ""}
+              lessonCount={courseData.lesson_count || 0}
+              onClick={handleCourseClick(courseData.id)}
+            />
           </div>
         );
       } catch (error) {
-        console.error('Error parsing course JSON:', error);
-        // Fallback if JSON parsing fails - just render as markdown
-        return (
-          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-            <ReactMarkdown>{message.content.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
-          </div>
-        );
+        console.error('Error rendering course card:', error);
+        return null;
       }
-    }
-    
-    // Handle AI button patterns ``BUTTON:advisor`` or ``BUTTON:educator``
-    if (buttonMatches.length > 0 && !isUser) {
-      // Remove all button patterns from text for clean display
-      const messageText = message.content.replace(/``BUTTON:[^`]+``/g, '').trim();
-      
+    },
+
+    "ai-button": ({ node, ...props }: any) => {
+      const aiType = props['data-type'];
       const aiButtonLabels: Record<string, { label: string; aiId: 'advisor' | 'educator';}> = {
-        advisor: { 
-          label: "Chat with Ollie", 
-          aiId: 'advisor', 
-        },
-        educator: { 
-          label: "Chat with Leo", 
-          aiId: 'educator', 
-        }
+        advisor: { label: "Chat with Ollie", aiId: 'advisor' },
+        educator: { label: "Chat with Leo", aiId: 'educator' }
       };
       
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name || "")}</ReactMarkdown>
-          
-          <div className="mt-3 space-y-2">
-            {buttonMatches.map((match, index) => {
-              const aiType = match[1]; // advisor or educator
-              const buttonInfo = aiButtonLabels[aiType];
-              
-              if (!buttonInfo) return null;
-              
-              return (
-                <Button
-                  key={index}
-                  onClick={() => {
-                    closeChat();
-                    openChat(buttonInfo.aiId)
-                  }}
-                  className="w-full bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faLightbulb} className="h-4 w-4" />
-                    <span>{buttonInfo.label}</span>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-    
-    if (hasQuestionnaireKeyword && !isUser) {
-      // Replace the QUESTIONNAIRE keyword with a button for assistant messages
-      const messageText = message.content.replace(/``QUESTIONNAIRE``/g, '').replace("{{username}}", user?.user_metadata?.full_name|| "");
-      
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.trim()}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => !hasProfile && onOpenQuizModal?.()}
-              disabled={hasProfile}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                hasProfile
-                  ? "bg-green-500 text-white cursor-default"
-                  : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
-              }`}
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
-              {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    
-    // Handle multiple goal completion buttons ``GOAL:id``
-    if (goalMatches.length > 0 && !isUser) {
-      // Remove all goal patterns from text for clean display
-      const messageText = message.content.replace(/``GOAL:[^`]+``/gi, '').trim();
+      const buttonInfo = aiButtonLabels[aiType];
+      if (!buttonInfo) return null;
 
       return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>  
+        <div className="mt-3">
+          <Button
+            onClick={() => { closeChat(); openChat(buttonInfo.aiId); }}
+            className="w-full bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faLightbulb} className="h-4 w-4" />
+              <span>{buttonInfo.label}</span>
+            </div>
+          </Button>
         </div>
       );
-    }
-    
-    // Handle goal template buttons
-    if (detectedTemplate && !isUser && onGoalTemplateClick) {
+    },
+
+    "questionnaire-button": ({ node, ...props }: any) => (
+      <div className="mt-3">
+        <Button
+          onClick={() => !hasProfile && onOpenQuizModal?.()}
+          disabled={hasProfile}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+            hasProfile
+              ? "bg-green-500 text-white cursor-default"
+              : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
+          }`}
+        >
+          <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
+          {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
+        </Button>
+      </div>
+    ),
+
+    "goal-template": ({ node, ...props }: any) => {
+      const goalType = props['data-type'] as GoalType;
       const templateLabels: Record<GoalType, string> = {
         retirement: "Retirement Planning",
         home_buying: "Home Buying",
@@ -266,36 +234,27 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
         passive_income: "Passive Income",
         custom: "Custom Goal"
       };
-      
-      const messageText = message.content.replace(new RegExp(`\`\`${detectedTemplate}\`\``, 'g'), '').trim();
-      
+
+      if (!onGoalTemplateClick) return null;
+
       return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => onGoalTemplateClick(detectedTemplate)}
-              className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
-              Start {templateLabels[detectedTemplate]} Setup
-            </Button>
-          </div>
+        <div className="mt-3">
+          <Button
+            onClick={() => onGoalTemplateClick(goalType)}
+            className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
+            Start {templateLabels[goalType]} Setup
+          </Button>
         </div>
       );
-    }
-    
-    // Parse the message for long content sections
-    const parsedMessage = parseMessageContent(message.content);
-    console.log(message.content)
-    
-    
-    if (parsedMessage.hasLongContent && !isUser && !disableMsgParse) {
-      return (
-        <>
-          <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-            <ReactMarkdown>{parsedMessage.shortContent.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-            
+    },
+
+    "view-details-button": ({ node, ...props }: any) => {
+      try {
+        const sections = JSON.parse(props['data-sections'] || '[]');
+        return (
+          <>
             <div className="mt-3 not-prose">
               <Button
                 onClick={() => setIsDetailModalOpen(true)}
@@ -304,32 +263,48 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
                 className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 flex items-center gap-2"
               >
                 <FontAwesomeIcon icon={faEye} className="h-3 w-3" />
-                View detailed information ({parsedMessage.sections.length} sections)
+                View detailed information ({sections.length} sections)
               </Button>
             </div>
-          </div>
-          
-          <DetailedContentModal
-            isOpen={isDetailModalOpen}
-            onClose={() => setIsDetailModalOpen(false)}
-            sections={parsedMessage.sections}
-            title="Detailed Financial Guidance"
-          />
-        </>
-      );
+            <DetailedContentModal
+              isOpen={isDetailModalOpen}
+              onClose={() => setIsDetailModalOpen(false)}
+              sections={sections}
+              title="Detailed Financial Guidance"
+            />
+          </>
+        );
+      } catch (error) {
+        console.error('Error rendering view details button:', error);
+        return null;
+      }
     }
-    
-    return (
-      <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-        <ReactMarkdown>{message.content.trim().replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-      </div>
-    );
-  };
+  }), [
+    handleCourseClick, 
+    closeChat, 
+    openChat, 
+    hasProfile, 
+    onOpenQuizModal, 
+    onGoalTemplateClick, 
+    isDetailModalOpen, 
+    setIsDetailModalOpen
+  ]);
+
+  const renderMessageContent = useMemo(() => (
+    <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
+      <ReactMarkdown
+        rehypePlugins={[rehypeRaw]}
+        components={customComponents}
+      >
+        {processedContent}
+      </ReactMarkdown>
+    </div>
+  ), [processedContent, isUser, customComponents]);
 
   return (
     <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <Avatar />}
-      <MessageBubble>{renderMessageContent()}</MessageBubble>
+      <MessageBubble>{renderMessageContent}</MessageBubble>
       {isUser && <Avatar />}
     </div>
   );

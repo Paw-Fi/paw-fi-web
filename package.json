@@ -58,6 +58,7 @@
     "react-toastify": "^11.0.5",
     "react-tooltip": "^5.29.1",
     "redaxios": "^0.5.1",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "sass": "^1.87.0",
     "tailwind-merge": "^2.6.0",
