@@ -56,6 +56,51 @@ function getRandomResponse(responses: string[]): string {
   return responses[randomIndex];
 }
 
+// Helper function to format goal context for AI comprehension
+function formatGoalContextForAI(goalContext: any): string {
+  if (!goalContext || !goalContext.goalsSummary) {
+    return "";
+  }
+  
+  const { totalGoals, activeGoals, totalProgress, goalsSummary } = goalContext;
+  
+  let formattedContext = `=== USER'S CURRENT FINANCIAL GOALS ===
+
+OVERVIEW:
+- Total Goals: ${totalGoals}
+- Active Goals: ${activeGoals}
+- Average Progress: ${totalProgress}%
+
+DETAILED GOAL BREAKDOWN:
+`;
+
+  goalsSummary.forEach((goal: any, index: number) => {
+    const progressStatus = goal.is_on_track ? "✅ ON TRACK" : "⚠️ BEHIND SCHEDULE";
+    const completionDate = goal.target_date ? ` (Target: ${goal.target_date})` : "";
+    
+    formattedContext += `
+${index + 1}. **${goal.title}** (ID: ${goal.id})
+   - Type: ${goal.goal_type}
+   - Progress: $${goal.current_amount.toLocaleString()} / $${goal.target_amount.toLocaleString()} (${goal.progress_percentage}%)
+   - Status: ${goal.status.toUpperCase()} - ${progressStatus}${completionDate}
+   - Milestones: ${goal.milestone_count} milestones set`;
+  });
+
+  formattedContext += `
+
+GOAL TRACKING CONTEXT:
+- When providing advice, reference these specific goals by name and ID
+- Suggest goal modifications when appropriate (timeline, amount, milestones)
+- Proactively suggest creating new goals when advice aligns with goal opportunities
+- Always confirm before executing any goal functions
+- Use the goal tracking tools to help users make progress on these objectives
+- Consider how any financial advice impacts their existing goal timelines and progress
+
+Remember: Every piece of financial advice should be evaluated against these existing goals and how it helps or hinders the user's progress toward achieving them.`;
+
+  return formattedContext;
+}
+
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
@@ -410,7 +455,8 @@ serve(async (req: Request): Promise<Response> => {
       
       // Append goal context to Financial Advisor's system instruction
       if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
-        systemInstruction = `${systemInstruction}\n\n=== USER'S CURRENT GOALS ===\n${JSON.stringify(goalContext, null, 2)}`;
+        const goalContextText = formatGoalContextForAI(goalContext);
+        systemInstruction = `${systemInstruction}\n\n${goalContextText}`;
       }
 
       // Initial generation

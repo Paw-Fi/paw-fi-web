@@ -24,6 +24,8 @@ import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { useAIChat } from '@/contexts/ai-chat-context';
 import { FinancialHealthProfile, useFinancialHealthProfile, formatProfileForAI } from '@/hooks/use-financial-health-profile';
+import { useUserGoals, createAllGoalsContext } from '@/hooks/goal-tracker/use-user-goals';
+import { AI_ROLES } from './ai-roles';
 
 export interface ConversationMessage {
   content: string;
@@ -186,6 +188,12 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   // Load financial health profile for authenticated users
   const { profile } = useFinancialHealthProfile(user?.id);
   
+  // Load user goals for Financial Advisor mode
+  const { data: userGoals, isLoading: isGoalsLoading } = useUserGoals();
+  
+  // Check if this is Financial Advisor mode
+  const isFinancialAdvisorMode = chatConfig.aiRole === AI_ROLES.FINANCIAL_ADVISOR;
+  
   // Get guest session ID from cookie or create new one
   const getGuestSessionId = useCallback((): string => {
     let sessionId = getCookie(GUEST_SESSION_COOKIE);
@@ -315,13 +323,24 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     }
     
     try {
+      // Create goal context for Financial Advisor mode
+      let goalContext = null;
+      if (isFinancialAdvisorMode && userGoals && userGoals.length > 0) {
+        goalContext = createAllGoalsContext(userGoals);
+      }
+      
       // Send message using proper supabase service function
       const response = await sendChatMessage(supabase, content, {
         conversationId: isAuthenticated ? currentConversationId : null,
         userId: user?.id || null,
         sessionId: isAuthenticated ? null : (chatConfig.enableGuestSessions ? getGuestSessionId() : null),
         model: chatConfig.aiRole,
-        profile: formatProfileForAI(user, manual_profile || profile)
+        profile: formatProfileForAI(user, manual_profile || profile),
+        // Include goal context for Financial Advisor mode
+        ...(isFinancialAdvisorMode && goalContext && {
+          goalContext: goalContext,
+          isGlobalMode: true // Financial Advisor operates in global mode with all goals
+        })
       });
       
       // For guest users (educator only), store the new session ID and course ID if provided
@@ -350,6 +369,22 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       // Add AI message to UI (only for internal messages)
       if (!chatConfig.useExternalMessages) {
         setInternalMessages(prev => [...prev, aiMessage]);
+      }
+      
+      // Handle goal function execution results for Financial Advisor
+      if (isFinancialAdvisorMode && response.function_executed && response.cache_refresh_needed) {
+        console.log('Goal function executed:', response.function_executed);
+        
+        // Invalidate goal-related queries to refresh UI
+        queryClient.invalidateQueries({ queryKey: ['user-goals', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['goals', 'list'] });
+        queryClient.invalidateQueries({ queryKey: ['goals', 'list', user?.id] });
+        
+        // Invalidate goal metrics if user is authenticated
+        if (user?.id) {
+          queryClient.invalidateQueries({ queryKey: ['goals', 'metrics', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['user-activities', user.id] });
+        }
       }
       
       // Check for signup prompt (educator only)

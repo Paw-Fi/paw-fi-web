@@ -9,6 +9,11 @@ export interface AIResponse {
   messageId?: string;
   conversationId?: string;
   course_id?: string;
+  // Goal tracking function execution results
+  function_executed?: string;
+  function_result?: any;
+  next_actions?: string[];
+  cache_refresh_needed?: boolean;
 }
 
 export interface Message {
@@ -253,6 +258,11 @@ export async function sendChatMessage(
     sessionId?: string | null;
     model: string;
     profile?: any;
+    // Goal context parameters for Financial Advisor
+    goalContext?: any;
+    isGlobalMode?: boolean;
+    goalId?: string;
+    goal?: any;
   }
 ): Promise<AIResponse> {
   try {
@@ -268,7 +278,12 @@ export async function sendChatMessage(
       userId: options.userId,
       sessionId: options.sessionId,
       model: options.model,
-      userProfile: options.profile
+      userProfile: options.profile,
+      // Include goal context parameters if provided
+      ...(options.goalContext && { goalContext: options.goalContext }),
+      ...(options.isGlobalMode !== undefined && { isGlobalMode: options.isGlobalMode }),
+      ...(options.goalId && { goalId: options.goalId }),
+      ...(options.goal && { goal: options.goal })
     };
     
     // Let Supabase handle method, headers, and JSON serialization automatically
@@ -282,7 +297,14 @@ export async function sendChatMessage(
       response: data.response || data.content,
       isComplete: true,
       messageId: data.messageId,
-      conversationId: data.conversationId // For guest sessions, backend returns new session ID
+      conversationId: data.conversationId, // For guest sessions, backend returns new session ID
+      generatedLessons: data.generatedLessons,
+      course_id: data.course_id,
+      // Goal tracking results
+      function_executed: data.function_executed,
+      function_result: data.function_result,
+      next_actions: data.next_actions,
+      cache_refresh_needed: data.cache_refresh_needed
     };
   } catch (error: any) {
     return {

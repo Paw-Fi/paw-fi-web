@@ -257,7 +257,7 @@ export function ActivityContributionGraph({
                   onDateSelect(day.date);
                 }
               }}
-              className={`w-8 h-8 rounded-md flex items-center justify-center text-xs font-medium transition-all duration-200 hover:scale-105 relative ${
+              className={`w-8 h-8 mx-auto rounded-md flex items-center justify-center text-xs font-medium transition-all duration-200 hover:scale-105 relative ${
                 day.isSelected
                   ? 'bg-blue-500 text-white shadow-md'
                   : day.isToday

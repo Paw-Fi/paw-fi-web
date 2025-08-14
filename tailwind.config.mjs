@@ -115,7 +115,10 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
-      }
+      },
+      fontFamily: {
+        'hepta-slab': ['Hepta Slab', 'serif'],
+      },
     }
   },
   plugins: [

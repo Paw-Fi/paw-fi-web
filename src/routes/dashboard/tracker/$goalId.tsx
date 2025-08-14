@@ -18,7 +18,11 @@ import {
   faTimes,
   faCalculator,
   faComments,
-  faBell
+  faBell,
+  faLightbulb,
+  faInfoCircle,
+  faExclamationCircle,
+  faCheckCircle
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoal } from "@/hooks/goal-tracker/use-goal";
@@ -29,6 +33,7 @@ import { MilestonesList } from "@/components/goal-tracker/goal-detail/Milestones
 import { AdjustTimelineModal } from "@/components/goal-tracker/goal-detail/AdjustTimelineModal";
 import { GoalInsights } from "@/components/goal-tracker/goal-detail/GoalInsights";
 import { useState, useEffect, useOptimistic } from "react";
+import ReactMarkdown from 'react-markdown';
 
 // Extracted components
 import { AnimatedNumber } from "@/components/goal-tracker/AnimatedNumber";
@@ -40,9 +45,6 @@ import { TrackerModal } from "@/components/goal-tracker/TrackerModal";
 import { UpdateProgressModal } from "@/components/goal-tracker/UpdateProgressModal";
 import { ActivityList } from "@/components/shared/ActivityList";
 import { useUserActivities } from "@/hooks/useUserActivities";
-import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
-import { GoalTrackerChatWidget } from "@/components/goal-tracker/GoalTrackerChatWidget";
-import { ProactiveReminders } from "@/components/goal-tracker/ProactiveReminders";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -123,9 +125,9 @@ function GoalDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // Main UI state
-  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'calculator' | 'activity' | 'chat' | 'reminders'>('overview');
+  const [activeTab, setActiveTab] = useState<'Analytics' | "Quick Actions" | 'calculator' | 'activity' | 'chat' | 'reminders'>('Quick Actions');
   const [showTrackerModal, setShowTrackerModal] = useState(false);
-  const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | 'milestones'>('activity');
+  const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | "Quick Actions">('activity');
   const [showAdjustTimelineModal, setShowAdjustTimelineModal] = useState(false);
   const [showAllInsightsModal, setShowAllInsightsModal] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -564,7 +566,7 @@ function GoalDetail() {
                   onClick={() => setShowTrackerModal(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  Overview
+                 Goal Summary
                 </button>
               </div>
             </div>
@@ -587,66 +589,17 @@ function GoalDetail() {
               </div>
             </div>
           </div>
-          
-        </div>
-        
-        {/* Tabbed Interface */}
-        <div className="mb-16">
-          {/* Tab Navigation */}
-          <div className="mb-12">
-            <nav className="flex gap-1" aria-label="Goal sections">
-              {[
-                { id: 'overview', label: 'Overview', icon: faChartLine },
-                { id: 'milestones', label: 'Milestones', icon: faFlag },
-                { id: 'calculator', label: 'Calculator', icon: faCalculator },
-                { id: 'activity', label: 'Activity', icon: faClock },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`group flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <FontAwesomeIcon 
-                    icon={tab.icon} 
-                    className={`w-4 h-4 transition-colors ${
-                      activeTab === tab.id 
-                        ? 'text-blue-500 dark:text-blue-400' 
-                        : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'
-                    }`} 
-                  />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-          
-          {/* Tab Content */}
-          <div>
-            <AnimatePresence mode="wait">
-              {activeTab === 'overview' && (
-                <motion.div
-                  key="overview"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-8"
-                >
-                  {/* Key Metrics */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                       <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-2xl p-8">
                         <div className="flex items-center justify-center mb-4">
                           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                             <FontAwesomeIcon icon={faCalendar} className="w-6 h-6 text-white" />
                           </div>
                         </div>
-                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Retirement Age</div>
-                        <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                          <AnimatedNumber value={55} isAnimated={numbersAnimated} />
+                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Start Date</div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                          {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString() : 'Not set'}
                         </div>
                       </div>
                       
@@ -686,6 +639,138 @@ function GoalDetail() {
                         </div>
                       </div>
                     </div>
+        </div>
+        
+        {/* Tabbed Interface */}
+        <div className="mb-16">
+          {/* Tab Navigation */}
+          <div className="mb-12">
+            <nav className="flex gap-1" aria-label="Goal sections">
+              {[
+                { id: "Quick Actions", label: "Quick Actions", icon: faFlag },
+                { id: 'Analytics', label: 'Analytics', icon: faChartLine },
+                { id: 'calculator', label: 'Calculator', icon: faCalculator },
+                { id: 'activity', label: 'Activity', icon: faClock },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`group flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <FontAwesomeIcon 
+                    icon={tab.icon} 
+                    className={`w-4 h-4 transition-colors ${
+                      activeTab === tab.id 
+                        ? 'text-blue-500 dark:text-blue-400' 
+                        : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'
+                    }`} 
+                  />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Tab Content */}
+          <div>
+            <AnimatePresence mode="wait">
+              {activeTab === 'Analytics' && (
+                <motion.div
+                  key="Analytics"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-8"
+                >               
+                  
+                  {/* AI Generated Strategy */}
+                  {currentGoal.ai_generated_strategy && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 mb-8 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+                          <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI-Generated Strategy</h3>
+                      </div>
+                      
+                      <div className="prose dark:prose-invert max-w-none">
+                        <ReactMarkdown 
+                          components={{
+                            h1: ({...props}) => <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4" {...props} />,
+                            h2: ({...props}) => <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 mt-6" {...props} />,
+                            h3: ({...props}) => <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 mt-4" {...props} />,
+                            p: ({...props}) => <p className="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed" {...props} />,
+                            ul: ({...props}) => <ul className="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300" {...props} />,
+                            ol: ({...props}) => <ol className="list-decimal list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300" {...props} />,
+                            li: ({...props}) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
+                            strong: ({...props}) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
+                            em: ({...props}) => <em className="italic text-gray-700 dark:text-gray-300" {...props} />,
+                            blockquote: ({...props}) => <blockquote className="border-l-4 border-purple-300 dark:border-purple-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-4" {...props} />,
+                            table: ({...props}) => <table className="w-full border-collapse border border-gray-300 dark:border-gray-600 mb-4" {...props} />,
+                            th: ({...props}) => <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left" {...props} />,
+                            td: ({...props}) => <td className="border border-gray-300 dark:border-gray-600 px-3 py-2" {...props} />,
+                          }}
+                        >
+                          {currentGoal.ai_generated_strategy}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+
+                
+                  {/* Questionnaire Details */}
+                  {currentGoal.ai_questionnaire_data && Object.keys(currentGoal.ai_questionnaire_data).length > 0 && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 mb-8 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
+                          <FontAwesomeIcon icon={faComments} className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Your Profile Details</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(currentGoal.ai_questionnaire_data).map(([key, value]) => {
+                          if (!value || value === '' || value === 'undefined') return null;
+                          
+                          const displayKey = key
+                            .replace(/_/g, ' ')
+                            .replace(/\b\w/g, (l) => l.toUpperCase());
+                          
+                          let displayValue = value;
+                          if (typeof value === 'boolean') {
+                            displayValue = value ? 'Yes' : 'No';
+                          } else if (typeof value === 'number') {
+                            if (key.includes('amount') || key.includes('income') || key.includes('savings') || key.includes('debt')) {
+                              displayValue = `$${value.toLocaleString()}`;
+                            } else if (key.includes('age')) {
+                              displayValue = `${value} years`;
+                            } else {
+                              displayValue = value.toString();
+                            }
+                          } else if (typeof value === 'string') {
+                            displayValue = value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
+                          }
+                          
+                          return (
+                            <div key={key} className="bg-white dark:bg-gray-800 rounded-xl p-4">
+                              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                {displayKey}
+                              </div>
+                              <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {displayValue}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* AI Insights Section - "What Moneko thinks" */}
                   <GoalInsights 
                     insights={currentInsights || []} 
@@ -696,9 +781,9 @@ function GoalDetail() {
                 </motion.div>
               )}
               
-              {activeTab === 'milestones' && (
+              {activeTab === "Quick Actions" && (
                 <motion.div
-                  key="milestones"
+                  key="Quick Actions"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -751,22 +836,58 @@ function GoalDetail() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                         <FontAwesomeIcon icon={faClock} className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Activity & Progress History</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Track your progress updates and goal modifications</p>
                       </div>
                     </div>
                     
-                    <ActivityList 
-                      activities={activities || []} 
-                      isLoading={activitiesLoading} 
-                      goalId={goalId} 
-                    />
+                    {/* Progress History Section */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                          <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
+                        </div>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">Progress Updates</h4>
+                      </div>
+                      
+                      {/* Progress Timeline Placeholder - This would fetch from goal_progress_updates table */}
+                      <div className="text-center py-8">
+                        <FontAwesomeIcon icon={faChartLine} className="w-12 h-12 text-gray-400 mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400 mb-2">Progress History Coming Soon</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">
+                          This section will show your detailed progress updates from the goal_progress_updates table,
+                          including amount changes, milestone completions, and progress tracking over time.
+                        </p>
+                        <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <strong>Database fields to display:</strong>
+                            <ul className="text-left mt-2 space-y-1">
+                              <li>• update_type (amount_added, milestone_completed, etc.)</li>
+                              <li>• amount_change and new_amount values</li>
+                              <li>• user_note comments</li>
+                              <li>• update_source (manual, automatic, ai_suggestion)</li>
+                              <li>• created_at timestamps</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* General Activity List */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h4>
+                      <ActivityList 
+                        activities={activities || []} 
+                        isLoading={activitiesLoading} 
+                        goalId={goalId} 
+                      />
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -1160,7 +1281,6 @@ function GoalDetail() {
         isOpen={showAdjustTimelineModal}
         onClose={() => setShowAdjustTimelineModal(false)}
         goal={currentGoal}
-        onGoalUpdate={updateGoal}
         onOptimisticUpdate={setOptimisticGoal}
       />
 

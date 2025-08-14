@@ -397,13 +397,7 @@ const SpotlightSection = memo(function SpotlightSection({
   getGoalStatus: (goal: any) => string;
 }) {
   if (!spotlightGoals || spotlightGoals.length === 0) return null;
-  
-  // Determine grid layout based on number of cards
-  const getGridClass = (count: number) => {
-    if (count === 1) return 'grid grid-cols-1 max-w-md mx-auto';
-    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6';
-    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-  };
+
   
   return (
     <motion.section 
@@ -413,7 +407,7 @@ const SpotlightSection = memo(function SpotlightSection({
       transition={{ duration: 0.4 }}
     >
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Spotlight</h2>
-      <div className={getGridClass(spotlightGoals.length)}>
+      <div className="grid grid-cols-3 gap-6">
         {spotlightGoals.map((goal, index) => (
           <SpotlightCard 
             key={goal.id}
@@ -451,82 +445,32 @@ const SpotlightCard = memo(function SpotlightCard({
     : 0;
   
   // Get background color based on goal type and spotlight type
-  const getCardBackground = (goalType: string, spotlightType: string) => {
-    // Primary colors based on goal type
-    const goalTypeColors = {
-      'retirement': 'bg-gradient-to-br from-purple-200 to-purple-300',
-      'home_buying': 'bg-gradient-to-br from-blue-200 to-blue-300', 
-      'wealth': 'bg-gradient-to-br from-green-200 to-green-300',
-      'investment': 'bg-gradient-to-br from-indigo-200 to-indigo-300',
-      'debt_payoff': 'bg-gradient-to-br from-red-200 to-red-300',
-      'passive_income': 'bg-gradient-to-br from-yellow-200 to-yellow-300',
-      'emergency_fund': 'bg-gradient-to-br from-orange-200 to-orange-300',
-      'custom': 'bg-gradient-to-br from-gray-200 to-gray-300'
-    };
-    
-    // Override with spotlight urgency colors if critical
-    if (spotlightType === 'critical') {
-      return 'bg-gradient-to-br from-red-300 to-red-400';
-    }
-    if (spotlightType === 'urgency') {
-      return 'bg-gradient-to-br from-orange-300 to-orange-400';
-    }
-    
-    return goalTypeColors[goalType as keyof typeof goalTypeColors] || goalTypeColors.custom;
+  const getCardBackground = (priority?: number) => {
+    if(priority === 1) return 'bg-[#d7ceff]';
+    if(priority === 2) return 'bg-[#f2e9fe]';
+    if(priority === 3) return 'bg-[#daeafe]';
+    return 'bg-[#d7ceff]';
   };
   
-  // Get decorative elements based on goal type
-  const getDecorativeElements = (goalType: string) => {
-    const decorativeMap = {
-      'retirement': ['🚀', '⭐', '✨', '●', '✦'],
-      'home_buying': ['🏠', '⭐', '●', '✦'],
-      'wealth': ['💎', '⭐', '✨', '●'],
-      'investment': ['📈', '⭐', '●', '✦'],
-      'debt_payoff': ['💳', '⚡', '●', '✦'],
-      'passive_income': ['💰', '⭐', '●', '✦'],
-      'emergency_fund': ['🛡️', '⭐', '●', '✦'],
-      'custom': ['🎯', '⭐', '●', '✦']
-    };
-    
-    const elements = decorativeMap[goalType as keyof typeof decorativeMap] || decorativeMap.custom;
-    return elements.slice(0, 4); // Limit to 4 elements
-  };
-  
-  const cardBackground = getCardBackground(goal.type || 'custom', type);
-  const decorativeElements = getDecorativeElements(goal.type || 'custom');
+  const cardBackground = getCardBackground(priority);
   
   return (
     <Link to={`/dashboard/tracker/${goal.id}`}>
       
       <motion.div 
-        className={`relative overflow-hidden bg-[#d6cffe] rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
+        className={`relative overflow-hidden flex justify-center items-center bg-[#d6cffe] rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
         whileHover={{ y: -2, scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        style={{ backgroundImage: `url(${travelBgImage})`, backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
-      >
-        {/* Decorative Elements */}
-        {/* <div className="absolute top-4 right-6 text-2xl opacity-30">{decorativeElements[0]}</div>
-        <div className="absolute top-8 right-12 text-sm opacity-25">{decorativeElements[1]}</div>
-        <div className="absolute bottom-6 left-6 text-lg opacity-20">{decorativeElements[2]}</div>
-        <div className="absolute bottom-4 right-8 text-xs opacity-25">{decorativeElements[3]}</div>
-         */}
-        <div className="relative z-10">
-          {/* Large Icon */}
-          {/* <div className="mb-6">
-            <div className="w-16 h-16 bg-white/50 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <FontAwesomeIcon icon={icon} className="w-8 h-8 text-gray-700" />
-            </div>
-          </div> */}
-          
+      >                
           {/* Main Content */}
-          <div className="space-y-2 pt-6">
+          <div className="flex flex-col gap-2">
             {/* Days Display */}
-            <div className="text-4xl font-bold text-gray-900 text-right">
+            <div className="text-4xl font-hepta-slab  font-bold text-gray-900 ">
               {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
             </div>
             
             {/* Goal Title */}
-            <div className="text-gray-800 font-medium text-lg leading-tight text-right pl-24 line-clamp-2 text-ellipsis">
+            <div className="text-gray-500 font-medium text-lg leading-tight line-clamp-2 text-ellipsis">
               Until {goal.title}
             </div>
             
@@ -537,7 +481,6 @@ const SpotlightCard = memo(function SpotlightCard({
               </div>
             )}
           </div>
-        </div>
       </motion.div>
     </Link>
   );

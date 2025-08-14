@@ -303,7 +303,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                Milestones ({completedCount}/{orderedMilestones.length})
+                Quick Actions ({completedCount}/{orderedMilestones.length})
               </h3>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -515,6 +515,17 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         {milestone.target_amount && (
                           <span>${milestone.target_amount.toLocaleString()}</span>
                         )}
+                        {milestone.milestone_type === 'habit' && milestone.frequency && (
+                          <span className="flex items-center gap-1">
+                            <FontAwesomeIcon icon={faRepeat} className="w-3 h-3" />
+                            {milestone.frequency}
+                          </span>
+                        )}
+                        {milestone.progress_percentage > 0 && milestone.status !== 'completed' && (
+                          <span className="text-blue-600 dark:text-blue-400 font-medium">
+                            {milestone.progress_percentage.toFixed(0)}% done
+                          </span>
+                        )}
                         {milestone.is_ai_generated && (
                           <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                             <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
@@ -551,9 +562,102 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         exit={{ height: 0, opacity: 0 }}
                         className="mt-3 pl-8 overflow-hidden"
                       >
-                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                          {milestone.description}
-                        </p>
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                            {milestone.description}
+                          </p>
+                          
+                          {/* Additional Details */}
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 space-y-2">
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400 font-medium">Type:</span>
+                                <span className="ml-2 text-gray-900 dark:text-white capitalize">
+                                  {milestone.milestone_type.replace('_', ' ')}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400 font-medium">Status:</span>
+                                <span className={`ml-2 capitalize font-medium ${
+                                  milestone.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                  milestone.status === 'overdue' ? 'text-red-600 dark:text-red-400' :
+                                  milestone.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' :
+                                  'text-gray-600 dark:text-gray-400'
+                                }`}>
+                                  {milestone.status.replace('_', ' ')}
+                                </span>
+                              </div>
+                              
+                              {milestone.start_date && (
+                                <div>
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Started:</span>
+                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                    {new Date(milestone.start_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {milestone.completed_date && (
+                                <div>
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Completed:</span>
+                                  <span className="ml-2 text-green-600 dark:text-green-400 font-medium">
+                                    {new Date(milestone.completed_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {milestone.milestone_type === 'habit' && milestone.habit_description && (
+                                <div className="col-span-2">
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Habit:</span>
+                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                    {milestone.habit_description}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {milestone.milestone_type === 'habit' && milestone.habit_target_value && (
+                                <div>
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Target:</span>
+                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                    ${milestone.habit_target_value} per {milestone.frequency}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {milestone.milestone_type === 'amount' && milestone.current_amount !== undefined && (
+                                <div>
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Progress:</span>
+                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                    ${milestone.current_amount.toLocaleString()}
+                                    {milestone.target_amount && (
+                                      <span className="text-gray-500 dark:text-gray-400 ml-1">
+                                        / ${milestone.target_amount.toLocaleString()}
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Progress Bar for amount milestones */}
+                            {milestone.milestone_type === 'amount' && milestone.target_amount && milestone.progress_percentage > 0 && (
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-gray-500 dark:text-gray-400">Progress</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">
+                                    {milestone.progress_percentage.toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                  <div 
+                                    className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min(milestone.progress_percentage, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
