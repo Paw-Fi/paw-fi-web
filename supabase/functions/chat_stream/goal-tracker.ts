@@ -169,8 +169,58 @@ export async function executeGoalFunction(
   console.log('Executing function:', functionName, parameters);
   
   try {
+    // Transform parameters based on the function being called
+    let requestBody: any = {};
+    
+    switch (functionName) {
+      case 'goal-milestone-manager':
+        // Expected structure: { action, payload, userId }
+        requestBody = {
+          action: parameters.action || 'create',
+          payload: parameters.payload || parameters,
+          userId: parameters.userId
+        };
+        
+        // If we have a goalId but no payload, structure it correctly
+        if (parameters.goalId && !parameters.payload) {
+          requestBody.payload = {
+            ...parameters,
+            goal_id: parameters.goalId
+          };
+          delete requestBody.payload.userId;
+          delete requestBody.payload.action;
+          delete requestBody.payload.goalId;
+        }
+        break;
+        
+      case 'goal-timeline-manager':
+        // Expected structure: { action, goalId, userId, payload }
+        requestBody = {
+          action: parameters.action || 'adjust_target',
+          goalId: parameters.goalId,
+          userId: parameters.userId,
+          payload: parameters.payload || {}
+        };
+        break;
+        
+      case 'goal-progress-tracker':
+        // This function expects different structure, pass as-is for now
+        requestBody = parameters;
+        break;
+        
+      case 'ai-goal-generator':
+        // This function expects different structure, pass as-is for now
+        requestBody = parameters;
+        break;
+        
+      default:
+        // For other functions, pass parameters as-is
+        requestBody = parameters;
+        break;
+    }
+    
     const { data, error } = await supabase.functions.invoke(functionName, {
-      body: parameters
+      body: requestBody
     });
     
     if (error) {

@@ -93,13 +93,8 @@ export function NextStepsPage({ milestones, strategy, isLoggedIn }: NextStepsPag
     }
   };
   
-  // Sort milestones by priority and due date
+  // Sort milestones by due date (end date)
   const sortedMilestones = [...milestones].sort((a, b) => {
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
-    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4;
-    
-    if (aPriority !== bPriority) return aPriority - bPriority;
     return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
   
@@ -233,7 +228,7 @@ export function NextStepsPage({ milestones, strategy, isLoggedIn }: NextStepsPag
               >
                 {/* Timeline line */}
                 {index < (isLoggedIn ? sortedMilestones.length - 1 : Math.min(3, sortedMilestones.length) - 1) && (
-                  <div className="absolute left-6 top-12 w-0.5 h-16 bg-gray-200 dark:bg-gray-600" />
+                  <div className="absolute left-6 top-12 w-0.5 h-full bg-gray-200 dark:bg-gray-600 z-0" />
                 )}
                 
                 <div className="flex items-start">

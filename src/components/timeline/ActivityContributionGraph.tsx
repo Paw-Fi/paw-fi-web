@@ -179,6 +179,7 @@ export function ActivityContributionGraph({
                 </div>
               )}
             </div>
+            
           </div>
           
           <button
@@ -191,22 +192,9 @@ export function ActivityContributionGraph({
             </svg>
           </button>
         </div>
-        
-        {/* Quick Actions */}
-        <div className="flex items-center gap-2">
-          {(selectedMonth !== today.getMonth() || selectedYear !== today.getFullYear()) && (
-            <button
-              onClick={goToCurrentMonth}
-              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-            >
-              Today
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Stats */}
-      <div className="flex justify-between items-center mb-3 text-xs text-gray-600 dark:text-gray-400">
+          {/* Stats */}
+      <div className="flex gap-2 items-center mb-3 text-xs text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-3">
           <span>🔥 <strong className="text-orange-500">{streak}</strong> streak</span>
           <span><strong className="text-gray-900 dark:text-white">{activeDays}</strong> active</span>
@@ -227,7 +215,21 @@ export function ActivityContributionGraph({
             </button>
           </div>
         )}
+
+{(selectedMonth !== today.getMonth() || selectedYear !== today.getFullYear()) && (
+            <button
+              onClick={goToCurrentMonth}
+              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              Today
+            </button>
+          )}
       </div>
+        
+      
+      </div>
+
+    
       
       <div className="calendar-container">
         {/* Weekday Headers */}

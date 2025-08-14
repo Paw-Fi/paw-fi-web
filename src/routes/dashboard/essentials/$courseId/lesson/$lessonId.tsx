@@ -19,7 +19,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/lesson/$le
   },
   head: ({ params, loaderData }) => {
     const { course, lesson } = loaderData;
-    const pageUrl = getCanonicalUrl(`/dashboard/essentials/${params.courseId}/lesson/${params.lessonId}`);
+    const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}/lesson/${params.lessonId}`);
     const title = `${lesson.title} | ${course.title} - Moneko Learning`;
     const description = lesson.description || `Learn about ${lesson.title} as part of the ${course.title} course on Moneko.`;
     const keywords = `${lesson.title}, ${course.title}, ${course.category}, financial education, Moneko, online lesson`;
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/lesson/$le
       "isPartOf": {
         "@type": "Course",
         "name": course.title,
-        "url": getCanonicalUrl(`/dashboard/essentials/${course.course_id}`)
+        "url": getCanonicalUrl(`/dashboard/learning/${course.course_id}`)
       },
       "provider": {
         "@type": "Organization",

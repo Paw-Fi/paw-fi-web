@@ -63,11 +63,11 @@ declare module '@tanstack/react-router' {
     '/dashboard/essentials': {
       parentRoute: RegisteredRoutes['/dashboard']
     }
-    '/dashboard/essentials/$courseId': {
+    '/dashboard/learning/$courseId': {
       parentRoute: RegisteredRoutes['/dashboard/essentials']
     }
-    '/dashboard/essentials/$courseId/lesson/$lessonId': {
-      parentRoute: RegisteredRoutes['/dashboard/essentials/$courseId']
+    '/dashboard/learning/$courseId/lesson/$lessonId': {
+      parentRoute: RegisteredRoutes['/dashboard/learning/$courseId']
     }
     '/blogs/$blogId': {
       parentRoute: RegisteredRoutes['/']

@@ -837,7 +837,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
   //         id: uuidv4(),
   //         title: tip.title,
   //         content: tip.content,
-  //         link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/${tip.lessonId}`,
+  //         link: `/dashboard/learning/${BasicLesson.course_id}/lesson/${tip.lessonId}`,
   //         displayOrder: index + 1,
   //         lessonDetails: lessonDetails || null
   //       };
@@ -867,7 +867,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             id: uuidv4(), 
             title: 'Debt Payoff Strategy', 
             content: 'Consider using the Avalanche method (highest interest first) or Snowball method (smallest balances first) to eliminate debt efficiently.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/tvm-L7`,
+            link: `/dashboard/learning/${BasicLesson.course_id}/lesson/tvm-L7`,
             displayOrder: 1,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'tvm-L7') || null
           },
@@ -875,7 +875,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             id: uuidv4(), 
             title: 'Economic Impacts of Debt', 
             content: 'Understanding how debt affects your overall financial health can help you make better decisions about borrowing and repayment.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/econbasics-L9`,
+            link: `/dashboard/learning/${BasicLesson.course_id}/lesson/econbasics-L9`,
             displayOrder: 2,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'econbasics-L9') || null
           },
@@ -883,7 +883,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             id: uuidv4(), 
             title: 'Investment Fundamentals', 
             content: 'Learning the basics of investing can help you grow your wealth and reduce the impact of debt on your financial future.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/invest-L1`,
+            link: `/dashboard/learning/${BasicLesson.course_id}/lesson/invest-L1`,
             displayOrder: 3,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'invest-L1') || null
           },
@@ -891,7 +891,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             id: uuidv4(), 
             title: 'Behavioral Finance Awareness', 
             content: 'Understanding psychological biases can help you make more rational decisions about spending and debt management.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/behavfin-L2`,
+            link: `/dashboard/learning/${BasicLesson.course_id}/lesson/behavfin-L2`,
             displayOrder: 4,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'behavfin-L2') || null
           },
@@ -899,7 +899,7 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
             id: uuidv4(), 
             title: 'Financial Statement Analysis', 
             content: 'Creating a personal income statement and balance sheet can help you track your progress in reducing debt and building assets.',
-            link: `/dashboard/essentials/${BasicLesson.course_id}/lesson/finstatements-L10`,
+            link: `/dashboard/learning/${BasicLesson.course_id}/lesson/finstatements-L10`,
             displayOrder: 5,
             lessonDetails: availableLessons.find(lesson => lesson.lessonId === 'finstatements-L10') || null
           },

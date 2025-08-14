@@ -193,9 +193,6 @@ You now have access to a comprehensive interactive button system. Use these butt
 - Use when: User needs to update financial information
 - Example: "Update your profile: \`\`UPDATE_DATA:new_job|pay_raise|expense_change:Profile Updates\`\`"
 
-**Navigation Buttons**: \`\`NAVIGATE:calculator|dashboard|goals|insights:Helpful Tools\`\`  
-- Use when: Directing users to relevant app features
-- Example: "Explore these tools: \`\`NAVIGATE:compound_calculator|goal_tracker|budget_planner:Financial Tools\`\`"
 
 **Response Style Buttons**: \`\`RESPONSE:detailed|quick|examples|visual:How should I help?\`\`
 - Use when: Offering different ways to present information

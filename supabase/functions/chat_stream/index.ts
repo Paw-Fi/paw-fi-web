@@ -56,6 +56,50 @@ function getRandomResponse(responses: string[]): string {
   return responses[randomIndex];
 }
 
+// Helper function to detect navigation requests (like "Take me to dashboard")
+function isNavigationRequest(message: string): boolean {
+  const navigationPatterns = [
+    /take me to (dashboard|goals?|insights?|calculator)/i,
+    /go to (dashboard|goals?|insights?|calculator)/i,
+    /show me (dashboard|goals?|insights?|calculator)/i,
+    /open (dashboard|goals?|insights?|calculator)/i,
+    /navigate to (dashboard|goals?|insights?|calculator)/i,
+    /^(dashboard|goals?|insights?|calculator)$/i
+  ];
+  
+  return navigationPatterns.some(pattern => pattern.test(message.trim()));
+}
+
+// Helper function to generate informative fallback responses for navigation requests
+function generateNavigationFallback(message: string): string {
+  const destination = extractNavigationDestination(message);
+  
+  switch (destination) {
+    case 'dashboard':
+      return "I understand you'd like to view your dashboard. As your financial advisor, I'm here to help with financial planning and goal management through our conversation. To navigate to your dashboard, please use the navigation menu in the app interface.";
+    case 'goals':
+      return "I can see you're interested in your goals. I can help you analyze, create, and manage your financial goals right here in our conversation. Would you like me to show you your current goals or help you work on a specific goal?";
+    case 'insights':
+      return "I'd be happy to provide insights about your financial progress! I can analyze your goals and provide personalized recommendations. Would you like me to review your current financial situation and provide insights?";
+    case 'calculator':
+      return "I can help you with financial calculations and planning right here in our conversation. What kind of calculation would you like assistance with? I can help with budgeting, savings projections, loan calculations, and more.";
+    default:
+      return "I'm here to help you with financial advice and goal management through our conversation. If you're looking to navigate to a different part of the app, please use the navigation menu. How can I assist you with your finances today?";
+  }
+}
+
+// Helper function to extract navigation destination from message
+function extractNavigationDestination(message: string): string {
+  const lowerMessage = message.toLowerCase().trim();
+  
+  if (lowerMessage.includes('dashboard')) return 'dashboard';
+  if (lowerMessage.includes('goal')) return 'goals';
+  if (lowerMessage.includes('insight')) return 'insights';
+  if (lowerMessage.includes('calculator')) return 'calculator';
+  
+  return 'unknown';
+}
+
 // Helper function to format goal context for AI comprehension
 function formatGoalContextForAI(goalContext: any): string {
   if (!goalContext || !goalContext.goalsSummary) {
@@ -272,97 +316,6 @@ serve(async (req: Request): Promise<Response> => {
     } else {
       // User has profile, generate AI response using Gemini
       
-      // Check if this is a Financial Advisor request that might need goal tracking
-      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
-        // Check if message contains goal-related keywords or patterns
-        const goalKeywords = [
-          /(?:saved?|add(?:ed)?|put in|deposit(?:ed)?|contributed?).*\$\d+/i,
-          /(?:create|make|set up).*goal/i,
-          /(?:how.*doing|show.*progress|analyze.*progress)/i,
-          /(?:milestone|deadline|timeline|target date)/i,
-          /(?:retirement|emergency|house|debt|invest)/i
-        ];
-        
-        const hasGoalKeywords = goalKeywords.some(pattern => pattern.test(message));
-        
-        // If goal-related request, try goal tracking first
-        if (hasGoalKeywords) {
-          console.log('Attempting goal tracking for Financial Advisor request');
-          
-          try {
-            const goalTrackingResult = await processGoalTrackingRequest(
-              {
-                message,
-                userId: userId || '',
-                goalContext,
-                isGlobalMode: isGlobalMode || false,
-                goalId,
-                goal,
-                conversationHistory: []
-              },
-              supabase,
-              genAI
-            );
-            
-            // If goal tracking was successful and a function was executed, return that response
-            if (goalTrackingResult.function_executed) {
-              console.log('Goal tracking function executed:', goalTrackingResult.function_executed);
-              
-              // Save both user and AI messages to database
-              if (currentConversationId) {
-                const messagesToInsert = [
-                  {
-                    chat_session_id: currentConversationId,
-                    content: message,
-                    role: 'user',
-                    metadata: null,
-                    timestamp: new Date().toISOString()
-                  },
-                  {
-                    chat_session_id: currentConversationId,
-                    content: goalTrackingResult.response,
-                    role: 'assistant',
-                    metadata: { 
-                      function_executed: goalTrackingResult.function_executed,
-                      function_result: goalTrackingResult.function_result 
-                    },
-                    timestamp: new Date().toISOString()
-                  }
-                ];
-                
-                const { error: batchInsertError } = await supabase
-                  .from('chat_messages')
-                  .insert(messagesToInsert);
-                  
-                if (batchInsertError) {
-                  console.error('Error saving goal tracking messages:', batchInsertError);
-                }
-              }
-              
-              return new Response(
-                JSON.stringify({
-                  response: goalTrackingResult.response,
-                  conversationId: currentConversationId,
-                  function_executed: goalTrackingResult.function_executed,
-                  function_result: goalTrackingResult.function_result,
-                  next_actions: goalTrackingResult.next_actions,
-                  cache_refresh_needed: goalTrackingResult.cache_refresh_needed
-                }),
-                {
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
-                }
-              );
-            }
-            
-            // If no function was executed but we got a response, fall through to normal processing
-            console.log('Goal tracking processed but no function executed, continuing with normal flow');
-          } catch (goalError) {
-            console.error('Goal tracking error, falling back to normal processing:', goalError);
-            // Fall through to normal processing
-          }
-        }
-      }
-      
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
       const formattedHistory = (history || [])
         .filter((msg: any) => {
@@ -396,7 +349,122 @@ serve(async (req: Request): Promise<Response> => {
             parts: [{ text: msg.content }],
           };
         });
-        
+      
+      // Check if this is a Financial Advisor request that might need goal tracking
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+        try {
+          const goalTrackingResult = await processGoalTrackingRequest(
+            {
+              message,
+              userId: userId || '',
+              goalContext,
+              isGlobalMode: isGlobalMode || false,
+              goalId,
+              goal,
+              conversationHistory: formattedHistory
+            },
+            supabase,
+            genAI
+          );
+          
+          // If goal tracking was successful and a function was executed, return that response
+          if (goalTrackingResult.function_executed) {
+            // Save both user and AI messages to database
+            if (currentConversationId) {
+              const messagesToInsert = [
+                {
+                  chat_session_id: currentConversationId,
+                  content: message,
+                  role: 'user',
+                  metadata: null,
+                  timestamp: new Date().toISOString()
+                },
+                {
+                  chat_session_id: currentConversationId,
+                  content: goalTrackingResult.response,
+                  role: 'assistant',
+                  metadata: { 
+                    function_executed: goalTrackingResult.function_executed,
+                    function_result: goalTrackingResult.function_result 
+                  },
+                  timestamp: new Date().toISOString()
+                }
+              ];
+              
+              const { error: batchInsertError } = await supabase
+                .from('chat_messages')
+                .insert(messagesToInsert);
+                
+              if (batchInsertError) {
+                console.error('Error saving goal tracking messages:', batchInsertError);
+              }
+            }
+            
+            return new Response(
+              JSON.stringify({
+                response: goalTrackingResult.response,
+                conversationId: currentConversationId,
+                function_executed: goalTrackingResult.function_executed,
+                function_result: goalTrackingResult.function_result,
+                next_actions: goalTrackingResult.next_actions,
+                cache_refresh_needed: goalTrackingResult.cache_refresh_needed
+              }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          } else {
+            // Goal tracking didn't execute a function, check if this might be an unhandled navigation request
+            if (isNavigationRequest(message)) {
+              const fallbackResponse = generateNavigationFallback(message);
+              
+              // Save both user and fallback messages to database
+              if (currentConversationId) {
+                const messagesToInsert = [
+                  {
+                    chat_session_id: currentConversationId,
+                    content: message,
+                    role: 'user',
+                    metadata: null,
+                    timestamp: new Date().toISOString()
+                  },
+                  {
+                    chat_session_id: currentConversationId,
+                    content: fallbackResponse,
+                    role: 'assistant',
+                    metadata: { fallback_type: 'navigation_request' },
+                    timestamp: new Date().toISOString()
+                  }
+                ];
+                
+                const { error: batchInsertError } = await supabase
+                  .from('chat_messages')
+                  .insert(messagesToInsert);
+                  
+                if (batchInsertError) {
+                  console.error('Error saving fallback messages:', batchInsertError);
+                }
+              }
+              
+              return new Response(
+                JSON.stringify({
+                  response: fallbackResponse,
+                  conversationId: currentConversationId,
+                  fallback_used: true
+                }),
+                {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                }
+              );
+            }
+          }
+        } catch (goalError) {
+          console.error('Goal tracking error, falling back to normal processing:', goalError);
+          // Fall through to normal processing
+        }
+      }
+      
+      
       // Append the current user message
       const contents = [
         ...formattedHistory,
@@ -750,6 +818,25 @@ ${markdownSuffix}`,
         console.error('Error saving messages:', batchInsertError);
         // Continue anyway - don't fail the response
       }
+    }
+    
+    // Final safety check: ensure response is not empty or meaningless
+    if (!finalResponse || finalResponse.trim().length === 0 || finalResponse.trim() === '{}') {
+      console.warn('Empty or invalid response detected, generating fallback');
+      
+      // Generate a context-appropriate fallback response
+      let fallbackResponse = "I apologize, but I didn't quite understand your request. ";
+      
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
+        fallbackResponse += "As your financial advisor, I'm here to help with financial planning, goal management, budgeting advice, and investment guidance. Could you please rephrase your question or let me know what specific financial topic you'd like assistance with?";
+      } else {
+        fallbackResponse += "As your financial educator, I'm here to help you learn about personal finance topics, investment concepts, and money management strategies. What would you like to learn about today?";
+      }
+      
+      finalResponse = fallbackResponse;
+      
+      // Log this occurrence for monitoring
+      console.log(`Fallback response generated for user ${userId}, message: "${message}"`);
     }
     
     return new Response(

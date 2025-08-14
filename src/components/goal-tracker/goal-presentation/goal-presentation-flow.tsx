@@ -14,6 +14,7 @@ import { KeyInsightsPage } from './key-insights-page';
 import { NextStepsPage } from './next-steps-page';
 import { FinalCallToActionPage } from './final-call-to-action-page';
 import type { GoalCreationResult } from '@/components/goal-tracker/types';
+import { useLocation } from '@tanstack/react-router';
 
 interface GoalPresentationFlowProps {
   goalData: GoalCreationResult;
@@ -24,7 +25,7 @@ interface GoalPresentationFlowProps {
 
 type PresentationPage = 'summary' | 'insights' | 'next-steps' | 'final';
 
-const PAGES: { id: PresentationPage; title: string; icon: any }[] = [
+const FULL_PAGES: { id: PresentationPage; title: string; icon: any }[] = [
   { id: 'summary', title: 'Your Plan', icon: faChartLine },
   { id: 'insights', title: 'Key Insights', icon: faRocket },
   { id: 'next-steps', title: 'Next Steps', icon: faArrowRight },
@@ -38,9 +39,13 @@ export function GoalPresentationFlow({
   onRegister 
 }: GoalPresentationFlowProps) {
   const [currentPage, setCurrentPage] = useState<PresentationPage>('summary');
-  const currentPageIndex = PAGES.findIndex(page => page.id === currentPage);
+  const currentPageIndex = FULL_PAGES.findIndex(page => page.id === currentPage);
   const canGoBack = currentPageIndex > 0;
-  const canGoNext = currentPageIndex < PAGES.length - 1;
+  const canGoNext = currentPageIndex < FULL_PAGES.length - 1;
+
+  const location=useLocation()
+  const isOnTrackerPage=location.pathname.includes("/tracker")
+  const PAGES=isOnTrackerPage?FULL_PAGES.slice(0,FULL_PAGES.length-1):FULL_PAGES
   
   const handleNext = () => {
     if (canGoNext) {
@@ -153,7 +158,7 @@ export function GoalPresentationFlow({
             {currentPageIndex + 1} of {PAGES.length}
           </div>
           
-          {currentPage !== 'final' ? (
+          {currentPageIndex !== PAGES.length - 1 ? (
             <Button
               onClick={handleNext}
               disabled={!canGoNext}
@@ -163,7 +168,16 @@ export function GoalPresentationFlow({
               Next
               <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
             </Button>
-          ) : (
+          ) : isOnTrackerPage?(
+            <Button
+            onClick={onComplete}
+            variant="primary"
+            className="flex items-center gap-2"
+          >
+            Finish
+            <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
+          </Button>
+          ):(
             <div className="w-20" /> // Placeholder to maintain layout balance
           )}
         </div>

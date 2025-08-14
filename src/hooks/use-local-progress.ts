@@ -3,6 +3,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { useLocation } from '@tanstack/react-router';
 import { useUserCourses } from '@/services/course-service';
 import { useCookie } from '@/utils/use-cookie';
+import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { useQuery } from '@tanstack/react-query';
+import { fetchConversations } from '@/services/conversation-service';
+import { supabase } from '@/lib/supabase';
+import { AI_ROLES } from '@/components/chat/ai-roles';
 
 export interface LocalProgressStep {
   id: string;
@@ -27,14 +32,31 @@ export const useLocalProgress = () => {
   const { getCookie, setCookie } = useCookie();
   const { data: courses = [] } = useUserCourses(user?.id ?? "", { enabled: !!user });
   
-  // Stabilize courses dependency by using only the length
+  // Get real financial health profile
+  const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
+  
+  // Get real conversation data
+  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
+    queryKey: ['conversations', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      try {
+        const result = await fetchConversations(supabase, AI_ROLES.FINANCIAL_ADVISOR);
+        return result ? [result] : [];
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        return [];
+      }
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  // Stabilize dependencies
   const coursesLength = useMemo(() => courses?.length ?? 0, [courses]);
-  
-  // Stabilize location dependency
   const pathname = useMemo(() => location.pathname, [location.pathname]);
-  
-  // Stabilize user dependency
   const userId = useMemo(() => user?.id, [user?.id]);
+  const hasConversations = useMemo(() => conversations.length > 0, [conversations]);
   
   const [steps, setSteps] = useState<LocalProgressStep[]>([]);
   const [stats, setStats] = useState<LocalProgressStats>({
@@ -44,32 +66,20 @@ export const useLocalProgress = () => {
     nextStep: null,
     isCompleted: false,
   });
-  
-  // Track if we've marked chat as visited to prevent infinite loops
-  const [hasMarkedChatVisited, setHasMarkedChatVisited] = useState(false);
 
-  // Check if user has portfolio (dashboard data)
-  const hasPortfolio = () => {
-    // Check if user has any dashboard views/data
-    // This is a simplified check - you might want to check actual dashboard data
-    return !!userId && pathname.startsWith('/dashboard');
+  // Check if user has completed their financial profile
+  const hasCompletedProfile = () => {
+    return hasProfile && !!financialProfile;
   };
 
-  // Check if user has chat history
+  // Check if user has real chat history with conversations
   const hasChatHistory = () => {
-    // Check if user has any conversation history
-    // This would need to be implemented based on your chat storage
-    if (!userId) return false;
-    
-    // For now, we'll check if they've visited the chat page
-    // In a real implementation, you'd check the actual conversation history length
-    const chatVisited = getCookie('moneko-chat-visited');
-    return chatVisited === 'true';
+    if (!userId || conversationsLoading) return false;
+    return hasConversations;
   };
 
-  // Check if user has AI-generated lessons
+  // Check if user has AI-generated lessons (courses)
   const hasAILessons = () => {
-    // Check if user has any AI-generated lessons (courses length > 0)
     return coursesLength > 0;
   };
 
@@ -79,10 +89,16 @@ export const useLocalProgress = () => {
     return essentialsVisited === 'true';
   };
 
-  // Check if user has visited calculators page
-  const hasVisitedCalculators = () => {
-    const calculatorsVisited = getCookie('moneko-calculators-visited');
-    return calculatorsVisited === 'true';
+  // Check if user has visited portfolio page
+  const hasVisitedPortfolio = () => {
+    const portfolioVisited = getCookie('moneko-portfolio-visited');
+    return portfolioVisited === 'true';
+  };
+
+  // Check if user has visited goal tracker
+  const hasVisitedGoalTracker = () => {
+    const trackerVisited = getCookie('moneko-tracker-visited');
+    return trackerVisited === 'true';
   };
 
   // Mark essentials as visited when user clicks on it
@@ -90,24 +106,26 @@ export const useLocalProgress = () => {
     setCookie('moneko-essentials-visited', 'true', { days: 365 });
   }, [setCookie]);
 
-  // Mark calculators as visited when user clicks on it
-  const markCalculatorsVisited = useCallback(() => {
-    setCookie('moneko-calculators-visited', 'true', { days: 365 });
+  // Mark portfolio as visited when user clicks on it
+  const markPortfolioVisited = useCallback(() => {
+    setCookie('moneko-portfolio-visited', 'true', { days: 365 });
   }, [setCookie]);
 
-  // Mark chat as visited when user visits chat page
-  const markChatVisited = useCallback(() => {
-    setCookie('moneko-chat-visited', 'true', { days: 365 });
+  // Mark tracker as visited when user clicks on it
+  const markTrackerVisited = useCallback(() => {
+    setCookie('moneko-tracker-visited', 'true', { days: 365 });
   }, [setCookie]);
+
 
   // Update progress steps and stats
   useEffect(() => {
     const isLoggedIn = !!userId;
-    const portfolioCompleted = hasPortfolio();
+    const profileCompleted = hasCompletedProfile();
+    const portfolioVisitedCompleted = hasVisitedPortfolio();
     const chatCompleted = hasChatHistory();
     const aiLessonsCompleted = hasAILessons();
     const essentialsCompleted = hasVisitedEssentials();
-    const calculatorsCompleted = hasVisitedCalculators();
+    const trackerCompleted = hasVisitedGoalTracker();
 
     const progressSteps: LocalProgressStep[] = [
       {
@@ -119,12 +137,20 @@ export const useLocalProgress = () => {
         isNextStep: !isLoggedIn,
       },
       {
+        id: 'profile',
+        title: 'Complete Profile',
+        description: 'Set up your financial profile for personalized AI recommendations',
+        path: '/dashboard/user-settings/profile',
+        isCompleted: profileCompleted,
+        isNextStep: isLoggedIn && !profileCompleted,
+      },
+      {
         id: 'portfolio',
-        title: 'Complete Portfolio',
-        description: 'Answer the questionnaire to create your personalized financial portfolio',
-        path: '/dashboard',
-        isCompleted: portfolioCompleted,
-        isNextStep: isLoggedIn && !portfolioCompleted,
+        title: 'Explore Portfolio',
+        description: 'View your personalized dashboard and financial overview',
+        path: '/dashboard/portfolio',
+        isCompleted: portfolioVisitedCompleted,
+        isNextStep: profileCompleted && !portfolioVisitedCompleted,
       },
       {
         id: 'chat',
@@ -132,12 +158,12 @@ export const useLocalProgress = () => {
         description: 'Generate personalized learning lessons through AI conversation',
         path: '/dashboard',
         isCompleted: chatCompleted,
-        isNextStep: portfolioCompleted && !chatCompleted,
+        isNextStep: portfolioVisitedCompleted && !chatCompleted,
       },
       {
-        id: 'learning',
-        title: 'Test AI Lessons',
-        description: 'Take the AI-generated lessons and test your financial knowledge',
+        id: 'learnin',
+        title: 'Take AI Lessons',
+        description: 'Learn from AI-generated lessons tailored to your goals',
         path: '/dashboard/learning',
         isCompleted: aiLessonsCompleted,
         isNextStep: chatCompleted && !aiLessonsCompleted,
@@ -145,18 +171,18 @@ export const useLocalProgress = () => {
       {
         id: 'essentials',
         title: 'Financial Essentials',
-        description: 'Learn from our curated financial education lessons',
+        description: 'Master fundamental financial concepts through our curated courses',
         path: '/dashboard/essentials',
         isCompleted: essentialsCompleted,
         isNextStep: aiLessonsCompleted && !essentialsCompleted,
       },
       {
-        id: 'calculators',
-        title: 'Financial Calculators',
-        description: 'Use our comprehensive suite of financial calculators',
-        path: '/calculators',
-        isCompleted: calculatorsCompleted,
-        isNextStep: essentialsCompleted && !calculatorsCompleted,
+        id: 'tracker',
+        title: 'Goal Tracker',
+        description: 'Set and track your financial goals with AI assistance',
+        path: '/dashboard/tracker',
+        isCompleted: trackerCompleted,
+        isNextStep: essentialsCompleted && !trackerCompleted,
       },
     ];
 
@@ -181,24 +207,27 @@ export const useLocalProgress = () => {
       nextStep,
       isCompleted: completed === total,
     });
-  }, [userId, pathname, coursesLength]);
+  }, [userId, pathname, coursesLength, hasProfile, financialProfile, hasConversations, conversationsLoading]);
 
-  // Auto-mark steps as completed based on current location
+  // Auto-mark visited pages based on current location
   useEffect(() => {
     if (!userId) return;
 
-    // Mark chat as visited when on chat page (only once)
-    if (pathname.startsWith('/dashboard/chat') && !hasMarkedChatVisited) {
-      setCookie('moneko-chat-visited', 'true', { days: 365 });
-      setHasMarkedChatVisited(true);
+    // Mark specific pages as visited when user navigates to them
+    if (pathname === '/dashboard/essentials') {
+      setCookie('moneko-essentials-visited', 'true', { days: 365 });
+    } else if (pathname === '/dashboard/portfolio') {
+      setCookie('moneko-portfolio-visited', 'true', { days: 365 });
+    } else if (pathname.startsWith('/dashboard/tracker')) {
+      setCookie('moneko-tracker-visited', 'true', { days: 365 });
     }
-  }, [pathname, userId, hasMarkedChatVisited]);
+  }, [pathname, userId, setCookie]);
 
   return {
     steps,
     stats,
     markEssentialsVisited,
-    markCalculatorsVisited,
-    markChatVisited,
+    markPortfolioVisited,
+    markTrackerVisited,
   };
 };

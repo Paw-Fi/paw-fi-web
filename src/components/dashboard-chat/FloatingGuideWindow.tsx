@@ -39,6 +39,8 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
     switch (stepId) {
       case 'account':
         return faUserPlus;
+      case 'profile':
+        return faGraduationCap;
       case 'portfolio':
         return faHandHoldingDollar;
       case 'chat':
@@ -47,8 +49,8 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
         return faChessKnight;
       case 'essentials':
         return faBookOpen;
-      case 'calculators':
-        return faCalculator;
+      case 'tracker':
+        return faTrophy;
       default:
         return faLightbulb;
     }

@@ -406,7 +406,7 @@ export default function HomePage() {
                 icon={lesson.icon}
                 title={lesson.title}
                 description={lesson.description}
-                linkTo={`/dashboard/essentials/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
+                linkTo={`/dashboard/learning/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
               />
             ))}
             {/* Explore More Card */}
