@@ -26,6 +26,7 @@ import { useAIChat } from '@/contexts/ai-chat-context';
 import { FinancialHealthProfile, useFinancialHealthProfile, formatProfileForAI } from '@/hooks/use-financial-health-profile';
 import { useUserGoals, createAllGoalsContext } from '@/hooks/goal-tracker/use-user-goals';
 import { AI_ROLES } from './ai-roles';
+import { BetaPill } from '../ui/beta-pill';
 
 export interface ConversationMessage {
   content: string;
@@ -524,9 +525,12 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
           <div className={`flex-shrink-0 border-b border-slate-200 dark:border-slate-700 ${headerBackgroundColors || "bg-gradient-to-r from-white to-emerald-50 dark:from-slate-800 dark:to-slate-700"}`}>
             <div className="px-6 py-6">
               <div className="text-center">
-                <h1 className={`text-3xl font-bold ${headerGradientColors || "bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"} bg-clip-text text-transparent mb-2`}>
+               <div className='flex items-center justify-center gap-2'>
+               <h1 className={`text-3xl font-bold ${headerGradientColors || "bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"} bg-clip-text text-transparent mb-2`}>
                   {headerTitle}
                 </h1>
+                <BetaPill size="small"/>
+                </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   {headerSubtitle}
                 </p>
@@ -676,6 +680,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                   onOpenQuizModal={() => setIsQuizModalOpen(true)}
                   onGoalTemplateClick={onGoalTemplateClick}
                   disableMsgParse={disableMsgParse}
+                  onSendMessage={handleSendMessage}
                 />
               </motion.div>
             );
@@ -737,10 +742,11 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         {/* Optional footer */}
         {chatConfig.showFooter && footerContent && (
           <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-            <div className="px-6 py-4">
+            <div className="px-6 pt-4 pb-3 text-center">
               <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 {footerContent}
               </div>
+              <span className="text-xs text-center text-slate-400 dark:text-slate-400">AI can make mistakes, consider double checking important information.</span>
             </div>
           </div>
         )}

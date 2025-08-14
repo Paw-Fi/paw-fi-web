@@ -1,8 +1,7 @@
 "use client";
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
-import React, { useState } from "react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
@@ -13,21 +12,15 @@ import {
   fadeInDown,
   elasticScale,
   staggerContainer,
-  fadeIn,
 } from "@/lib/motion-variants";
-import { Button } from "@/components/ui/button";
 import catCoin from "@/assets/images/icon.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faPlus,
   faX,
-  faEnvelope,
-  faStar,
-  faClock,
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
-import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import basicLessonsData from "@/data/basic-lessons.json";
@@ -155,7 +148,7 @@ function BasicLessonCard({
         <Link to={linkTo} className="group flex h-full flex-col">
           <div className="flex-grow">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40 transition-transform duration-200">
-              <OptimizedImage src={icon} alt={title} className="text-3xl text-white" />
+              <p className="text-3xl text-white" >{icon}</p>
             </div>
             <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
               {title}
@@ -179,16 +172,10 @@ function BasicLessonCard({
 import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
-import { useEffect } from "react";
 
-import { useNewsletterSubscription } from "@/hooks/use-newsletter-subscription";
 import { HomeHeader } from "@/components/index/header";
 import { AISearchInput } from "@/components/ui/ai-search-input";
-import { getRemainingSpots } from "@/lib/early-access";
-import { useCookie } from "@/utils/use-cookie";
-import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
 import { EarlyAccessSection } from "@/components/index/early-access-section";
-import { OptimizedImage } from "@/components/seo/optimized-image";
 
 
 
@@ -226,7 +213,7 @@ export default function HomePage() {
       </nav>
 
       <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
            {/* Heading */}
           <div className="mb-8 sm:mb-12 text-center">
            <motion.h1
@@ -236,17 +223,9 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              Build Your First Portfolio
+              Your AI Personal Money Coach
             </motion.h1>
-            <motion.h2
-              className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-foreground dark:text-dark-foreground"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-            >
-              from 0 to 1
-            </motion.h2>
+         
             <motion.p
               className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
@@ -254,7 +233,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Create personalized financial journeys by chatting with AI
+             Start with your goal. Moneko builds the plan.
             </motion.p>
           </div>
 

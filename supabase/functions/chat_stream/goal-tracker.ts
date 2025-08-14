@@ -72,8 +72,17 @@ export const GOAL_FUNCTIONS_REGISTRY = {
       /(?:extend|push back|move)\s+(?:my\s+)?(?:deadline|target date|timeline)\s+(?:by\s+|to\s+)(.+)/i,
       /(?:need|want)\s+(?:more\s+time|\d+\s+more\s+(?:days|weeks|months))/i,
       /change\s+(?:my\s+)?(?:goal\s+)?(?:deadline|target date)\s+to\s+(.+)/i,
+      /(?:update|change|modify|set)\s+(?:the\s+)?goal\s+.+?\s+(?:with\s+amount\s+to|target\s+to|amount\s+to)\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(?:change|update|modify|set)\s+(?:the\s+)?(?:target\s+)?amount\s+(?:of|for|to)\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(?:increase|decrease|adjust)\s+(?:the\s+)?target\s+(?:amount\s+)?(?:to\s+)?\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(?:change|update|set)\s+goal\s+status\s+to\s+(active|paused|completed|cancelled)/i,
+      /(?:mark|set)\s+goal\s+(?:as\s+)?(active|paused|completed|cancelled)/i,
+      /(?:change|update|set)\s+goal\s+priority\s+to\s+(low|medium|high|critical)/i,
+      /(?:optimize|improve)\s+(?:my\s+)?(?:goal\s+)?timeline/i,
+      /(?:validate|check)\s+(?:if\s+)?(?:my\s+)?timeline\s+(?:is\s+)?(?:realistic|feasible)/i,
+      /(?:is\s+my\s+timeline|am\s+I\s+on\s+track)/i,
     ],
-    description: "Modifies goal timelines, extends deadlines, and adjusts target dates"
+    description: "Comprehensive goal management: modifies timelines, extends deadlines, adjusts target dates, updates target amounts, changes goal status, adjusts priority, optimizes timelines, and validates feasibility"
   },
   "manage_milestones": {
     function_name: "goal-milestone-manager",
@@ -82,8 +91,14 @@ export const GOAL_FUNCTIONS_REGISTRY = {
       /add\s+(?:a\s+)?milestone\s+(?:called|named)\s+['"](.*)['"]?/i,
       /(?:change|update|edit)\s+(?:the\s+)?milestone\s+(?:title|name)\s+to\s+['"](.*)['"]?/i,
       /delete\s+(?:the\s+)?milestone\s+(?:about|called|named)\s+(.*)/i,
+      /(?:create|add)\s+(?:multiple|several|bulk)\s+milestones/i,
+      /(?:change|update|set)\s+milestone\s+(?:status|priority)/i,
+      /(?:mark|set)\s+milestone\s+(?:as\s+)?(completed|pending|in_progress|overdue|cancelled)/i,
+      /(?:set|change)\s+milestone\s+priority\s+to\s+(low|medium|high|critical)/i,
+      /(?:create|add|generate)\s+(?:milestone\s+)?template/i,
+      /(?:bulk|mass)\s+(?:update|delete|create)\s+milestones/i,
     ],
-    description: "Create, update, delete, and reorder goal milestones"
+    description: "Comprehensive milestone management: create, update, delete, reorder, bulk operations, status changes, priority adjustments, and template generation"
   },
   "generate_insights": {
     function_name: "goal-insights-generator",
@@ -212,15 +227,15 @@ function getParameterSchema(functionKey: string) {
       return {
         ...baseSchema,
         goalId: { type: "string", description: "Goal ID to adjust" },
-        action: { type: "string", description: "Action type: update_timeline" },
-        payload: { type: "object", description: "Timeline adjustment data" }
+        action: { type: "string", description: "Action type: update_timeline, extend_timeline, adjust_target, change_status, change_priority, optimize_timeline, or validate_timeline" },
+        payload: { type: "object", description: "Adjustment data including target_date, target_amount, new_status, new_priority, reason, etc." }
       };
     case "manage_milestones":
       return {
         ...baseSchema,
         goalId: { type: "string", description: "Goal ID for milestone" },
-        action: { type: "string", description: "Action: create, update, or delete" },
-        payload: { type: "object", description: "Milestone data" }
+        action: { type: "string", description: "Action: create, update, delete, reorder, bulk_create, bulk_update, bulk_delete, change_status, change_priority, or create_template" },
+        payload: { type: "object", description: "Milestone data, bulk operations array, status/priority changes, or template parameters" }
       };
     case "create_goal":
       return {
@@ -361,6 +376,26 @@ export async function processGoalTrackingRequest(
         // Ensure we have required parameters
         goalId: functionArgs.goalId || (isGlobalMode && goalContext?.goalsSummary?.[0]?.id),
       };
+    }
+    
+    // Special handling for goal-timeline-manager (target amount updates)
+    if (functionCall.name === 'goal-timeline-manager') {
+      // Extract target amount from the original message if present
+      const targetAmountMatch = message.match(/(?:with\s+amount\s+to|target\s+to|amount\s+to)\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i);
+      
+      if (targetAmountMatch) {
+        const targetAmount = parseFloat(targetAmountMatch[1].replace(/,/g, ''));
+        functionArgs = {
+          ...functionArgs,
+          action: 'adjust_target',
+          payload: {
+            ...functionArgs.payload,
+            target_amount: targetAmount,
+            reason: `Target amount updated via chat to $${targetAmount.toLocaleString()}`,
+            auto_generated: false
+          }
+        };
+      }
     }
     
     // Special handling for ai-goal-generator

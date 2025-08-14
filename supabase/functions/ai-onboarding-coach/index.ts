@@ -42,9 +42,9 @@ serve(async (req: Request): Promise<Response> => {
 I know that talking about money can feel overwhelming, but you're in a safe, judgment-free space. My entire purpose is to help you feel clear and confident about your financial future, one step at a time
 
 ### Here's how it works:
-- **Tell me your goal** - Share what you're saving for
-- **Quick financial snapshot** - I'll get to know your situation  
-- **Personalized plan** - I'll build a strategy just for you
+- 1. **Tell me your goal** - Share what you're saving for
+- 2. **Quick financial snapshot** - I'll get to know your situation  
+- 3. **Personalized plan** - I'll build a strategy just for you
 
 **Ready to get started?** Just tell me what financial goal you'd like to work on!`;
 

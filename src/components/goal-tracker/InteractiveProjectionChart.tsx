@@ -63,8 +63,11 @@ export function InteractiveProjectionChart({
     return date.toISOString().split('T')[0];
   };
   
+  // Use existing date variables
+  const currentDateStr = minDateStr;
+  
+  // For calculations, we still need months
   const targetMonths = editedTargetDate ? getMonthsFromDate(editedTargetDate) : 12;
-  const maxMonths = getMonthsFromDate(maxDateStr);
 
   // Calculate projection data based on current monthly contribution and edited values
   const calculateProjection = (monthly: number, targetAmount: number, targetDate: string) => {
@@ -375,21 +378,26 @@ export function InteractiveProjectionChart({
                   step={1000}
                   formatValue={(value) => `$${Number(value).toLocaleString()}`}
                   className=""
+                  type="number"
+                  isValueEditable
                 />
                 
                 {/* Target Date Slider */}
                 <RangeSlider
                   label="Target Date"
-                  value={targetMonths}
-                  onChange={(value) => setEditedTargetDate(getDateFromMonths(Number(value)))}
-                  min={1}
-                  max={maxMonths}
-                  step={1}
+                  value={editedTargetDate || currentDateStr}
+                  onChange={(value) => {
+                    setEditedTargetDate(value as string);
+                  }}
+                  min={currentDateStr}
+                  max={maxDateStr}
+                  step={1} // 1 day step
                   formatValue={(value) => {
-                    const date = getDateFromMonths(Number(value));
-                    return new Date(date).toLocaleDateString();
+                    return new Date(value as string).toLocaleDateString();
                   }}
                   className=""
+                  isValueEditable
+                  type="date"
                 />
               </div>
             </div>

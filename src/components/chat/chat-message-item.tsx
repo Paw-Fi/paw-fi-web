@@ -32,6 +32,7 @@ interface ChatMessageItemProps {
   onGoalTemplateClick?: (goalType: GoalType) => void;
   formatTime?: (timestamp: number) => string;
   disableMsgParse?: boolean;
+  onSendMessage?: (message: string) => void;
 }
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
@@ -40,6 +41,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   onGoalTemplateClick,
   formatTime: formatTimeProp,
   disableMsgParse = false,
+  onSendMessage,
 }) => {
   const isUser = message.role === "user";
   const navigate = useNavigate();
@@ -130,6 +132,22 @@ ${after}`;
 
     // Convert AI buttons to HTML elements
     content = content.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type="$1"></ai-button>');
+    
+    // Convert interactive buttons to HTML elements
+    content = content.replace(/``CONFIRM:([^`]+)``/gi, '<confirm-button data-type="$1"></confirm-button>');
+    content = content.replace(/``QUICK_SAVE:([^`]+)``/gi, '<quick-save data-type="$1"></quick-save>');
+    content = content.replace(/``FINANCIAL_ACTION:([^`]+)``/gi, '<financial-action data-type="$1"></financial-action>');
+    content = content.replace(/``GOAL_ACTION:([^`]+)``/gi, '<goal-action data-type="$1"></goal-action>');
+    content = content.replace(/``UPDATE_DATA:([^`]+)``/gi, '<update-data data-type="$1"></update-data>');
+    content = content.replace(/``NAVIGATE:([^`]+)``/gi, '<navigate-button data-type="$1"></navigate-button>');
+    content = content.replace(/``RESPONSE:([^`]+)``/gi, '<response-style data-type="$1"></response-style>');
+    content = content.replace(/``PRIORITY:([^`]+)``/gi, '<priority-select data-type="$1"></priority-select>');
+    content = content.replace(/``HABIT:([^`]+)``/gi, '<habit-track data-type="$1"></habit-track>');
+    content = content.replace(/``AMOUNT:([^`]+)``/gi, '<amount-select data-type="$1"></amount-select>');
+    content = content.replace(/``RISK:([^`]+)``/gi, '<risk-select data-type="$1"></risk-select>');
+    content = content.replace(/``TIMELINE:([^`]+)``/gi, '<timeline-select data-type="$1"></timeline-select>');
+    content = content.replace(/``CONFIDENCE:([^`]+)``/gi, '<confidence-track data-type="$1"></confidence-track>');
+    content = content.replace(/``COMMITMENT:([^`]+)``/gi, '<commitment-level data-type="$1"></commitment-level>');
 
     // Convert questionnaire trigger to HTML element
     content = content.replace(/``QUESTIONNAIRE``/gi, '<questionnaire-button></questionnaire-button>');
@@ -159,6 +177,433 @@ ${after}`;
     a: ({ node, ...props }: any) => (
       <a {...props} target="_blank" className="text-primary font-bold no-underline" />
     ),
+    
+    // Interactive Button Components
+    "confirm-button": ({ node, ...props }: any) => {
+      const [options, label] = (props['data-type'] || '').split(':');
+      const buttonOptions = options?.split('|') || [];
+      
+      return (
+        <div className="mt-3 flex gap-2 flex-wrap">
+          <p className="text-sm font-medium mb-2 w-full">{label}</p>
+          {buttonOptions.map((option) => (
+            <Button
+              key={option}
+              onClick={() => {
+                const message = option.charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' ');
+                onSendMessage?.(message);
+              }}
+              className={`px-4 py-2 rounded-lg ${
+                option.includes('yes') || option.includes('agree') || option.includes('proceed')
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : 'bg-gray-500 hover:bg-gray-600 text-white'
+              }`}
+            >
+              {option.replace(/_/g, ' ').charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' ')}
+            </Button>
+          ))}
+        </div>
+      );
+    },
+
+    "quick-save": ({ node, ...props }: any) => {
+      const [amounts, label] = (props['data-type'] || '').split(':');
+      const amountOptions = amounts?.split('|') || [];
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm text-gray-600 mb-2">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {amountOptions.map((amount) => (
+              <Button
+                key={amount}
+                onClick={() => {
+                  const message = amount === 'other' || amount === 'custom'
+                    ? 'I want to add a custom amount' 
+                    : `I saved $${amount} today`;
+                  onSendMessage?.(message);
+                }}
+                className="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg border border-green-300"
+              >
+                {amount === 'other' || amount === 'custom' ? 'Custom Amount' : `$${amount}`}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "financial-action": ({ node, ...props }: any) => {
+      const [actions, label] = (props['data-type'] || '').split(':');
+      const actionOptions = actions?.split('|') || [];
+      
+      const actionIcons: Record<string, string> = {
+        pay_debt: '💳', save_money: '💰', invest: '📈', budget: '📊',
+        emergency_fund: '🛡️', debt_payoff: '💳', investment: '📈', retirement: '🏖️'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {actionOptions.map((action) => (
+              <Button
+                key={action}
+                onClick={() => {
+                  const message = `I want to focus on ${action.replace(/_/g, ' ')}`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-3 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg border border-blue-200"
+              >
+                <span>{actionIcons[action] || '🎯'}</span>
+                <span className="text-sm">{action.replace(/_/g, ' ').toUpperCase()}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "goal-action": ({ node, ...props }: any) => {
+      const [actions, label] = (props['data-type'] || '').split(':');
+      const actionOptions = actions?.split('|') || [];
+      
+      const goalActionIcons: Record<string, string> = {
+        add_money: '💰', add_progress: '📈', extend_deadline: '📅', 
+        add_milestone: '🎯', adjust_target: '🎯', set_reminder: '🔔'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {actionOptions.map((action) => (
+              <Button
+                key={action}
+                onClick={() => {
+                  const message = `I want to ${action.replace(/_/g, ' ')} for my goal`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-lg border border-purple-200"
+              >
+                <span>{goalActionIcons[action] || '⚡'}</span>
+                <span className="text-sm capitalize">{action.replace(/_/g, ' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "update-data": ({ node, ...props }: any) => {
+      const [dataTypes, label] = (props['data-type'] || '').split(':');
+      const dataOptions = dataTypes?.split('|') || [];
+      
+      const dataIcons: Record<string, string> = {
+        income: '💵', expenses: '🧾', debt: '💳', assets: '🏦',
+        new_job: '💼', pay_raise: '📈', expense_change: '🧾'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {dataOptions.map((dataType) => (
+              <Button
+                key={dataType}
+                onClick={() => {
+                  const message = `I need to update my ${dataType.replace(/_/g, ' ')} information`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200"
+              >
+                <span>{dataIcons[dataType] || '📝'}</span>
+                <span className="text-sm capitalize">{dataType.replace(/_/g, ' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "navigate-button": ({ node, ...props }: any) => {
+      const [destinations, label] = (props['data-type'] || '').split(':');
+      const navOptions = destinations?.split('|') || [];
+      
+      const navIcons: Record<string, string> = {
+        calculator: '🧮', dashboard: '📊', goals: '🎯', insights: '💡',
+        compound_calculator: '📈', goal_tracker: '🎯', budget_planner: '📋'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {navOptions.map((destination) => (
+              <Button
+                key={destination}
+                onClick={() => {
+                  const message = `Take me to ${destination.replace(/_/g, ' ')}`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg border border-indigo-200"
+              >
+                <span>{navIcons[destination] || '🔗'}</span>
+                <span className="text-sm capitalize">{destination.replace(/_/g, ' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "amount-select": ({ node, ...props }: any) => {
+      const [amounts, label] = (props['data-type'] || '').split(':');
+      const amountOptions = amounts?.split('|') || [];
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {amountOptions.map((amount) => (
+              <Button
+                key={amount}
+                onClick={() => {
+                  const message = amount === 'custom'
+                    ? 'I want to enter a custom amount'
+                    : `I choose $${amount}`;
+                  onSendMessage?.(message);
+                }}
+                className="px-3 py-2 bg-green-50 hover:bg-green-100 text-green-800 rounded-lg border border-green-200"
+              >
+                {amount === 'custom' ? 'Custom' : `$${amount}`}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "priority-select": ({ node, ...props }: any) => {
+      const [priorities, label] = (props['data-type'] || '').split(':');
+      const priorityOptions = priorities?.split('|') || [];
+      
+      const priorityColors: Record<string, string> = {
+        high: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
+        critical: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
+        medium: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
+        important: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
+        low: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
+        nice_to_have: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {priorityOptions.map((priority) => (
+              <Button
+                key={priority}
+                onClick={() => {
+                  const message = `This is ${priority.replace(/_/g, ' ')} priority for me`;
+                  onSendMessage?.(message);
+                }}
+                className={`px-3 py-2 rounded-lg border ${priorityColors[priority] || 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'}`}
+              >
+                {priority.replace(/_/g, ' ').charAt(0).toUpperCase() + priority.slice(1).replace(/_/g, ' ')}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "response-style": ({ node, ...props }: any) => {
+      const [styles, label] = (props['data-type'] || '').split(':');
+      const styleOptions = styles?.split('|') || [];
+      
+      const styleIcons: Record<string, string> = {
+        detailed: '📋', quick: '⚡', examples: '💡', visual: '📊',
+        step_by_step: '📋', overview: '🌐'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {styleOptions.map((style) => (
+              <Button
+                key={style}
+                onClick={() => {
+                  const message = `Please explain this with ${style.replace(/_/g, ' ')} style`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 rounded-lg border border-cyan-200"
+              >
+                <span>{styleIcons[style] || '💬'}</span>
+                <span className="text-sm capitalize">{style.replace(/_/g, ' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "habit-track": ({ node, ...props }: any) => {
+      const [habits, label] = (props['data-type'] || '').split(':');
+      const habitOptions = habits?.split('|') || [];
+      
+      const habitIcons: Record<string, string> = {
+        completed: '✅', yes: '✅', missed: '❌', no: '❌', 
+        partial: '🟡', mostly: '🟡'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {habitOptions.map((habit) => (
+              <Button
+                key={habit}
+                onClick={() => {
+                  const message = `I ${habit} my financial habit`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg border border-teal-200"
+              >
+                <span>{habitIcons[habit] || '📝'}</span>
+                <span className="text-sm capitalize">{habit}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "risk-select": ({ node, ...props }: any) => {
+      const [risks, label] = (props['data-type'] || '').split(':');
+      const riskOptions = risks?.split('|') || [];
+      
+      const riskColors: Record<string, string> = {
+        conservative: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
+        low_risk: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
+        moderate: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
+        balanced: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
+        aggressive: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
+        growth_focused: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {riskOptions.map((risk) => (
+              <Button
+                key={risk}
+                onClick={() => {
+                  const message = `My risk tolerance is ${risk.replace(/_/g, ' ')}`;
+                  onSendMessage?.(message);
+                }}
+                className={`px-3 py-2 rounded-lg border ${riskColors[risk] || 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'}`}
+              >
+                {risk.replace(/_/g, ' ').charAt(0).toUpperCase() + risk.slice(1).replace(/_/g, ' ')}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "timeline-select": ({ node, ...props }: any) => {
+      const [timelines, label] = (props['data-type'] || '').split(':');
+      const timelineOptions = timelines?.split('|') || [];
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {timelineOptions.map((timeline) => (
+              <Button
+                key={timeline}
+                onClick={() => {
+                  const message = `I want this goal completed in ${timeline.replace(/_/g, ' ')}`;
+                  onSendMessage?.(message);
+                }}
+                className="px-3 py-2 bg-orange-50 hover:bg-orange-100 text-orange-800 rounded-lg border border-orange-200"
+              >
+                {timeline.replace(/_/g, ' ').charAt(0).toUpperCase() + timeline.slice(1).replace(/_/g, ' ')}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "confidence-track": ({ node, ...props }: any) => {
+      const [levels, label] = (props['data-type'] || '').split(':');
+      const confidenceOptions = levels?.split('|') || [];
+      
+      const confidenceLabels: Record<string, string> = {
+        '1': 'Very Low', very_low: 'Very Low',
+        '2': 'Low', low: 'Low', 
+        '3': 'Neutral', neutral: 'Neutral',
+        '4': 'High', high: 'High',
+        '5': 'Very High', very_high: 'Very High'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {confidenceOptions.map((level) => (
+              <Button
+                key={level}
+                onClick={() => {
+                  const displayLevel = confidenceLabels[level] || level;
+                  const message = `My confidence level is ${displayLevel}`;
+                  onSendMessage?.(message);
+                }}
+                className="px-3 py-2 bg-violet-50 hover:bg-violet-100 text-violet-800 rounded-lg border border-violet-200"
+              >
+                {confidenceLabels[level] || level}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    "commitment-level": ({ node, ...props }: any) => {
+      const [levels, label] = (props['data-type'] || '').split(':');
+      const commitmentOptions = levels?.split('|') || [];
+      
+      const commitmentIcons: Record<string, string> = {
+        very_committed: '🔥', all_in: '🔥',
+        somewhat: '👍', mostly: '👍',
+        need_motivation: '💪', need_support: '🤝'
+      };
+      
+      return (
+        <div className="mt-3">
+          <p className="text-sm font-medium mb-3">{label}</p>
+          <div className="flex gap-2 flex-wrap">
+            {commitmentOptions.map((level) => (
+              <Button
+                key={level}
+                onClick={() => {
+                  const message = `I am ${level.replace(/_/g, ' ')} to this plan`;
+                  onSendMessage?.(message);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-800 rounded-lg border border-pink-200"
+              >
+                <span>{commitmentIcons[level] || '💪'}</span>
+                <span className="text-sm capitalize">{level.replace(/_/g, ' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    },
     
     "course-card": ({ node, ...props }: any) => {
       try {
@@ -287,7 +732,8 @@ ${after}`;
     onOpenQuizModal, 
     onGoalTemplateClick, 
     isDetailModalOpen, 
-    setIsDetailModalOpen
+    setIsDetailModalOpen,
+    onSendMessage
   ]);
 
   const renderMessageContent = useMemo(() => (

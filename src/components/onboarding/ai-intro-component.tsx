@@ -441,7 +441,6 @@ Sound good?`,
                 <Button
                   onClick={handleLogin}
                   variant="outline"
-                  className="bg-white/80 hover:bg-white border-slate-300 text-slate-700 hover:text-slate-900 transition-all duration-200"
                 >
                   <FontAwesomeIcon icon={faSignInAlt} className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Sign In</span>

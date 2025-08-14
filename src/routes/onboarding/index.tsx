@@ -1,11 +1,8 @@
 import { AIIntroComponent } from '@/components/onboarding/ai-intro-component';
-import { useAuth } from '@/contexts/auth-context';
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react';
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
-import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 
 export const Route = createFileRoute('/onboarding/')({
   component: RouteComponent,
@@ -40,10 +37,7 @@ export const Route = createFileRoute('/onboarding/')({
 });
 
 function RouteComponent() {
-  const {user} = useAuth();
-  const navigate = useNavigate();
   const { q } = Route.useSearch();
-  const {profile}=useFinancialHealthProfile(user?.id)
 
   // useEffect(() => {
   //   if (user&&profile) {

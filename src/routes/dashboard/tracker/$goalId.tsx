@@ -22,7 +22,8 @@ import {
   faLightbulb,
   faInfoCircle,
   faExclamationCircle,
-  faCheckCircle
+  faCheckCircle,
+  faSlidersH
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoal } from "@/hooks/goal-tracker/use-goal";
@@ -125,7 +126,7 @@ function GoalDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // Main UI state
-  const [activeTab, setActiveTab] = useState<'Analytics' | "Quick Actions" | 'calculator' | 'activity' | 'chat' | 'reminders'>('Quick Actions');
+  const [activeTab, setActiveTab] = useState<'Analytics' | "Quick Actions" | 'fine-tune' | 'activity' | 'chat' | 'reminders'>('Quick Actions');
   const [showTrackerModal, setShowTrackerModal] = useState(false);
   const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | "Quick Actions">('activity');
   const [showAdjustTimelineModal, setShowAdjustTimelineModal] = useState(false);
@@ -649,7 +650,7 @@ function GoalDetail() {
               {[
                 { id: "Quick Actions", label: "Quick Actions", icon: faFlag },
                 { id: 'Analytics', label: 'Analytics', icon: faChartLine },
-                { id: 'calculator', label: 'Calculator', icon: faCalculator },
+                { id: 'fine-tune', label: 'Fine-tune', icon: faSlidersH },
                 { id: 'activity', label: 'Activity', icon: faClock },
               ].map((tab) => (
                 <button
@@ -720,57 +721,8 @@ function GoalDetail() {
                         </ReactMarkdown>
                       </div>
                     </div>
-                  )}
-
+                  )}             
                 
-                  {/* Questionnaire Details */}
-                  {currentGoal.ai_questionnaire_data && Object.keys(currentGoal.ai_questionnaire_data).length > 0 && (
-                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 mb-8 border border-emerald-200 dark:border-emerald-800">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-                          <FontAwesomeIcon icon={faComments} className="w-5 h-5 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Your Profile Details</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(currentGoal.ai_questionnaire_data).map(([key, value]) => {
-                          if (!value || value === '' || value === 'undefined') return null;
-                          
-                          const displayKey = key
-                            .replace(/_/g, ' ')
-                            .replace(/\b\w/g, (l) => l.toUpperCase());
-                          
-                          let displayValue = value;
-                          if (typeof value === 'boolean') {
-                            displayValue = value ? 'Yes' : 'No';
-                          } else if (typeof value === 'number') {
-                            if (key.includes('amount') || key.includes('income') || key.includes('savings') || key.includes('debt')) {
-                              displayValue = `$${value.toLocaleString()}`;
-                            } else if (key.includes('age')) {
-                              displayValue = `${value} years`;
-                            } else {
-                              displayValue = value.toString();
-                            }
-                          } else if (typeof value === 'string') {
-                            displayValue = value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
-                          }
-                          
-                          return (
-                            <div key={key} className="bg-white dark:bg-gray-800 rounded-xl p-4">
-                              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                {displayKey}
-                              </div>
-                              <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {displayValue}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
                   {/* AI Insights Section - "What Moneko thinks" */}
                   <GoalInsights 
                     insights={currentInsights || []} 
@@ -798,9 +750,9 @@ function GoalDetail() {
                 </motion.div>
               )}
               
-              {activeTab === 'calculator' && (
+              {activeTab === 'fine-tune' && (
                 <motion.div
-                  key="calculator"
+                  key='fine-tune'
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -845,43 +797,11 @@ function GoalDetail() {
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Activity & Progress History</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Track your progress updates and goal modifications</p>
                       </div>
-                    </div>
-                    
-                    {/* Progress History Section */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
-                          <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
-                        </div>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">Progress Updates</h4>
-                      </div>
-                      
-                      {/* Progress Timeline Placeholder - This would fetch from goal_progress_updates table */}
-                      <div className="text-center py-8">
-                        <FontAwesomeIcon icon={faChartLine} className="w-12 h-12 text-gray-400 mb-4" />
-                        <p className="text-gray-600 dark:text-gray-400 mb-2">Progress History Coming Soon</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
-                          This section will show your detailed progress updates from the goal_progress_updates table,
-                          including amount changes, milestone completions, and progress tracking over time.
-                        </p>
-                        <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl">
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            <strong>Database fields to display:</strong>
-                            <ul className="text-left mt-2 space-y-1">
-                              <li>• update_type (amount_added, milestone_completed, etc.)</li>
-                              <li>• amount_change and new_amount values</li>
-                              <li>• user_note comments</li>
-                              <li>• update_source (manual, automatic, ai_suggestion)</li>
-                              <li>• created_at timestamps</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    </div>                    
+                
                     
                     {/* General Activity List */}
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h4>
                       <ActivityList 
                         activities={activities || []} 
                         isLoading={activitiesLoading} 
@@ -897,234 +817,6 @@ function GoalDetail() {
           </div>
         </div>
 
-      {/* Next Steps - Only show if goal is not completed */}
-      {!isGoalCompleted && (
-        <div className="mb-16">
-          <div className="flex items-center gap-3 mb-8">
-            <FontAwesomeIcon icon={faRocket} className="w-6 h-6 text-blue-500" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Next Step:</h2>
-          </div>
-        <div className="space-y-3">
-          {/* Increase Income */}
-          <div className="py-6 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            <button 
-              onClick={() => toggleStepExpansion('increase-income')}
-              className="w-full text-left flex items-center justify-between group hover:opacity-80 transition-opacity"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">📈</span>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Increase Your Income</h4>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Ask for a raise of ${Math.ceil(Math.max(0, savingsGap) * 1.3)}/month (accounting for taxes)
-                  </p>
-                </div>
-              </div>
-              <FontAwesomeIcon 
-                icon={expandedSteps.has('increase-income') ? faChevronUp : faChevronDown} 
-                className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" 
-              />
-            </button>
-            <AnimatePresence>
-              {expandedSteps.has('increase-income') && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 pl-16 bg-gray-50 dark:bg-gray-800 rounded-xl p-6 ml-12">
-                    <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                      <li className="flex items-start gap-3">
-                        <span className="text-green-500 mt-1 text-xs">●</span>
-                        Ask for a raise of ${Math.ceil(Math.max(0, savingsGap) * 1.3)}/month (accounting for taxes)
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-green-500 mt-1 text-xs">●</span>
-                        Start a side hustle or freelance work
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-green-500 mt-1 text-xs">●</span>
-                        Sell unused items or rent out assets
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-green-500 mt-1 text-xs">●</span>
-                        Pick up extra hours or overtime shifts
-                      </li>
-                    </ul>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          {/* Cut Expenses */}
-          <div className="py-6 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            <button 
-              onClick={() => toggleStepExpansion('cut-expenses')}
-              className="w-full text-left flex items-center justify-between group hover:opacity-80 transition-opacity"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">💰</span>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Cut Monthly Expense</h4>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Review subscriptions and cancel ${Math.ceil(Math.max(0, Math.abs(savingsGap)) * 0.3)}/month worth
-                  </p>
-                </div>
-              </div>
-              <FontAwesomeIcon 
-                icon={expandedSteps.has('cut-expenses') ? faChevronUp : faChevronDown} 
-                className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" 
-              />
-            </button>
-            <AnimatePresence>
-              {expandedSteps.has('cut-expenses') && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 pl-16 bg-gray-50 dark:bg-gray-800 rounded-xl p-6 ml-12">
-                    <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                      <li className="flex items-start gap-3">
-                        <span className="text-blue-500 mt-1 text-xs">●</span>
-                        Review subscriptions and cancel ${Math.ceil(Math.max(0, Math.abs(savingsGap)) * 0.3)}/month worth
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-blue-500 mt-1 text-xs">●</span>
-                        Cook more meals at home instead of eating out
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-blue-500 mt-1 text-xs">●</span>
-                        Switch to cheaper phone/internet plans
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-blue-500 mt-1 text-xs">●</span>
-                        Reduce entertainment and shopping expenses
-                      </li>
-                    </ul>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          {/* Adjust Timeline */}
-          <div className="py-6 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            <button 
-              onClick={() => toggleStepExpansion('adjust-timeline')}
-              className="w-full text-left flex items-center justify-between group hover:opacity-80 transition-opacity"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">📅</span>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Adjust Your Timeline</h4>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Extend target date by {timelineExtensionMonths} months
-                  </p>
-                </div>
-              </div>
-              <FontAwesomeIcon 
-                icon={expandedSteps.has('adjust-timeline') ? faChevronUp : faChevronDown} 
-                className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" 
-              />
-            </button>
-            <AnimatePresence>
-              {expandedSteps.has('adjust-timeline') && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 pl-16 bg-gray-50 dark:bg-gray-800 rounded-xl p-6 ml-12">
-                    <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-6">
-                      <li className="flex items-start gap-3">
-                        <span className="text-purple-500 mt-1 text-xs">●</span>
-                        Extend target date by {timelineExtensionMonths} months
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-purple-500 mt-1 text-xs">●</span>
-                        Break goal into smaller milestones
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-purple-500 mt-1 text-xs">●</span>
-                        Start with a lower target amount first
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-purple-500 mt-1 text-xs">●</span>
-                        Consider a phased approach to reaching your goal
-                      </li>
-                    </ul>
-                    <button
-                      onClick={() => setShowAdjustTimelineModal(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-xl font-medium transition-colors"
-                    >
-                      Adjust Timeline Now
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          {/* Investment Strategy */}
-          <div className="py-6 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            <button 
-              onClick={() => toggleStepExpansion('investment-strategy')}
-              className="w-full text-left flex items-center justify-between group hover:opacity-80 transition-opacity"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">📊</span>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">Investment Strategy</h4>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Invest existing savings for higher returns
-                  </p>
-                </div>
-              </div>
-              <FontAwesomeIcon 
-                icon={expandedSteps.has('investment-strategy') ? faChevronUp : faChevronDown} 
-                className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" 
-              />
-            </button>
-            <AnimatePresence>
-              {expandedSteps.has('investment-strategy') && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 pl-16 bg-gray-50 dark:bg-gray-800 rounded-xl p-6 ml-12">
-                    <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                      <li className="flex items-start gap-3">
-                        <span className="text-orange-500 mt-1 text-xs">●</span>
-                        Invest existing savings for higher returns
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-orange-500 mt-1 text-xs">●</span>
-                        Use dollar-cost averaging for consistent growth
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-orange-500 mt-1 text-xs">●</span>
-                        Consider low-cost index funds or ETFs
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="text-orange-500 mt-1 text-xs">●</span>
-                        Automate investments to reduce required manual savings
-                      </li>
-                    </ul>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-        </div>
-      )}
 
       {/* Goal Completed Celebration Section */}
       {isGoalCompleted && (
