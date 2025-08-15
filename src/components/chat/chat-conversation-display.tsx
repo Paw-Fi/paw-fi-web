@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChatMessageItem } from "./chat-message-item";
@@ -18,14 +18,14 @@ import { supabase } from '@/lib/supabase';
 import { GoalType } from '../goal-tracker/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
-import { useLocation, useRouter } from '@tanstack/react-router';
+import { useLocation } from '@tanstack/react-router';
 import FinancialHealthQuiz from '../financial-health/FinancialHealthQuiz';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { useAIChat } from '@/contexts/ai-chat-context';
 import { FinancialHealthProfile, useFinancialHealthProfile, formatProfileForAI } from '@/hooks/use-financial-health-profile';
 import { useUserGoals, createAllGoalsContext } from '@/hooks/goal-tracker/use-user-goals';
-import { AI_ROLES } from './ai-roles';
+import { AI_ROLES, AI_ROLE } from './ai-roles';
 import { BetaPill } from '../ui/beta-pill';
 
 export interface ConversationMessage {
@@ -132,6 +132,159 @@ export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
   );
 };
 
+// Simple loading state hook - no timer logic to prevent parent rerenders
+const useSimpleLoadingState = () => {
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  
+  const startLoading = useCallback(() => {
+    setIsSendingMessage(true);
+  }, []);
+  
+  const stopLoading = useCallback(() => {
+    setIsSendingMessage(false);
+  }, []);
+  
+  return {
+    isSendingMessage,
+    startLoading,
+    stopLoading
+  };
+};
+
+// Self-contained Loading Message Component with internal timer
+const LoadingMessage = React.memo<{
+  isSendingMessage: boolean;
+  enableLoadingDuration?: boolean;
+  agentIcon: string;
+  agentName: string;
+}>(({ isSendingMessage, enableLoadingDuration = false, agentIcon, agentName }) => {
+  const [loadingDuration, setLoadingDuration] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Internal timer that doesn't affect parent component
+  useEffect(() => {
+    if (isSendingMessage && enableLoadingDuration) {
+      setLoadingDuration(0);
+      timerRef.current = setInterval(() => {
+        setLoadingDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLoadingDuration(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isSendingMessage, enableLoadingDuration]);
+  
+  const loadingMessage = useMemo(() => {
+    const MAX_TIME = 9;
+    if (loadingDuration >= MAX_TIME + 45) {
+      return "Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱";
+    } else if (loadingDuration >= MAX_TIME + 30) {
+      return "Creating something special! Your financial wisdom is on the way... ✨";
+    } else if (loadingDuration >= MAX_TIME + 15) {
+      return "Building knowledge blocks just for you! Almost there... 🧩";
+    } else if (loadingDuration >= MAX_TIME) {
+      return "Crafting your personalized content... 📚";
+    }
+    return "Moneko is thinking...";
+  }, [loadingDuration]);
+  
+  if (!isSendingMessage) {
+    return null;
+  }
+  
+  const MAX_TIME_TO_SHOW_LOADING = 9;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2 }}
+      className="flex justify-start"
+    >
+      <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
+        <OptimizedImage src={agentIcon} alt={agentName || "AI Assistant"} className="size-10" />
+                <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
+          <div className="flex items-center space-x-3">
+            {enableLoadingDuration && loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
+              <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
+                {loadingMessage}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400"></div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+LoadingMessage.displayName = 'LoadingMessage';
+
+// Memoized Messages List Component
+const MessagesList = React.memo<{
+  messages: ConversationMessage[];
+  onOpenQuizModal: () => void;
+  onGoalTemplateClick?: (goalType: GoalType) => void;
+  disableMsgParse: boolean;
+  onSendMessage: (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => Promise<void>;
+  agentIcon?: any;
+  agentName?: string;
+}>(({ messages, onOpenQuizModal, onGoalTemplateClick, disableMsgParse, onSendMessage, agentIcon, agentName }) => {
+  const memoizedMessages = useMemo(() => {
+    return messages.map((message) => {
+      const contentHash = message.content.length > 0
+        ? message.content.split("").reduce(
+            (acc, char) => (acc * 31 + char.charCodeAt(0)) & 0xffffffff,
+            0
+          )
+        : 0;
+      return { ...message, contentHash };
+    });
+  }, [messages]);
+  
+  return (
+    <AnimatePresence initial={false}>
+      {memoizedMessages.map((message) => (
+        <motion.div
+          key={`${message.timestamp}-${message.role}-${message.contentHash}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <ChatMessageItem
+            message={message}
+            onOpenQuizModal={onOpenQuizModal}
+            onGoalTemplateClick={onGoalTemplateClick}
+            disableMsgParse={disableMsgParse}
+            onSendMessage={onSendMessage}
+            agentIcon={agentIcon}
+            agentName={agentName}
+          />
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  );
+});
+
+MessagesList.displayName = 'MessagesList';
+
 export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = ({
   chatConfig,
   agentIcon,
@@ -143,7 +296,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   onClearConversation,
   disableMsgParse = false,
   className = "",
-  headerClassName = "",
   messagesClassName = "",
   headerTitle,
   headerSubtitle,
@@ -157,7 +309,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
-  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user } = useAuth();
   const { closeChat } = useAIChat();
@@ -168,20 +319,21 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 
   // State management - moved from parent components
   const [internalMessages, setInternalMessages] = useState<ConversationMessage[]>([]);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [loadingDuration, setLoadingDuration] = useState(0);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [hasUpdatedGuestSession, setHasUpdatedGuestSession] = useState(false);
+  
+  // Simple loading state - no timer in parent to prevent rerenders
+  const {
+    isSendingMessage,
+    startLoading,
+    stopLoading
+  } = useSimpleLoadingState();
   
   // Shared handlers
   const handleSignupClick = () => {
     setShowSignupPrompt(false);
     navigate?.({ to: "/register", search: { redirect: "/dashboard" } });
-  };
-  
-  const handleGuestSessionUpdate = () => {
-    // Handle guest session updates if needed
   };
   
   // Use external messages if provided, otherwise use internal state
@@ -191,7 +343,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const { profile } = useFinancialHealthProfile(user?.id);
   
   // Load user goals for Financial Advisor mode
-  const { data: userGoals, isLoading: isGoalsLoading } = useUserGoals();
+  const { data: userGoals } = useUserGoals();
   
   // Check if this is Financial Advisor mode
   const isFinancialAdvisorMode = chatConfig.aiRole === AI_ROLES.FINANCIAL_ADVISOR;
@@ -212,7 +364,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     isLoading: isConversationsLoading,
   } = useQuery({
     queryKey: ['conversations', chatConfig.aiRole],
-    queryFn: () => fetchConversations(supabase, chatConfig.aiRole),
+    queryFn: () => fetchConversations(supabase, chatConfig.aiRole as AI_ROLE),
     enabled: isAuthenticated && !chatConfig.useExternalMessages,
     staleTime: Infinity, // Never refetch automatically
     refetchOnWindowFocus: false,
@@ -264,6 +416,27 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       block: "end",
     });
   }, []);
+  
+  // Memoized fetch suggestions to prevent unnecessary recreations
+  const fetchSuggestions = useCallback(async (lastAssistantMessage: string) => {
+    try {
+      const contextMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      // Add the final assistant message to context
+      contextMessages.push({
+        role: 'assistant',
+        content: lastAssistantMessage
+      });
+      
+      const suggestions = await getPredictedResponses(supabase, lastAssistantMessage, contextMessages);
+      setSuggestedResponses(suggestions);
+    } catch (error) {
+      setSuggestedResponses([]);
+    }
+  }, [messages]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -279,29 +452,20 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     
     // If using custom message handler (like goal tracker), delegate to it
     if (chatConfig.customMessageHandler) {
-      setIsSendingMessage(true);
+      startLoading();
       setConnectionError(null);
       try {
         await chatConfig.customMessageHandler(content);
       } catch (error) {
         setConnectionError(typeof error === 'string' ? error : 'Connection error. Please try again.');
       } finally {
-        setIsSendingMessage(false);
+        stopLoading();
       }
       return;
     }
     
-    setIsSendingMessage(true);
+    startLoading();
     setConnectionError(null);
-    
-    if (chatConfig.enableLoadingDuration) {
-      setLoadingDuration(0);
-      // Start loading timer
-      if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
-      loadingTimerRef.current = setInterval(() => {
-        setLoadingDuration(prev => prev + 1);
-      }, 1000);
-    }
     
     const getConsistentTimestamp = (): number => {
       if (typeof window === "undefined") {
@@ -336,8 +500,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         conversationId: isAuthenticated ? currentConversationId : null,
         userId: user?.id || null,
         sessionId: isAuthenticated ? null : (chatConfig.enableGuestSessions ? getGuestSessionId() : null),
-        model: chatConfig.aiRole,
-        profile: formatProfileForAI(user, manual_profile || profile),
+        model: chatConfig.aiRole as AI_ROLE,
+        profile: formatProfileForAI(user, manual_profile ? null : profile),
         // Include goal context for Financial Advisor mode
         ...(isFinancialAdvisorMode && goalContext && {
           goalContext: goalContext,
@@ -415,15 +579,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       }
       setConnectionError("Connection error. Please try again.");
     } finally {
-      setIsSendingMessage(false);
-      
-      if (chatConfig.enableLoadingDuration) {
-        setLoadingDuration(0);
-        if (loadingTimerRef.current) {
-          clearInterval(loadingTimerRef.current);
-          loadingTimerRef.current = null;
-        }
-      }
+      stopLoading();
     }
   };
 
@@ -432,67 +588,19 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     handleSendMessage(suggestion);
   };
 
-  const MAX_TIME_TO_SHOW_LOADING = 9;
-  const [loadingMessage, setLoadingMessage] = useState<string>("Moneko is thinking...");
-  
   const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
     ...initialSuggestedResponses || []
   ]);
 
+  // Optimized effect for fetching suggestions
   useEffect(() => {
-    if(messages.length > 0) {
-      fetchSuggestions(messages[messages.length - 1].content);
-    }
-  }, [messages]);
-  
-  // Fetch suggested responses based on assistant message
-  const fetchSuggestions = async (lastAssistantMessage: string) => {
-    try {
-      const contextMessages = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-      
-      // Add the final assistant message to context
-      contextMessages.push({
-        role: 'assistant',
-        content: lastAssistantMessage
-      });
-      
-      const suggestions = await getPredictedResponses(supabase, lastAssistantMessage, contextMessages);
-      setSuggestedResponses(suggestions);
-    } catch (error) {
-      setSuggestedResponses([]);
-    }
-  };
-
-  useEffect(() => {
-    if(loadingDuration >= MAX_TIME_TO_SHOW_LOADING && !isSendingMessage) {
-     
-    }
-  }, [messages]);
-
-    // Update loading message based on duration
-    useEffect(() => {
-      if (loadingDuration === MAX_TIME_TO_SHOW_LOADING) {
-        setLoadingMessage("Crafting your personalized financial lessons... 📚");
-      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 15) {
-        setLoadingMessage("Building knowledge blocks just for you! Almost there... 🧩");
-      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 30) {
-        setLoadingMessage("Creating something special! Your financial wisdom is on the way... ✨");
-      } else if (loadingDuration === MAX_TIME_TO_SHOW_LOADING + 45) {
-        setLoadingMessage("Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱");
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant') {
+        fetchSuggestions(lastMessage.content);
       }
-    }, [loadingDuration]);
-
-    // Cleanup
-    useEffect(() => {
-      return () => {
-        if (loadingTimerRef.current) {
-          clearInterval(loadingTimerRef.current);
-        }
-      };
-    }, []);
+    }
+  }, [messages, fetchSuggestions]);
 
     const handleDashboardCreated = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
       setIsQuizModalOpen(false);
@@ -655,73 +763,23 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         )}
 
         {/* Messages */}
-        <AnimatePresence initial={false}>
-          {messages.map((message) => {
-            const contentHash =
-              message.content.length > 0
-                ? message.content
-                    .split("")
-                    .reduce(
-                      (acc, char) =>
-                        (acc * 31 + char.charCodeAt(0)) & 0xffffffff,
-                      0,
-                    )
-                : 0;
-            return (
-              <motion.div
-                key={`${message.timestamp}-${message.role}-${contentHash}`}
-                layout
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
-              >
-                <ChatMessageItem 
-                  message={message} 
-                  onOpenQuizModal={() => setIsQuizModalOpen(true)}
-                  onGoalTemplateClick={onGoalTemplateClick}
-                  disableMsgParse={disableMsgParse}
-                  onSendMessage={handleSendMessage}
-                  agentIcon={agentIcon}
-                  agentName={agentName}
-                />
-              </motion.div>
-            );
-          })}
+        <MessagesList
+          messages={messages}
+          onOpenQuizModal={() => setIsQuizModalOpen(true)}
+          onGoalTemplateClick={onGoalTemplateClick}
+          disableMsgParse={disableMsgParse}
+          onSendMessage={handleSendMessage}
+          agentIcon={agentIcon}
+          agentName={agentName}
+        />
 
-          {/* Loading Message */}
-          {isSendingMessage && (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
-            >
-              <div className="flex justify-start">
-                <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
-                  <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 shrink-0">
-                    {agentIcon?<OptimizedImage src={agentIcon} alt={agentName} className="size-6" /> : iconContainer("size-6")}
-                  </div>
-                  <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
-                    <div className="flex items-center space-x-3">
-                      {loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
-                        <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
-                          {loadingMessage}
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
-                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
-                          <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400"></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Loading Message */}
+        <LoadingMessage
+          isSendingMessage={isSendingMessage}
+          enableLoadingDuration={chatConfig.enableLoadingDuration || false}
+          agentIcon={agentIcon}
+          agentName={agentName}
+        />
         <div ref={messagesEndRef} />
       </div>
 

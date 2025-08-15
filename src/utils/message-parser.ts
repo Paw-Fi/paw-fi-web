@@ -22,7 +22,6 @@ export interface ParsedMessage {
  * @returns A ParsedMessage object.
  */
 export function parseMessageContent(content: string): ParsedMessage {
-  console.log("Parsing message content: ", content);
   // --- Differentiation Logic ---
 
   // Exclusion Rule for Content 2: Check for the financial goal list pattern.
