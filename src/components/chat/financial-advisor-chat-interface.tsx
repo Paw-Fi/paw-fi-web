@@ -7,6 +7,7 @@ import { faChartLine } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
+import monekoLogo from "@/assets/images/avatar/moneko.png";
 
 export function FinancialAdvisorChatInterface() {
   const { user } = useAuth();
@@ -63,6 +64,8 @@ export function FinancialAdvisorChatInterface() {
         showFloatingCloseButton: true,
         showSignupModal: true,
       }}
+      agentIcon={monekoLogo}
+      agentName="Moneko"
       initialSuggestedResponses={[
         "I want to know how to save money", 
         "Help me create a retirement goal", 

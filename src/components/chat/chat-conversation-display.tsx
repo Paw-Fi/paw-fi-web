@@ -151,7 +151,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   headerBackgroundColors,
   backgroundGradient,
   footerContent,
-  signupModalConfig
+  signupModalConfig,
+  agentName
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -681,6 +682,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                   onGoalTemplateClick={onGoalTemplateClick}
                   disableMsgParse={disableMsgParse}
                   onSendMessage={handleSendMessage}
+                  agentIcon={agentIcon}
+                  agentName={agentName}
                 />
               </motion.div>
             );
@@ -697,7 +700,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
               <div className="flex justify-start">
                 <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
                   <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 shrink-0">
-                    {agentIcon || iconContainer("size-6")}
+                    {agentIcon?<OptimizedImage src={agentIcon} alt={agentName} className="size-6" /> : iconContainer("size-6")}
                   </div>
                   <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
                     <div className="flex items-center space-x-3">

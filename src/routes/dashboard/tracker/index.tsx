@@ -24,11 +24,13 @@ import {
   faRocket,
   faChartBar,
   faCreditCard,
-  faShieldAlt
+  faShieldAlt,
+  faEye
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
-import { memo, useCallback, useState, useMemo } from "react";
+import { memo, useCallback, useState, useMemo, useEffect } from "react";
+import { useTrackerIndexWalkthrough } from "@/hooks/walkthrough/use-tracker-index-walkthrough";
 import travelBgImage from "@/assets/images/tracker/spotlight-travel.svg";
 
 const trackerSearchSchema = z.object({
@@ -82,6 +84,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   function GoalsTracker() {
     const { user } = useAuth();
     const { goals, isLoading, error, refetch } = useGoals(user?.id);
+    const { autoStartWalkthrough, startWalkthrough } = useTrackerIndexWalkthrough();
   
     // Move all useMemo hooks before any conditional returns
     const sortedGoals = useMemo(() => {
@@ -251,6 +254,13 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
     }
   
     const hasGoals = goals && goals.length > 0;
+
+    // Auto-start walkthrough for new users
+    useEffect(() => {
+      if (hasGoals) {
+        autoStartWalkthrough();
+      }
+    }, [hasGoals, autoStartWalkthrough]);
     
     const getGoalStatus = (goal) => {
       if (goal.status === 'completed') return 'completed';
@@ -341,7 +351,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         {/* Clean Header inspired by the design */}
         <div className="bg-white">
           <div className="max-w-6xl mx-auto px-6 py-8">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between" data-tour="page-header">
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">
                   Goals
@@ -350,12 +360,18 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
                   Track your financial goals with AI-powered insights
                 </p>
               </div>
-              <Link to="/dashboard/tracker/create">
-                <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
-                  <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                  Create Goal
-                </button>
-              </Link>
+              <div className="flex items-center gap-3">
+              
+                <Link to="/dashboard/tracker/create">
+                  <button 
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg"
+                    data-tour="create-goal-btn"
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                    Create Goal
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -364,19 +380,25 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         <div id="main-content" className="max-w-6xl mx-auto px-6 py-8 space-y-8" tabIndex={-1}>
           {hasGoals ? (
             <>
-              <SpotlightSection 
-                spotlightGoals={spotlightGoals}
-                getGoalIcon={getGoalIcon}
-                getGoalStatus={getGoalStatus}
-              />
+              <div data-tour="spotlight-section">
+                <SpotlightSection 
+                  spotlightGoals={spotlightGoals}
+                  getGoalIcon={getGoalIcon}
+                  getGoalStatus={getGoalStatus}
+                />
+              </div>
               
-              <StatsBar stats={statsData} />
+              <div data-tour="stats-bar">
+                <StatsBar stats={statsData} />
+              </div>
               
-              <CommandCenter 
-                goals={sortedGoals}
-                getGoalStatus={getGoalStatus}
-                onUpdate={refetch}
-              />
+              <div data-tour="goals-list">
+                <CommandCenter 
+                  goals={sortedGoals}
+                  getGoalStatus={getGoalStatus}
+                  onUpdate={refetch}
+                />
+              </div>
             </>
           ) : (
             <EmptyGoalsState />

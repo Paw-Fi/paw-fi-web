@@ -226,17 +226,20 @@ ${after}`;
           <p className="text-sm font-medium mb-3">{label}</p>
           <div className="flex gap-2 flex-wrap">
             {actionOptions.map((action) => (
-              <Button
-                key={action}
-                onClick={() => {
-                  const message = `I want to ${action.replace(/_/g, ' ')} for my goal`;
-                  onSendMessage?.(message);
-                }}
-                className="flex items-center gap-4 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-black rounded-lg border border-purple-200"
-              >
-                <span>{goalActionIcons[action] || '⚡'}</span>
-                <span className="text-sm capitalize pl-1">{action.replace(/_/g, ' ')}</span>
-              </Button>
+             <Button
+             key={action}
+             onClick={() => {
+               const message = `I want to ${action.replace(/_/g, ' ')} for my goal`;
+               onSendMessage?.(message);
+             }}
+           >
+             <span className="text-purple-400 hover:text-cyan-400 transition-colors duration-300">
+               {goalActionIcons[action] || '⚡'}
+             </span>
+             <span className="capitalize">
+               {action.replace(/_/g, ' ')}
+             </span>
+           </Button>
             ))}
           </div>
         </div>

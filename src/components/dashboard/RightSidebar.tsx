@@ -6,7 +6,7 @@ import { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLightbulb,  faTimes } from '@fortawesome/free-solid-svg-icons';
 import monekoLogo from '@/assets/images/avatar/moneko.png';
-import logo from '@/assets/images/avatar/1.png';
+import finniLogo from '@/assets/images/avatar/finni.png';
 
 interface ChatAgent {
   id: string;
@@ -79,7 +79,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
       id: 'ai-educator',
       label: 'Financial Educator',
       description: 'Learn personal finance with your AI educator Leo',
-      icon:logo,
+      icon:finniLogo,
       aiType: 'educator',
       onClick: () => openChat('educator')
     }

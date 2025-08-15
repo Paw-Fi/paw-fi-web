@@ -10,6 +10,7 @@ import { iconContainer } from "./chat-conversation-display";
 import { formatTime as defaultFormatTime } from "@/utils/sanitize-course";
 import { GoalType } from "../goal-tracker/types";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { OptimizedImage } from "../seo/optimized-image";
 
 interface Message {
   content: string;
@@ -26,6 +27,8 @@ interface ChatMessageItemProps {
   formatTime?: (timestamp: number) => string;
   disableMsgParse?: boolean;
   onSendMessage?: (message: string) => void;
+  agentIcon?: string;
+  agentName?: string;
 }
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
@@ -35,6 +38,8 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   formatTime: formatTimeProp,
   disableMsgParse = false,
   onSendMessage,
+  agentIcon,
+  agentName,
 }) => {
   const isUser = message.role === "user";
   const { user } = useAuth();
@@ -51,16 +56,18 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   }, [message.content, isUser, user?.id, refetchProfile]);
 
   const Avatar = () => (
-    <div
-      className={`flex items-center justify-center h-10 w-10 rounded-full shrink-0 ${isUser ? "bg-[#F9F9F9] dark:bg-slate-600" : "bg-gradient-to-br from-purple-500 to-indigo-600"}`}>
+    <div>
      {
       isUser ? (
-        <FontAwesomeIcon
+       <div className="flex items-center justify-center h-10 w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
+
+<FontAwesomeIcon
         icon={isUser ? faUser : faLightbulb}
-        className={`h-4 w-4 ${isUser ? "text-slate-500 dark:text-slate-300" : "text-white"}`}
+        className={`size-4 ${isUser ? "text-slate-500 dark:text-slate-300" : "text-white"}`}
       />
+       </div>
       ) : (
-        iconContainer("size-6")
+        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName} className="size-10" /> : iconContainer("size-6")
       )
      }
     </div>

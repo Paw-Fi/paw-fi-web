@@ -7,6 +7,8 @@ import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
+import { OptimizedImage } from "../seo/optimized-image";
+import finniLogo from '@/assets/images/avatar/finni.png';
 
 export function FinancialEducatorChatInterface() {
   const { user } = useAuth();
@@ -63,6 +65,8 @@ export function FinancialEducatorChatInterface() {
         showFloatingCloseButton: true,
         showSignupModal: true,
       }}
+      agentIcon={finniLogo}
+      agentName="Finni"
       welcomeMessage="Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything."
       welcomeSubtitle="Ask me anything to get started!"
       navigate={navigate}

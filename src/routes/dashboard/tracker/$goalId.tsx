@@ -35,6 +35,8 @@ import { AdjustTimelineModal } from "@/components/goal-tracker/goal-detail/Adjus
 import { GoalInsights } from "@/components/goal-tracker/goal-detail/GoalInsights";
 import { useState, useEffect, useOptimistic } from "react";
 import ReactMarkdown from 'react-markdown';
+import { useGoalTrackerWalkthrough } from '@/hooks/walkthrough/use-goal-tracker-walkthrough';
+import '@/styles/walkthrough.css';
 
 // Extracted components
 import { AnimatedNumber } from "@/components/goal-tracker/AnimatedNumber";
@@ -128,7 +130,7 @@ function GoalDetail() {
   // Main UI state
   const [activeTab, setActiveTab] = useState<'Analytics' | "Quick Actions" | 'fine-tune' | 'activity' | 'chat' | 'reminders'>('Quick Actions');
   const [showTrackerModal, setShowTrackerModal] = useState(false);
-  const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | "Quick Actions">('activity');
+  const [trackerActiveTab, setTrackerActiveTab] = useState<'activity' | 'milestones'>('activity');
   const [showAdjustTimelineModal, setShowAdjustTimelineModal] = useState(false);
   const [showAllInsightsModal, setShowAllInsightsModal] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -161,6 +163,9 @@ function GoalDetail() {
 
   // Get user activities for the activity timeline
   const { activities, isLoading: activitiesLoading } = useUserActivities();
+
+  // Walkthrough integration
+  const { startWalkthrough, autoStartWalkthrough, hasSeenWalkthrough, isWalkthroughActive } = useGoalTrackerWalkthrough();
 
   // Optimistic state for goal updates - always called, even with null data
   const [optimisticGoal, setOptimisticGoal] = useOptimistic(
@@ -207,6 +212,13 @@ function GoalDetail() {
     const timer = setTimeout(() => setNumbersAnimated(true), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  // Auto-start walkthrough for new users (after goal loads)
+  useEffect(() => {
+    if (goal && !isLoading && !error) {
+      autoStartWalkthrough();
+    }
+  }, [goal, isLoading, error, autoStartWalkthrough]);
 
 
   // Early returns AFTER all hooks are called
@@ -383,7 +395,7 @@ function GoalDetail() {
           <div className="flex items-start justify-between mb-12">
             <div className="flex-1">
               {/* Title - Inline Editing */}
-              <div className="mb-6">
+              <div className="mb-6" data-tour="goal-title">
                 {isEditingTitle ? (
                   <div className="flex items-center gap-3">
                     <input
@@ -502,6 +514,24 @@ function GoalDetail() {
                     <div className="py-3">
                       <button
                         onClick={() => {
+                          startWalkthrough();
+                          setShowGoalMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                          <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Take Tour</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Learn about goal features</div>
+                        </div>
+                      </button>
+                      
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                      
+                      <button
+                        onClick={() => {
                           setShowDeleteConfirm(true);
                           setShowGoalMenu(false);
                         }}
@@ -533,7 +563,7 @@ function GoalDetail() {
           {/* Visual Progress Section */}
           <div className="mb-16">
             <div className="flex items-center justify-between mb-8">
-              <div>
+              <div data-tour="current-savings">
                 <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Current Saving</div>
                 <AnimatedNumber 
                   value={progressData.currentAmount} 
@@ -551,6 +581,7 @@ function GoalDetail() {
                   <button
                     onClick={() => setShowUpdateProgressModal(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    data-tour="update-progress-btn"
                   >
                     Update Progress
                   </button>
@@ -566,6 +597,7 @@ function GoalDetail() {
                 <button 
                   onClick={() => setShowTrackerModal(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  data-tour="goal-summary-btn"
                 >
                  Goal Summary
                 </button>
@@ -573,7 +605,7 @@ function GoalDetail() {
             </div>
             
             {/* Enhanced Progress Bar */}
-            <div className="relative">
+            <div className="relative" data-tour="progress-bar">
               <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
                 <motion.div
                   className="bg-gradient-to-r from-teal-500 to-teal-600 h-3 rounded-full relative"
@@ -591,7 +623,7 @@ function GoalDetail() {
             </div>
           </div>
             {/* Key Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8" data-tour="key-metrics">
                       <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-2xl p-8">
                         <div className="flex items-center justify-center mb-4">
                           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -646,12 +678,12 @@ function GoalDetail() {
         <div className="mb-16">
           {/* Tab Navigation */}
           <div className="mb-12">
-            <nav className="flex gap-1" aria-label="Goal sections">
+            <nav className="flex gap-1" aria-label="Goal sections" data-tour="tab-navigation">
               {[
-                { id: "Quick Actions", label: "Quick Actions", icon: faFlag },
-                { id: 'Analytics', label: 'Analytics', icon: faChartLine },
-                { id: 'fine-tune', label: 'Fine-tune', icon: faSlidersH },
-                { id: 'activity', label: 'Activity', icon: faClock },
+                { id: "Quick Actions", label: "Quick Actions", icon: faFlag, tour: "quick-actions-tab" },
+                { id: 'Analytics', label: 'Analytics', icon: faChartLine, tour: "analytics-tab" },
+                { id: 'fine-tune', label: 'Fine-tune', icon: faSlidersH, tour: "fine-tune-tab" },
+                { id: 'activity', label: 'Activity', icon: faClock, tour: "activity-tab" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -661,6 +693,7 @@ function GoalDetail() {
                       ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
+                  data-tour={tab.tour}
                 >
                   <FontAwesomeIcon 
                     icon={tab.icon} 
