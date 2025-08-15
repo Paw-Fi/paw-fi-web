@@ -185,17 +185,17 @@ const LoadingMessage = React.memo<{
   }, [isSendingMessage, enableLoadingDuration]);
   
   const loadingMessage = useMemo(() => {
-    const MAX_TIME = 9;
+    const MAX_TIME = 15;
     if (loadingDuration >= MAX_TIME + 45) {
-      return "Almost done! Did you know? Small, consistent steps lead to big financial growth. 🌱";
+      return "Almost done! Polishing the final reply";
     } else if (loadingDuration >= MAX_TIME + 30) {
-      return "Creating something special! Your financial wisdom is on the way... ✨";
+      return "Organizing my ideas.. ✨";
     } else if (loadingDuration >= MAX_TIME + 15) {
-      return "Building knowledge blocks just for you! Almost there... 🧩";
+      return "Searching for the best answer...";
     } else if (loadingDuration >= MAX_TIME) {
-      return "Crafting your personalized content... 📚";
+      return "Gathering thoughts...";
     }
-    return "Moneko is thinking...";
+    return "Gathering thoughts...";
   }, [loadingDuration]);
   
   if (!isSendingMessage) {
@@ -366,8 +366,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     queryKey: ['conversations', chatConfig.aiRole],
     queryFn: () => fetchConversations(supabase, chatConfig.aiRole as AI_ROLE),
     enabled: isAuthenticated && !chatConfig.useExternalMessages,
-    staleTime: Infinity, // Never refetch automatically
-    refetchOnWindowFocus: false,
+    staleTime: 0, // Always consider data stale to allow refetching
+    refetchOnWindowFocus: true, // Refetch when user returns to page
     refetchOnReconnect: false,
   });
 
@@ -502,11 +502,9 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         sessionId: isAuthenticated ? null : (chatConfig.enableGuestSessions ? getGuestSessionId() : null),
         model: chatConfig.aiRole as AI_ROLE,
         profile: formatProfileForAI(user, manual_profile ? null : profile),
-        // Include goal context for Financial Advisor mode
-        ...(isFinancialAdvisorMode && goalContext && {
-          goalContext: goalContext,
-          isGlobalMode: true // Financial Advisor operates in global mode with all goals
-        })
+        // Include goal context for Financial Advisor mode (CRITICAL for goal tracking)
+        ...(goalContext && { goalContext: goalContext }),
+        // Note: Backend fetches conversation history directly from database
       });
       
       // For guest users (educator only), store the new session ID and course ID if provided
@@ -535,6 +533,11 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       // Add AI message to UI (only for internal messages)
       if (!chatConfig.useExternalMessages) {
         setInternalMessages(prev => [...prev, aiMessage]);
+      }
+      
+      // CRITICAL: Invalidate conversation cache to ensure fresh data on navigation
+      if (isAuthenticated) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', chatConfig.aiRole] });
       }
       
       // Handle goal function execution results for Financial Advisor

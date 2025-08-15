@@ -84,6 +84,7 @@ ${after}`;
     processedContent = processedContent.replace(/``QUICK_SAVE:([^`]+)``/gi, '<quick-save data-type="$1"></quick-save>');
     processedContent = processedContent.replace(/``FINANCIAL_ACTION:([^`]+)``/gi, '<financial-action data-type="$1"></financial-action>');
     processedContent = processedContent.replace(/``GOAL_ACTION:([^`]+)``/gi, '<goal-action data-type="$1"></goal-action>');
+    processedContent = processedContent.replace(/`GOAL_ACTION:([^`]+)`/gi, '<goal-action data-type="$1"></goal-action>');
     processedContent = processedContent.replace(/``UPDATE_DATA:([^`]+)``/gi, '<update-data data-type="$1"></update-data>');
     processedContent = processedContent.replace(/``RESPONSE:([^`]+)``/gi, '<response-style data-type="$1"></response-style>');
     processedContent = processedContent.replace(/``PRIORITY:([^`]+)``/gi, '<priority-select data-type="$1"></priority-select>');
@@ -106,6 +107,9 @@ ${after}`;
 
     // Remove goal matches (keeping original logic)
     processedContent = processedContent.replace(/``GOAL:[^`]+``/gi, '');
+
+    // Remove thinking tags and their content (for AI internal monologue)
+    processedContent = processedContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
 
     // Handle long content parsing
     const parsedMessage = parseMessageContent(processedContent);
@@ -218,7 +222,9 @@ ${after}`;
       
       const goalActionIcons: Record<string, string> = {
         add_money: '💰', add_progress: '📈', extend_deadline: '📅', 
-        add_milestone: '🎯', adjust_target: '🎯', set_reminder: '🔔'
+        add_milestone: '🎯', adjust_target: '🎯', set_reminder: '🔔',
+        create: '➕', update: '✏️', delete: '🗑️', 
+        change_status: '🔄', change_priority: '⭐'
       };
       
       return (
@@ -229,7 +235,16 @@ ${after}`;
              <Button
              key={action}
              onClick={() => {
-               const message = `I want to ${action.replace(/_/g, ' ')} for my goal`;
+               // Generate more specific messages based on action type
+               const actionMessages: Record<string, string> = {
+                 create: 'I want to create a new milestone',
+                 update: 'I want to update this milestone',
+                 delete: 'I want to delete this milestone',
+                 change_status: 'I want to change the status',
+                 change_priority: 'I want to change the priority'
+               };
+               
+               const message = actionMessages[action] || `I want to ${action.replace(/_/g, ' ')} for my goal`;
                onSendMessage?.(message);
              }}
            >
@@ -647,7 +662,8 @@ ${after}`;
         console.error('Error rendering view details button:', error);
         return null;
       }
-    }
+    },
+   
   }), [
     handleCourseClick, 
     closeChat, 

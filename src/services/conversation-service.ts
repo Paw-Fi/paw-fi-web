@@ -263,6 +263,7 @@ export async function sendChatMessage(
     isGlobalMode?: boolean;
     goalId?: string;
     goal?: any;
+    // Note: Backend fetches conversation history directly from database
   }
 ): Promise<AIResponse> {
   try {
@@ -279,6 +280,7 @@ export async function sendChatMessage(
       sessionId: options.sessionId,
       model: options.model,
       userProfile: options.profile,
+      // Note: Backend fetches conversation history directly from database
       // Include goal context parameters if provided
       ...(options.goalContext && { goalContext: options.goalContext }),
       ...(options.isGlobalMode !== undefined && { isGlobalMode: options.isGlobalMode }),

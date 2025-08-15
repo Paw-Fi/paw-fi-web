@@ -594,6 +594,33 @@ export async function processGoalTrackingRequest(
     // No function call, just return the text response
     const responseText = response.text();
     
+    // Check if response is empty or invalid
+    if (!responseText || responseText.trim().length === 0) {
+      console.warn('Empty response from AI, generating fallback');
+      const fallbackResponse = "I understand you want to work with your goals, but I need a bit more clarity. Could you please specify which goal you'd like to update or what specific action you'd like to take? You can say something like:\n\n- \"Add $100 to my retirement goal\"\n- \"Update the target amount for my house fund\"\n- \"Show me my progress on goal #3\"\n\nThis will help me assist you more effectively!";
+      
+      return {
+        response: fallbackResponse,
+        next_actions: ["Specify which goal to work with", "Provide more details about the action you want to take"],
+        conversation_history: [
+          ...conversationHistory,
+          {
+            role: "user",
+            parts: [{ text: message }]
+          },
+          {
+            role: "model",
+            parts: [{ text: fallbackResponse }]
+          }
+        ],
+        debug: {
+          no_function_call: true,
+          empty_response_fallback: true,
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+    
     return {
       response: responseText,
       next_actions: ["Keep making progress!", "Let me know how else I can help!"],

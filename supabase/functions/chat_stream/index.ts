@@ -193,8 +193,9 @@ serve(async (req: Request): Promise<Response> => {
       goalId,
       goal 
     } = requestData;
-    let history = requestData.history;
-    console.log("requestData", requestData)
+    // Note: Frontend no longer sends history - we fetch it from database
+    let history: any[] = []; // Will be populated from database
+    console.log("requestData", requestData);
     
     // Initialize Supabase client with service role for database operations
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -351,14 +352,19 @@ serve(async (req: Request): Promise<Response> => {
         });
       
       // Check if this is a Financial Advisor request that might need goal tracking
-      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+      // Goal tracking should be attempted for ANY financial advisor message, not just when goalContext exists
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
         try {
+          console.log('Attempting goal tracking for Financial Advisor message:', message);
+          console.log('Goal context exists:', !!goalContext);
+          console.log('Global mode:', isGlobalMode);
+          
           const goalTrackingResult = await processGoalTrackingRequest(
             {
               message,
               userId: userId || '',
-              goalContext,
-              isGlobalMode: isGlobalMode || false,
+              goalContext: goalContext || null, // Allow null goalContext
+              isGlobalMode: isGlobalMode || true, // Default to global mode if not specified
               goalId,
               goal,
               conversationHistory: formattedHistory
