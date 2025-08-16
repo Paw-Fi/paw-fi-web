@@ -197,7 +197,6 @@ export function ActivityContributionGraph({
       <div className="flex gap-2 items-center mb-3 text-xs text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-3">
           <span>🔥 <strong className="text-orange-500">{streak}</strong> streak</span>
-          <span><strong className="text-gray-900 dark:text-white">{activeDays}</strong> active</span>
         </div>
         {selectedDate && (
           <div className="flex items-center gap-2">

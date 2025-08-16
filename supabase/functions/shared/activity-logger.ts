@@ -11,14 +11,19 @@ export interface ActivityData {
   source: string;
   metadata?: {
     goalId?: string;
+    goalTitle?: string; // Goal title for frontend display
     milestoneId?: string;
     amountChange?: number;
     newProgressPercentage?: number;
-    goalTitle?: string;
+    isOnTrack?: boolean;
+    targetAmount?: number; // Goal target amount
+    finalAmount?: number; // Final amount when goal is completed
+    title?: string; // Milestone title for milestone completions
+    amount?: number; // Milestone target amount
+    progressPercentage?: number; // Progress percentage for milestones
     lesson_id?: string;
     lesson_title?: string;
     xp?: number;
-    isOnTrack?: boolean;
     [key: string]: any; // Allow additional metadata
   };
   timestamp?: string;

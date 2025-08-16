@@ -77,6 +77,7 @@ serve(async (req: Request): Promise<Response> => {
 
     let newAmount = goal.current_amount;
     let milestoneUpdate: { id: string; status: string; progress_percentage: number; completed_date: string; } | null = null;
+    let milestoneData: any = null; // Store milestone data for activity logging
 
     // Handle different update types
     switch (updateType) { 
@@ -119,6 +120,9 @@ serve(async (req: Request): Promise<Response> => {
             }
           );
         }
+
+        // Store milestone data for activity logging
+        milestoneData = milestone;
 
         milestoneUpdate = {
           id: milestoneId,
@@ -226,18 +230,42 @@ serve(async (req: Request): Promise<Response> => {
       activityAction = RewardActions.MILESTONE_COMPLETED;
     }
 
+    // Build activity metadata based on update type
+    const baseMetadata = {
+      goalId,
+      goalTitle: goal.title, // Add goalTitle for frontend display
+      amountChange: amountChange || 0,
+      newProgressPercentage: Math.round(newProgressPercentage * 100) / 100,
+      isOnTrack,
+      targetAmount: goal.target_amount, // Add for frontend display consistency
+    };
+
+    // Add type-specific metadata
+    let activityMetadata = baseMetadata;
+    
+    if (newProgressPercentage >= 100 && goal.status !== 'completed') {
+      // Goal completion - add finalAmount for frontend display
+      activityMetadata = {
+        ...baseMetadata,
+        finalAmount: newAmount,
+      };
+    } else if (milestoneData && updateType === RewardActions.MILESTONE_COMPLETED) {
+      // Milestone completion - add milestone details for frontend display
+      activityMetadata = {
+        ...baseMetadata,
+        milestoneId: milestoneData.id,
+        title: milestoneData.title, // Milestone title for frontend display
+        amount: milestoneData.target_amount, // Milestone target amount
+        progressPercentage: Math.round(newProgressPercentage * 100) / 100,
+      };
+    }
+
     // Add user activity tracking using shared logger
     const activityData: ActivityData = {
       type: activityType,
       action: activityAction,
       source: 'goal-progress-tracker',
-      metadata: {
-        goalId,
-        milestoneId: milestoneId || undefined,
-        amountChange: amountChange || 0,
-        newProgressPercentage: Math.round(newProgressPercentage * 100) / 100,
-        isOnTrack,
-      },
+      metadata: activityMetadata,
     };
     
     // Log activity asynchronously (don't block the main update)

@@ -515,7 +515,7 @@ export function QuestionnaireFlow({
                   placeholder={question.placeholder}
                   validation={question.validation}
                 />
-              </div>
+              </div>  
             ))}
           </div>
 
@@ -525,7 +525,7 @@ export function QuestionnaireFlow({
               <MonekoAdvisorMessage
                 message={advisorMessage}
                 showMessage={showAdvisorMessage}
-                typewriterSpeed={30}
+                typewriterSpeed={80}
               />
             </div>
           )}

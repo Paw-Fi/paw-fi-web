@@ -256,10 +256,15 @@ export async function processGoalTrackingRequest(
     const functionCall = part?.function_call || part?.functionCall;
     
     if (functionCall) {
-      // Execute the function exactly as AI requested (no modifications)
+      // Ensure userId is always included in function parameters
+      const enhancedArgs = {
+        ...functionCall.args,
+        userId: userId // Always inject userId from request context
+      };
+      
       const functionResult = await executeGoalFunction(
         functionCall.name,
-        functionCall.args,
+        enhancedArgs,
         supabaseClient
       );
       
@@ -277,12 +282,18 @@ export async function processGoalTrackingRequest(
         }
       ];
       
-      // Get AI's final response
-      const finalResult = await model.generateContent({ contents: updatedContents });
-      const finalResponse = finalResult.response;
-      let finalText = finalResponse.text();
+      // Get AI's final response - wrap in try/catch to preserve function execution data
+      let finalText = '';
+      try {
+        const finalResult = await model.generateContent({ contents: updatedContents });
+        const finalResponse = finalResult.response;
+        finalText = finalResponse.text();
+      } catch (aiError) {
+        console.error('⚠️ Final AI response generation failed, using fallback:', aiError);
+        finalText = ''; // Will trigger fallback below
+      }
       
-      // Fallback response if AI doesn't provide text
+      // Fallback response if AI doesn't provide text or AI call failed
       if (!finalText || finalText.trim().length === 0) {
         
         if (functionResult.success) {

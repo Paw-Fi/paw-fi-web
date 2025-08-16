@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TypewriterText from './TypewriterText';
-import monekoIconPng from '@/assets/images/avatar/moneko.png';
-import monekoIconGif from '@/assets/images/avatar/moneko-optimize.gif';
+ import monekoIconGif from '@/assets/images/avatar/moneko-avatar.gif';
 
 export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
 
@@ -62,7 +61,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
   }, [message.message]); // Reset when message changes
 
   // Choose avatar based on typewriter state
-  const avatarSrc = isTypewriterActive ? monekoIconGif : monekoIconPng;
+  const avatarSrc = monekoIconGif;
 
   return (
     <motion.div

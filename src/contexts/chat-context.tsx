@@ -59,11 +59,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const [conversations, setConversations] = useState<Record<AI_ROLE, ConversationState>>(() => ({
     [AI_ROLES.FINANCIAL_ADVISOR]: { ...initialConversationState },
     [AI_ROLES.FINANCIAL_EDUCATOR]: { ...initialConversationState },
+    [AI_ROLES.GOAL_TRACKER]: { ...initialConversationState },
   } as Record<AI_ROLE, ConversationState>));
   
   const [sendingStates, setSendingStates] = useState<Record<AI_ROLE, boolean>>(() => ({
     [AI_ROLES.FINANCIAL_ADVISOR]: false,
     [AI_ROLES.FINANCIAL_EDUCATOR]: false,
+    [AI_ROLES.GOAL_TRACKER]: false,
   } as Record<AI_ROLE, boolean>));
   
   // Cookie utility functions for guest sessions
@@ -238,11 +240,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
   }, [sendingStates]);
 
   const getMessages = useCallback((aiRole: AI_ROLE) => {
-    return conversations[aiRole].messages;
+    return conversations[aiRole]?.messages || [];
   }, [conversations]);
 
   const isConversationLoaded = useCallback((aiRole: AI_ROLE) => {
-    return conversations[aiRole].isLoaded;
+    return conversations[aiRole]?.isLoaded || false;
   }, [conversations]);
 
   const value: ChatContextValue = {

@@ -91,16 +91,19 @@ export function TodaysActivitySection({ activities }: TodaysActivitySectionProps
             </div>
           </div>
           
-          <div className="space-y-4">
-            {activities.map((activity, index) => (
-              <motion.div
-                key={activity.id}
-                variants={cardVariants}
-                className="transform"
-              >
-                <ActivityCard activity={activity} index={index} />
-              </motion.div>
-            ))}
+          <div className="relative">
+            <div className="absolute left-2 top-0 w-0.5 h-full bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500" />
+            <div className="space-y-8">
+              {activities.map((activity, index) => (
+                <motion.div
+                  key={activity.id}
+                  variants={cardVariants}
+                  className="transform"
+                >
+                  <ActivityCard activity={activity} index={index} />
+                </motion.div>
+              ))}
+            </div>
           </div>
         </motion.div>
       ) : (

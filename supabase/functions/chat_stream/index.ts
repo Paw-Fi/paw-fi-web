@@ -360,7 +360,9 @@ serve(async (req: Request): Promise<Response> => {
       
       // Check if this is a Financial Advisor request that might need goal tracking
       // Goal tracking should be attempted for ANY financial advisor message, not just when goalContext exists
+      let goalTrackingAttempted = false;
       if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
+        goalTrackingAttempted = true;
         try {
           
           const goalTrackingResult = await processGoalTrackingRequest(
@@ -493,9 +495,10 @@ serve(async (req: Request): Promise<Response> => {
       ];
       
       // Initialize model with function calling for Financial Advisor if goals are available
+      // BUT avoid function calling if goal tracking was already attempted to prevent duplicate calls
       let model;
       
-      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext && !goalTrackingAttempted) {
         // Add function calling capabilities for Financial Advisor with goals
         const functionDeclarations = getGeminiFunctionDeclarations();
         model = genAI.getGenerativeModel({ 

@@ -49,8 +49,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const processedContent = useMemo(() => {
     let processedContent = content;
 
-    // Don't process user messages or when parsing is disabled
-    if (isUserMessage || disableMessageParsing) {
+    // Don't process user messages
+    if (isUserMessage) {
       return processedContent.replace("{{username}}", user?.user_metadata?.full_name || "");
     }
 
@@ -111,13 +111,15 @@ ${after}`;
     // Remove thinking tags and their content (for AI internal monologue)
     processedContent = processedContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
 
-    // Handle long content parsing
-    const parsedMessage = parseMessageContent(processedContent);
-    if (parsedMessage.hasLongContent) {
-      // Properly escape JSON data for HTML attribute
-      const escapedSections = JSON.stringify(parsedMessage.sections).replace(/'/g, '&apos;').replace(/"/g, '&quot;');
-      processedContent = `${parsedMessage.shortContent}
+    // Handle long content parsing (only if not disabled)
+    if (!disableMessageParsing) {
+      const parsedMessage = parseMessageContent(processedContent);
+      if (parsedMessage.hasLongContent) {
+        // Properly escape JSON data for HTML attribute
+        const escapedSections = JSON.stringify(parsedMessage.sections).replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+        processedContent = `${parsedMessage.shortContent}
 <view-details-button data-sections="${escapedSections}"></view-details-button>`;
+      }
     }
 
     return processedContent.replace("{{username}}", user?.user_metadata?.full_name || "");
@@ -586,7 +588,7 @@ ${after}`;
       );
     },
 
-    "questionnaire-button": ({ node, ...props }: any) => (
+    "questionnaire-button": ({ node, ..._ }: any) => (
       <div className="mt-3">
         <Button
           onClick={() => !hasProfile && onOpenQuizModal?.()}
