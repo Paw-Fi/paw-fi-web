@@ -28,12 +28,14 @@ import type { GoalMilestone, MilestoneType, MilestoneFrequency, MilestonePriorit
 import { useState, useEffect, useOptimistic } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
+import { toast } from "react-toastify";
 
 interface MilestonesListProps {
   milestones: GoalMilestone[];
   goalId: string;
   onMilestoneUpdate: (reorderedItems?: GoalMilestone[]) => void;
   onOptimisticUpdate?: (action: { type: string; milestoneId?: string; milestone?: GoalMilestone; updates?: Partial<GoalMilestone> }) => void;
+  isSubscriptionActive?: boolean;
 }
 
 interface MilestoneFormData {
@@ -48,7 +50,7 @@ interface MilestoneFormData {
   priority: MilestonePriority;
 }
 
-export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimisticUpdate }: MilestonesListProps) {
+export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimisticUpdate, isSubscriptionActive }: MilestonesListProps) {
   const { user } = useAuth();
   const [orderedMilestones, setOrderedMilestones] = useState<GoalMilestone[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -319,7 +321,14 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
             </div>
           </div>
           <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
+            onClick={() => {
+              if(!isSubscriptionActive)
+              {
+                toast.error("Subscribe to unlock this feature")
+                return
+              }
+              setShowCreateForm(!showCreateForm)
+            }}
             className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
           >
             <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} className="w-3 h-3" />

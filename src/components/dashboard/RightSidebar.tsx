@@ -70,7 +70,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
     {
       id: 'ai-advisor',
       label: 'Financial Advisor',
-      description: 'Get personalized investment and financial planning guidance with Ollie',
+      description: 'Get personalized investment and financial planning guidance with Moneko',
       aiType: 'advisor',
       icon:monekoLogo,
       onClick: () => openChat('advisor')
@@ -78,7 +78,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
     {
       id: 'ai-educator',
       label: 'Financial Educator',
-      description: 'Learn personal finance with your AI educator Leo',
+      description: 'Learn personal finance with your AI educator Finni',
       icon:finniLogo,
       aiType: 'educator',
       onClick: () => openChat('educator')

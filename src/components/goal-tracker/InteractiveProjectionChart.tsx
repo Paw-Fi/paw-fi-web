@@ -18,16 +18,19 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Line } from 'react-chartjs-2';
 import RangeSlider from '@/components/ui/RangeSlider';
+import { toast } from "react-toastify";
 
 // Interactive Projection Chart Component with Real Editing
 export function InteractiveProjectionChart({ 
   goal, 
   progressData, 
-  onGoalUpdate 
+  onGoalUpdate ,
+  isSubscriptionActive
 }: { 
   goal: any; 
   progressData: any;
   onGoalUpdate: (updates: any) => Promise<void>;
+  isSubscriptionActive?:boolean
 }) {
   const [showProjection, setShowProjection] = useState(true);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
@@ -106,6 +109,11 @@ export function InteractiveProjectionChart({
   
   const saveChanges = async () => {
     if (isUpdating) return;
+    if(!isSubscriptionActive)
+    {
+      toast.error("Subscribe to unlock this feature")
+      return
+    }
     
     setIsUpdating(true);
     try {

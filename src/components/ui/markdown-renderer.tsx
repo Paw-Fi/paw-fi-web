@@ -566,8 +566,8 @@ ${after}`;
     "ai-button": ({ node, ...props }: any) => {
       const aiType = props['data-type'];
       const aiButtonLabels: Record<string, { label: string; aiId: 'advisor' | 'educator';}> = {
-        advisor: { label: "Chat with Ollie", aiId: 'advisor' },
-        educator: { label: "Chat with Leo", aiId: 'educator' }
+        advisor: { label: "Chat with Moneko", aiId: 'advisor' },
+        educator: { label: "Chat with Finni", aiId: 'educator' }
       };
       
       const buttonInfo = aiButtonLabels[aiType];

@@ -51,6 +51,7 @@ import { useUserActivities } from "@/hooks/useUserActivities";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/dashboard/tracker/$goalId")({
   component: GoalDetail,
@@ -127,6 +128,7 @@ function GoalDetail() {
   const { goalId } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const {isActive} = useSubscription(user?.id);
   // Main UI state
   const [activeTab, setActiveTab] = useState<'Analytics' | "Quick Actions" | 'fine-tune' | 'activity' | 'chat' | 'reminders'>('Quick Actions');
   const [showTrackerModal, setShowTrackerModal] = useState(false);
@@ -778,6 +780,7 @@ function GoalDetail() {
                   <MilestonesList 
                     milestones={currentMilestones || []}
                     goalId={goalId}
+                    isSubscriptionActive={isActive}
                     onMilestoneUpdate={refetch}
                     onOptimisticUpdate={(action) => setOptimisticMilestones(action)}
                   />
@@ -809,6 +812,7 @@ function GoalDetail() {
                       goal={currentGoal} 
                       progressData={progressData}
                       onGoalUpdate={updateGoal}
+                      isSubscriptionActive={isActive}
                     />
                   </div>
                 </motion.div>
