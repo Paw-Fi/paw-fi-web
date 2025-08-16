@@ -14,15 +14,17 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { DBMilestone } from '@/components/goal-tracker/types';
+import type { DBMilestone, AdvisorMessage } from '@/components/goal-tracker/types';
+import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface NextStepsPageProps {
   milestones: DBMilestone[];
   strategy: string;
   isLoggedIn: boolean;
+  advisorMessage?: AdvisorMessage;
 }
 
-export function NextStepsPage({ milestones, strategy, isLoggedIn }: NextStepsPageProps) {
+export function NextStepsPage({ milestones, strategy, isLoggedIn, advisorMessage }: NextStepsPageProps) {
   const getMilestoneIcon = (type: string) => {
     switch (type) {
       case 'amount':
@@ -126,6 +128,21 @@ export function NextStepsPage({ milestones, strategy, isLoggedIn }: NextStepsPag
           to stay on track and achieve your financial goal.
         </p>
       </motion.div>
+
+      {/* Moneko Advisor Message - Next Steps Message */}
+      {advisorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MonekoAdvisorMessage
+            message={advisorMessage}
+            showMessage={true}
+            typewriterSpeed={25}
+          />
+        </motion.div>
+      )}
       
       {/* Immediate Actions */}
       {immediateActions.length > 0 && (

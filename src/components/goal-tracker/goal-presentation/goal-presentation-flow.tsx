@@ -66,12 +66,17 @@ export function GoalPresentationFlow({
       case 'summary':
         return <GoalSummaryPage goalData={goalData} isLoggedIn={isLoggedIn} />;
       case 'insights':
-        return <KeyInsightsPage insights={goalData.insights || []} isLoggedIn={isLoggedIn} />;
+        return <KeyInsightsPage 
+          insights={goalData.insights || []} 
+          isLoggedIn={isLoggedIn} 
+          advisorMessage={goalData.advisorMessages?.insightsMessage}
+        />;
       case 'next-steps':
         return <NextStepsPage 
           milestones={goalData.milestones || []} 
           strategy={goalData.strategy || ''} 
           isLoggedIn={isLoggedIn}
+          advisorMessage={goalData.advisorMessages?.nextStepsMessage}
         />;
       case 'final':
         return <FinalCallToActionPage 

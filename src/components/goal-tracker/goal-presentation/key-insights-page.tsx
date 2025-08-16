@@ -10,14 +10,16 @@ import {
   faCheckCircle,
   faArrowTrendUp
 } from '@fortawesome/free-solid-svg-icons';
-import type { Insight } from '@/components/goal-tracker/types';
+import type { Insight, AdvisorMessage } from '@/components/goal-tracker/types';
+import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface KeyInsightsPageProps {
   insights: Insight[];
   isLoggedIn: boolean;
+  advisorMessage?: AdvisorMessage;
 }
 
-export function KeyInsightsPage({ insights, isLoggedIn }: KeyInsightsPageProps) {
+export function KeyInsightsPage({ insights, isLoggedIn, advisorMessage }: KeyInsightsPageProps) {
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'savings':
@@ -160,6 +162,21 @@ export function KeyInsightsPage({ insights, isLoggedIn }: KeyInsightsPageProps) 
           Pay special attention to actionable items that require your attention.
         </p>
       </motion.div>
+
+      {/* Moneko Advisor Message - Insights Message */}
+      {advisorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MonekoAdvisorMessage
+            message={advisorMessage}
+            showMessage={true}
+            typewriterSpeed={25}
+          />
+        </motion.div>
+      )}
       
       {/* Insights by Priority */}
       <div className="space-y-12">

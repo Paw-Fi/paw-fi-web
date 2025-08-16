@@ -12,6 +12,7 @@ import {
 import type { GoalCreationResult } from '@/components/goal-tracker/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface GoalSummaryPageProps {
   goalData: GoalCreationResult;
@@ -103,6 +104,21 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
           Here's your personalized financial plan created by our AI. Let's break down the key details of your journey to success.
         </p>
       </motion.div>
+
+      {/* Moneko Advisor Message - Plan Message */}
+      {goalData.advisorMessages?.planMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MonekoAdvisorMessage
+            message={goalData.advisorMessages.planMessage}
+            showMessage={true}
+            typewriterSpeed={25}
+          />
+        </motion.div>
+      )}
       
       {/* Key Metrics Cards */}
       <motion.div

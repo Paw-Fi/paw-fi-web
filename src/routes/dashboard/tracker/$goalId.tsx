@@ -721,7 +721,14 @@ function GoalDetail() {
                   transition={{ duration: 0.3 }}
                   className="space-y-8"
                 >               
-                  
+                   {/* AI Insights Section - "What Moneko thinks" */}
+                   <GoalInsights 
+                    insights={currentInsights || []} 
+                    goal={currentGoal}
+                    onInsightUpdate={refetch}
+                    onOptimisticUpdate={(action) => setOptimisticInsights(action)}
+                  />
+
                   {/* AI Generated Strategy */}
                   {currentGoal.ai_generated_strategy && (
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 mb-8 border border-purple-200 dark:border-purple-800">
@@ -729,7 +736,7 @@ function GoalDetail() {
                         <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
                           <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-white" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI-Generated Strategy</h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Personalised Strategy</h3>
                       </div>
                       
                       <div className="prose dark:prose-invert max-w-none">
@@ -756,13 +763,7 @@ function GoalDetail() {
                     </div>
                   )}             
                 
-                  {/* AI Insights Section - "What Moneko thinks" */}
-                  <GoalInsights 
-                    insights={currentInsights || []} 
-                    goal={currentGoal}
-                    onInsightUpdate={refetch}
-                    onOptimisticUpdate={(action) => setOptimisticInsights(action)}
-                  />
+                 
                 </motion.div>
               )}
               

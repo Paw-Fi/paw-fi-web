@@ -243,6 +243,15 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         onTrackPercentage
       };
     }, [goals]);
+
+    const hasGoals = goals && goals.length > 0;
+
+    // Auto-start walkthrough for new users
+    useEffect(() => {
+      if (hasGoals) {
+        autoStartWalkthrough();
+      }
+    }, [hasGoals, autoStartWalkthrough]);
   
     // Now the early returns after all hooks are called
     if (isLoading) {
@@ -252,15 +261,6 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
     if (error) {
       return <ErrorState error={error} onRetry={refetch} />;
     }
-  
-    const hasGoals = goals && goals.length > 0;
-
-    // Auto-start walkthrough for new users
-    useEffect(() => {
-      if (hasGoals) {
-        autoStartWalkthrough();
-      }
-    }, [hasGoals, autoStartWalkthrough]);
     
     const getGoalStatus = (goal) => {
       if (goal.status === 'completed') return 'completed';

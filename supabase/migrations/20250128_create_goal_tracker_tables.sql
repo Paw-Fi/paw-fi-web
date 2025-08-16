@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.financial_goals (
   target_amount DECIMAL(15,2) NOT NULL,
   current_amount DECIMAL(15,2) DEFAULT 0,
   currency VARCHAR(3) DEFAULT 'USD',
+  ai_advisor_messages JSONB DEFAULT NULL,
+
   
   -- Timeline
   start_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -149,6 +151,13 @@ CREATE TABLE IF NOT EXISTS public.goal_insights (
 -- ====================
 -- PERFORMANCE INDEXES
 -- ====================
+
+-- Add comment to document the column structure
+COMMENT ON COLUMN financial_goals.ai_advisor_messages IS 'AI-generated advisor messages for presentation flow pages (planMessage, insightsMessage, nextStepsMessage). Each message contains content and tone properties.';
+
+-- Create index for faster queries on advisor messages (optional, for future optimization)
+CREATE INDEX IF NOT EXISTS idx_financial_goals_advisor_messages 
+ON financial_goals USING gin (ai_advisor_messages);
 
 -- Financial Goals Indexes
 CREATE INDEX IF NOT EXISTS idx_financial_goals_user_id ON public.financial_goals(user_id);

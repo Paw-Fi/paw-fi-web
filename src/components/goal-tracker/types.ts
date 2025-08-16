@@ -27,6 +27,13 @@ export interface CreateGoalRequest {
   questionnaireAnswers: QuestionnaireData;
 }
 
+export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
+
+export interface AdvisorMessage {
+  content: string;
+  tone: AdvisorTone;
+}
+
 export interface GoalCreationResult {
   goal: {
     id: string;
@@ -43,6 +50,11 @@ export interface GoalCreationResult {
     monthlyRequired: number;
     projectedFinalAmount: number;
     confidenceLevel: number;
+  };
+  advisorMessages?: {
+    planMessage: AdvisorMessage;
+    insightsMessage: AdvisorMessage;
+    nextStepsMessage: AdvisorMessage;
   };
 }
 

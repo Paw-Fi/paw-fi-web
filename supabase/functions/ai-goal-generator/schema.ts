@@ -1,6 +1,8 @@
 // AI Goal Generator Schema and Types
 // Defines the structured response schema for AI goal generation using function calling
 
+export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
+
 export interface AIGoalResponse {
   goal: {
     title: string;
@@ -35,6 +37,20 @@ export interface AIGoalResponse {
     incomeReplacement?: number;
     confidenceLevel?: number;
   } | null;
+  advisorMessages: {
+    planMessage: {
+      content: string;
+      tone: AdvisorTone;
+    };
+    insightsMessage: {
+      content: string;
+      tone: AdvisorTone;
+    };
+    nextStepsMessage: {
+      content: string;
+      tone: AdvisorTone;
+    };
+  };
 }
 
 // Structured response schema for AI goal generation using Gemini function calling
@@ -178,8 +194,63 @@ export const goalGeneratorTool = {
             },
             description: "Financial projections for the goal (optional).",
           },
+          advisorMessages: {
+            type: "OBJECT",
+            properties: {
+              planMessage: {
+                type: "OBJECT",
+                properties: {
+                  content: {
+                    type: "STRING",
+                    description: "Detailed advisor message for the 'Your Plan' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should be personalized based on user's financial situation and goals.",
+                  },
+                  tone: {
+                    type: "STRING",
+                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
+                    enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
+                  },
+                },
+                required: ["content", "tone"],
+                description: "Advisor message for the 'Your Plan' presentation page.",
+              },
+              insightsMessage: {
+                type: "OBJECT",
+                properties: {
+                  content: {
+                    type: "STRING",
+                    description: "Detailed advisor message for the 'Key Insights' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should highlight key financial insights and opportunities.",
+                  },
+                  tone: {
+                    type: "STRING",
+                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
+                    enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
+                  },
+                },
+                required: ["content", "tone"],
+                description: "Advisor message for the 'Key Insights' presentation page.",
+              },
+              nextStepsMessage: {
+                type: "OBJECT",
+                properties: {
+                  content: {
+                    type: "STRING",
+                    description: "Detailed advisor message for the 'Next Steps' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should focus on immediate actionable steps.",
+                  },
+                  tone: {
+                    type: "STRING",
+                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
+                    enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
+                  },
+                },
+                required: ["content", "tone"],
+                description: "Advisor message for the 'Next Steps' presentation page.",
+              },
+            },
+            required: ["planMessage", "insightsMessage", "nextStepsMessage"],
+            description: "Personalized advisor messages for each presentation flow page.",
+          },
         },
-        required: ["goal", "strategy", "milestones", "insights"],
+        required: ["goal", "strategy", "milestones", "insights", "advisorMessages"],
       },
     },
   ],

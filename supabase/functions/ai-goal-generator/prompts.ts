@@ -36,6 +36,15 @@ CRITICAL REQUIREMENTS:
 - Generate content that scales appropriately for mobile and desktop viewing
 - Use clear section headers, bullet points, and visual elements (emojis, tables) strategically
 
+ADVISOR MESSAGE GENERATION REQUIREMENTS:
+- Generate 3 personalized advisor messages for presentation flow pages: "Your Plan", "Key Insights", and "Next Steps"
+- Each message MUST follow the format: "I suggest you to [specific action], because [detailed reason based on user's situation], so that [clear outcome/benefit]"
+- Messages should be detailed (3-5 sentences) and deeply personalized based on questionnaire answers
+- Select appropriate advisor tone: 'congratulatory' for achievements, 'encouraging' for progress, 'motivational' for challenges, 'reassuring' for concerns, 'informative' for education
+- Plan Message: Focus on overall strategy and confidence in their personalized approach
+- Insights Message: Highlight key discoveries about their financial situation and opportunities
+- Next Steps Message: Emphasize immediate actionable steps and momentum building
+
 CONTENT OPTIMIZATION FOR UI DISPLAY:
 - Structure strategy content with clear H2/H3 headings for better navigation
 - Use callout-style formatting for important warnings and tips
@@ -148,6 +157,11 @@ ENHANCED REASONING FRAMEWORK:
 | Alternative: Taxable Only | $500 | $950k | Flexibility | Higher tax drag |
 | Alternative: Real Estate | $800 | $1.1M | Leverage, tangible asset | Management, illiquidity |
 
+ADVISOR MESSAGE EXAMPLES FOR RETIREMENT:
+- **Plan Message** (tone: 'encouraging'): "I suggest you to start with your 401(k) and max out employer matching first, because this gives you an immediate 100% return on investment that's essentially free money, so that you can build a solid foundation before exploring other retirement vehicles. Your steady income and long time horizon make this the perfect starting point for building wealth systematically."
+- **Insights Message** (tone: 'informative'): "I suggest you to take advantage of your 30-year investment timeline, because compound growth becomes incredibly powerful over decades and even small increases in contributions now will dramatically impact your final retirement balance, so that every dollar you invest today could be worth $7-10 in retirement purchasing power."
+- **Next Steps Message** (tone: 'motivational'): "I suggest you to set up automatic 401(k) contributions this week and schedule annual reviews, because automating your retirement savings removes the decision fatigue and ensures consistency even during busy periods, so that you can build wealth effortlessly while focusing on your career and life goals."
+
 Focus on long-term wealth building strategies, compound interest, and retirement account optimization.
 Consider tax-advantaged accounts, employer matching, and age-appropriate risk levels.
 Provide milestones for contribution increases and portfolio rebalancing.`,
@@ -201,6 +215,11 @@ ENHANCED REASONING FRAMEWORK:
 - First-time buyer programs: Up to $10k in assistance available
 - Rate buydown options: Pay points to reduce long-term interest cost
 
+ADVISOR MESSAGE EXAMPLES FOR HOME BUYING:
+- **Plan Message** (tone: 'congratulatory'): "I suggest you to focus on building your down payment fund to 20% to avoid PMI costs, because this strategy will save you hundreds of dollars monthly and thousands over the life of your loan, so that you can achieve homeownership with optimal loan terms. Your current savings rate shows you're already on the right track to reach this goal."
+- **Insights Message** (tone: 'informative'): "I suggest you to consider the total monthly housing costs including taxes and insurance, because many first-time buyers underestimate these additional expenses that can add 30-40% to your monthly payment, so that you can budget accurately and avoid being house-poor after purchase."
+- **Next Steps Message** (tone: 'encouraging'): "I suggest you to get pre-approved for your mortgage this month while continuing to save, because pre-approval gives you a competitive edge in today's market and helps you understand exactly what you can afford, so that you can move quickly when you find the right home."
+
 Focus on down payment strategies, credit score improvement, and pre-approval preparation.
 Consider closing costs, emergency funds, and ongoing homeownership expenses.
 Provide milestones for savings targets and homebuying process steps.`,
@@ -214,6 +233,11 @@ REASONING_FRAMEWORK:
 🎯 **PERSONALIZATION:** [How their specific situation affects this recommendation] - e.g., "As a freelancer with variable income, 6-month fund recommended vs standard 3-month for stable employment"
 ⚠️ **RISK ANALYSIS:** [Potential risks and mitigation strategies] - e.g., "Inflation risk managed through high-yield account; opportunity cost vs investment returns justified by guaranteed liquidity need"
 📈 **ALTERNATIVES:** [Other options considered and why this is optimal] - e.g., "Money market vs high-yield savings vs CDs: High-yield savings chosen for best balance of liquidity and returns without penalties"
+
+ADVISOR MESSAGE EXAMPLES FOR EMERGENCY FUND:
+- **Plan Message** (tone: 'reassuring'): "I suggest you to start with a 3-month emergency fund goal and gradually build to 6 months, because this approach makes the goal less overwhelming while still providing crucial financial security, so that you can sleep peacefully knowing you're protected from life's unexpected events."
+- **Insights Message** (tone: 'informative'): "I suggest you to prioritize your emergency fund over other investments initially, because having liquid cash available prevents you from going into debt when emergencies arise, so that you can maintain your financial progress even during difficult times."
+- **Next Steps Message** (tone: 'motivational'): "I suggest you to set up automatic transfers to a separate high-yield savings account labeled 'Emergency Only', because automation removes the temptation to skip months and the separate account prevents accidental spending, so that your emergency fund grows consistently without any effort on your part."
 
 Focus on liquidity, accessibility, and gradual building strategies.
 Consider 3-6 months of expenses and high-yield savings options.
@@ -273,6 +297,11 @@ ENHANCED REASONING FRAMEWORK:
 - **Month 7**: All credit cards paid off (30% of debt gone) 🎉
 - **Month 12**: Car loan halfway done (50% total progress) 🎉
 - **Month 18**: DEBT FREEDOM achieved! 🎉
+
+ADVISOR MESSAGE EXAMPLES FOR DEBT PAYOFF:
+- **Plan Message** (tone: 'encouraging'): "I suggest you to use the debt avalanche method targeting highest interest rates first, because this mathematically saves you the most money in interest charges over time, so that you can become debt-free faster and redirect those payments toward building wealth. Your determination to tackle this debt shows you're ready for financial freedom."
+- **Insights Message** (tone: 'motivational'): "I suggest you to track your progress visually with a debt thermometer or app, because seeing your balances decrease month by month provides powerful motivation to stay on track, so that you can celebrate each milestone and maintain momentum through the entire payoff journey."
+- **Next Steps Message** (tone: 'encouraging'): "I suggest you to set up automatic extra payments to your highest interest debt starting this week, because automation ensures consistency even when motivation fluctuates, so that you can build unstoppable momentum toward debt freedom without having to make the payment decision every month."
 
 Focus on debt avalanche/snowball strategies and interest minimization.
 Consider debt consolidation options and payment acceleration.
@@ -337,6 +366,11 @@ ENHANCED REASONING FRAMEWORK:
 - **Contribution Strategy**: Max 401k match → Roth IRA → 401k → taxable
 - **Withdrawal Strategy**: 4% rule with bond tent as approach target date
 
+ADVISOR MESSAGE EXAMPLES FOR INVESTMENT:
+- **Plan Message** (tone: 'congratulatory'): "I suggest you to start with low-cost index funds in a diversified portfolio, because this approach gives you instant diversification across thousands of companies with minimal fees, so that you can build wealth efficiently without needing to pick individual stocks. Your long-term thinking shows you understand the power of compound growth."
+- **Insights Message** (tone: 'informative'): "I suggest you to stay invested during market downturns and continue dollar-cost averaging, because market volatility is temporary but the long-term upward trend has been consistent over decades, so that you can actually benefit from lower prices during market dips by buying more shares for the same monthly investment."
+- **Next Steps Message** (tone: 'motivational'): "I suggest you to increase your monthly investment by 3% annually or whenever you get a raise, because gradually increasing your contributions as your income grows doesn't impact your lifestyle but dramatically improves your final portfolio value, so that you can build wealth without feeling the pinch in your daily budget."
+
 Focus on diversification, risk management, and growth strategies.
 Consider time horizon, risk tolerance, and investment vehicle selection.
 Provide milestones for portfolio building and performance monitoring.`,
@@ -365,7 +399,12 @@ MILESTONE REQUIREMENTS:
 - Monthly passive income targets (not expense reduction)
 - Asset acquisition milestones that generate ongoing income
 - Portfolio building focused on cash flow, not just appreciation
-- Specific income stream diversification goals`,
+- Specific income stream diversification goals
+
+ADVISOR MESSAGE EXAMPLES FOR PASSIVE INCOME:
+- **Plan Message** (tone: 'encouraging'): "I suggest you to focus on dividend-paying index funds and REITs as your foundation, because these provide steady income with professional management and diversification, so that you can build passive income streams without the complexity of managing individual properties or businesses. Your systematic approach will create lasting financial freedom."
+- **Insights Message** (tone: 'informative'): "I suggest you to reinvest your dividends initially and then gradually switch to income mode as your portfolio grows, because compound growth in the early years dramatically increases your income potential later, so that you can eventually generate significant monthly income from the same investment base."
+- **Next Steps Message** (tone: 'motivational'): "I suggest you to start with just $500 monthly into dividend ETFs and set up automatic reinvestment, because small consistent investments compound into significant income streams over time, so that you can build financial independence gradually while maintaining your current lifestyle."`,
 
     'wealth_building': `
 CRITICAL: Use the REASONING_FRAMEWORK for every recommendation.
@@ -376,6 +415,11 @@ REASONING_FRAMEWORK:
 🎯 **PERSONALIZATION:** [How their specific situation affects this recommendation] - e.g., "Your $120k household income and 35% savings rate ($3,500/month) supports aggressive wealth building while your business experience qualifies you for direct investments"
 ⚠️ **RISK ANALYSIS:** [Potential risks and mitigation strategies] - e.g., "Market risk diversified across asset classes; illiquidity risk managed with 70% liquid investments; business risk limited to 20% allocation with due diligence requirements"
 📈 **ALTERNATIVES:** [Other options considered and why this is optimal] - e.g., "100% stock market vs diversified: Diversified chosen for risk management and multiple wealth paths. Rental properties vs REITs: Direct ownership preferred for leverage and control given your real estate experience"
+
+ADVISOR MESSAGE EXAMPLES FOR WEALTH BUILDING:
+- **Plan Message** (tone: 'congratulatory'): "I suggest you to diversify across stocks, real estate, and business investments rather than putting everything in one asset class, because wealth building accelerates when you have multiple appreciation engines working simultaneously, so that you can build substantial net worth more reliably and faster. Your ambitious goals show you're thinking like a true wealth builder."
+- **Insights Message** (tone: 'informative'): "I suggest you to focus on assets that appreciate in value while providing tax advantages, because the wealthy use these strategies to grow wealth faster than inflation and taxes can erode it, so that you can keep more of what you earn and compound your returns more efficiently over time."
+- **Next Steps Message** (tone: 'motivational'): "I suggest you to start with index fund investing and gradually add real estate or business investments as your knowledge and capital grow, because building wealth is a progressive skill that develops over time, so that you can start safely and expand into more advanced strategies as you gain experience and confidence."
 
 Focus on multiple income streams, asset diversification, and long-term growth.
 Consider real estate, business investments, and active wealth accumulation strategies.

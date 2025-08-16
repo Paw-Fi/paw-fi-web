@@ -51,15 +51,10 @@ export function DetailedContentModal({
   if (!sections.length) return null;
 
   const currentSection = sections[currentPage];
+  if(!isOpen)
+    return null
 
   const renderSectionContent = (section: MessageSection) => {
-    console.log("=== MODAL DEBUG ===");
-    console.log("Rendering section:", section);
-    console.log("Section title:", section.title);
-    console.log("Section content:", section.content);
-    console.log("Section subsections:", section.subsections);
-    console.log("Subsections length:", section.subsections?.length || 0);
-
     if (section.subsections && section.subsections.length > 0) {
       console.log("Rendering with subsections:");
       section.subsections.forEach((sub, index) => {
@@ -72,7 +67,6 @@ export function DetailedContentModal({
     } else {
       console.log("No subsections, rendering main content only");
     }
-    console.log("==================");
 
     // If section has subsections, render them as attractive cards
     if (section.subsections && section.subsections.length > 0) {

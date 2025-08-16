@@ -13,6 +13,8 @@ import { useCreateGoalWithAI } from "@/hooks/goal-tracker/use-create-goal";
 import { useSimulatedProgress } from "@/hooks/use-simulated-progress";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
+import MonekoAdvisorMessage, { type AdvisorMessage } from "@/components/ui/MonekoAdvisorMessage";
+import { GoalAdvisorMessageGenerator } from "./goal-advisor-messages";
 import type { 
   GoalType, 
   QuestionnaireTemplate, 
@@ -38,6 +40,8 @@ export function QuestionnaireFlow({
   const [answers, setAnswers] = useState<Partial<FinancialProfileData>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>('');
+  const [advisorMessage, setAdvisorMessage] = useState<AdvisorMessage | null>(null);
+  const [showAdvisorMessage, setShowAdvisorMessage] = useState(false);
   
   // Cookie utilities for guest profile management
   const { getCookie, setCookie } = useCookie();
@@ -372,6 +376,24 @@ export function QuestionnaireFlow({
     });
   }, [questionsByCategory, answers]);
 
+  // Generate advisor message for current category
+  const updateAdvisorMessage = useCallback(() => {
+    if (isCategoryComplete(activeCategory)) {
+      const message = GoalAdvisorMessageGenerator.getCategoryMessage(activeCategory, goalType, answers);
+      if (message) {
+        setAdvisorMessage(message);
+        setShowAdvisorMessage(true);
+      }
+    } else {
+      setShowAdvisorMessage(false);
+    }
+  }, [activeCategory, goalType, answers, isCategoryComplete]);
+
+  // Update advisor message when answers change or category is complete
+  useEffect(() => {
+    updateAdvisorMessage();
+  }, [updateAdvisorMessage]);
+
   // Note: Removed completedCategories and categoriesWithErrors since they're not used in the simplified CategoryProgress
 
   // Check if current category is complete AND has no validation errors
@@ -496,6 +518,17 @@ export function QuestionnaireFlow({
               </div>
             ))}
           </div>
+
+          {/* Moneko Advisor Message */}
+          {showAdvisorMessage && advisorMessage && (
+            <div className="mt-6">
+              <MonekoAdvisorMessage
+                message={advisorMessage}
+                showMessage={showAdvisorMessage}
+                typewriterSpeed={30}
+              />
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 

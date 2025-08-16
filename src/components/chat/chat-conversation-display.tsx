@@ -629,7 +629,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       </div>
      {/* Financial Health Quiz Modal */}
      <Modal
-     isOpen={true}
+     isOpen={isQuizModalOpen}
      onClose={() => setIsQuizModalOpen(false)}
      title="Financial Health Assessment"
      description="Complete this assessment to get personalized financial advice"

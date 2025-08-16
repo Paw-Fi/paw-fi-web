@@ -134,6 +134,7 @@ async function createGoalInDatabase(
       ai_questionnaire_data: questionnaireAnswers,
       ai_generated_strategy: aiResponse.strategy,
       ai_generated_milestones: aiResponse.milestones,
+      ai_advisor_messages: aiResponse.advisorMessages || null,
     })
     .select()
     .single();
@@ -232,7 +233,8 @@ async function createGoalInDatabase(
     milestones: newMilestones,
     strategy: aiResponse.strategy,
     insights: aiResponse.insights || [],
-    projections: aiResponse.projections || null
+    projections: aiResponse.projections || null,
+    advisorMessages: aiResponse.advisorMessages || null
   };
 }
 

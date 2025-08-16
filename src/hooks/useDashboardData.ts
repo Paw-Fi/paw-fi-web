@@ -165,6 +165,7 @@ export function useDashboardData(): DashboardDataState {
 export function useDashboardActivities() {
   const { activities, activitiesLoading, activitiesError } = useDashboardData();
   
+  console.log("activities", activities);
   return {
     activities,
     isLoading: activitiesLoading,
