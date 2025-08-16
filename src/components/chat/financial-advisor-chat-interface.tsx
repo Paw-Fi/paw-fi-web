@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuth } from "@/contexts/auth-context";
+import { useChatContext } from "@/contexts/chat-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
 import monekoLogo from "@/assets/images/avatar/moneko.png";
@@ -12,6 +14,14 @@ import monekoLogo from "@/assets/images/avatar/moneko.png";
 export function FinancialAdvisorChatInterface() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { loadInitialMessages } = useChatContext();
+  
+  // Load conversation history on mount
+  useEffect(() => {
+    if (user) {
+      loadInitialMessages(AI_ROLES.FINANCIAL_ADVISOR);
+    }
+  }, [user, loadInitialMessages]);
   
   // Footer content for advisor interface
   const footerContent = user ? (
@@ -54,8 +64,8 @@ export function FinancialAdvisorChatInterface() {
   
   return (
     <ChatConversationDisplay
+      aiRole={AI_ROLES.FINANCIAL_ADVISOR}
       chatConfig={{
-        aiRole: AI_ROLES.FINANCIAL_ADVISOR,
         enableGuestSessions: true,
         enableSignupPrompt: true,
         enableLoadingDuration: true,
@@ -63,7 +73,7 @@ export function FinancialAdvisorChatInterface() {
         showFooter: true,
         showFloatingCloseButton: true,
         showSignupModal: true,
-      }}
+      }}  
       agentIcon={monekoLogo}
       agentName="Moneko"
       initialSuggestedResponses={[
@@ -76,8 +86,7 @@ export function FinancialAdvisorChatInterface() {
       welcomeSubtitle="Ask me about budgeting, investing, debt management, goal tracking, or any financial topic!"
       navigate={navigate}
       className="flex-1"
-      headerTitle="Financial Advisor"
-      headerSubtitle="Get personalized financial guidance and goal tracking with Moneko"
+      headerTitle="Moneko"
       headerGradientColors="bg-gradient-to-r from-slate-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-100"
       headerBackgroundColors="bg-gradient-to-r from-white to-blue-50 dark:from-slate-800 dark:to-slate-700"
       backgroundGradient="h-full bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 dark:from-blue-950 dark:via-indigo-950 dark:to-cyan-950 flex flex-col"

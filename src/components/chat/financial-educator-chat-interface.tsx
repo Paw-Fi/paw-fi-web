@@ -1,18 +1,27 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useNavigate } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuth } from "@/contexts/auth-context";
+import { useChatContext } from "@/contexts/chat-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
-import { OptimizedImage } from "../seo/optimized-image";
 import finniLogo from '@/assets/images/avatar/finni.png';
 
 export function FinancialEducatorChatInterface() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { loadInitialMessages } = useChatContext();
+  
+  // Load conversation history on mount
+  useEffect(() => {
+    if (user) {
+      loadInitialMessages(AI_ROLES.FINANCIAL_EDUCATOR);
+    }
+  }, [user, loadInitialMessages]);
   
   // Footer content for educator interface
   const footerContent = user ? (
@@ -55,8 +64,8 @@ export function FinancialEducatorChatInterface() {
   
   return (
     <ChatConversationDisplay
+      aiRole={AI_ROLES.FINANCIAL_EDUCATOR}
       chatConfig={{
-        aiRole: AI_ROLES.FINANCIAL_EDUCATOR,
         enableGuestSessions: true,
         enableSignupPrompt: true,
         enableLoadingDuration: true,
@@ -71,8 +80,7 @@ export function FinancialEducatorChatInterface() {
       welcomeSubtitle="Ask me anything to get started!"
       navigate={navigate}
       className="flex-1"
-      headerTitle="Financial Education"
-      headerSubtitle="Learn personal finance with your AI educator Leo"
+      headerTitle="Finni"
       headerGradientColors="bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"
       headerBackgroundColors="bg-gradient-to-r from-white to-emerald-50 dark:from-slate-800 dark:to-slate-700"
       backgroundGradient="h-full bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 dark:from-emerald-950 dark:via-teal-950 dark:to-green-950 flex flex-col"

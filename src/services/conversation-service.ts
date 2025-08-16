@@ -60,7 +60,12 @@ export async function updateConversationData(supabase: SupabaseClient, params: {
   return updateConversation(supabase, params.conversationId, params.updates);
 }
 
+/**
+ * ⚠️ DEPRECATED: Frontend should not directly save messages to database.
+ * The chat_stream backend function handles all message persistence.
+ */
 export async function addMessageToConversation(supabase: SupabaseClient, message: Message) {
+  console.warn('addMessageToConversation is deprecated. Backend handles message saving.');
   return addMessage(supabase, message);
 }
 
@@ -183,6 +188,10 @@ export const updateConversation = async (
 
 /**
  * Add a message to a conversation
+ * 
+ * ⚠️ DEPRECATED: This function is no longer used. 
+ * The chat_stream backend function now handles all message saving to prevent duplication.
+ * Only use this for legacy compatibility if needed.
  */
 export const addMessage = async (
   supabase: SupabaseClient,

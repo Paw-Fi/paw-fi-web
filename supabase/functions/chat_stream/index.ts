@@ -5,9 +5,11 @@ import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
-import { prompt as FA_PROMPT, formatPromptWithContext, buildContextPrompt } from "./fa-prompt.ts";
+import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
 import { processGoalTrackingRequest, getGeminiFunctionDeclarations } from "./goal-tracker.ts";
+
+const AI_MODEL = "gemini-2.5-pro";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -182,6 +184,8 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
+    
+    
     const { 
       message, 
       userProfile, 
@@ -193,9 +197,9 @@ serve(async (req: Request): Promise<Response> => {
       goalId,
       goal 
     } = requestData;
+    
     // Note: Frontend no longer sends history - we fetch it from database
     let history: any[] = []; // Will be populated from database
-    console.log("requestData", requestData);
     
     // Initialize Supabase client with service role for database operations
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -247,14 +251,13 @@ serve(async (req: Request): Promise<Response> => {
       console.log(`Created new chat session: ${currentConversationId} for ${userId ? 'authenticated user' : 'guest'}`);
     }
     
-    // Fetch recent conversation history (sliding window - last 20 messages)
-    // Also verify the session has the correct model to prevent cross-contamination
+    // Fetch conversation history - sorted by timestamp ascending for proper conversation order
     const { data: recentMessages, error: fetchError } = await supabase
       .from('chat_messages')
-      .select('content, role, chat_sessions!inner(model)')
+      .select('*')
       .eq('chat_session_id', currentConversationId)
-      .eq('chat_sessions.model', chatModel)
       .order('timestamp', { ascending: true })
+      .order('id', { ascending: true }) // Secondary sort by ID for messages with identical timestamps
       .limit(20);
       
     if (fetchError) {
@@ -262,9 +265,9 @@ serve(async (req: Request): Promise<Response> => {
       // Continue with empty history rather than failing
     }
     
-    // Use recent messages as history instead of passed history
+    
+    // Use the fetched messages as history
     history = recentMessages || [];
-    console.log(`Using sliding window of ${history.length} recent messages for session ${currentConversationId}`);
     
     // Note: User message will be saved to database after AI response is generated
 
@@ -318,6 +321,7 @@ serve(async (req: Request): Promise<Response> => {
       // User has profile, generate AI response using Gemini
       
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
+      
       const formattedHistory = (history || [])
         .filter((msg: any) => {
           // Accept only messages with valid text
@@ -326,10 +330,12 @@ serve(async (req: Request): Promise<Response> => {
             Array.isArray(msg.parts) &&
             typeof msg.parts[0]?.text === "string" &&
             msg.parts[0].text.trim() !== ""
-          )
+          ) {
             return true;
-          if (typeof msg.content === "string" && msg.content.trim() !== "")
+          }
+          if (typeof msg.content === "string" && msg.content.trim() !== "") {
             return true;
+          }
           return false;
         })
         .map((msg: any) => {
@@ -351,22 +357,17 @@ serve(async (req: Request): Promise<Response> => {
           };
         });
       
+      
       // Check if this is a Financial Advisor request that might need goal tracking
       // Goal tracking should be attempted for ANY financial advisor message, not just when goalContext exists
       if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
         try {
-          console.log('Attempting goal tracking for Financial Advisor message:', message);
-          console.log('Goal context exists:', !!goalContext);
-          console.log('Global mode:', isGlobalMode);
           
           const goalTrackingResult = await processGoalTrackingRequest(
             {
               message,
               userId: userId || '',
-              goalContext: goalContext || null, // Allow null goalContext
-              isGlobalMode: isGlobalMode || true, // Default to global mode if not specified
-              goalId,
-              goal,
+              goalContext: goalContext || null, // All user goals - AI will decide
               conversationHistory: formattedHistory
             },
             supabase,
@@ -377,13 +378,19 @@ serve(async (req: Request): Promise<Response> => {
           if (goalTrackingResult.function_executed) {
             // Save both user and AI messages to database
             if (currentConversationId) {
+              
+              // Generate consistent timestamps for message pair
+              const baseTimestamp = new Date();
+              const userTimestamp = baseTimestamp.toISOString();
+              const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+              
               const messagesToInsert = [
                 {
                   chat_session_id: currentConversationId,
                   content: message,
                   role: 'user',
                   metadata: null,
-                  timestamp: new Date().toISOString()
+                  timestamp: userTimestamp
                 },
                 {
                   chat_session_id: currentConversationId,
@@ -393,7 +400,7 @@ serve(async (req: Request): Promise<Response> => {
                     function_executed: goalTrackingResult.function_executed,
                     function_result: goalTrackingResult.function_result 
                   },
-                  timestamp: new Date().toISOString()
+                  timestamp: aiTimestamp
                 }
               ];
               
@@ -426,20 +433,25 @@ serve(async (req: Request): Promise<Response> => {
               
               // Save both user and fallback messages to database
               if (currentConversationId) {
+                // Generate consistent timestamps for message pair
+                const baseTimestamp = new Date();
+                const userTimestamp = baseTimestamp.toISOString();
+                const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+                
                 const messagesToInsert = [
                   {
                     chat_session_id: currentConversationId,
                     content: message,
                     role: 'user',
                     metadata: null,
-                    timestamp: new Date().toISOString()
+                    timestamp: userTimestamp
                   },
                   {
                     chat_session_id: currentConversationId,
                     content: fallbackResponse,
                     role: 'assistant',
                     metadata: { fallback_type: 'navigation_request' },
-                    timestamp: new Date().toISOString()
+                    timestamp: aiTimestamp
                   }
                 ];
                 
@@ -487,14 +499,13 @@ serve(async (req: Request): Promise<Response> => {
         // Add function calling capabilities for Financial Advisor with goals
         const functionDeclarations = getGeminiFunctionDeclarations();
         model = genAI.getGenerativeModel({ 
-          model: "gemini-2.5-flash-lite",
+          model: AI_MODEL,
           tools: [{
             function_declarations: functionDeclarations
           }]
         });
-        console.log('Financial Advisor model initialized with goal tracking functions');
       } else {
-        model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        model = genAI.getGenerativeModel({ model: AI_MODEL });
       }
       const generationConfig = {
         responseMimeType: "text/plain",
@@ -549,7 +560,6 @@ serve(async (req: Request): Promise<Response> => {
       // If JSON is incomplete, keep requesting more content
       while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
         attempts++;
-        console.log(`JSON incomplete, attempt ${attempts} to get more content`);
 
         // Add the current response to history and ask for continuation
         const continuationContents = [
@@ -684,7 +694,6 @@ serve(async (req: Request): Promise<Response> => {
 
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
-      console.log("wellFormedJsonString", wellFormedJsonString);
       // --- Course Extraction & Storage ---
       // Attempt to extract a valid course object using Zod
       const extractedCourse = wellFormedJsonString
@@ -723,7 +732,6 @@ serve(async (req: Request): Promise<Response> => {
           console.error("Course storage error:", err);
         }
       } else {
-        console.log("No valid course JSON detected in AI response.");
       }
       // --- End Course Extraction & Async Storage ---
 
@@ -799,20 +807,25 @@ ${markdownSuffix}`,
     
     // Save both user and AI messages to database in a single batch for all users (authenticated and guests)
     if (currentConversationId) {
+      // Generate consistent timestamps for message pair
+      const baseTimestamp = new Date();
+      const userTimestamp = baseTimestamp.toISOString();
+      const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+      
       const messagesToInsert = [
         {
           chat_session_id: currentConversationId,
           content: message,
           role: 'user',
           metadata: null,
-          timestamp: new Date().toISOString()
+          timestamp: userTimestamp
         },
         {
           chat_session_id: currentConversationId,
           content: finalResponse,
           role: 'assistant',
           metadata: extractedCourse ? { courseRecommendation: extractedCourse } : null,
-          timestamp: new Date().toISOString()
+          timestamp: aiTimestamp
         }
       ];
       
@@ -828,8 +841,6 @@ ${markdownSuffix}`,
     
     // Final safety check: ensure response is not empty or meaningless
     if (!finalResponse || finalResponse.trim().length === 0 || finalResponse.trim() === '{}') {
-      console.warn('Empty or invalid response detected, generating fallback');
-      
       // Generate a context-appropriate fallback response
       let fallbackResponse = "I apologize, but I didn't quite understand your request. ";
       
@@ -840,9 +851,6 @@ ${markdownSuffix}`,
       }
       
       finalResponse = fallbackResponse;
-      
-      // Log this occurrence for monitoring
-      console.log(`Fallback response generated for user ${userId}, message: "${message}"`);
     }
     
     return new Response(

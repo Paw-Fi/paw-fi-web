@@ -2,31 +2,28 @@
 
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from "framer-motion";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChatMessageItem } from "./chat-message-item";
 import { ChatSuggestions } from "./chat-suggestions";
 import { ChatInput } from './chat-input';
 import logo from "@/assets/images/icon.svg";
 import { OptimizedImage } from "@/components/seo/optimized-image";
-import { 
-  getPredictedResponses,
-  fetchConversations,
-  sendChatMessage,
-  updateGuestSession
-} from '@/services/conversation-service';
+import { getPredictedResponses } from '@/services/conversation-service';
 import { supabase } from '@/lib/supabase';
 import { GoalType } from '../goal-tracker/types';
 import { useAuth } from '@/contexts/auth-context';
+import { useChatContext } from '@/contexts/chat-context';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useLocation } from '@tanstack/react-router';
 import FinancialHealthQuiz from '../financial-health/FinancialHealthQuiz';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { useAIChat } from '@/contexts/ai-chat-context';
-import { FinancialHealthProfile, useFinancialHealthProfile, formatProfileForAI } from '@/hooks/use-financial-health-profile';
+import { FinancialHealthProfile, useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import { useUserGoals, createAllGoalsContext } from '@/hooks/goal-tracker/use-user-goals';
 import { AI_ROLES, AI_ROLE } from './ai-roles';
 import { BetaPill } from '../ui/beta-pill';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
 export interface ConversationMessage {
   content: string;
@@ -37,33 +34,7 @@ export interface ConversationMessage {
   metadata?: Record<string, any>;
 }
 
-// Cookie utility functions for guest sessions
-const setCookie = (name: string, value: string, days: number) => {
-  const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-};
-
-const getCookie = (name: string): string | null => {
-  const nameEQ = name + "=";
-  const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-  }
-  return null;
-};
-
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-};
-
-const GUEST_SESSION_COOKIE = "moneko-guest-session";
-const GUEST_COURSE_COOKIE = "moneko-guest-course";
-
 export interface ChatConfig {
-  aiRole: string;
   enableGuestSessions?: boolean;
   enableSignupPrompt?: boolean;
   enableLoadingDuration?: boolean;
@@ -81,6 +52,9 @@ export interface ChatConfig {
 }
 
 interface ChatConversationDisplayProps {
+  // AI Role - required
+  aiRole: AI_ROLE;
+  
   // Chat configuration
   chatConfig: ChatConfig;
   
@@ -106,12 +80,10 @@ interface ChatConversationDisplayProps {
   
   // Chat container customization
   className?: string;
-  headerClassName?: string;
   messagesClassName?: string;
   
   // Header/Footer customization
   headerTitle?: string;
-  headerSubtitle?: string;
   headerGradientColors?: string;
   headerBackgroundColors?: string;
   backgroundGradient?: string;
@@ -214,7 +186,7 @@ const LoadingMessage = React.memo<{
     >
       <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
         <OptimizedImage src={agentIcon} alt={agentName || "AI Assistant"} className="size-10" />
-                <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
+        <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
             {enableLoadingDuration && loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
               <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
@@ -286,6 +258,7 @@ const MessagesList = React.memo<{
 MessagesList.displayName = 'MessagesList';
 
 export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = ({
+  aiRole,
   chatConfig,
   agentIcon,
   welcomeMessage = "Hi! I'm here to help you. Ask me anything to get started!",
@@ -298,7 +271,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   className = "",
   messagesClassName = "",
   headerTitle,
-  headerSubtitle,
   headerGradientColors,
   headerBackgroundColors,
   backgroundGradient,
@@ -314,30 +286,26 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const { closeChat } = useAIChat();
   const { isActive } = useSubscription(user?.id || '');
   const location = useLocation();
-  const queryClient = useQueryClient();
   const isAuthenticated = !!user;
 
-  // State management - moved from parent components
-  const [internalMessages, setInternalMessages] = useState<ConversationMessage[]>([]);
+  // Chat context - primary source of truth
+  const {
+    getMessages,
+    isSendingMessage,
+    sendMessage,
+    isConversationLoaded
+  } = useChatContext();
+
+  // Get messages from context
+  const messages = chatConfig.useExternalMessages ? (chatConfig.externalMessages || []) : getMessages(aiRole);
+  const isLoading = isSendingMessage(aiRole);
+  
+  // State management for UI only
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
-  const [hasUpdatedGuestSession, setHasUpdatedGuestSession] = useState(false);
-  
-  // Simple loading state - no timer in parent to prevent rerenders
-  const {
-    isSendingMessage,
-    startLoading,
-    stopLoading
-  } = useSimpleLoadingState();
-  
-  // Shared handlers
-  const handleSignupClick = () => {
-    setShowSignupPrompt(false);
-    navigate?.({ to: "/register", search: { redirect: "/dashboard" } });
-  };
-  
-  // Use external messages if provided, otherwise use internal state
-  const messages = chatConfig.useExternalMessages ? (chatConfig.externalMessages || []) : internalMessages;
+  const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
+    ...initialSuggestedResponses || []
+  ]);
   
   // Load financial health profile for authenticated users
   const { profile } = useFinancialHealthProfile(user?.id);
@@ -346,60 +314,13 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const { data: userGoals } = useUserGoals();
   
   // Check if this is Financial Advisor mode
-  const isFinancialAdvisorMode = chatConfig.aiRole === AI_ROLES.FINANCIAL_ADVISOR;
+  const isFinancialAdvisorMode = aiRole === AI_ROLES.FINANCIAL_ADVISOR;
   
-  // Get guest session ID from cookie or create new one
-  const getGuestSessionId = useCallback((): string => {
-    let sessionId = getCookie(GUEST_SESSION_COOKIE);
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      setCookie(GUEST_SESSION_COOKIE, sessionId, 365);
-    }
-    return sessionId;
-  }, []);
-
-  // Fetch conversations for authenticated users - only if not using external messages
-  const { 
-    data: conversationsData,
-    isLoading: isConversationsLoading,
-  } = useQuery({
-    queryKey: ['conversations', chatConfig.aiRole],
-    queryFn: () => fetchConversations(supabase, chatConfig.aiRole as AI_ROLE),
-    enabled: isAuthenticated && !chatConfig.useExternalMessages,
-    staleTime: 0, // Always consider data stale to allow refetching
-    refetchOnWindowFocus: true, // Refetch when user returns to page
-    refetchOnReconnect: false,
-  });
-
-  const currentConversationId = conversationsData?.id || null;
-
-  // Load messages from conversation data - only once initially (only if not using external messages)
-  const [hasLoadedInitialMessages, setHasLoadedInitialMessages] = useState(false);
-  useEffect(() => {
-    if (!chatConfig.useExternalMessages && isAuthenticated && conversationsData?.messages && !hasLoadedInitialMessages) {
-      setInternalMessages(conversationsData.messages);
-      setHasLoadedInitialMessages(true);
-    }
-  }, [chatConfig.useExternalMessages, isAuthenticated, conversationsData, hasLoadedInitialMessages]);
-
-  // Update guest session on login (for educator interface)
-  useEffect(() => {
-    if (chatConfig.enableGuestSessions && isAuthenticated && user?.id && !hasUpdatedGuestSession) {
-      const guestSessionId = getCookie(GUEST_SESSION_COOKIE);
-      if (guestSessionId) {
-        updateGuestSession(guestSessionId, user.id)
-          .then(() => {
-            // Clean up guest cookies after successful session transfer
-            deleteCookie(GUEST_SESSION_COOKIE);
-            deleteCookie(GUEST_COURSE_COOKIE);
-          })
-          .catch((error) => {
-            console.error('Failed to update guest session:', error);
-          });
-        setHasUpdatedGuestSession(true);
-      }
-    }
-  }, [chatConfig.enableGuestSessions, isAuthenticated, user?.id, hasUpdatedGuestSession]);
+  // Shared handlers
+  const handleSignupClick = () => {
+    setShowSignupPrompt(false);
+    navigate?.({ to: "/register", search: { redirect: "/dashboard" } });
+  };
 
   const isConversationMaxedOut = location.pathname!='/onboarding' && !isActive&&messages.length>=8;
   
@@ -446,47 +367,21 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     return () => clearTimeout(timeoutId);
   }, [messages, scrollToBottom]);
 
-  // Send message function - unified for both guest and authenticated users
+  // Send message function - simplified using context
   const handleSendMessage = async (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
-    if (!content.trim() || isSendingMessage) return;
+    if (!content.trim() || isLoading) return;
     
     // If using custom message handler (like goal tracker), delegate to it
     if (chatConfig.customMessageHandler) {
-      startLoading();
-      setConnectionError(null);
       try {
         await chatConfig.customMessageHandler(content);
       } catch (error) {
         setConnectionError(typeof error === 'string' ? error : 'Connection error. Please try again.');
-      } finally {
-        stopLoading();
       }
       return;
     }
     
-    startLoading();
     setConnectionError(null);
-    
-    const getConsistentTimestamp = (): number => {
-      if (typeof window === "undefined") {
-        return 1717000000000;
-      }
-      return Date.now();
-    };
-    
-    // Create optimistic user message
-    const userMessage: ConversationMessage = {
-      content,
-      role: "user",
-      timestamp: getConsistentTimestamp(),
-      chat_session_id: isAuthenticated ? currentConversationId || "" : (chatConfig.enableGuestSessions ? getGuestSessionId() : ""),
-      userId: user?.id
-    };
-    
-    // Optimistically add user message to UI (only for internal messages)
-    if (!chatConfig.useExternalMessages) {
-      setInternalMessages(prev => [...prev, userMessage]);
-    }
     
     try {
       // Create goal context for Financial Advisor mode
@@ -495,94 +390,19 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         goalContext = createAllGoalsContext(userGoals);
       }
       
-      // Send message using proper supabase service function
-      const response = await sendChatMessage(supabase, content, {
-        conversationId: isAuthenticated ? currentConversationId : null,
-        userId: user?.id || null,
-        sessionId: isAuthenticated ? null : (chatConfig.enableGuestSessions ? getGuestSessionId() : null),
-        model: chatConfig.aiRole as AI_ROLE,
-        profile: formatProfileForAI(user, manual_profile ? null : profile),
-        // Include goal context for Financial Advisor mode (CRITICAL for goal tracking)
-        ...(goalContext && { goalContext: goalContext }),
-        // Note: Backend fetches conversation history directly from database
+      // Send message using context
+      await sendMessage(aiRole, content, {
+        profile: manual_profile || profile || undefined,
+        goalContext
       });
       
-      // For guest users (educator only), store the new session ID and course ID if provided
-      if (!isAuthenticated && chatConfig.enableGuestSessions) {
-        if (response.conversationId) {
-          setCookie(GUEST_SESSION_COOKIE, response.conversationId, 365);
-        }
-        if (response.course_id) {
-          setCookie(GUEST_COURSE_COOKIE, response.course_id, 365);
-        }
-        if (response.conversationId) {
-          chatConfig.onGuestSessionUpdate?.(response.conversationId, response.course_id);
-        }
-      }
-      
-      // Create AI message from response
-      const aiMessage: ConversationMessage = {
-        content: response.response || "I'm sorry, I couldn't generate a response.",
-        role: "assistant",
-        timestamp: getConsistentTimestamp(),
-        chat_session_id: response.conversationId || userMessage.chat_session_id,
-        userId: user?.id,
-        metadata: response.generatedLessons ? { courseRecommendation: response.generatedLessons } : undefined
-      };
-      
-      // Add AI message to UI (only for internal messages)
-      if (!chatConfig.useExternalMessages) {
-        setInternalMessages(prev => [...prev, aiMessage]);
-      }
-      
-      // CRITICAL: Invalidate conversation cache to ensure fresh data on navigation
-      if (isAuthenticated) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', chatConfig.aiRole] });
-      }
-      
-      // Handle goal function execution results for Financial Advisor
-      if (isFinancialAdvisorMode && response.function_executed && response.cache_refresh_needed) {
-        console.log('Goal function executed:', response.function_executed);
-        
-        // Invalidate goal-related queries to refresh UI
-        queryClient.invalidateQueries({ queryKey: ['user-goals', user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['goals', 'list'] });
-        queryClient.invalidateQueries({ queryKey: ['goals', 'list', user?.id] });
-        
-        // Invalidate goal metrics if user is authenticated
-        if (user?.id) {
-          queryClient.invalidateQueries({ queryKey: ['goals', 'metrics', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['user-activities', user.id] });
-        }
-      }
-      
-      // Check for signup prompt (educator only)
-      if (chatConfig.enableSignupPrompt && !isAuthenticated && response.response?.includes('```json')) {
-        setShowSignupPrompt(true);
-        chatConfig.onSignupPromptShow?.();
-      } else if (isAuthenticated && response.response?.includes('```json')) {
-        await queryClient.invalidateQueries({ queryKey: ['user-courses', user.id] });
-      }
+      // Note: All response handling is now managed through chat context
+      // Goal functions, course updates, and signup prompts are handled by the backend
+      // State changes are applied optimistically through context
       
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Add error message (only for internal messages)
-      if (!chatConfig.useExternalMessages) {
-        const errorMessage: ConversationMessage = {
-          content: "Sorry, I had trouble connecting. Please check your connection or try again.",
-          role: "assistant",
-          timestamp: getConsistentTimestamp(),
-          chat_session_id: userMessage.chat_session_id,
-          userId: user?.id,
-          metadata: { isError: true }
-        };
-        
-        setInternalMessages(prev => [...prev, errorMessage]);
-      }
       setConnectionError("Connection error. Please try again.");
-    } finally {
-      stopLoading();
     }
   };
 
@@ -590,10 +410,6 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     setSuggestedResponses([]);
     handleSendMessage(suggestion);
   };
-
-  const [suggestedResponses, setSuggestedResponses] = useState<string[]>([
-    ...initialSuggestedResponses || []
-  ]);
 
   // Optimized effect for fetching suggestions
   useEffect(() => {
@@ -605,14 +421,14 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     }
   }, [messages, fetchSuggestions]);
 
-    const handleDashboardCreated = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
-      setIsQuizModalOpen(false);
-      handleSendMessage("I've completed the questionnaire", profile);
-      await queryClient.invalidateQueries({ queryKey: ["dashboard-views"] });
-    };
+  const handleDashboardCreated = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+    setIsQuizModalOpen(false);
+    handleSendMessage("I've completed the questionnaire", profile);
+    // Note: Dashboard data will be refreshed through normal user interactions
+    // No React Query invalidations needed - SSR maintains state during navigation
+  };
 
-    const isBackendProcessing = (isAuthenticated && isConversationsLoading) && messages.length === 0;
-  
+  const isBackendProcessing = isAuthenticated && !isConversationLoaded(aiRole) && messages.length === 0;
 
   return (
     <>
@@ -620,14 +436,12 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       <div className={backgroundGradient || "h-full flex flex-col"}>
         {/* Optional floating close button */}
         {chatConfig.showFloatingCloseButton && (
-          <div className="absolute top-4 right-4 z-50">
+          <div className="absolute top-1.5 right-4 z-50">
             <button
               onClick={closeChat}
-              className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+              className="size-5  transition-all duration-200 flex items-center justify-center group"
             >
-              <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+            <FontAwesomeIcon icon={faXmark} />
             </button>
           </div>
         )}
@@ -635,17 +449,15 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         {/* Optional header */}
         {chatConfig.showHeader && headerTitle && (
           <div className={`flex-shrink-0 border-b border-slate-200 dark:border-slate-700 ${headerBackgroundColors || "bg-gradient-to-r from-white to-emerald-50 dark:from-slate-800 dark:to-slate-700"}`}>
-            <div className="px-6 py-6">
+            <div className="px-6 py-2">
               <div className="text-center">
-               <div className='flex items-center justify-center gap-2'>
-               <h1 className={`text-3xl font-bold ${headerGradientColors || "bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"} bg-clip-text text-transparent mb-2`}>
+               <div className='flex items-center justify-center gap-1'>
+               <h1 className={`text-md font-bold ${headerGradientColors || "bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-100"} bg-clip-text text-transparent`}>
                   {headerTitle}
                 </h1>
                 <BetaPill size="small"/>
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {headerSubtitle}
-                </p>
+               
               </div>
             </div>
           </div>
@@ -778,10 +590,10 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 
         {/* Loading Message */}
         <LoadingMessage
-          isSendingMessage={isSendingMessage}
+          isSendingMessage={isLoading}
           enableLoadingDuration={chatConfig.enableLoadingDuration || false}
-          agentIcon={agentIcon}
-          agentName={agentName}
+          agentIcon={typeof agentIcon === 'string' ? agentIcon : logo}
+          agentName={agentName || 'AI Assistant'}
         />
         <div ref={messagesEndRef} />
       </div>
@@ -791,14 +603,14 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         <ChatSuggestions
           suggestions={suggestedResponses}
           onSuggestionClick={handleSuggestionClick}
-          isSendingMessage={isSendingMessage||isConversationMaxedOut}
+          isSendingMessage={isLoading||isConversationMaxedOut}
         />
       )}
 
       {/* Input */}
       <ChatInput 
         onSendMessage={handleSendMessage} 
-        isLoading={isSendingMessage||isConversationMaxedOut} 
+        isLoading={isLoading||isConversationMaxedOut} 
         isMaxedOut={isConversationMaxedOut}
       />
         </div>
@@ -806,7 +618,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         {/* Optional footer */}
         {chatConfig.showFooter && footerContent && (
           <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-            <div className="px-6 pt-4 pb-3 text-center">
+            <div className="px-6 pt-2 pb-1 text-center">
               <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 {footerContent}
               </div>
@@ -817,7 +629,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       </div>
      {/* Financial Health Quiz Modal */}
      <Modal
-     isOpen={isQuizModalOpen}
+     isOpen={true}
      onClose={() => setIsQuizModalOpen(false)}
      title="Financial Health Assessment"
      description="Complete this assessment to get personalized financial advice"
