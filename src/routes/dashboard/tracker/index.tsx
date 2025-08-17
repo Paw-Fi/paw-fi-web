@@ -333,7 +333,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   
     return (
       <motion.main 
-        className="min-h-screen bg-gray-50" 
+        className="min-h-screen bg-gray-50 dark:bg-gray-900" 
         role="main" 
         aria-label="Goals Dashboard"
         variants={pageVariants}
@@ -343,20 +343,20 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         {/* Skip to main content link for keyboard navigation */}
         <a 
           href="#main-content" 
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-purple-600 text-white px-4 py-2 rounded-md z-50 font-medium"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-md z-50 font-medium"
         >
           Skip to main content
         </a>
   
         {/* Clean Header inspired by the design */}
-        <div className="bg-white">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-6xl mx-auto px-6 py-8">
             <div className="flex items-center justify-between" data-tour="page-header">
               <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
                   Goals
                 </h1>
-                <p className="text-gray-500 text-lg">
+                <p className="text-gray-500 dark:text-gray-400 text-lg">
                   Track your financial goals with AI-powered insights
                 </p>
               </div>
@@ -364,7 +364,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
               
                 <Link to="/dashboard/tracker/create">
                   <button 
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg"
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 dark:from-purple-600 dark:to-blue-600 dark:hover:from-purple-700 dark:hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg"
                     data-tour="create-goal-btn"
                   >
                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
@@ -468,37 +468,37 @@ const SpotlightCard = memo(function SpotlightCard({
   
   // Get background color based on goal type and spotlight type
   const getCardBackground = (priority?: number) => {
-    if(priority === 1) return 'bg-[#d7ceff]';
-    if(priority === 2) return 'bg-[#f2e9fe]';
-    if(priority === 3) return 'bg-[#daeafe]';
-    return 'bg-[#d7ceff]';
+    if(priority === 1) return 'bg-[#d7ceff] dark:bg-purple-800/30';
+    if(priority === 2) return 'bg-[#f2e9fe] dark:bg-purple-700/20';
+    if(priority === 3) return 'bg-[#daeafe] dark:bg-blue-800/30';
+    return 'bg-[#d7ceff] dark:bg-purple-800/30';
   };
   
   const cardBackground = getCardBackground(priority);
   
   return (
-    <Link to={`/dashboard/tracker/${goal.id}`}>
+    <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
       
       <motion.div 
-        className={`relative overflow-hidden flex justify-center items-center bg-[#d6cffe] rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg ${cardBackground}`}
+        className={`relative overflow-hidden flex justify-center items-center bg-[#d6cffe] dark:bg-gray-700 rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg dark:hover:bg-gray-600 ${cardBackground}`}
         whileHover={{ y: -2, scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >                
           {/* Main Content */}
           <div className="flex flex-col gap-2">
             {/* Days Display */}
-            <div className="text-4xl font-hepta-slab  font-bold text-gray-900 ">
+            <div className="text-4xl font-hepta-slab  font-bold text-gray-900 dark:text-white">
               {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
             </div>
             
             {/* Goal Title */}
-            <div className="text-gray-500 font-medium text-lg leading-tight line-clamp-2 text-ellipsis">
+            <div className="text-gray-500 dark:text-gray-300 font-medium text-lg leading-tight line-clamp-2 text-ellipsis">
               Until {goal.title}
             </div>
             
             {/* Additional Info for certain types */}
             {(type === 'attention' || type === 'stagnant') && (
-              <div className="text-sm text-gray-700 font-medium mt-3">
+              <div className="text-sm text-gray-700 dark:text-gray-200 font-medium mt-3">
                 {reason || 'Next Milestone:'}
               </div>
             )}
@@ -515,29 +515,29 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
       label: 'Total Goals', 
       value: stats.totalGoals, 
       icon: faBullseye,
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-500'
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      iconColor: 'text-blue-500 dark:text-blue-400'
     },
     { 
       label: 'Active Goals', 
       value: stats.activeGoals, 
       icon: faChartLine,
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-500'
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      iconColor: 'text-green-500 dark:text-green-400'
     },
     { 
       label: 'Completed Goals', 
       value: stats.completedGoals, 
       icon: faTrophy,
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-500'
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      iconColor: 'text-purple-500 dark:text-purple-400'
     },
     { 
       label: 'Overall Progress', 
       value: `${stats.onTrackPercentage}%`, 
       icon: faCheckCircle,
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-500',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      iconColor: 'text-orange-500 dark:text-orange-400',
       subtitle: `${stats.activeGoals} of ${stats.totalGoals} goals on track`
     }
   ];
@@ -552,20 +552,20 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
       {statItems.map((stat) => (
         <motion.div 
           key={stat.label} 
-          className="bg-white rounded-2xl p-6 text-center border border-gray-100 hover:shadow-lg transition-all duration-300"
+          className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-gray-100 dark:border-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300"
           whileHover={{ y: -2 }}
         >
           <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center mx-auto mb-4`}>
             <FontAwesomeIcon icon={stat.icon} className={`w-5 h-5 ${stat.iconColor}`} />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
+          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {stat.value}
           </div>
-          <div className="text-sm text-gray-600 font-medium">
+          <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">
             {stat.label}
           </div>
           {stat.subtitle && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {stat.subtitle}
             </div>
           )}
@@ -587,22 +587,22 @@ const CommandCenter = memo(function CommandCenter({
 }) {
   return (
     <motion.section 
-      className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+      className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900">Goals</h2>
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h2>
       </div>
       
       {/* Goals List */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
         {goals.length === 0 ? (
           <div className="text-center py-12">
-            <FontAwesomeIcon icon={faFilter} className="w-12 h-12 text-gray-400 mb-4" />
-            <p className="text-gray-500">No goals match your current filter</p>
+            <FontAwesomeIcon icon={faFilter} className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">No goals match your current filter</p>
           </div>
         ) : (
           goals.map((goal) => (
@@ -649,34 +649,34 @@ const GoalCard = memo(function GoalCard({
   };
   
   return (
-    <Link to={`/dashboard/tracker/${goal.id}`}>
+    <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
       <motion.div 
-        className="p-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+        className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
         whileHover={{ x: 4 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="flex items-center gap-4">
           {/* Icon */}
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0">
             <FontAwesomeIcon 
               icon={getGoalIcon(goal.title)} 
-              className="w-6 h-6 text-gray-600" 
+              className="w-6 h-6 text-gray-600 dark:text-gray-300" 
             />
           </div>
           
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {goal.title}
               </h3>
-              <span className="text-lg font-bold text-gray-900 ml-4">
+              <span className="text-lg font-bold text-gray-900 dark:text-white ml-4">
                 {Math.round(progress)}%
               </span>
             </div>
             
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
               <motion.div 
                 className={`h-full rounded-full ${getProgressColor(progress)}`}
                 initial={{ width: 0 }}
@@ -800,7 +800,7 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
           whileTap={{ scale: 0.98 }}
         >
           <Link to="/dashboard/tracker/create" aria-describedby="empty-state-heading">
-            <button className="group h-14 px-10 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl border-0 font-bold text-lg rounded-2xl transition-all duration-300" aria-label="Create your first financial goal">
+            <button className="group h-14 px-10 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-2xl border-0 font-bold text-lg rounded-2xl transition-all duration-300" aria-label="Create your first financial goal">
               <FontAwesomeIcon icon={faWandSparkles} className="mr-3 group-hover:rotate-12 transition-transform" aria-hidden="true" />
               Create Your First Goal
               <FontAwesomeIcon icon={faArrowRight} className="ml-3 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
@@ -921,7 +921,7 @@ const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; on
         
         <motion.button 
           onClick={handleRetry}
-          className="h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg border-0 font-semibold rounded-xl transition-all duration-200"
+          className="h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-lg border-0 font-semibold rounded-xl transition-all duration-200"
           aria-label="Retry loading goals"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

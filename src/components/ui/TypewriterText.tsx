@@ -18,7 +18,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
   className = '',
   onComplete,
   showCursor = true,
-  cursorClassName = 'animate-pulse text-gray-400'
+  cursorClassName = 'animate-pulse text-gray-400 dark:text-gray-500'
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);

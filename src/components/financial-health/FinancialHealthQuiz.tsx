@@ -87,9 +87,9 @@ const DebtRepeater: React.FC<{
   return (
     <div className="space-y-4">
       {debts.map((debt, index) => (
-        <div key={debt.id} className="border rounded-lg p-4 bg-gray-50">
+        <div key={debt.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
           <div className="flex justify-between items-center mb-3">
-            <h4 className="font-medium text-gray-800">Debt #{index + 1}</h4>
+            <h4 className="font-medium text-gray-800 dark:text-gray-200">Debt #{index + 1}</h4>
             <button
               onClick={() => removeDebt(debt.id)}
               className="text-red-500 hover:text-red-700 text-sm"
@@ -100,13 +100,13 @@ const DebtRepeater: React.FC<{
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Debt Type
               </label>
               <select
                 value={debt.type}
                 onChange={(e) => updateDebt(debt.id, 'type', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select type</option>
                 {debtTypes.map(type => (
@@ -118,23 +118,23 @@ const DebtRepeater: React.FC<{
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Total Amount Owed
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
                 <input
                   type="number"
                   value={debt.amount === 0 ? "" : debt.amount}
                   onChange={(e) => updateDebt(debt.id, 'amount', e.target.value === "" ? 0 : Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 pl-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   placeholder="e.g., 5000"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Interest Rate (APR %)
               </label>
               <div className="relative">
@@ -142,11 +142,11 @@ const DebtRepeater: React.FC<{
                   type="number"
                   value={debt.interestRate === 0 ? "" : debt.interestRate}
                   onChange={(e) => updateDebt(debt.id, 'interestRate', e.target.value === "" ? 0 : Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 pr-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   placeholder="e.g., 5.5"
                   step="0.01"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">%</span>
               </div>
             </div>
           </div>
@@ -155,14 +155,14 @@ const DebtRepeater: React.FC<{
       
       <button
         onClick={addDebt}
-        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
         + Add Debt
       </button>
       
       {debts.length === 0 && (
         <div className="text-center py-4">
-          <p className="text-gray-500">No debts added yet. Click "Add Debt" to get started.</p>
+          <p className="text-gray-500 dark:text-gray-400">No debts added yet. Click "Add Debt" to get started.</p>
         </div>
       )}
     </div>
@@ -637,7 +637,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
         const question = inputQuestions[0];
         return (
           <div key={question.id} className="w-full">
-            <h3 className="mb-1 text-sm font-medium text-gray-800">
+            <h3 className="mb-1 text-sm font-medium text-gray-800 dark:text-gray-200">
               {question.question}
           {question.type === "slider" &&     <span className="text-md ml-2 font-bold text-green-500">
               {(state.answers[question.id] as number) || (question.validation?.min || 0)}%
@@ -645,26 +645,26 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               </span>}
             </h3>
             {question.description && (
-              <p className="mb-4 text-xs text-gray-600">{question.description}</p>
+              <p className="mb-4 text-xs text-gray-600 dark:text-gray-400">{question.description}</p>
             )}
 
             {(question.type === "number" || question.type === "currency" || question.type === "percentage") && (
               <div className="relative rounded-lg border border-transparent">
                 {/* Show $ symbol for currency questions */}
                 {question.type === "currency" && (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                     $
                   </span>
                 )}
                 {/* Show % symbol for percentage questions */}
                 {question.type === "percentage" && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                     %
                   </span>
                 )}
                 {/* Show custom unit for number questions */}
                 {question.type === "number" && question.unit && (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                     {question.unit}
                   </span>
                 )}
@@ -837,15 +837,15 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
             className="flex flex-col items-center justify-center py-16 text-center"
           >
             <div className="mb-8 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-primary"></div>
-            <h3 className="mb-3 text-xl font-semibold text-gray-800">
+            <h3 className="mb-3 text-xl font-semibold text-gray-800 dark:text-gray-200">
               Analyzing Your Financial Profile
             </h3>
-            <p className="mb-8 max-w-md text-gray-600">
+            <p className="mb-8 max-w-md text-gray-600 dark:text-gray-300">
               We're creating your personalized financial portfolio based on your answers...
             </p>
-            <div className="max-w-md rounded-lg border border-blue-100 bg-blue-50 p-6">
-              <h4 className="mb-3 font-medium text-blue-800">Financial Tip</h4>
-              <p className="text-blue-700">
+            <div className="max-w-md rounded-lg border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-6">
+              <h4 className="mb-3 font-medium text-blue-800 dark:text-blue-300">Financial Tip</h4>
+              <p className="text-blue-700 dark:text-blue-200">
                 {investmentTips[state.currentTip]}
               </p>
             </div>
@@ -855,19 +855,19 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
             initial="hidden"
             animate="visible"
             variants={resultVariants}
-            className="mx-auto max-w-3xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+            className="mx-auto max-w-3xl rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm"
           >
-            <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">
+            <h2 className="mb-6 text-center text-2xl font-bold text-gray-800 dark:text-gray-200">
               Your Financial Health Assessment
             </h2>
 
             {state.calculationResults && (
               <div className="mb-8 space-y-6">
-                <div className="rounded-lg bg-blue-50 p-6">
-                  <h3 className="mb-2 text-lg font-semibold text-blue-800">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-6">
+                  <h3 className="mb-2 text-lg font-semibold text-blue-800 dark:text-blue-300">
                     Financial Health Score: {state.calculationResults.healthScore.toFixed(0)}/100
                   </h3>
-                  <p className="text-blue-700">
+                  <p className="text-blue-700 dark:text-blue-200">
                     Your financial health is rated as{" "}
                     <span className="font-medium">
                       {state.calculationResults.healthAssessment}
@@ -876,77 +876,77 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Projected Retirement Fund
                     </h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       ${state.calculationResults.projectedRetirementFund.toLocaleString()}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       At age {state.calculationResults.portfolioProjection.retirementAge}
                     </p>
                   </div>
 
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Monthly Retirement Income
                     </h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       ${state.calculationResults.monthlyRetirementIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}/month
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Using 4% withdrawal rule
                     </p>
                   </div>
 
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Years Until Retirement
                     </h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {state.calculationResults.yearsUntilRetirement} years
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Time to build wealth
                     </p>
                   </div>
 
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Current Savings Rate
                     </h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {state.calculationResults.cashFlow.savingsRatePercent}%
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       ${state.calculationResults.cashFlow.monthlySavings.toLocaleString()}/month
                     </p>
                   </div>
 
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-4">
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Risk Profile
                     </h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {state.calculationResults.portfolioAllocation.riskScore >= 80 ? 'Aggressive' : 
                        state.calculationResults.portfolioAllocation.riskScore >= 60 ? 'Growth' :
                        state.calculationResults.portfolioAllocation.riskScore >= 40 ? 'Balanced' :
                        state.calculationResults.portfolioAllocation.riskScore >= 20 ? 'Cautious' : 'Conservative'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {state.calculationResults.portfolioAllocation.equityPercentage}% stocks, {state.calculationResults.portfolioAllocation.bondPercentage}% bonds
                     </p>
                   </div>
 
-                  <div className={`rounded-lg p-4 ${state.calculationResults.portfolioProjection.onTrack ? 'bg-green-50' : 'bg-red-50'}`}>
-                    <h4 className="mb-1 text-sm font-medium text-gray-700">
+                  <div className={`rounded-lg p-4 ${state.calculationResults.portfolioProjection.onTrack ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                    <h4 className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       Retirement Goal Status
                     </h4>
-                    <p className={`text-lg font-semibold ${state.calculationResults.portfolioProjection.onTrack ? 'text-green-900' : 'text-red-900'}`}>
+                    <p className={`text-lg font-semibold ${state.calculationResults.portfolioProjection.onTrack ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'}`}>
                       {state.calculationResults.portfolioProjection.onTrack ? 'On Track' : 'Behind Goal'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {state.calculationResults.portfolioProjection.progressPercentage}% of target (${state.calculationResults.portfolioProjection.targetAmount.toLocaleString()})
                     </p>
                   </div>
@@ -954,18 +954,18 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               </div>
             )}
 
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-800">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+              <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-200">
                 Create Your Financial Portfolio
               </h3>
-              <p className="mb-4 text-gray-600">
+              <p className="mb-4 text-gray-600 dark:text-gray-300">
                 We'll create a personalized portfolio based on your assessment results.
               </p>
               
               <div className="mb-4">
                 <label
                   htmlFor="portfolio-name"
-                  className="mb-1 block text-sm font-medium text-gray-700"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
                   Portfolio Name
                 </label>
@@ -974,7 +974,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                   id="dashboard-name"
                   value={state.dashboardName}
                   onChange={handleDashboardNameChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
                   placeholder="My Financial Health Portfolio"
                 />
               </div>
@@ -990,7 +990,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               </button>
 
               {error && (
-                <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-4 text-red-700">
+                <div className="mt-4 rounded-lg border border-red-100 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-red-700 dark:text-red-300">
                   {error}
                 </div>
               )}
@@ -1034,7 +1034,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between"
+                  className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
@@ -1043,17 +1043,17 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-green-800">
+                      <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
                         "{state.appliedProfileName}" profile applied successfully!
                       </h4>
-                      <p className="text-xs text-green-700 mt-1">
+                      <p className="text-xs text-green-700 dark:text-green-200 mt-1">
                         All questions have been pre-filled. You can still modify any answers before submitting.
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setState(prev => ({ ...prev, showPresetBanner: false }))}
-                    className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
+                    className="flex-shrink-0 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
                   >
                     <FontAwesomeIcon icon={faTimes} className="text-sm" />
                   </button>
@@ -1148,7 +1148,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                   {question.options.map((option) => (
                                     <button
                                       key={option.value}
-                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
                                       onClick={() =>
                                         handleAnswerChange(
                                           question.id,
@@ -1179,7 +1179,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                     return (
                                       <button
                                         key={option.value}
-                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
                                         onClick={() =>
                                           handleMultipleChoiceChange(
                                             question.id,
@@ -1211,9 +1211,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
             </div>
 
             {/* Footer with navigation buttons */}
-            <div className="flex items-center justify-between border-t border-gray-100 p-6 sm:p-8">
+            <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 p-6 sm:p-8">
               <button
-                className="flex items-center rounded-lg border border-gray-200 px-4 py-2.5 font-medium text-gray-600 transition-all hover:bg-gray-100"
+                className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => {
                   // Find previous category
                   const currentIndex = categories.findIndex(cat => cat.id === state.activeCategory);

@@ -29,6 +29,24 @@ export interface RightSidebarRef {
   hideAllTooltips: () => void;
 }
 
+// Static chat agents configuration to prevent recreation
+const CHAT_AGENTS_DATA = [
+  {
+    id: 'ai-advisor',
+    label: 'Financial Advisor',
+    description: 'Get personalized investment and financial planning guidance with Moneko',
+    aiType: 'advisor' as AI_ID,
+    icon: monekoLogo
+  },   
+  {
+    id: 'ai-educator',
+    label: 'Financial Educator',
+    description: 'Learn personal finance with your AI educator Finni',
+    icon: finniLogo,
+    aiType: 'educator' as AI_ID
+  }
+];
+
 export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ className = '', isGuideHidden = false, showGuide }, ref) => {
   const { openChat } = useAIChat();
   const [openTooltips, setOpenTooltips] = useState<Record<string, boolean>>({});
@@ -63,27 +81,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
     hideAllTooltips: () => {
       setOpenTooltips({});
     }
-  }));
-
-  // Chat agents configuration - matching the visual style of chat interfaces
-  const chatAgents: ChatAgent[] = [
-    {
-      id: 'ai-advisor',
-      label: 'Financial Advisor',
-      description: 'Get personalized investment and financial planning guidance with Moneko',
-      aiType: 'advisor',
-      icon:monekoLogo,
-      onClick: () => openChat('advisor')
-    },   
-    {
-      id: 'ai-educator',
-      label: 'Financial Educator',
-      description: 'Learn personal finance with your AI educator Finni',
-      icon:finniLogo,
-      aiType: 'educator',
-      onClick: () => openChat('educator')
-    }
-  ];
+  }), []);
 
   return (
     <>
@@ -96,7 +94,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
         <div className="h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
           <div className="flex flex-col items-center py-6 space-y-4">
           
-            {chatAgents.map((agent, index) => {
+            {CHAT_AGENTS_DATA.map((agent, index) => {
               const tooltipId = `chat-tooltip-${agent.id}`;
               return (
               <motion.div
@@ -109,7 +107,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                 <motion.button
                   id={`chat-agent-${agent.id}`}
                   className={`flex size-10 items-center justify-center shadow-sm hover:shadow-md transition-all duration-200`}
-                  onClick={agent.onClick}
+                  onClick={() => openChat(agent.aiType)}
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   data-tooltip-id={tooltipId}

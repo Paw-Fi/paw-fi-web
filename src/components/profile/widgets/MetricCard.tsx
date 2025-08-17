@@ -195,30 +195,25 @@ export function MetricCard({ widget }: MetricCardProps) {
   
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="">       
-
-        {/* Main Value Display */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+        {/* Status Badge */}
         <div className="mb-4">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-              {metricItem?.value}
-            </span>
-            {savingAmount > 0 && (
-              <span className="text-sm text-emerald-600 dark:text-emerald-400">
-                💚 Saving ${savingAmount} per month
-              </span>
-            )}
-
-          {/* Status Indicator */}
-
-            <div className={`ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusIndicator.bgColor} ${statusIndicator.color}`}>
-            <FontAwesomeIcon icon={statusIndicator.icon} className="h-3 w-3" />
+          <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusIndicator.bgColor} ${statusIndicator.color}`}>
             <span className="capitalize">{analysis.status.replace('-', ' ')}</span>
           </div>
         </div>
+
+        {/* Main Value Display */}
+        <div className="mb-6">
+          <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+            {metricItem?.value}
           </div>
-          
-      
+          {savingAmount > 0 && (
+            <div className="text-sm text-emerald-600 dark:text-emerald-400 mb-2">
+              💚 Saving ${savingAmount} per month
+            </div>
+          )}
+        </div>
 
         {/* Progress Bar (for percentage-based metrics) */}
         {numericValue > 0 && metricItem?.value?.toString().includes('%') && (
@@ -231,13 +226,12 @@ export function MetricCard({ widget }: MetricCardProps) {
           </div>
         )}
 
-        {/* Guidance Section */}
-        <div className="mt-auto">          
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              {analysis.guidance}
-            </p>  
+        {/* Description Section */}
+        <div className="mt-auto">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            {analysis.guidance}
+          </p>
         </div>
-    
       </div>
     </Widget>
   );

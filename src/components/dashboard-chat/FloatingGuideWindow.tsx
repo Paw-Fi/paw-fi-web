@@ -140,7 +140,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-xl shadow-xl border border-gray-200 w-[340px] max-h-[480px] overflow-hidden"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-[340px] max-h-[480px] overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-purple-500 text-white p-3">
@@ -195,10 +195,10 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                       className={classNames(
                         "flex items-center p-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
                         step.isCompleted
-                          ? "bg-green-50 border-green-200 text-green-800"
+                          ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
                           : step.isNextStep
-                          ? "bg-blue-50 border-blue-200 text-blue-800 ring-1 ring-blue-100"
-                          : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800"
+                          : "bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50"
                       )}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
@@ -247,15 +247,15 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 p-3 border-t">
+            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 border-t border-gray-200 dark:border-gray-600">
               <div className="text-center">
                 {stats.isCompleted ? (
-                  <span className="flex items-center justify-center text-green-600 text-sm">
+                  <span className="flex items-center justify-center text-green-600 dark:text-green-400 text-sm">
                     <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 mr-1" />
                     Journey Complete! 🎉
                   </span>
                 ) : (
-                  <span className="text-gray-600 text-sm">Keep going! You're doing great!</span>
+                  <span className="text-gray-600 dark:text-gray-300 text-sm">Keep going! You're doing great!</span>
                 )}
               </div>
             </div>

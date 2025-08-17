@@ -42,7 +42,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+    <div className="w-full max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
       {verificationSent ? (
         <div className="text-center">
           <div className="flex justify-center mb-4">
@@ -50,12 +50,12 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold mb-4">Verify Your Email</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Verify Your Email</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
             We've sent a verification email to <span className="font-medium">{email}</span>. 
             Please check your inbox and click the verification link to complete your registration.
           </p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             If you don't see the email, please check your spam folder or
             <button 
               onClick={() => setVerificationSent(false)} 
@@ -67,11 +67,11 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         </div>
       ) : (
         <>
-          <h2 className="text-2xl font-bold mb-6 text-center">Create Your Account</h2>
+          <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">Create Your Account</h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium mb-1">
+              <label htmlFor="fullName" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                 Full Name
               </label>
               <Input
@@ -86,7 +86,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
+              <label htmlFor="email" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                 Email
               </label>
               <Input
@@ -101,7 +101,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">
+              <label htmlFor="password" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                 Password
               </label>
               <Input
@@ -117,7 +117,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             </div>
             
             {error && (
-              <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>
+              <div className="text-red-500 dark:text-red-400 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">{error}</div>
             )}
             
             <Button 
@@ -131,7 +131,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         </>
       )}
      {!verificationSent && <div className="mt-6 text-center">
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           Already have an account?{' '}
           <Link to="/login" search={{ redirect: redirectUrl }} className="text-primary font-medium hover:underline">
             Sign in

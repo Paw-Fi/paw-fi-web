@@ -346,20 +346,72 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
       </Widget>
     );
   }
+  // Helper function to get priority styling based on mockup design
+  const getPriorityStyles = (priority?: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return {
+          bgColor: 'bg-red-50 dark:bg-red-900/20',
+          borderColor: 'border-red-200 dark:border-red-800',
+          textColor: 'text-red-600 dark:text-red-400',
+          labelBg: 'bg-red-100 dark:bg-red-900/40',
+          labelText: 'text-red-700 dark:text-red-300'
+        };
+      case 'medium':
+        return {
+          bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+          borderColor: 'border-yellow-200 dark:border-yellow-800',
+          textColor: 'text-yellow-600 dark:text-yellow-400',
+          labelBg: 'bg-yellow-100 dark:bg-yellow-900/40',
+          labelText: 'text-yellow-700 dark:text-yellow-300'
+        };
+      case 'low':
+        return {
+          bgColor: 'bg-green-50 dark:bg-green-900/20',
+          borderColor: 'border-green-200 dark:border-green-800',
+          textColor: 'text-green-600 dark:text-green-400',
+          labelBg: 'bg-green-100 dark:bg-green-900/40',
+          labelText: 'text-green-700 dark:text-green-300'
+        };
+      default:
+        return {
+          bgColor: 'bg-slate-50 dark:bg-slate-800/50',
+          borderColor: 'border-slate-200 dark:border-slate-700',
+          textColor: 'text-slate-600 dark:text-slate-400',
+          labelBg: 'bg-slate-100 dark:bg-slate-800',
+          labelText: 'text-slate-700 dark:text-slate-300'
+        };
+    }
+  };
+
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="flex flex-col space-y-4 p-4">
-        {actionsToDisplay.map((action) => (
-          <div key={action.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5 text-amber-500 mt-0.5" />
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">{action.title}</p>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{action.message}</p>
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full">
+        <div className="space-y-3">
+          {actionsToDisplay.map((action) => {
+            const styles = getPriorityStyles(action.priority);
+            return (
+              <div 
+                key={action.id} 
+                className={`p-4 rounded-lg border ${styles.bgColor} ${styles.borderColor}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles.labelBg} ${styles.labelText}`}>
+                    {action.priority ? `${action.priority.charAt(0).toUpperCase() + action.priority.slice(1)} Priority` : 'Priority'}
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
+                    {action.title}
+                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {action.message}
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
     </Widget>
   );
@@ -371,8 +423,8 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
     return (
       <Widget widget={widget} controls={widget.controls}>
         <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-6 text-center">
-          <FontAwesomeIcon icon={faCircleCheck} className="mb-4 text-4xl text-emerald-500" />
-          <h4 className="mb-1 text-lg font-semibold text-emerald-600">Congratulations - You're Debt Free!</h4>
+          <FontAwesomeIcon icon={faCircleCheck} className="mb-4 text-4xl text-emerald-500 dark:text-emerald-400" />
+          <h4 className="mb-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">Congratulations - You're Debt Free!</h4>
         </div>
       </Widget>
     );
@@ -388,10 +440,10 @@ export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget
   return (
     <Widget widget={widget} controls={widget.controls}>
       <div className="p-4">
-        <h3 className="font-semibold mb-2">{title || 'Path to Debt Freedom'}</h3>
-        <p>Total Debt: ${totalCurrentBalance.toLocaleString()}</p>
-        <p>Progress: {overallProgressPercentage.toFixed(1)}%</p>
-        <p>Strategy: {strategyName}</p>
+        <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">{title || 'Path to Debt Freedom'}</h3>
+        <p className="text-slate-700 dark:text-slate-300">Total Debt: ${totalCurrentBalance.toLocaleString()}</p>
+        <p className="text-slate-700 dark:text-slate-300">Progress: {overallProgressPercentage.toFixed(1)}%</p>
+        <p className="text-slate-700 dark:text-slate-300">Strategy: {strategyName}</p>
         {/* Full implementation of the debt visualizer would go here */}
       </div>
     </Widget>
@@ -403,15 +455,133 @@ export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadi
     const [selectedScenarioId, setSelectedScenarioId] = useState(retirementData.currentScenarioId);
     const currentScenario = useMemo(() => retirementData.scenarios.find(s => s.id === selectedScenarioId), [retirementData.scenarios, selectedScenarioId]);
 
-    if (!currentScenario) return <Widget widget={widget}><p>Scenario not found.</p></Widget>;
+    if (!currentScenario) {
+        return (
+            <Widget widget={widget} controls={widget.controls}>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex items-center justify-center">
+                    <p className="text-slate-600 dark:text-slate-400">Scenario not found.</p>
+                </div>
+            </Widget>
+        );
+    }
+
+    // Extract data from current scenario
+    const projectedAmount = currentScenario.projectionAmount || 0;
+    const targetAmount = currentScenario.targetAmount || projectedAmount * 2; // Fallback if no target
+    const currentSavings = currentScenario.currentAmount || 0;
+    const annualSavings = currentScenario.annualContribution || 3000; // Default from mockup
+    const expectedReturn = currentScenario.expectedReturn || 6.5; // Default from mockup
+    const targetAge = currentScenario.targetAge || 65;
+    const currentAge = currentScenario.currentAge || 30;
+    const yearsToRetirement = targetAge - currentAge;
+    
+    // Calculate progress percentage
+    const progressPercentage = targetAmount > 0 ? Math.min((projectedAmount / targetAmount) * 100, 100) : 0;
+    
+    // Determine status based on progress
+    const getRetirementStatus = (progress: number) => {
+        if (progress >= 90) return { status: 'On Track', color: 'green', textClass: 'text-green-600 dark:text-green-400', bgClass: 'bg-green-50 dark:bg-green-900/20' };
+        if (progress >= 70) return { status: 'Good Progress', color: 'blue', textClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-50 dark:bg-blue-900/20' };
+        if (progress >= 40) return { status: 'Needs Attention', color: 'orange', textClass: 'text-orange-600 dark:text-orange-400', bgClass: 'bg-orange-50 dark:bg-orange-900/20' };
+        return { status: 'At Risk', color: 'red', textClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-50 dark:bg-red-900/20' };
+    };
+
+    const statusInfo = getRetirementStatus(progressPercentage);
 
     return (
         <Widget widget={widget} controls={widget.controls}>
-            <div className="p-5 space-y-5">
-                <h3 className="font-semibold">{currentScenario.scenarioName}</h3>
-                <p>Projected Amount: ${currentScenario.projectionAmount?.toLocaleString()}</p>
-                <p>Status: {currentScenario.status}</p>
-                {/* Full implementation of the retirement widget would go here */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+                {/* Status Badge */}
+                <div className="mb-4">
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusInfo.textClass} ${statusInfo.bgClass}`}>
+                        <span>{statusInfo.status}</span>
+                    </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-6">
+                    <div className="mb-2">
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-2">
+                            <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                    statusInfo.color === 'green' ? 'bg-green-500 dark:bg-green-400' :
+                                    statusInfo.color === 'blue' ? 'bg-blue-500 dark:bg-blue-400' :
+                                    statusInfo.color === 'orange' ? 'bg-orange-500 dark:bg-orange-400' :
+                                    'bg-red-500 dark:bg-red-400'
+                                }`}
+                                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                            />
+                        </div>
+                        <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                            <span>{progressPercentage.toFixed(0)}%</span>
+                        </div>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        You're on track to meet your retirement goal based on your current savings, timeline, and expected portfolio growth.
+                    </p>
+                </div>
+
+                {/* Detailed Information Section */}
+                <div className="mt-auto">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">Will You Reach Your Goal?</h4>
+                        
+                        <div className="flex items-center gap-4 mb-4">
+                            {/* Circular Progress Indicator */}
+                            <div className="relative w-12 h-12 flex-shrink-0">
+                                <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+                                    <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="20"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        className="text-slate-200 dark:text-slate-700"
+                                    />
+                                    <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="20"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        strokeDasharray={`${(progressPercentage / 100) * 125.6} 125.6`}
+                                        className={
+                                            statusInfo.color === 'green' ? 'text-green-500 dark:text-green-400' :
+                                            statusInfo.color === 'blue' ? 'text-blue-500 dark:text-blue-400' :
+                                            statusInfo.color === 'orange' ? 'text-orange-500 dark:text-orange-400' :
+                                            'text-red-500 dark:text-red-400'
+                                        }
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                        {Math.round(progressPercentage)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h5 className={`font-bold ${statusInfo.textClass}`}>{statusInfo.status}</h5>
+                                <p className="text-xs text-slate-600 dark:text-slate-400">
+                                    Projected: ${projectedAmount.toLocaleString()} by Age {targetAge}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                            <p>Assumes {expectedReturn}% return annually</p>
+                            <p>Based on your current savings: ${annualSavings.toLocaleString()}/yr</p>
+                            {yearsToRetirement > 0 && (
+                                <p>{yearsToRetirement} years until retirement</p>
+                            )}
+                            {currentSavings > 0 && (
+                                <p>Current balance: ${currentSavings.toLocaleString()}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
         </Widget>
     );
@@ -423,10 +593,10 @@ export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSaving
     return (
         <Widget widget={widget} controls={widget.controls}>
             <div className="p-4">
-                <h3 className="font-semibold mb-2">Savings Goals</h3>
+                <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Savings Goals</h3>
                 {items.map(item => (
                     <div key={item.id} className="mb-2">
-                        <p>{item.name}: ${item.savedAmount.toLocaleString()} / ${item.targetAmount.toLocaleString()}</p>
+                        <p className="text-slate-700 dark:text-slate-300">{item.name}: ${item.savedAmount.toLocaleString()} / ${item.targetAmount.toLocaleString()}</p>
                     </div>
                 ))}
             </div>
@@ -440,10 +610,10 @@ export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverage
     return (
         <Widget widget={widget} controls={widget.controls}>
             <div className="p-4">
-                <h3 className="font-semibold mb-2">Insurance Coverage</h3>
+                <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Insurance Coverage</h3>
                 {items.map(item => (
                     <div key={item.id} className="mb-2">
-                        <p>{item.policyName} ({item.type})</p>
+                        <p className="text-slate-700 dark:text-slate-300">{item.policyName} ({item.type})</p>
                     </div>
                 ))}
             </div>
