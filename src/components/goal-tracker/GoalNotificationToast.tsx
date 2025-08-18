@@ -301,9 +301,9 @@ export function useGoalNotifications() {
     return addNotification({
       type: 'warning',
       title: 'Getting Behind Schedule',
-      message: `You're falling behind on "${goal.title}". Let's chat with Alex to get back on track!`,
+      message: `You're falling behind on "${goal.title}". Let's chat with Moneko to get back on track!`,
       goal,
-      actionLabel: 'Chat with Alex',
+      actionLabel: 'Chat with Moneko',
       duration: 7000
     });
   };

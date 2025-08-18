@@ -587,7 +587,7 @@ function BudgetingAppPage() {
                     {[
                       {
                         quote: `Moneko completely transformed my approach to finances. As a ${displayTargetGroup.toLowerCase()}, I was struggling with financial planning. Now I'm ahead of schedule on my ${displayFinancialGoal.toLowerCase()} goals!`,
-                        author: 'Alex M.',
+                        author: 'Moneko M.',
                         role: `${displayTargetGroup} • Moneko User`,
                         rating: 5,
                         gradient: 'from-purple-500 to-pink-500'
