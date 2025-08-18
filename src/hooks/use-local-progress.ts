@@ -137,6 +137,14 @@ export const useLocalProgress = () => {
         isNextStep: !isLoggedIn,
       },
       {
+        id: 'tracker',
+        title: 'Create a Goal',
+        description: 'Set and track your financial goals with AI assistance',
+        path: '/dashboard/tracker',
+        isCompleted: trackerCompleted,
+        isNextStep: essentialsCompleted && !trackerCompleted,
+      },
+      {
         id: 'profile',
         title: 'Complete Profile',
         description: 'Set up your financial profile for personalized AI recommendations',
@@ -176,14 +184,7 @@ export const useLocalProgress = () => {
         isCompleted: essentialsCompleted,
         isNextStep: aiLessonsCompleted && !essentialsCompleted,
       },
-      {
-        id: 'tracker',
-        title: 'Goal Tracker',
-        description: 'Set and track your financial goals with AI assistance',
-        path: '/dashboard/tracker',
-        isCompleted: trackerCompleted,
-        isNextStep: essentialsCompleted && !trackerCompleted,
-      },
+     
     ];
 
     // Update isNextStep to only show the first incomplete step

@@ -24,6 +24,7 @@ import {
   faHome,
   faChartBar,
   faIdCard,
+  faHeadphones,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -734,6 +735,26 @@ export function Dashboard() {
                           </span>
                         </motion.div>
                       </Link>
+                      <a 
+                        href="mailto:hello@moneko.io"
+                        className="block"
+                      
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faHeadphones}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Support
+                          </span>
+                        </motion.div>
+                      </a>
 
                       {/* Divider */}
                       <div className="border-t border-gray-200 dark:border-gray-700" />
