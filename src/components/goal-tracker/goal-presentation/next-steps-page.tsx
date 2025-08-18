@@ -12,30 +12,19 @@ import {
   faCalendarAlt,
   faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
-import { formatProfileForAI } from '@/hooks/use-financial-health-profile';
-import { profile } from 'console';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-interface Milestone {
-  id?: string;
-  title: string;
-  description: string;
-  milestone_type: string;
-  target_amount?: number;
-  due_date: string;
-  priority: string;
-  frequency?: string;
-  habit_description?: string;
-  habit_target_value?: number;
-}
+import type { DBMilestone, AdvisorMessage } from '@/components/goal-tracker/types';
+import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface NextStepsPageProps {
-  milestones: Milestone[];
+  milestones: DBMilestone[];
   strategy: string;
+  isLoggedIn: boolean;
+  advisorMessage?: AdvisorMessage;
 }
 
-export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
+export function NextStepsPage({ milestones, strategy, isLoggedIn, advisorMessage }: NextStepsPageProps) {
   const getMilestoneIcon = (type: string) => {
     switch (type) {
       case 'amount':
@@ -106,13 +95,8 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
     }
   };
   
-  // Sort milestones by priority and due date
+  // Sort milestones by due date (end date)
   const sortedMilestones = [...milestones].sort((a, b) => {
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
-    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4;
-    
-    if (aPriority !== bPriority) return aPriority - bPriority;
     return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
   
@@ -144,6 +128,21 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
           to stay on track and achieve your financial goal.
         </p>
       </motion.div>
+
+      {/* Moneko Advisor Message - Next Steps Message */}
+      {advisorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MonekoAdvisorMessage
+            message={advisorMessage}
+            showMessage={true}
+            typewriterSpeed={25}
+          />
+        </motion.div>
+      )}
       
       {/* Immediate Actions */}
       {immediateActions.length > 0 && (
@@ -158,7 +157,7 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Immediate Actions Required</h2>
           </div>
           <div className="space-y-4">
-            {immediateActions.map((milestone, index) => {
+            {immediateActions.slice(0, isLoggedIn ? immediateActions.length : 2).map((milestone, index) => {
               const colors = getPriorityColor(milestone.priority);
               const timeline = getTimelineStatus(milestone.due_date);
               
@@ -188,7 +187,7 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                     </p>
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                       <span className="capitalize">{milestone.milestone_type}</span>
-                      {milestone.target_amount && (
+                      {milestone.target_amount && milestone.target_amount > 0 && (
                         <>
                           <span className="mx-2">•</span>
                           <span>${milestone.target_amount.toLocaleString()}</span>
@@ -201,10 +200,20 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                         </>
                       )}
                     </div>
+                    {!isLoggedIn && index >= 1 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Additional action details available after sign up</p>
+                    )}
                   </div>
                 </motion.div>
               );
             })}
+            {!isLoggedIn && immediateActions.length > 2 && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                  +{immediateActions.length - 2} more urgent action{immediateActions.length > 3 ? 's' : ''} available after sign up
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -221,8 +230,8 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Complete Roadmap</h2>
         </div>
         
-        <div className="space-y-6">
-          {sortedMilestones.map((milestone, index) => {
+        <div className="space-y-6 relative">
+          {sortedMilestones.slice(0, isLoggedIn ? sortedMilestones.length : 3).map((milestone, index) => {
             const colors = getPriorityColor(milestone.priority);
             const timeline = getTimelineStatus(milestone.due_date);
             
@@ -235,8 +244,8 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                 className="relative"
               >
                 {/* Timeline line */}
-                {index < sortedMilestones.length - 1 && (
-                  <div className="absolute left-6 top-12 w-0.5 h-16 bg-gray-200 dark:bg-gray-600" />
+                {index < (isLoggedIn ? sortedMilestones.length - 1 : Math.min(3, sortedMilestones.length) - 1) && (
+                  <div className="absolute left-6 top-12 w-0.5 h-full bg-gray-200 dark:bg-gray-600 z-0" />
                 )}
                 
                 <div className="flex items-start">
@@ -264,7 +273,7 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                       </div>
                       <div className={`text-right ${timeline.color}`}>
                         <div className="text-sm font-medium">{timeline.text}</div>
-                        {milestone.target_amount && (
+                        {milestone.target_amount && milestone.target_amount > 0 && (
                           <div className="text-lg font-bold">
                             ${milestone.target_amount.toLocaleString()}
                           </div>
@@ -282,7 +291,7 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                           <FontAwesomeIcon icon={faRepeat} className="w-4 h-4 mr-2" />
                           <span className="font-medium">Habit: </span>
                           <span className="ml-1">{milestone.habit_description}</span>
-                          {milestone.habit_target_value && (
+                          {milestone.habit_target_value && milestone.habit_target_value > 0 && (
                             <>
                               <span className="mx-2">•</span>
                               <span>${milestone.habit_target_value.toLocaleString()}</span>
@@ -291,11 +300,29 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
                         </div>
                       </div>
                     )}
+                    {!isLoggedIn && index >= 2 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Milestone progress tracking available after sign up</p>
+                    )}
                   </div>
                 </div>
               </motion.div>
             );
           })}
+          {!isLoggedIn && sortedMilestones.length > 3 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl text-center"
+            >
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Complete Roadmap Available
+              </h3>
+              <p className="text-blue-600 dark:text-blue-400 font-medium">
+                +{sortedMilestones.length - 3} more milestone{sortedMilestones.length > 4 ? 's' : ''} with detailed tracking available after sign up
+              </p>
+            </motion.div>
+          )}
         </div>
       </motion.div>
       
@@ -310,9 +337,18 @@ export function NextStepsPage({ milestones, strategy }: NextStepsPageProps) {
           <FontAwesomeIcon icon={faArrowRight} className="w-6 h-6 text-blue-500 mr-3" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Remember Your Strategy</h2>
         </div>
-        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} >{strategy}</ReactMarkdown>
-  </article>        
+        <article className={`prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6 ${!isLoggedIn ? 'line-clamp-2' : ''}`}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} >
+            {strategy}
+          </ReactMarkdown>
+        </article>
+        {!isLoggedIn && (
+          <div className="px-4 pb-4 text-center">
+            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
+              Complete strategy details available after sign up
+            </span>
+          </div>
+        )}        
       </motion.div>
     </div>
   );

@@ -10,11 +10,6 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-// Available goal templates
-type GoalTemplate = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom';
-
-
-
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
@@ -33,29 +28,67 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const requestData = await req.json();
-    const { message, isFirstMessage = false } = requestData;
+    const { message, isFirstMessage = false, withWelcomeAndResponse = false } = requestData;
 
-    if (!message && !isFirstMessage) {
+    if (!message && !isFirstMessage && !withWelcomeAndResponse) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let aiResponse: string;
-
-    // Handle first message - welcome message
-    if (isFirstMessage || !message) {
-      aiResponse = `### Hey! I'm Moneko—your AI money coach 👋
+    const welcomeMessage = `### Hey! I'm Moneko—your AI money coach 👋
 
 I know that talking about money can feel overwhelming, but you're in a safe, judgment-free space. My entire purpose is to help you feel clear and confident about your financial future, one step at a time
 
 ### Here's how it works:
-- **Tell me your goal** - Share what you're saving for
-- **Quick financial snapshot** - I'll get to know your situation  
-- **Personalized plan** - I'll build a strategy just for you
+- 1. **Tell me your goal** - Share what you're saving for
+- 2. **Quick financial snapshot** - I'll get to know your situation  
+- 3. **Personalized plan** - I'll build a strategy just for you
 
 **Ready to get started?** Just tell me what financial goal you'd like to work on!`;
+
+    // Handle special case: return both welcome message and response to user message
+    if (withWelcomeAndResponse && message) {
+      // Process user's goal using Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const generationConfig = {
+        responseMimeType: "text/plain",
+        maxOutputTokens: 1000,
+      };
+
+      const result = await model.generateContent(
+        {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: message }],
+            },
+          ],
+          systemInstruction: SYSTEM_PROMPT,
+        },
+        generationConfig,
+      );
+
+      const aiResponse = result.response.text();
+
+      return new Response(
+        JSON.stringify({ 
+          welcome: welcomeMessage,
+          response: aiResponse,
+          coach: "moneko"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let aiResponse: string;
+
+    // Handle first message - welcome message only
+    if (isFirstMessage || !message) {
+      aiResponse = welcomeMessage;
     } else {
       // Process user's goal using Gemini
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });

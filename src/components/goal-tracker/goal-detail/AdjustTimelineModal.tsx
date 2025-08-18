@@ -26,6 +26,29 @@ export function AdjustTimelineModal({ isOpen, onClose, goal, onOptimisticUpdate 
   const [showMinDateAlert, setShowMinDateAlert] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Calculate required monthly amount for selected date (safe calculation)
+  const calculateRequiredMonthlyAmount = () => {
+    if (!goal?.target_amount || !targetDate) {
+      return 0;
+    }
+    
+    const remainingAmount = goal.target_amount - (goal.current_amount || 0);
+    if (remainingAmount <= 0) {
+      return 0;
+    }
+    
+    const now = new Date();
+    const selectedDate = new Date(targetDate);
+    const timeDiffMs = selectedDate.getTime() - now.getTime();
+    
+    if (timeDiffMs <= 0) {
+      return remainingAmount; // If date is in the past/today, show full amount
+    }
+    
+    const monthsUntilTarget = Math.max(1, Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24 * 30.44)));
+    return Math.ceil(remainingAmount / monthsUntilTarget);
+  };
+
   // Calculate minimum required date to achieve goal with current capacity
   const calculateMinimumDate = () => {
     if (!goal?.target_amount || !goal?.ai_questionnaire_data?.monthly_savings_capacity) {
@@ -174,7 +197,7 @@ export function AdjustTimelineModal({ isOpen, onClose, goal, onOptimisticUpdate 
                     Timeline too aggressive
                   </p>
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    This date requires ${Math.ceil((goal?.target_amount! - (goal?.current_amount || 0)) / Math.max(1, Math.ceil((new Date(targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44))))}/month, 
+                    This date requires ${calculateRequiredMonthlyAmount().toLocaleString()}/month, 
                     but your capacity is ${goal?.ai_questionnaire_data?.monthly_savings_capacity || 0}/month.
                   </p>
                 </div>

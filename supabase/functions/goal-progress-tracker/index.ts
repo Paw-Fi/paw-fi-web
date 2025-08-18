@@ -77,9 +77,17 @@ serve(async (req: Request): Promise<Response> => {
 
     let newAmount = goal.current_amount;
     let milestoneUpdate: { id: string; status: string; progress_percentage: number; completed_date: string; } | null = null;
+    let milestoneData: any = null; // Store milestone data for activity logging
 
     // Handle different update types
     switch (updateType) { 
+
+      case RewardActions.GOAL_PROGRESS_UPDATED:
+        // Handle basic amount additions/subtractions
+        if (amountChange !== undefined) {
+          newAmount += amountChange;
+        }
+        break;
 
       case RewardActions.MILESTONE_COMPLETED:
         if (!milestoneId) {
@@ -112,6 +120,9 @@ serve(async (req: Request): Promise<Response> => {
             }
           );
         }
+
+        // Store milestone data for activity logging
+        milestoneData = milestone;
 
         milestoneUpdate = {
           id: milestoneId,
@@ -214,9 +225,39 @@ serve(async (req: Request): Promise<Response> => {
     if (newProgressPercentage >= 100 && goal.status !== 'completed') {
       activityType = 'goal_completed';
       activityAction = RewardActions.GOAL_COMPLETED;
-    } else if (updateType === 'milestone_completed') {
+    } else if (updateType === RewardActions.MILESTONE_COMPLETED) {
       activityType = 'milestone_completed';
       activityAction = RewardActions.MILESTONE_COMPLETED;
+    }
+
+    // Build activity metadata based on update type
+    const baseMetadata = {
+      goalId,
+      goalTitle: goal.title, // Add goalTitle for frontend display
+      amountChange: amountChange || 0,
+      newProgressPercentage: Math.round(newProgressPercentage * 100) / 100,
+      isOnTrack,
+      targetAmount: goal.target_amount, // Add for frontend display consistency
+    };
+
+    // Add type-specific metadata
+    let activityMetadata = baseMetadata;
+    
+    if (newProgressPercentage >= 100 && goal.status !== 'completed') {
+      // Goal completion - add finalAmount for frontend display
+      activityMetadata = {
+        ...baseMetadata,
+        finalAmount: newAmount,
+      };
+    } else if (milestoneData && updateType === RewardActions.MILESTONE_COMPLETED) {
+      // Milestone completion - add milestone details for frontend display
+      activityMetadata = {
+        ...baseMetadata,
+        milestoneId: milestoneData.id,
+        title: milestoneData.title, // Milestone title for frontend display
+        amount: milestoneData.target_amount, // Milestone target amount
+        progressPercentage: Math.round(newProgressPercentage * 100) / 100,
+      };
     }
 
     // Add user activity tracking using shared logger
@@ -224,13 +265,7 @@ serve(async (req: Request): Promise<Response> => {
       type: activityType,
       action: activityAction,
       source: 'goal-progress-tracker',
-      metadata: {
-        goalId,
-        milestoneId: milestoneId || undefined,
-        amountChange: amountChange || 0,
-        newProgressPercentage: Math.round(newProgressPercentage * 100) / 100,
-        isOnTrack,
-      },
+      metadata: activityMetadata,
     };
     
     // Log activity asynchronously (don't block the main update)
@@ -281,11 +316,28 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Generate appropriate message based on the update type and progress
+    let responseMessage = "";
+    const progressPercentageRounded = Math.round(newProgressPercentage * 100) / 100;
+    
+    if (newProgressPercentage >= 100) {
+      responseMessage = `🎉 **Congratulations!** You've completed your goal "${goal.title}"! You've reached 100% of your $${goal.target_amount.toLocaleString()} target.`;
+    } else if (updateType === RewardActions.MILESTONE_COMPLETED) {
+      responseMessage = `✅ **Milestone completed!** Great progress on "${goal.title}". You're now at ${progressPercentageRounded}% of your $${goal.target_amount.toLocaleString()} target.`;
+    } else {
+      const amountAdded = amountChange || 0;
+      const amountText = amountAdded > 0 ? `Added $${amountAdded.toLocaleString()}` : `Updated progress`;
+      responseMessage = `💰 **${amountText}** to "${goal.title}". You're now at ${progressPercentageRounded}% of your $${goal.target_amount.toLocaleString()} target.`;
+    }
+    
+    responseMessage += `\n\n\`\`GOAL:${goalId}\`\``;
+
     return new Response(JSON.stringify({
       success: true,
       goal: updatedGoal,
       milestone: updatedMilestone,
       progressUpdate: progressUpdate,
+      message: responseMessage,
       metrics: {
         previousAmount: goal.current_amount,
         newAmount,

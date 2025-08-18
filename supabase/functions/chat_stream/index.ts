@@ -7,79 +7,233 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
 import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
+import { processGoalTrackingRequest, getGeminiFunctionDeclarations } from "./goal-tracker.ts";
 
+// Configuration constants
+const AI_MODEL = "gemini-2.5-flash-lite";
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_OUTPUT_TOKENS = 8000;
+const MAX_JSON_COMPLETION_ATTEMPTS = 5;
+const MESSAGE_TIMESTAMP_OFFSET_MS = 1;
+
+// Environment validation
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
-  console.error(
-    "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
-  );
+  console.error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
+  throw new Error("Missing required environment variable: GEMINI_API_KEY");
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204, // No content
-      headers: corsHeaders,
-    });
-  }
+// Random response arrays for different scenarios
+const RANDOM_RESPONSES = {
+  FINANCIAL_ADVISOR_FIRST: [
+    "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking ``QUESTIONNAIRE``. Your answers will allow me to create a truly personalized plan that's right for you.",
+    "Hello {{username}}! Welcome to your personal financial journey.\n\nLet's start by understanding your unique financial situation. Click ``QUESTIONNAIRE`` to complete your assessment and unlock personalized guidance tailored specifically for you.",
+    "Great to meet you, {{username}}! I'm here to help you achieve your financial dreams.\n\nTo provide you with the most relevant advice, I need to learn about your goals and current situation. Please click ``QUESTIONNAIRE`` to get started with your personalized financial assessment.",
+    "Welcome {{username}}! I'm excited to be your financial guide on this journey.\n\nEvery great financial plan starts with understanding where you are today. Click ``QUESTIONNAIRE`` to complete your assessment and let's build your personalized roadmap to success.",
+    "Hi there, {{username}}! Ready to take control of your financial future?\n\nThe first step is understanding your unique situation and goals. Click ``QUESTIONNAIRE`` to complete your financial health assessment and unlock personalized strategies designed just for you."
+  ],
+  EDUCATOR_FIRST: [
+    "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking ``QUESTIONNAIRE``. This will help me create a personalized learning plan to boost your financial literacy.",
+    "Hello {{username}}! I'm excited to be your financial education companion.\n\nLet's discover the best way for you to learn about money and investing. Click ``QUESTIONNAIRE`` to share your learning preferences and I'll create a customized educational journey just for you.",
+    "Great to see you, {{username}}! Ready to master the world of personal finance?\n\nEvery learner is unique, and I want to make sure your educational experience is perfectly suited to your style. Click ``QUESTIONNAIRE`` to help me understand how you learn best.",
+    "Welcome to your financial education journey, {{username}}!\n\nI'm here to make learning about money engaging and effective for you. To create the most impactful learning experience, please click ``QUESTIONNAIRE`` and tell me about your goals and preferences.",
+    "Hi {{username}}! I'm thrilled to help you become financially savvy.\n\nLet's start by understanding what you want to learn and how you prefer to absorb new information. Click ``QUESTIONNAIRE`` to begin your personalized financial education assessment."
+  ],
+  FINANCIAL_ADVISOR_FOLLOWUP: [
+    "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click ``QUESTIONNAIRE`` to get started and unlock tailored advice for your unique situation.",
+    "I'd love to give you specific financial advice, but I need to understand your situation first. Please complete your financial assessment by clicking ``QUESTIONNAIRE`` to unlock personalized recommendations.",
+    "For the best financial guidance tailored to your needs, let's start with your assessment. Click ``QUESTIONNAIRE`` to share your financial goals and current situation with me.",
+    "To create a financial plan that truly works for you, I need to know more about your goals and circumstances. Please click ``QUESTIONNAIRE`` to complete your personalized assessment.",
+    "Every great financial strategy starts with understanding your unique situation. Click ``QUESTIONNAIRE`` to complete your assessment and I'll provide guidance specifically designed for your goals."
+  ],
+  EDUCATOR_FOLLOWUP: [
+    "I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click ``QUESTIONNAIRE`` to begin!",
+    "I'm ready to design a learning experience that matches your style and goals.\n\nLet me understand how you learn best by completing a quick assessment. Click ``QUESTIONNAIRE`` to get started with your personalized education plan!",
+    "Your financial education journey awaits! I can tailor lessons specifically for your learning preferences.\n\nTo create the perfect curriculum for you, please click ``QUESTIONNAIRE`` and share your learning goals with me.",
+    "I have so many great lessons to share with you, but I want to make sure they're perfectly suited to your needs.\n\nClick ``QUESTIONNAIRE`` to tell me about your learning style and goals, and I'll create a customized educational experience just for you.",
+    "Ready to dive deep into financial knowledge? I can craft lessons that match exactly how you learn best.\n\nTo get started with your personalized learning journey, click ``QUESTIONNAIRE`` and complete your educational assessment."
+  ]
+};
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+// Utility functions
+function getRandomResponse(responses: string[]): string {
+  if (!responses?.length) throw new Error("Empty responses array");
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+function validateRequestData(data: any): boolean {
+  return data && typeof data === 'object' && typeof data.message === 'string' && data.message.trim().length > 0;
+}
+
+function createTimestampPair(): { userTimestamp: string; aiTimestamp: string } {
+  const baseTimestamp = new Date();
+  return {
+    userTimestamp: baseTimestamp.toISOString(),
+    aiTimestamp: new Date(baseTimestamp.getTime() + MESSAGE_TIMESTAMP_OFFSET_MS).toISOString()
+  };
+}
+
+// Helper function to detect navigation requests (like "Take me to dashboard")
+function isNavigationRequest(message: string): boolean {
+  const navigationPatterns = [
+    /take me to (dashboard|goals?|insights?|calculator)/i,
+    /go to (dashboard|goals?|insights?|calculator)/i,
+    /show me (dashboard|goals?|insights?|calculator)/i,
+    /open (dashboard|goals?|insights?|calculator)/i,
+    /navigate to (dashboard|goals?|insights?|calculator)/i,
+    /^(dashboard|goals?|insights?|calculator)$/i
+  ];
+  
+  return navigationPatterns.some(pattern => pattern.test(message.trim()));
+}
+
+// Helper function to generate informative fallback responses for navigation requests
+function generateNavigationFallback(message: string): string {
+  const destination = extractNavigationDestination(message);
+  
+  switch (destination) {
+    case 'dashboard':
+      return "I understand you'd like to view your dashboard. As your financial advisor, I'm here to help with financial planning and goal management through our conversation. To navigate to your dashboard, please use the navigation menu in the app interface.";
+    case 'goals':
+      return "I can see you're interested in your goals. I can help you analyze, create, and manage your financial goals right here in our conversation. Would you like me to show you your current goals or help you work on a specific goal?";
+    case 'insights':
+      return "I'd be happy to provide insights about your financial progress! I can analyze your goals and provide personalized recommendations. Would you like me to review your current financial situation and provide insights?";
+    case 'calculator':
+      return "I can help you with financial calculations and planning right here in our conversation. What kind of calculation would you like assistance with? I can help with budgeting, savings projections, loan calculations, and more.";
+    default:
+      return "I'm here to help you with financial advice and goal management through our conversation. If you're looking to navigate to a different part of the app, please use the navigation menu. How can I assist you with your finances today?";
   }
+}
+
+// Helper function to extract navigation destination from message
+function extractNavigationDestination(message: string): string {
+  const lowerMessage = message.toLowerCase().trim();
+  
+  if (lowerMessage.includes('dashboard')) return 'dashboard';
+  if (lowerMessage.includes('goal')) return 'goals';
+  if (lowerMessage.includes('insight')) return 'insights';
+  if (lowerMessage.includes('calculator')) return 'calculator';
+  
+  return 'unknown';
+}
+
+// Helper function to format goal context for AI comprehension
+function formatGoalContextForAI(goalContext: any): string {
+  if (!goalContext || !goalContext.goalsSummary) {
+    return "";
+  }
+  
+  const { totalGoals, activeGoals, totalProgress, goalsSummary } = goalContext;
+  
+  let formattedContext = `=== USER'S CURRENT FINANCIAL GOALS ===
+
+OVERVIEW:
+- Total Goals: ${totalGoals}
+- Active Goals: ${activeGoals}
+- Average Progress: ${totalProgress}%
+
+DETAILED GOAL BREAKDOWN:
+`;
+
+  goalsSummary.forEach((goal: any, index: number) => {
+    const progressStatus = goal.is_on_track ? "✅ ON TRACK" : "⚠️ BEHIND SCHEDULE";
+    const completionDate = goal.target_date ? ` (Target: ${goal.target_date})` : "";
+    
+    formattedContext += `
+${index + 1}. **${goal.title}** (ID: ${goal.id})
+   - Type: ${goal.goal_type}
+   - Progress: $${goal.current_amount.toLocaleString()} / $${goal.target_amount.toLocaleString()} (${goal.progress_percentage}%)
+   - Status: ${goal.status.toUpperCase()} - ${progressStatus}${completionDate}
+   - Milestones: ${goal.milestone_count} milestones set`;
+  });
+
+  formattedContext += `
+
+GOAL TRACKING CONTEXT:
+- When providing advice, reference these specific goals by name and ID
+- Suggest goal modifications when appropriate (timeline, amount, milestones)
+- Proactively suggest creating new goals when advice aligns with goal opportunities
+- Always confirm before executing any goal functions
+- Use the goal tracking tools to help users make progress on these objectives
+- Consider how any financial advice impacts their existing goal timelines and progress
+
+Remember: Every piece of financial advice should be evaluated against these existing goals and how it helps or hinders the user's progress toward achieving them.`;
+
+  return formattedContext;
+}
+
+// HTTP request handlers
+function handleOptionsRequest(): Response {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+function handleMethodNotAllowed(): Response {
+  return new Response(
+    JSON.stringify({ error: "Method Not Allowed" }),
+    { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+function createErrorResponse(message: string, status: number = 500, details?: any): Response {
+  const body = details ? { error: message, details } : { error: message };
+  return new Response(
+    JSON.stringify(body),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+serve(async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") return handleOptionsRequest();
+  if (req.method !== "POST") return handleMethodNotAllowed();
 
   try {
-    let rawBody: string = await req.text();
+    // Parse and validate request body
+    const rawBody = await req.text();
     let requestData;
+    
     try {
-      if (!rawBody || rawBody.trim() === "") {
-        requestData = {};
-      } else {
-        requestData = JSON.parse(rawBody);
-      }
+      requestData = rawBody?.trim() ? JSON.parse(rawBody) : {};
     } catch (error) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid JSON in request body",
-          details: { rawBody },
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return createErrorResponse("Invalid JSON in request body", 400, { rawBody });
     }
-    const { message, userProfile, userId, conversationId, model: chatModel } = requestData;
-    let history = requestData.history;
-    console.log("requestData", requestData)
+    
+    if (!validateRequestData(requestData)) {
+      return createErrorResponse("Message is required and must be a non-empty string", 400);
+    }
+    
+    
+    const { 
+      message, 
+      userProfile, 
+      userId, 
+      conversationId, 
+      model: chatModel,
+      goalContext,
+      isGlobalMode,
+      goalId,
+      goal 
+    } = requestData;
+    
+    // Note: Frontend no longer sends history - we fetch it from database
+    let history: any[] = []; // Will be populated from database
     
     // Initialize Supabase client with service role for database operations
+    // Initialize Supabase client
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error("Missing Supabase credentials");
-      return new Response(JSON.stringify({ error: "Server configuration error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return createErrorResponse("Server configuration error");
     }
     
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
+    // Log user profile availability
     if (userProfile) {
       console.log("User profile provided for personalized response");
-    }
-    if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
     
     let currentConversationId = conversationId;
@@ -108,24 +262,23 @@ serve(async (req: Request): Promise<Response> => {
       console.log(`Created new chat session: ${currentConversationId} for ${userId ? 'authenticated user' : 'guest'}`);
     }
     
-    // Fetch recent conversation history (sliding window - last 20 messages)
-    // Also verify the session has the correct model to prevent cross-contamination
+    // Fetch conversation history
     const { data: recentMessages, error: fetchError } = await supabase
       .from('chat_messages')
-      .select('content, role, chat_sessions!inner(model)')
+      .select('*')
       .eq('chat_session_id', currentConversationId)
-      .eq('chat_sessions.model', chatModel)
       .order('timestamp', { ascending: true })
-      .limit(20);
+      .order('id', { ascending: true })
+      .limit(MAX_HISTORY_MESSAGES);
       
     if (fetchError) {
       console.error('Error fetching conversation history:', fetchError);
       // Continue with empty history rather than failing
     }
     
-    // Use recent messages as history instead of passed history
+    
+    // Use the fetched messages as history
     history = recentMessages || [];
-    console.log(`Using sliding window of ${history.length} recent messages for session ${currentConversationId}`);
     
     // Note: User message will be saved to database after AI response is generated
 
@@ -154,26 +307,24 @@ serve(async (req: Request): Promise<Response> => {
       const isFirstMessage = !history || history.length <=1;
       
       if (isFirstMessage) {
-        // First message - welcome message
+        // First message - welcome message with random variation
         if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
         {
-          
-          aiResponse = "Hi {{username}}! I'm ready to help you build a clear path to your financial goals.\n\nTo begin, please complete your financial health assessment by clicking the ``QUESTIONNAIRE`` button below. Your answers will allow me to create a truly personalized plan that's right for you.";
+          aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
         }
         else
         {
-          aiResponse = "Welcome, {{username}}! I'm here to help you build your financial knowledge with lessons tailored just for you.\n\nTo get started, please tell me a bit about your learning goals by clicking the QUESTIONNAIRE button below. This will help me create a personalized learning plan to boost your financial literacy.";
+          aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
         }
       } else {
-        // Has conversation history - encourage completing assessment
+        // Has conversation history - encourage completing assessment with random variation
         if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
           {
-
-            aiResponse = "To provide you with the most personalized financial guidance, I recommend completing your financial health assessment. Click the ``QUESTIONNAIRE`` button below to get started and unlock tailored advice for your unique situation.";
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
           }
           else
           {
-            aiResponse = " I can create personalized lessons to help you master the concepts of money.\n\nTo discover your unique learning path, start by answering a few questions. Click the ``QUESTIONNAIRE`` button below to begin!";
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
           }
         
       }
@@ -181,6 +332,7 @@ serve(async (req: Request): Promise<Response> => {
       // User has profile, generate AI response using Gemini
       
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
+      
       const formattedHistory = (history || [])
         .filter((msg: any) => {
           // Accept only messages with valid text
@@ -189,10 +341,12 @@ serve(async (req: Request): Promise<Response> => {
             Array.isArray(msg.parts) &&
             typeof msg.parts[0]?.text === "string" &&
             msg.parts[0].text.trim() !== ""
-          )
+          ) {
             return true;
-          if (typeof msg.content === "string" && msg.content.trim() !== "")
+          }
+          if (typeof msg.content === "string" && msg.content.trim() !== "") {
             return true;
+          }
           return false;
         })
         .map((msg: any) => {
@@ -213,7 +367,128 @@ serve(async (req: Request): Promise<Response> => {
             parts: [{ text: msg.content }],
           };
         });
-        
+      
+      
+      // Check if this is a Financial Advisor request that might need goal tracking
+      // Goal tracking should be attempted for ANY financial advisor message, not just when goalContext exists
+      let goalTrackingAttempted = false;
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
+        goalTrackingAttempted = true;
+        try {
+          
+          const goalTrackingResult = await processGoalTrackingRequest(
+            {
+              message,
+              userId: userId || '',
+              goalContext: goalContext || null, // All user goals - AI will decide
+              conversationHistory: formattedHistory
+            },
+            supabase,
+            genAI
+          );
+          
+          // Handle successful goal tracking function execution
+          if (goalTrackingResult.function_executed) {
+            // Save goal tracking messages to database
+            if (currentConversationId) {
+              const timestamps = createTimestampPair();
+              
+              const messagesToInsert = [
+                {
+                  chat_session_id: currentConversationId,
+                  content: message,
+                  role: 'user',
+                  metadata: null,
+                  timestamp: timestamps.userTimestamp
+                },
+                {
+                  chat_session_id: currentConversationId,
+                  content: goalTrackingResult.response,
+                  role: 'assistant',
+                  metadata: { 
+                    function_executed: goalTrackingResult.function_executed,
+                    function_result: goalTrackingResult.function_result 
+                  },
+                  timestamp: timestamps.aiTimestamp
+                }
+              ];
+              
+              const { error: batchInsertError } = await supabase
+                .from('chat_messages')
+                .insert(messagesToInsert);
+                
+              if (batchInsertError) {
+                console.error('Error saving goal tracking messages:', batchInsertError);
+              }
+            }
+            
+            return new Response(
+              JSON.stringify({
+                response: goalTrackingResult.response,
+                conversationId: currentConversationId,
+                function_executed: goalTrackingResult.function_executed,
+                function_result: goalTrackingResult.function_result,
+                next_actions: goalTrackingResult.next_actions,
+                cache_refresh_needed: goalTrackingResult.cache_refresh_needed
+              }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          } else {
+            // Goal tracking didn't execute a function, check if this might be an unhandled navigation request
+            if (isNavigationRequest(message)) {
+              const fallbackResponse = generateNavigationFallback(message);
+              
+              // Save navigation fallback messages to database
+              if (currentConversationId) {
+                const timestamps = createTimestampPair();
+                
+                const messagesToInsert = [
+                  {
+                    chat_session_id: currentConversationId,
+                    content: message,
+                    role: 'user',
+                    metadata: null,
+                    timestamp: timestamps.userTimestamp
+                  },
+                  {
+                    chat_session_id: currentConversationId,
+                    content: fallbackResponse,
+                    role: 'assistant',
+                    metadata: { fallback_type: 'navigation_request' },
+                    timestamp: timestamps.aiTimestamp
+                  }
+                ];
+                
+                const { error: batchInsertError } = await supabase
+                  .from('chat_messages')
+                  .insert(messagesToInsert);
+                  
+                if (batchInsertError) {
+                  console.error('Error saving fallback messages:', batchInsertError);
+                }
+              }
+              
+              return new Response(
+                JSON.stringify({
+                  response: fallbackResponse,
+                  conversationId: currentConversationId,
+                  fallback_used: true
+                }),
+                {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                }
+              );
+            }
+          }
+        } catch (goalError) {
+          console.error('Goal tracking error, falling back to normal processing:', goalError);
+          // Fall through to normal processing
+        }
+      }
+      
+      
       // Append the current user message
       const contents = [
         ...formattedHistory,
@@ -223,11 +498,25 @@ serve(async (req: Request): Promise<Response> => {
         },
       ];
       
-      // Log the final contents sent to Gemini
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      // Initialize model with function calling for Financial Advisor if goals are available
+      // BUT avoid function calling if goal tracking was already attempted to prevent duplicate calls
+      let model;
+      
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext && !goalTrackingAttempted) {
+        // Add function calling capabilities for Financial Advisor with goals
+        const functionDeclarations = getGeminiFunctionDeclarations();
+        model = genAI.getGenerativeModel({ 
+          model: AI_MODEL,
+          tools: [{
+            function_declarations: functionDeclarations
+          }]
+        });
+      } else {
+        model = genAI.getGenerativeModel({ model: AI_MODEL });
+      }
       const generationConfig = {
         responseMimeType: "text/plain",
-        maxOutputTokens: 8000,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
       };
       
       // Helper function to check if JSON is complete
@@ -255,6 +544,12 @@ serve(async (req: Request): Promise<Response> => {
       if(userActivities){
         systemInstruction = `${systemInstruction}\n\nMost recent activities of this user: ${userActivities}`;
       }
+      
+      // Append goal context to Financial Advisor's system instruction
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+        const goalContextText = formatGoalContextForAI(goalContext);
+        systemInstruction = `${systemInstruction}\n\n${goalContextText}`;
+      }
 
       // Initial generation
       let result = await model.generateContent(
@@ -267,12 +562,10 @@ serve(async (req: Request): Promise<Response> => {
 
       let responseText = result.response.text();
       let attempts = 0;
-      const MAX_ATTEMPTS = 5;
 
-      // If JSON is incomplete, keep requesting more content
-      while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
+      // Handle incomplete JSON responses
+      while (!isJsonComplete(responseText) && attempts < MAX_JSON_COMPLETION_ATTEMPTS) {
         attempts++;
-        console.log(`JSON incomplete, attempt ${attempts} to get more content`);
 
         // Add the current response to history and ask for continuation
         const continuationContents = [
@@ -407,7 +700,6 @@ serve(async (req: Request): Promise<Response> => {
 
       // Stringify the now valid JavaScript object back to a well-formed JSON string
       const wellFormedJsonString = JSON.stringify(parsedJsonObject, null, 2); // Pretty-print
-      console.log("wellFormedJsonString", wellFormedJsonString);
       // --- Course Extraction & Storage ---
       // Attempt to extract a valid course object using Zod
       const extractedCourse = wellFormedJsonString
@@ -446,7 +738,6 @@ serve(async (req: Request): Promise<Response> => {
           console.error("Course storage error:", err);
         }
       } else {
-        console.log("No valid course JSON detected in AI response.");
       }
       // --- End Course Extraction & Async Storage ---
 
@@ -520,22 +811,24 @@ ${markdownSuffix}`,
       }
     }
     
-    // Save both user and AI messages to database in a single batch for all users (authenticated and guests)
+    // Save final messages to database
     if (currentConversationId) {
+      const timestamps = createTimestampPair();
+      
       const messagesToInsert = [
         {
           chat_session_id: currentConversationId,
           content: message,
           role: 'user',
           metadata: null,
-          timestamp: new Date().toISOString()
+          timestamp: timestamps.userTimestamp
         },
         {
           chat_session_id: currentConversationId,
           content: finalResponse,
           role: 'assistant',
           metadata: extractedCourse ? { courseRecommendation: extractedCourse } : null,
-          timestamp: new Date().toISOString()
+          timestamp: timestamps.aiTimestamp
         }
       ];
       
@@ -547,6 +840,20 @@ ${markdownSuffix}`,
         console.error('Error saving messages:', batchInsertError);
         // Continue anyway - don't fail the response
       }
+    }
+    
+    // Final safety check: ensure response is not empty or meaningless
+    if (!finalResponse || finalResponse.trim().length === 0 || finalResponse.trim() === '{}') {
+      // Generate a context-appropriate fallback response
+      let fallbackResponse = "I apologize, but I didn't quite understand your request. ";
+      
+      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
+        fallbackResponse += "As your financial advisor, I'm here to help with financial planning, goal management, budgeting advice, and investment guidance. Could you please rephrase your question or let me know what specific financial topic you'd like assistance with?";
+      } else {
+        fallbackResponse += "As your financial educator, I'm here to help you learn about personal finance topics, investment concepts, and money management strategies. What would you like to learn about today?";
+      }
+      
+      finalResponse = fallbackResponse;
     }
     
     return new Response(
@@ -561,18 +868,13 @@ ${markdownSuffix}`,
       },
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Internal Server Error:", errorMessage);
+    
     if (error instanceof Error && error.stack) {
       console.error("Stack trace:", error.stack);
     }
-    return new Response(
-      JSON.stringify({ error: "Internal Server Error", details: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    
+    return createErrorResponse("Internal Server Error", 500, errorMessage);
   }
 });

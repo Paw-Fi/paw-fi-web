@@ -5,7 +5,7 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
@@ -19,11 +19,11 @@ import {
   faSignOut,
   faBars,
   faTimes,
-  faLightbulb,
   faHandHoldingDollar,
   faHouseChimney,
   faHome,
   faChartBar,
+  faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -35,18 +35,17 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { FloatingGuideWindow } from "@/components/dashboard-chat/FloatingGuideWindow";
 import { useLocalProgress } from "@/hooks/use-local-progress";
 import { useCookie } from "@/utils/use-cookie";
-import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
-import { useGamification } from "@/hooks/use-gamification";
 import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
-
-
-
-const NON_PROTECTED_ROUTES = [
-  "/dashboard/chat",
-];
+import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
+import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
+import { useAIChat } from "@/contexts/ai-chat-context";
+import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
+import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
+import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
+import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -102,10 +101,31 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
+  // AI Chat context
+  const { isOpen: aiChatOpen, selectedAI, openChat, closeChat } = useAIChat();
+  
+  // Track chat usage
+  useEffect(() => {
+    if (aiChatOpen) {
+      trackUserAction('chat_used', { aiType: selectedAI });
+    }
+  }, [aiChatOpen, selectedAI]);
+  
   // Use route matching instead of local state for active menu
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const rightSidebarRef = useRef<RightSidebarRef>(null);
+
+  // Initialize dashboard guidance system
+  const { trackUserAction, updatePreferences, hideAllTooltips, resetGuidanceState, getGuidanceStats } = useDashboardGuidance({
+    enabled: true,
+    frequencyLevel: 'medium',
+    sidebarRef: rightSidebarRef
+  });
+
   const { user, signOut, isLoading } = useAuth();
   const { data: courses = [] } = useUserCourses(
     user?.id ?? "",
@@ -116,6 +136,7 @@ export function Dashboard() {
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');
   const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
+  const [hasCheckedGuestProfiles, setHasCheckedGuestProfiles] = useState(false);
   const {refetch}=useGoals(user?.id)
   const showGuide = () => {
     setCookie('moneko-guide-hidden', 'false', { days: 365 });
@@ -123,17 +144,30 @@ export function Dashboard() {
   };
 
   // Guest goals migration utility functions
-  const getGuestGoalIds = useCallback((): string[] => {
+  const getGuestGoalIds = ()=> {
     const goalIds = getCookie('moneko-guest-goals');
     return goalIds ? JSON.parse(goalIds) : [];
-  }, [getCookie]);
+  }
 
-  const clearGuestGoalIds = useCallback(() => {
+  const clearGuestGoalIds = () => {
     document.cookie = 'moneko-guest-goals=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  }, []);
+  }
+
+  // Guest financial health profile migration utility functions
+  const getGuestProfileIds = () => {
+    const profileIds = getCookie('moneko-guest-profiles');
+    return profileIds ? JSON.parse(profileIds) : [];
+  }
+
+  const clearGuestProfileIds = () => {
+    document.cookie = 'moneko-guest-profiles=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }
 
   // Migrate guest goals to authenticated user
-  const migrateGuestGoals = useCallback(async (userId: string) => {
+  const migrateGuestGoals = async (userId: string) => {
+    if(!userId){
+      return;
+    }
     const guestGoalIds = getGuestGoalIds();
     
     if (guestGoalIds.length === 0) {
@@ -145,36 +179,21 @@ export function Dashboard() {
       
       // Update each guest goal with the user ID and log activity
       for (const goalId of guestGoalIds) {
-        // First, get the goal details for activity logging
-        const { data: goalData, error: fetchError } = await supabase
-          .from('financial_goals')
-          .select('*')
-          .eq('id', goalId)
-          .is('user_id', null)
-          .single();
-        
-        if (fetchError) {
-          console.error(`Failed to fetch guest goal ${goalId}:`, fetchError);
-          continue;
-        }
-        
-        if (!goalData) {
-          console.warn(`Guest goal ${goalId} not found or already migrated`);
-          continue;
-        }
-        
         // Update the goal with user ID
-        const { error: updateError } = await supabase
+        const { data:goalData,error: updateError } = await supabase
           .from('financial_goals')
           .update({ user_id: userId })
           .eq('id', goalId)
           .is('user_id', null);
-        
+        console.log("data",goalData)
         if (updateError) {
           console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
-          continue;
+          return;
         }
         refetch();
+        
+        // Track goal creation for guidance system
+        trackUserAction('goal_created', { goalId: goalData.id, goalTitle: goalData.title });
         
         // Log the goal creation activity with original creation timestamp
         try {
@@ -203,20 +222,64 @@ export function Dashboard() {
       
       // Clear guest goal IDs after successful migration
       clearGuestGoalIds();
+      setHasCheckedGuestGoals(true);
       console.log(`Completed migration of ${guestGoalIds.length} guest goals with activity logging`);
       
     } catch (error) {
       console.error('Failed to migrate guest goals:', error);
     }
-  }, [getGuestGoalIds, clearGuestGoalIds]);
+  }
 
-  // Handle guest goal migration on login
+  // Migrate guest financial health profiles to authenticated user
+  const migrateGuestProfiles = async (userId: string) => {
+    if (!userId) {
+      return;
+    }
+    const guestProfileIds = getGuestProfileIds();
+    
+    if (guestProfileIds.length === 0) {
+      return;
+    }
+    
+    try {
+      console.log(`Migrating ${guestProfileIds.length} guest financial health profiles to user ${userId}`);
+      
+      // Update each guest profile with the user ID
+      for (const profileId of guestProfileIds) {
+        // Update the profile with user ID
+        const { error: updateError } = await supabase
+          .from('financial_health_profiles')
+          .update({ user_id: userId })
+          .eq('id', profileId)
+          .is('user_id', null);
+        
+        if (updateError) {
+          console.error(`Failed to migrate guest profile ${profileId}:`, updateError);
+          continue;
+        }
+        
+        console.log(`Successfully migrated guest financial health profile ${profileId} to user ${userId}`);
+      }
+      
+      // Clear guest profile IDs after successful migration
+      clearGuestProfileIds();
+      setHasCheckedGuestProfiles(true);
+      console.log(`Completed migration of ${guestProfileIds.length} guest financial health profiles`);
+      
+    } catch (error) {
+      console.error('Failed to migrate guest profiles:', error);
+    }
+  }
+
+  // Handle guest goal and profile migration on login
   useEffect(() => {
     if (user?.id && !hasCheckedGuestGoals) {
       migrateGuestGoals(user.id);
-      setHasCheckedGuestGoals(true);
     }
-  }, [user?.id, hasCheckedGuestGoals, migrateGuestGoals]);
+    if (user?.id && !hasCheckedGuestProfiles) {
+      migrateGuestProfiles(user.id);
+    }
+  }, [user]);
 
 
   // Helper function to check if a route is active
@@ -250,68 +313,23 @@ export function Dashboard() {
 
 
   const menuItems = [
-
+    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
+    { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
       id: "learning",
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
-    },    
-    // Only show membership and settings if user is logged in
-    ...(user ? [
-      {
-        id: "user-settings",
-        label: "Settings",
-        icon: faCog,
-        path: "/dashboard/user-settings",
-        submenu: [
-          {
-            id: "profile",
-            label: "Profile",
-            icon: faUser,
-            path: "/dashboard/user-settings/",
-          },
-          {
-            id: "membership",
-            label: "Membership",
-            icon: faUser,
-            path: "/dashboard/user-settings/membership",
-          },
-        ],
-      },
-    ] : []),
+    },
   ];
 
-  // Effect to handle menu expansion based on current route
+
+  // Effect to handle menu expansion based on current route (simplified since no submenus)
   useEffect(() => {
-    const path = location.pathname;
-    
-    // First check if we're on a main menu path
-    const currentMenuItem = menuItems.find((item) => item.path === path);
-    if (currentMenuItem?.submenu) {
-      setExpandedMenu(currentMenuItem);
-      return;
-    }
-    
-    // If not, check if we're on a submenu path
-    for (const menuItem of menuItems) {
-      if (menuItem.submenu) {
-        // Check if current path is in this menu's submenu
-        const isInSubmenu = menuItem.submenu.some(subItem => 
-          path === subItem.path || path.startsWith(subItem.path + '/')
-        );
-        
-        if (isInSubmenu) {
-          setExpandedMenu(menuItem);
-          return;
-        }
-      }
-    }
-    
-    // If we're not in any submenu, clear the expanded menu
+    // Clear expanded menu since we no longer use submenus
     setExpandedMenu(null);
-  }, [location.pathname]); // Only depend on pathname, not the entire menuItems array
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -472,11 +490,10 @@ export function Dashboard() {
   // </div>
   // }
 
-  const showBlockModal=(!NON_PROTECTED_ROUTES.includes(location.pathname) && !user) || (!NON_PROTECTED_ROUTES.includes(location.pathname)&&!isActive)
 
 
   return (
-    <>
+    <ProtectedRouteSubscription>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
       <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20 p-2 sm:p-4 font-sans">
@@ -515,7 +532,7 @@ export function Dashboard() {
         className={classNames(
           "flex-shrink-0 transition-all duration-300 ease-in-out",
           mobileMenuOpen ? "block" : "hidden md:block",
-          "w-full md:w-56 md:max-h-full md:overflow-y-auto"
+          "w-full md:w-64 md:max-h-full md:overflow-y-auto"
         )}
         initial={{ x: -64, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -538,7 +555,7 @@ export function Dashboard() {
             </div>
 
             {/* Navigation Menu */}
-            <nav className="flex-1 space-y-2 px-4">
+            <nav className="flex-1 space-y-2 px-4 h-full">
               {menuItems.map((item) => (
                 <div key={item.id}>
                   <Link 
@@ -549,6 +566,13 @@ export function Dashboard() {
                       // Track visits for calculators
                       if (item.id === 'calculators') {
                         markCalculatorsVisited();
+                      }
+                      // Track learning and portfolio visits
+                      if (item.id === 'learning') {
+                        trackUserAction('learning_visited');
+                      }
+                      if (item.id === 'portfolio') {
+                        trackUserAction('portfolio_visited');
                       }
                     }}
                   >
@@ -590,63 +614,14 @@ export function Dashboard() {
                   </Link>
                 </div>
               ))}
+        
 
-               {/* Show Guide Button - Only visible when guide is hidden */}
-               {isGuideHidden && (
-                    <motion.div
-                      className={
-                        "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                      }
-                      onClick={showGuide}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
-                        >
-                          <FontAwesomeIcon
-                            className={`size-5 text-yellow-500 dark:text-yellow-400`}
-                            icon={faLightbulb}
-                          />
-                        </div>
-                        <span className="text-md font-medium text-gray-600 dark:text-gray-400">
-                          Show Guide
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
-              {user && (
-                <>
-                 
-                  
-                  <motion.div
-                    className={
-                      "flex w-full cursor-pointer items-center justify-between border-l-4 border-transparent px-4 py-3 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                    }
-                    onClick={() => handleSignOut()}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg group-hover:bg-gray-200 dark:group-hover:bg-gray-600`}
-                      >
-                        <FontAwesomeIcon
-                          className={`size-5 text-red-600 dark:text-red-400`}
-                          icon={faSignOut}
-                        />
-                      </div>
-                      <span className="text-md font-medium text-red-600 dark:text-red-400">
-                        Logout
-                      </span>
-                    </div>
-                  </motion.div>
-                </>
-              )}
+
             </nav>
           </div>
 
           {/* User Profile Section */}
-          <div className="border-t border-gray-100 dark:border-gray-700 p-4">
+          <div className="border-t border-gray-100 dark:border-gray-700 p-4 relative">
             {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
                 <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600"></div>
@@ -656,17 +631,137 @@ export function Dashboard() {
                 </div>
               </div>
             ) : user ? (
-              <div className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden">
-                <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
-                  {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
-                    {user.user_metadata?.full_name || "User"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-                </div>
-              </div>
+              <>
+                <motion.div 
+                  className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-all duration-200"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
+                    {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
+                      {user.user_metadata?.full_name || "User"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                  </div>
+                 
+                </motion.div>
+
+                {/* User Menu Popup */}
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {/* Settings Option */}
+                      <Link 
+                        to="/dashboard/user-settings" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faCog}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Settings
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Profile Option */}
+                      <Link 
+                        to="/dashboard/user-settings/profile" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faUser}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Profile
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Membership Option */}
+                      <Link 
+                        to="/dashboard/user-settings/membership" 
+                        className="block"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          whileHover={{ x: 2 }}
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                            <FontAwesomeIcon
+                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              icon={faIdCard}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Membership
+                          </span>
+                        </motion.div>
+                      </Link>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-200 dark:border-gray-700" />
+
+                      {/* Logout Option */}
+                      <motion.div
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 cursor-pointer"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setMobileMenuOpen(false);
+                          handleSignOut();
+                        }}
+                        whileHover={{ x: 2 }}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                          <FontAwesomeIcon
+                            className="h-4 w-4 text-red-600 dark:text-red-400"
+                            icon={faSignOut}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          Logout
+                        </span>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
             ) : (
               <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
@@ -828,7 +923,7 @@ export function Dashboard() {
       </AnimatePresence>
    
       {/* Main Content Area */}
-     {isLoading||isSubscriptionLoading ? null : <div className={classNames(
+     <div className={classNames(
        "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
        expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-20 lg:pt-0" : ""
      )}>
@@ -848,18 +943,58 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-        >            
-              {showBlockModal ? (
-                <DashboardBlockModal />
-              ) : (
-                <Outlet />
-              )}
+        >                         
+                <Outlet />             
            
         </motion.main>
-          </div>}
+          </div>
+
+          {/* Right Sidebar */}
+          <RightSidebar 
+            className="hidden lg:block" 
+            ref={rightSidebarRef}
+            isGuideHidden={isGuideHidden}
+            showGuide={showGuide}
+          />
         </div>
       </div>
+      {/* AI Chat Drawer */}
+      <AnimatePresence>
+        {aiChatOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => closeChat()}
+            />
+            
+            {/* Drawer */}
+            <motion.div
+              className="fixed right-0 top-0 h-full w-screen lg:w-[50rem] z-50 flex flex-col overflow-hidden"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              {/* Chat Interface Content - Full Height with proper styling */}
+              <div className="h-full w-full">
+                {selectedAI === 'advisor' && (
+                  <FinancialAdvisorChatInterface />
+                )}
+                
+                {selectedAI === 'educator' && (
+                  <FinancialEducatorChatInterface />
+                )}                
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {!isGuideHidden && <FloatingGuideWindow onClose={() => setIsGuideHidden(true)} />}
-    </>
+    </ProtectedRouteSubscription>
   );
 }

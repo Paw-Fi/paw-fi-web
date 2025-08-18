@@ -19,6 +19,7 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
   default: mod.ToastContainer
 })))
 import { AuthProvider } from '@/contexts/auth-context'
+import { ChatProvider } from '@/contexts/chat-context'
 import { ClientOnly } from '@/components/client-only'
 import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
@@ -118,27 +119,29 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       
       <body className="h-screen">       
       <AuthProvider>
-        {/* Use ClientOnly wrapper to prevent hydration mismatches */}
-        <ClientOnly>
-          <Suspense fallback={null}>
-            <ToastContainer
-              position="top-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
-          </Suspense>
-        </ClientOnly>
-       {children}
-        <TanStackRouterDevtools position="bottom-right" />
-        <ReactQueryDevtools buttonPosition="bottom-left" />
-        <Scripts />
+        <ChatProvider>
+          {/* Use ClientOnly wrapper to prevent hydration mismatches */}
+          <ClientOnly>
+            <Suspense fallback={null}>
+              <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
+            </Suspense>
+          </ClientOnly>
+         {children}
+          <TanStackRouterDevtools position="bottom-right" />
+          <ReactQueryDevtools buttonPosition="bottom-left" />
+          <Scripts />
+        </ChatProvider>
       </AuthProvider>
       </body>
     </html>

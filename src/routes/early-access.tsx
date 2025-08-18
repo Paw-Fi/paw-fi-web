@@ -26,9 +26,10 @@ import {
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import icon from "@/assets/images/pawfi-icon.png"
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 const SPOTS = 100;
-const CAMPAIGN_END_DATE = new Date('2025-07-31T23:59:59.999Z');
+const CAMPAIGN_END_DATE = new Date('2025-09-30T23:59:59.999Z');
 
 export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,

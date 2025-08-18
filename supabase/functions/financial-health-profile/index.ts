@@ -19,196 +19,308 @@ const supabaseClient = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
 );
 
-serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
+/**
+ * Builds the structured profile data object for the AI from flat quiz answers.
+ * @param answers A flat object of quiz answers.
+ * @returns A structured object for the AI prompt.
+ */
+function buildProfileData(answers: Record<string, any>) {
+  // Use snake_case field names to match frontend quiz structure
+  const netIncome = answers['net_monthly_income'] || 0;
+  const grossIncome = answers['gross_monthly_income'] || 0;
+  const age = answers['current_age'] || 0;
+  const retirementAge = answers['retirement_age'] || 0;
+  const dependents = answers['dependents'] || 0;
+  const maritalStatus = answers['marital_status'] || 'single';
+  
+  // Calculate total monthly expenses from individual expense categories
+  const housingCost = answers['housing_cost'] || 0;
+  const foodExpenses = answers['food_expenses'] || 0;
+  const transportationExpenses = answers['transportation_expenses'] || 0;
+  const healthcareExpenses = answers['healthcare_expenses'] || 0;
+  const insuranceExpenses = answers['insurance_expenses'] || 0;
+  const entertainmentExpenses = answers['entertainment_expenses'] || 0;
+  const otherExpenses = answers['other_monthly_expenses'] || 0;
+  const totalExpenses = housingCost + foodExpenses + transportationExpenses + 
+                       healthcareExpenses + insuranceExpenses + entertainmentExpenses + otherExpenses;
+  
+  // Assets and savings
+  const emergencyFund = answers['emergency_fund'] || 0;
+  const checkingAccount = answers['checking_account'] || 0;
+  const savingsAccount = answers['savings_account'] || 0;
+  const investmentAccounts = answers['investment_accounts'] || 0;
+  const retirementAccounts = answers['retirement_accounts'] || 0;
+  const realEstateValue = answers['real_estate_value'] || 0;
+  const otherAssets = answers['other_assets'] || 0;
+  
+  // Debts
+  const creditCardDebt = answers['credit_card_debt'] || 0;
+  const studentLoanDebt = answers['student_loan_debt'] || 0;
+  const mortgageBalance = answers['mortgage_balance'] || 0;
+  const autoLoanBalance = answers['auto_loan_balance'] || 0;
+  const otherDebt = answers['other_debt'] || 0;
+  const totalDebt = creditCardDebt + studentLoanDebt + mortgageBalance + autoLoanBalance + otherDebt;
+  
+  // Goals
+  const shortTermGoals = answers['short_term_goals'] || [];
+  const mediumTermGoals = answers['medium_term_goals'] || [];
+  const longTermGoals = answers['long_term_goals'] || [];
+  const desiredRetirementIncome = answers['desired_retirement_income'] || 0;
+  
+  // Risk and investment profile
+  const riskTolerance = answers['risk_tolerance'] || 'moderate';
+  const investmentExperience = answers['investment_experience'] || 'beginner';
+  const investmentTimeline = answers['investment_timeline'] || 'long';
+  const investmentPriorities = answers['investment_priorities'] || [];
+  
+  // Financial behavior
+  const savingsRate = answers['savings_rate'] || 0;
+  const spendingTracking = answers['spending_tracking'] || 'occasionally';
+  const budgetAdherence = answers['budget_adherence'] || 'sometimes';
+  const financialStressLevel = answers['financial_stress_level'] || 5;
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  try {
-    const rawBody: string = await req.text();
-    let requestData;
-    
-    try {
-      if (!rawBody || rawBody.trim() === "") {
-        return new Response(
-          JSON.stringify({ error: "Request body is required" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-      requestData = JSON.parse(rawBody);
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid JSON in request body",
-          details: { rawBody },
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const { quizAnswers, userId } = requestData;
-
-    if (!quizAnswers) {
-      return new Response(
-        JSON.stringify({ error: "Quiz answers are required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    console.log("Processing quiz answers for user:", userId);
-    console.log("Quiz answers received:", quizAnswers);
-
-    // Prepare data for AI analysis
-    const profileData = {
-      demographics: {
-        age: quizAnswers['current-age'] || 'Not specified',
-        dependents: quizAnswers['number-of-dependents'] || 0,
-        housing: quizAnswers['housing-situation'] || 'Not specified',
-        income: {
-          gross: quizAnswers['gross-monthly-income'] || 0,
-          net: quizAnswers['net-monthly-income'] || 0,
-        },
-        expenses: quizAnswers['total-monthly-expenses'] || 0,
+  return {
+    demographics: {
+      age: age || 'Not specified',
+      dependents: dependents,
+      marital_status: maritalStatus,
+      housing_type: answers['housing_type'] || 'Not specified',
+      income: {
+        gross_monthly: grossIncome,
+        net_monthly: netIncome,
+        stability: answers['income_stability'] || 'stable',
+        additional_sources: answers['additional_income_sources'] || [],
+        annual_bonus: answers['annual_bonus'] || 0,
       },
-      financial_situation: {
-        cash_savings: quizAnswers['cash-savings'] || 0,
-        pension_value: quizAnswers['pension-value'] || 0,
-        other_investments: quizAnswers['other-investments'] || 0,
-        monthly_pension_contribution: quizAnswers['monthly-pension-contribution'] || 0,
-        emergency_fund: quizAnswers['emergency-fund'] || 0,
-        debt_amount: quizAnswers['total-debt-amount'] || 0,
-        debt_interest: quizAnswers['average-debt-interest'] || 'none',
-        insurance_coverage: quizAnswers['insurance-coverage'] || [],
+      expenses: {
+        total_monthly: totalExpenses,
+        housing: housingCost,
+        food: foodExpenses,
+        transportation: transportationExpenses,
+        healthcare: healthcareExpenses,
+        insurance: insuranceExpenses,
+        entertainment: entertainmentExpenses,
+        other: otherExpenses,
       },
-      goals_and_timeline: {
-        retirement_age: quizAnswers['retirement-age'] || 65,
-        target_retirement: quizAnswers['target-retirement'] || 0,
-        financial_priorities: quizAnswers['financial-priorities'] || [],
-        investment_goals: quizAnswers['investment-goals'] || [],
-        time_horizon: quizAnswers['time-horizon'] || 'medium',
-        expect_lump_sum: quizAnswers['expect-lump-sum'] || 'no',
+    },
+    financial_situation: {
+      assets: {
+        emergency_fund: emergencyFund,
+        checking_account: checkingAccount,
+        savings_account: savingsAccount,
+        investment_accounts: investmentAccounts,
+        retirement_accounts: retirementAccounts,
+        real_estate_value: realEstateValue,
+        other_assets: otherAssets,
+        total_assets: emergencyFund + checkingAccount + savingsAccount + investmentAccounts + retirementAccounts + realEstateValue + otherAssets,
       },
-      risk_profile: {
-        predictable_income: quizAnswers['predictable-income'] || 'yes',
-        high_risk_preference: quizAnswers['high-risk-preference'] || 'no',
-        risky_investments: quizAnswers['risky-investments'] || 'no',
-        market_downturn: quizAnswers['market-downturn'] || 'wait',
-        investment_knowledge: quizAnswers['investment-knowledge'] || 'beginner',
-        liquidity_importance: quizAnswers['liquidity-importance'] || 'important',
+      debts: {
+        credit_card_debt: creditCardDebt,
+        credit_card_interest_rate: answers['credit_card_interest_rate'] || 0,
+        student_loan_debt: studentLoanDebt,
+        student_loan_interest_rate: answers['student_loan_interest_rate'] || 0,
+        mortgage_balance: mortgageBalance,
+        mortgage_interest_rate: answers['mortgage_interest_rate'] || 0,
+        auto_loan_balance: autoLoanBalance,
+        auto_loan_interest_rate: answers['auto_loan_interest_rate'] || 0,
+        other_debt: otherDebt,
+        other_debt_interest_rate: answers['other_debt_interest_rate'] || 0,
+        total_debt: totalDebt,
       },
-      calculated_metrics: {
-        // Basic calculations we can do without importing the calculation functions
-        monthly_savings: (quizAnswers['net-monthly-income'] || 0) - (quizAnswers['total-monthly-expenses'] || 0),
-        years_to_retirement: (quizAnswers['retirement-age'] || 65) - (quizAnswers['current-age'] || 30),
-        total_assets: (quizAnswers['cash-savings'] || 0) + (quizAnswers['pension-value'] || 0) + (quizAnswers['other-investments'] || 0),
-        // Note: More complex calculations are done in the client-side code
-      },
-    };
+    },
+    goals_and_timeline: {
+      retirement_age: retirementAge || 'Not specified',
+      desired_retirement_income: desiredRetirementIncome,
+      short_term_goals: shortTermGoals,
+      medium_term_goals: mediumTermGoals,
+      long_term_goals: longTermGoals,
+      major_purchase_timeline: answers['major_purchase_timeline'] || 'Not specified',
+    },
+    risk_profile: {
+      risk_tolerance: riskTolerance,
+      investment_experience: investmentExperience,
+      investment_timeline: investmentTimeline,
+      investment_priorities: investmentPriorities,
+    },
+    financial_behavior: {
+      savings_rate: savingsRate,
+      spending_tracking: spendingTracking,
+      budget_adherence: budgetAdherence,
+      financial_stress_level: financialStressLevel,
+    },
+    calculated_metrics: {
+      monthly_savings: netIncome - totalExpenses,
+      years_to_retirement: retirementAge > age ? retirementAge - age : 0,
+      net_worth: (emergencyFund + checkingAccount + savingsAccount + investmentAccounts + retirementAccounts + realEstateValue + otherAssets) - totalDebt,
+      debt_to_income_ratio: grossIncome > 0 ? (totalDebt / (grossIncome * 12)) : 0,
+      emergency_fund_months: totalExpenses > 0 ? emergencyFund / totalExpenses : 0,
+    },
+  };
+}
 
-    console.log("Profile data prepared for AI:", profileData);
+/**
+ * Generates a profile description using AI and stores the complete profile in Supabase.
+ * @param profileData The structured data for the AI.
+ * @param quizAnswers The flat quiz answers.
+ * @param userId The user's ID.
+ * @param isUpdate A flag to adjust logging messages.
+ * @returns A Response object.
+ */
+async function generateAndStoreProfile(profileData: any, quizAnswers: any, userId: string, isUpdate = false) {
+  console.log("Profile data prepared for AI:", profileData);
 
-    // Generate AI prompt with the profile data
-    const prompt = `${PROFILE_GENERATION_PROMPT}
+  const prompt = `${PROFILE_GENERATION_PROMPT}
 
 FINANCIAL PROFILE DATA:
 ${JSON.stringify(profileData, null, 2)}
 
-Please generate a comprehensive financial profile description based on this data.`;
+Please generate a comprehensive financial profile description based on this data.`
 
-    console.log("Sending request to Gemini AI...");
+  console.log("Sending request to Gemini AI...");
 
-    // Call Google Gemini AI
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const generationConfig = {
-      responseMimeType: "text/plain",
-      maxOutputTokens: 2000,
-      temperature: 0.7,
-    };
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const generationConfig = {
+    responseMimeType: "text/plain",
+    maxOutputTokens: 2000,
+    temperature: 0.7,
+  };
 
-    const result = await model.generateContent(
-      {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-      },
-      generationConfig,
-    );
-
-    const profileDescription = result.response.text();
-    console.log("AI generated profile description:", profileDescription);
-
-    // Store the profile in the database
-    console.log("Storing profile in database for user:", userId);
-    const { data: dbResult, error: dbError } = await supabaseClient
-      .from("financial_health_profiles")
-      .insert({
-        user_id: userId,
-        profile_description: profileDescription,
-        quiz_answers: quizAnswers,
-        profile_data: profileData,
-      })
-      .select()
-      .single();
-
-    if (dbError) {
-      console.error("Error storing profile in database:", dbError);
-      // Continue without failing - return the profile even if storage fails
-    } else {
-      console.log("Successfully stored profile in database with ID:", dbResult.id);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        profileDescription: profileDescription,
-        profileData: profileData,
-        profileId: dbResult?.id || null,
-        debug: {
-          message: "Profile generated and stored successfully",
-          timestamp: new Date().toISOString(),
-          stored_in_db: !dbError,
+  const result = await model.generateContent(
+    {
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
         },
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+      ],
+    },
+    generationConfig,
+  );
 
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown internal server error";
-    console.error("Internal Server Error:", errorMessage);
-    if (error instanceof Error && error.stack) {
-      console.error("Stack trace:", error.stack);
+  const profileDescription = result.response.text();
+  console.log("AI generated profile description:", profileDescription);
+
+  console.log(`${isUpdate ? 'Upserting' : 'Inserting'} profile in database for user:`, userId);
+  const { data: dbResult, error: dbError } = await supabaseClient
+    .from("financial_health_profiles")
+    .upsert({
+      user_id: userId,
+      profile_description: profileDescription,
+      quiz_answers: quizAnswers,
+      profile_data: profileData,
+    }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (dbError) {
+    console.error("Error upserting profile in database:", dbError);
+  } else {
+    console.log(`Successfully upserted profile in database with ID:`, dbResult.id);
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      profileDescription: profileDescription,
+      profileData: profileData,
+      profileId: dbResult?.id || null,
+      debug: {
+        message: `Profile ${isUpdate ? 'updated' : 'created'} and stored successfully`,
+        timestamp: new Date().toISOString(),
+        stored_in_db: !dbError,
+      },
+    }),
+    {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
+serve(async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  try {
+    const rawBody: string = await req.text();
+    if (!rawBody || rawBody.trim() === "") {
+      return new Response(JSON.stringify({ error: "Request body is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const requestData = JSON.parse(rawBody);
+    const { userId } = requestData;
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "userId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (req.method === "POST") {
+      const { quizAnswers, isPartialUpdate } = requestData;
+      if (!quizAnswers) {
+        return new Response(JSON.stringify({ error: "quizAnswers are required for POST" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      // Handle partial updates
+      if (isPartialUpdate) {
+        const { data: existingProfile } = await supabaseClient
+          .from('financial_health_profiles')
+          .select('quiz_answers')
+          .eq('user_id', userId)
+          .single();
+
+        const existingAnswers = existingProfile?.quiz_answers || {};
+        const updatedQuizAnswers = { ...existingAnswers, ...quizAnswers };
+        
+        const updatedProfileData = buildProfileData(updatedQuizAnswers);
+        return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, true);
+      }
+      
+      // Handle complete profile creation/update
+      const profileData = buildProfileData(quizAnswers);
+      return await generateAndStoreProfile(profileData, quizAnswers, userId, false);
+
+    } else if (req.method === "PATCH") {
+      const { partialData } = requestData;
+      if (!partialData) {
+        return new Response(JSON.stringify({ error: "partialData is required for PATCH" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingProfile } = await supabaseClient
+        .from('financial_health_profiles')
+        .select('quiz_answers')
+        .eq('user_id', userId)
+        .single();
+
+      const existingAnswers = existingProfile?.quiz_answers || {};
+      const updatedQuizAnswers = { ...existingAnswers, ...partialData };
+      
+      const updatedProfileData = buildProfileData(updatedQuizAnswers);
+      return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, true);
+
+    } else {
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
+    console.error("Internal Server Error:", errorMessage, error.stack);
     return new Response(
       JSON.stringify({ 
         error: "Internal Server Error", 
         details: errorMessage,
-        timestamp: new Date().toISOString(),
       }),
       {
         status: 500,

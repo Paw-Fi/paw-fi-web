@@ -15,7 +15,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
   },
   head: ({ params, loaderData }) => {
     const { course } = loaderData;
-    const pageUrl = getCanonicalUrl(`/dashboard/essentials/${params.courseId}`);
+    const pageUrl = getCanonicalUrl(`/dashboard/learning/${params.courseId}`);
     const title = `${course.title} | Moneko Learning`;
     const description = course.description;
     const keywords = `${course.title}, ${course.category}, financial education, Moneko, online course, ${course.tags.join(", ")}`;

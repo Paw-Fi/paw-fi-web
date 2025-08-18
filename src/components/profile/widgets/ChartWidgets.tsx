@@ -359,21 +359,56 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
 
   return (
     <Widget widget={widget} controls={widget.controls} isBeta>
-      <div className="h-full w-full flex flex-col items-center justify-center">
-        <div className="w-full max-w-sm mb-4">
-          <Pie 
-            data={chartData} 
-            options={chartOptions} 
-          />
-        </div>
-        
-        {stocksPercentage > 0 && bondsPercentage > 0 && (
-          <div className="text-center">
-            <p className="text-gray-700 dark:text-gray-300 text-sm">
-              Based on your risk score and time horizon: <strong>{stocksPercentage}%</strong> stocks / <strong>{bondsPercentage}%</strong> bonds
-            </p>
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+        <div className="flex-grow flex flex-col items-center justify-center">
+          <div className="w-full max-w-[200px] mb-6">
+            <Pie 
+              data={{
+                ...chartData,
+                datasets: [{
+                  ...chartData.datasets[0],
+                  backgroundColor: [
+                    '#8b5cf6', // Purple for Stocks
+                    '#10b981'  // Green for Bonds
+                  ],
+                  borderColor: [
+                    '#8b5cf6',
+                    '#10b981'
+                  ],
+                  borderWidth: 0
+                }]
+              }} 
+              options={{
+                ...chartOptions,
+                plugins: {
+                  ...chartOptions.plugins,
+                  legend: {
+                    position: 'bottom' as const,
+                    labels: {
+                      boxWidth: 12,
+                      usePointStyle: true,
+                      pointStyle: 'circle',
+                      font: {
+                        size: 12,
+                        weight: 500
+                      },
+                      color: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#6B7280',
+                      padding: 15
+                    }
+                  }
+                }
+              }} 
+            />
           </div>
-        )}
+          
+          {stocksPercentage > 0 && bondsPercentage > 0 && (
+            <div className="text-center">
+              <p className="text-slate-600 dark:text-slate-400 text-sm">
+                Based on your risk score and time horizon: <strong>{stocksPercentage}%</strong> stocks / <strong>{bondsPercentage}%</strong> bonds
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </Widget>
   );
@@ -396,7 +431,6 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   const totalIncome = cashFlowData.inflows.reduce((sum, item) => sum + item.value, 0);
   const totalExpenses = cashFlowData.outflows.reduce((sum, item) => sum + item.value, 0);
   const savings = totalIncome - totalExpenses;
-  const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : '0.0';
 
   // More encouraging color scheme
   const getSavingsColor = (savings: number) => {
@@ -448,12 +482,16 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
           color: isDark ? 'rgba(75, 85, 99, 0.2)' : 'rgba(156, 163, 175, 0.1)',
         },
         ticks: {
+          color: isDark ? '#9CA3AF' : '#6B7280',
           callback: (value: any) => `${value}`
         }
       },
       x: {
         grid: {
           display: false
+        },
+        ticks: {
+          color: isDark ? '#9CA3AF' : '#6B7280'
         }
       }
     },
@@ -475,38 +513,14 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
 
-  // Encouraging message based on savings situation
-  const getSavingsMessage = (savings: number, savingsRate: string) => {
-    if (savings >= 0) {
-      const rate = parseFloat(savingsRate);
-      if (rate >= 20) return `🎯 Excellent ${savingsRate}% savings rate!`;
-      if (rate >= 10) return `📈 Good progress with ${savingsRate}% saved!`;
-      if (rate > 0) return `🌱 Building wealth at ${savingsRate}% savings rate`;
-      return '🎯 Every dollar saved is progress!';
-    } else {
-      return '💡 Ready to flip the script? Small expense cuts can create savings!';
-    }
-  };
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="flex flex-col h-full p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
-        {/* Encouraging message */}
-        <div className="mb-3 text-center">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {getSavingsMessage(savings, savingsRate)}
-          </p>
-          {savings < 0 && (
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-              Focus area: Reduce expenses by ${ Math.abs(savings).toLocaleString()}/month to break even
-            </p>
-          )}
-        </div>
-        
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
         <div 
           ref={chartContainerRef}
           className="flex-grow w-full flex items-center justify-center relative" 
-          style={{ minHeight: '100px', maxHeight: '500px' }}
+          style={{ minHeight: '200px' }}
         > 
           <Bar 
             ref={(ref) => {
@@ -514,11 +528,58 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
                 chartInstanceRef.current = ref;
               }
             }}
-            data={chartData} 
+            data={{
+              ...chartData,
+              datasets: [{
+                ...chartData.datasets[0],
+                backgroundColor: [
+                  '#10b981', // Green for income
+                  '#f59e0b', // Orange for savings 
+                  '#8b5cf6'  // Purple for expenses
+                ],
+                borderColor: [
+                  '#10b981',
+                  '#f59e0b', 
+                  '#8b5cf6'
+                ],
+                borderWidth: 0,
+                borderRadius: 8,
+                barThickness: 60,
+              }]
+            }} 
             options={{
               ...chartOptions,
               maintainAspectRatio: false,
-              responsive: true
+              responsive: true,
+              plugins: {
+                ...chartOptions.plugins,
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                ...chartOptions.scales,
+                y: {
+                  ...chartOptions.scales?.y,
+                  display: false,
+                  grid: {
+                    display: false
+                  }
+                },
+                x: {
+                  ...chartOptions.scales?.x,
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    color: isDark ? '#9CA3AF' : '#6B7280',
+                    font: {
+                      size: 12,
+                      weight: 500
+                    }
+                  }
+                }
+              }
             }} 
           />
         </div>

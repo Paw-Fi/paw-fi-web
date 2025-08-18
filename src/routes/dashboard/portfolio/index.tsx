@@ -33,7 +33,6 @@ import FinancialHealthFinetune from "@/components/financial-health/FinancialHeal
 import classNames from "classnames";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { EmptyStatePrompt } from "@/components/ui/empty-state-prompt";
-import { FloatingChatButton } from "@/components/dashboard-chat/FloatingChatButton";
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -749,7 +748,6 @@ function Profile() {
         </div>
       </Modal>
 
-      <FloatingChatButton />
     </ProtectedRouteSubscription>
   );
 }

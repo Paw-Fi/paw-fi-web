@@ -1,24 +1,22 @@
 "use client";
 
-import React from "react";
-import ReactMarkdown from "react-markdown";
-import { CourseCard } from "@/components/ui/course-card";
+import React, { useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLightbulb, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/button";
+import { faUser, faLightbulb } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { useEffect } from "react";
 import { iconContainer } from "./chat-conversation-display";
-import { extractFirstJson, formatTime as defaultFormatTime } from "@/utils/sanitize-course";
-import { useNavigate } from "@tanstack/react-router";
+import { formatTime as defaultFormatTime } from "@/utils/sanitize-course";
 import { GoalType } from "../goal-tracker/types";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { OptimizedImage } from "../seo/optimized-image";
 
 interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: number;
-  chat_session_id: string; // Keeping as per original, map if needed for backend
+  chat_session_id: string;
   metadata?: Record<string, any>;
 }
 
@@ -27,29 +25,30 @@ interface ChatMessageItemProps {
   onOpenQuizModal?: () => void;
   onGoalTemplateClick?: (goalType: GoalType) => void;
   formatTime?: (timestamp: number) => string;
+  disableMsgParse?: boolean;
+  onSendMessage?: (message: string) => void;
+  agentIcon?: string;
+  agentName?: string;
 }
-
-
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   message,
   onOpenQuizModal,
   onGoalTemplateClick,
   formatTime: formatTimeProp,
+  disableMsgParse = false,
+  onSendMessage,
+  agentIcon,
+  agentName,
 }) => {
   const isUser = message.role === "user";
-  const navigate = useNavigate();
   const { user } = useAuth();
-  
-  // Check if user has completed the financial assessment
+
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
-  const found = extractFirstJson(message.content);
-  
-  // Watch for quiz completion messages and refetch profile
+
   useEffect(() => {
     if (isUser && message.content.toLowerCase().includes("completed the questionnaire") && user?.id) {
-      // Add a small delay then refetch profile to ensure it's been created
       setTimeout(() => {
         refetchProfile();
       }, 1000);
@@ -57,16 +56,18 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   }, [message.content, isUser, user?.id, refetchProfile]);
 
   const Avatar = () => (
-    <div
-      className={`flex items-center justify-center h-10 w-10 rounded-full shrink-0 ${isUser ? "bg-[#F9F9F9] dark:bg-slate-600" : "bg-gradient-to-br from-purple-500 to-indigo-600"}`}>
+    <div>
      {
       isUser ? (
-        <FontAwesomeIcon
+       <div className="flex items-center justify-center h-10 w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
+
+<FontAwesomeIcon
         icon={isUser ? faUser : faLightbulb}
-        className={`h-4 w-4 ${isUser ? "text-slate-500 dark:text-slate-300" : "text-white"}`}
+        className={`size-4 ${isUser ? "text-slate-500 dark:text-slate-300" : "text-white"}`}
       />
+       </div>
       ) : (
-        iconContainer("size-6")
+        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName} className="size-10" /> : iconContainer("size-6")
       )
      }
     </div>
@@ -74,10 +75,11 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 
   const MessageBubble = ({ children }: { children: React.ReactNode }) => (
     <div
-      className={`relative max-w-xs lg:max-w-md xl:max-w-lg rounded-2xl px-4 py-3 shadow-md ${isUser
-          ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-none"
-          : "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-none"
-        }`}>
+      className={`relative max-w-[75%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+        isUser
+          ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-md ml-auto"
+          : "bg-white/90 dark:bg-slate-700/90 text-slate-800 dark:text-slate-100 rounded-bl-md border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm"
+      }`}>
       {children}
       <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
         {(formatTimeProp || defaultFormatTime)(message.timestamp)}
@@ -90,103 +92,24 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     </div>
   );
 
-  const renderMessageContent = () => {
-    // Check if message contains QUESTIONNAIRE keyword
-    const hasQuestionnaireKeyword = message.content.includes('``QUESTIONNAIRE``');
-    
-    // Check for goal template patterns
-    const goalTemplates:GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'custom'];
-    const detectedTemplate = goalTemplates.find(template => 
-      message.content.includes(`\`\`${template}\`\``)
-    );
-    
-    if (found) {
-      const { json, start, end } = found;
-      const intro = message.content.slice(0, start).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
-      const outro = message.content.slice(end).trim().replace("{{username}}", user?.user_metadata?.full_name|| "");
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}  >
-          {intro && <ReactMarkdown>{intro}</ReactMarkdown>}
-          <div className="my-3">
-            <CourseCard
-              title={json.title || ""}
-              icon={json.icon || ""}
-              description={json.description || ""}
-              lessonCount={json.lesson_count || 0}
-              onClick={() => navigate({ to: `/dashboard/learning/${json.id}` })}
-            />
-          </div>
-          {outro && <ReactMarkdown>{outro}</ReactMarkdown>}
-        </div>
-      );
-    }
-    
-    if (hasQuestionnaireKeyword && !isUser) {
-      // Replace the QUESTIONNAIRE keyword with a button for assistant messages
-      const messageText = message.content.replace(/``QUESTIONNAIRE``/g, '').replace("{{username}}", user?.user_metadata?.full_name|| "");
-      
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.trim()}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => !hasProfile && onOpenQuizModal?.()}
-              disabled={hasProfile}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                hasProfile
-                  ? "bg-green-500 text-white cursor-default"
-                  : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
-              }`}
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4 mr-1" />
-              {hasProfile ? "Assessment Completed ✓" : "Complete Financial Assessment"}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    
-    // Handle goal template buttons
-    if (detectedTemplate && !isUser && onGoalTemplateClick) {
-      const templateLabels: Record<GoalType, string> = {
-        retirement: "Retirement Planning",
-        home_buying: "Home Buying",
-        wealth: "Wealth Building",
-        investment: "Investment Portfolio",
-        debt_payoff: "Debt Payoff",
-        emergency_fund: "Emergency Fund",
-        custom: "Custom Goal"
-      };
-      
-      const messageText = message.content.replace(new RegExp(`\`\`${detectedTemplate}\`\``, 'g'), '').trim();
-      
-      return (
-        <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-          <ReactMarkdown>{messageText.replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-          <div className="mt-3">
-            <Button
-              onClick={() => onGoalTemplateClick(detectedTemplate)}
-              className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <FontAwesomeIcon icon={faClipboardCheck} className="h-4 w-4" />
-              Start {templateLabels[detectedTemplate]} Setup
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 ${isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}`}>
-        <ReactMarkdown>{message.content.trim().replace("{{username}}", user?.user_metadata?.full_name|| "")}</ReactMarkdown>
-      </div>
-    );
-  };
+
+
+  const renderMessageContent = useMemo(() => (
+    <MarkdownRenderer
+      content={message.content}
+      className={isUser ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-purple-100 prose-a:text-purple-200 hover:prose-a:text-purple-100 prose-code:text-purple-200 prose-code:bg-purple-700/50 prose-pre:bg-purple-800/50 prose-li:text-white prose-blockquote:text-purple-100 prose-blockquote:border-purple-300' : 'prose-slate dark:prose-invert'}
+      onOpenQuizModal={onOpenQuizModal}
+      onGoalTemplateClick={onGoalTemplateClick}
+      onSendMessage={onSendMessage}
+      disableMessageParsing={disableMsgParse}
+      isUserMessage={isUser}
+    />
+  ), [message.content, isUser, onOpenQuizModal, onGoalTemplateClick, onSendMessage, disableMsgParse]);
 
   return (
-    <div className={`flex items-end gap-3 w-full ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <Avatar />}
-      <MessageBubble>{renderMessageContent()}</MessageBubble>
+      <MessageBubble>{renderMessageContent}</MessageBubble>
       {isUser && <Avatar />}
     </div>
   );

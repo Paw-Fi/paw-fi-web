@@ -31,14 +31,11 @@ export function Widget({ widget, children, className = '', controls,isBeta }: Wi
         ${widget.column_span === 2 ? 'col-span-2' : 'col-span-1'}
         ${className}
       `}    
-    >
-      {/* Glass effect overlay */}
-      
+    >      
       {/* Widget header */}
       <div className="pb-4 flex items-center flex-shrink-0">
         <div className="flex items-center space-x-3 min-w-0 flex-grow"> 
-            {/* <FontAwesomeIcon icon={icon} className="size-3" /> */}
-          <h3 className="font-bold text-lg text-[#4d5562] truncate" title={widget.title}>
+          <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200 truncate" title={widget.title}>
             {widget.title || 'Financial Widget'}
           </h3>
           {isBeta && <BetaPill/>}
@@ -53,10 +50,8 @@ export function Widget({ widget, children, className = '', controls,isBeta }: Wi
       </div>
       
       {/* Widget content - flex-grow allows it to fill available space */}
-      <div className={`flex-grow ${className.includes('overflow-hidden') ? 'relative' : 'overflow-auto'}`}>
-        <div className="h-full">
-          {children}
-        </div>
+      <div className={`flex-grow ${className.includes('overflow-hidden') ? 'relative' : ''}`}>
+        {children}
       </div>
     </div>
   );

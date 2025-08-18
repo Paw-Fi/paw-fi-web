@@ -178,10 +178,11 @@ export type {
 } from './milestone-types';
 
 export type {
-  QuestionnaireTemplate,
   Question,
   QuestionType,
   QuestionOption,
   QuestionValidation,
   ConditionalLogic,
-} from './questionnaire-types';
+} from '@/types/financial-quiz-constants';
+
+export type { QuestionnaireTemplate } from '@/data/questionnaire-templates';

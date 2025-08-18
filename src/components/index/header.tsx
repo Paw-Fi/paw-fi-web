@@ -6,10 +6,14 @@ import { OptimizedImage } from "@components/seo/optimized-image";
 import catCoin from "@/assets/images/icon.svg";
 import { DISCORD_URL } from "@/routes";
 import classNames from "classnames";
+import { useAuth } from "@/contexts/auth-context";
+import { useNavigate } from "@tanstack/react-router";
 
 export const HomeHeader=()=>{
 
     const location=useLocation()
+    const {user}=useAuth()
+    const navigate=useNavigate()
 
     const routes=[
         {to:"/dashboard/essentials",label:"Learning"},
@@ -58,21 +62,21 @@ export const HomeHeader=()=>{
           Community
         </a>
       </div>
-    <div className="flex items-center gap-x-5">
-      <Link
-        to="/dashboard/learning"
-        className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:text-primary dark:hover:text-dark-primary md:block"
-      >
-        Explore Tools
-      </Link>
-      <Link
-        to="/dashboard"
+    <div className="flex items-center gap-x-5">     
+    
+        <Button
         className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
-      >
-        <Button>
-          Build Portfolio <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+        onClick={()=>{
+            if(user){
+                navigate({to:"/dashboard"})
+            }else{
+                navigate({to:"/onboarding"})
+            }
+        }}
+        >
+          Get Started <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
         </Button>
-      </Link>
+
   </div>
   </div>
   

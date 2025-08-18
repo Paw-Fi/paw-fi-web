@@ -18,13 +18,20 @@ export type {
 export { GOAL_TYPE_CONFIGS } from '@/data/goal-type-configs';
 
 // Define GoalType and QuestionnaireData locally to avoid circular imports
-export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom';
+export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'passive_income' | 'custom';
 export type QuestionnaireData = Record<string, any>;
 
 // Additional types specific to the goal tracker components
 export interface CreateGoalRequest {
   goalType: GoalType;
   questionnaireAnswers: QuestionnaireData;
+}
+
+export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
+
+export interface AdvisorMessage {
+  content: string;
+  tone: AdvisorTone;
 }
 
 export interface GoalCreationResult {
@@ -37,12 +44,17 @@ export interface GoalCreationResult {
     rationale: string;
   };
   strategy: string;
-  milestones: Milestone[];
+  milestones: DBMilestone[];
   insights: Insight[];
   projections?: {
     monthlyRequired: number;
     projectedFinalAmount: number;
     confidenceLevel: number;
+  };
+  advisorMessages?: {
+    planMessage: AdvisorMessage;
+    insightsMessage: AdvisorMessage;
+    nextStepsMessage: AdvisorMessage;
   };
 }
 
@@ -57,6 +69,30 @@ export interface Milestone {
   habitTargetValue?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
   aiRationale: string;
+}
+
+// Database milestone interface that matches the actual API response
+export interface DBMilestone {
+  id?: string;
+  goal_id?: string;
+  title: string;
+  description: string;
+  milestone_type: string;
+  target_amount?: number | null;
+  current_amount?: number;
+  habit_description?: string | null;
+  frequency?: string | null;
+  habit_target_value?: number | null;
+  start_date?: string;
+  due_date: string;
+  completed_date?: string | null;
+  status?: string;
+  progress_percentage?: number;
+  is_ai_generated?: boolean;
+  display_order?: number;
+  priority: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Insight {

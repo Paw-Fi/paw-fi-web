@@ -31,5 +31,5 @@ export const Route = createFileRoute("/dashboard/essentials/")({
 
 function Essentials() {
   // Pass source='local' as a prop to LearningPage
-  return <Navigate to={`/dashboard/essentials/${basicLessonsData.course_id}/lesson/${basicLessonsData.lessons[0].lesson_id}`} />
+  return <Navigate to={`/dashboard/learning/${basicLessonsData.course_id}/lesson/${basicLessonsData.lessons[0].lesson_id}`} />
 }

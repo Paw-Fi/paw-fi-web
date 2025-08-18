@@ -14,7 +14,7 @@ const supabaseClient = createClient(
 );
 
 const INSIGHTS_GENERATION_PROMPT = `
-You are an expert financial advisor analyzing a user's goal progress and providing actionable insights.
+You are Moneko, an enthusiastic and knowledgeable AI goal tracking assistant who loves helping users achieve their financial dreams! 🐱💰
 
 GOAL DATA:
 {{GOAL_DATA}}
@@ -22,21 +22,21 @@ GOAL DATA:
 PROGRESS ANALYSIS:
 {{PROGRESS_ANALYSIS}}
 
-Based on this data, generate insights to help the user improve their progress and achieve their goal. Focus on:
+As Moneko, analyze this user's goal progress and provide personalized insights. Speak in first person as Moneko with an encouraging, educational, and lively tone. Focus on:
 
-1. Progress Assessment: Are they on track, behind, or ahead of schedule?
-2. Strategy Adjustments: What changes could improve their success rate?
-3. Milestone Recommendations: Should milestones be adjusted based on current progress?
-4. Motivational Support: Encourage continued progress or celebrate achievements
-5. Risk Warnings: Alert about potential issues that could derail progress
+1. Progress Assessment: How is the user doing? Are they on track?
+2. Strategy Adjustments: What does Moneko think could work better?
+3. Milestone Recommendations: Should milestones be tweaked based on what Moneko sees?
+4. Motivational Support: Celebrate wins and encourage continued progress!
+5. Risk Warnings: Alert about potential roadblocks Moneko notices
 
-Generate a response in the following JSON format:
+IMPORTANT: Return ONLY valid JSON without any markdown formatting, code blocks, or additional text. Generate insights as Moneko speaking directly to the user:
 
 [
   {
     "type": "progress_assessment" | "strategy_suggestion" | "milestone_recommendation" | "celebration" | "progress_warning",
-    "title": "Concise insight title (max 60 characters)",
-    "content": "Detailed explanation and actionable advice (2-3 sentences)",
+    "title": "What Moneko noticed (max 60 characters)",
+    "content": "Moneko's personal message starting with phrases like 'I think...', 'I noticed...', 'I suggest...' (2-3 sentences max)",
     "priority": "low" | "medium" | "high" | "critical",
     "confidence": 0.0-1.0,
     "expiresAt": "YYYY-MM-DD" or null,
@@ -44,13 +44,14 @@ Generate a response in the following JSON format:
   }
 ]
 
-Guidelines:
-- Generate 2-4 insights maximum
-- Be specific and actionable
-- Use encouraging language
-- Focus on most impactful recommendations
+Moneko's Guidelines:
+- Generate 2-4 insights maximum as Moneko
+- Be specific, actionable, and speak as a friendly AI assistant
+- Use encouraging, educational language with personality
+- Focus on most impactful recommendations Moneko can offer
 - Set expiration dates for time-sensitive insights
-- Confidence should reflect certainty of the recommendation
+- Confidence should reflect how certain Moneko is about the recommendation
+- Always speak in first person as Moneko ("I think", "I noticed", "I suggest")
 `;
 
 interface InsightRequest {
@@ -145,7 +146,7 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Progress analysis:", progressAnalysis);
 
-    // Only generate insights if we don't have recent ones
+    // Check for recent insights - but allow user-initiated requests to override
     const { data: recentInsights } = await supabaseClient
       .from("goal_insights")
       .select("created_at")
@@ -153,16 +154,10 @@ serve(async (req: Request): Promise<Response> => {
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
       .limit(1);
 
+    // For now, we'll always generate insights when requested to improve user experience
+    // In the future, we could add a request parameter to override this check
     if (recentInsights && recentInsights.length > 0) {
-      console.log("Recent insights exist, skipping generation");
-      return new Response(JSON.stringify({
-        success: true,
-        insights: [],
-        message: "Recent insights already exist",
-        debug: { recentInsightsCount: recentInsights.length }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("Recent insights exist, but generating new ones as requested");
     }
 
     // Generate AI insights
@@ -174,7 +169,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const generationConfig = {
-      responseMimeType: "text/plain",
+      responseMimeType: "application/json",
       maxOutputTokens: 2000,
       temperature: 0.7,
     };
@@ -186,17 +181,36 @@ serve(async (req: Request): Promise<Response> => {
     const aiResponseText = result.response.text();
     console.log("AI insights response received:", aiResponseText);
 
+    // Clean the response text to remove markdown formatting
+    let cleanedResponse = aiResponseText.trim();
+    
+    // Remove markdown code blocks if present
+    if (cleanedResponse.startsWith("```json")) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '');
+    }
+    if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '');
+    }
+    if (cleanedResponse.endsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
+    }
+    
+    console.log("Cleaned AI response:", cleanedResponse);
+
     // Parse AI response
-    let insights;
+    let insights: any[];
     try {
-      insights = JSON.parse(aiResponseText);
+      insights = JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error("Failed to parse AI insights response:", parseError);
+      console.error("Original response:", aiResponseText);
+      console.error("Cleaned response:", cleanedResponse);
       return new Response(
         JSON.stringify({ 
           error: "Failed to parse AI insights response", 
           details: parseError.message,
-          rawResponse: aiResponseText 
+          rawResponse: aiResponseText,
+          cleanedResponse: cleanedResponse
         }),
         {
           status: 500,
@@ -252,10 +266,16 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Successfully created ${newInsights?.length || 0} insights`);
 
+    const insightCount = newInsights?.length || 0;
+    const responseMessage = insightCount > 0 
+      ? `💡 **Generated ${insightCount} new insight${insightCount === 1 ? '' : 's'}!** I've analyzed your goal progress and created personalized recommendations to help you stay on track.\n\n\`\`GOAL:${goalId}\`\``
+      : `📊 **Analysis complete!** I've reviewed your goal progress. Check your goal dashboard for detailed insights.\n\n\`\`GOAL:${goalId}\`\``;
+
     return new Response(JSON.stringify({
       success: true,
       insights: newInsights || [],
       progressAnalysis,
+      message: responseMessage,
       debug: {
         message: "Insights generated and stored successfully",
         timestamp: new Date().toISOString(),

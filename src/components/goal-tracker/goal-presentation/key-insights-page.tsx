@@ -10,13 +10,16 @@ import {
   faCheckCircle,
   faArrowTrendUp
 } from '@fortawesome/free-solid-svg-icons';
-import type { Insight } from '@/components/goal-tracker/types';
+import type { Insight, AdvisorMessage } from '@/components/goal-tracker/types';
+import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface KeyInsightsPageProps {
   insights: Insight[];
+  isLoggedIn: boolean;
+  advisorMessage?: AdvisorMessage;
 }
 
-export function KeyInsightsPage({ insights }: KeyInsightsPageProps) {
+export function KeyInsightsPage({ insights, isLoggedIn, advisorMessage }: KeyInsightsPageProps) {
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'savings':
@@ -159,6 +162,21 @@ export function KeyInsightsPage({ insights }: KeyInsightsPageProps) {
           Pay special attention to actionable items that require your attention.
         </p>
       </motion.div>
+
+      {/* Moneko Advisor Message - Insights Message */}
+      {advisorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MonekoAdvisorMessage
+            message={advisorMessage}
+            showMessage={true}
+            typewriterSpeed={25}
+          />
+        </motion.div>
+      )}
       
       {/* Insights by Priority */}
       <div className="space-y-12">
@@ -170,14 +188,30 @@ export function KeyInsightsPage({ insights }: KeyInsightsPageProps) {
         
         {renderInsightGroup(
           '⚠️ Medium Priority Insights', 
-          mediumPriorityInsights, 
+          isLoggedIn ? mediumPriorityInsights : mediumPriorityInsights.slice(0, 1), 
           0.4
         )}
         
         {renderInsightGroup(
           '✅ Additional Insights', 
-          lowPriorityInsights, 
+          isLoggedIn ? lowPriorityInsights : lowPriorityInsights.slice(0, 1), 
           0.6
+        )}
+        
+        {!isLoggedIn && (mediumPriorityInsights.length > 1 || lowPriorityInsights.length > 1) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 text-center"
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Additional Insights Available
+            </h3>
+            <p className="text-blue-600 dark:text-blue-400 font-medium">
+              +{(mediumPriorityInsights.length > 1 ? mediumPriorityInsights.length - 1 : 0) + (lowPriorityInsights.length > 1 ? lowPriorityInsights.length - 1 : 0)} more personalized insights available after sign up
+            </p>
+          </motion.div>
         )}
       </div>
       
@@ -218,6 +252,11 @@ export function KeyInsightsPage({ insights }: KeyInsightsPageProps) {
             </div>
           </div>
         </div>
+        {!isLoggedIn && (
+          <div className="mt-4 text-center text-sm text-blue-600 dark:text-blue-400 font-medium">
+            Complete detailed analysis available after sign up
+          </div>
+        )}
       </motion.div>
     </div>
   );

@@ -9,7 +9,7 @@
 -- ====================
 CREATE TABLE IF NOT EXISTS public.financial_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   
   -- Basic Goal Information
   title VARCHAR(255) NOT NULL,
@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.financial_goals (
   target_amount DECIMAL(15,2) NOT NULL,
   current_amount DECIMAL(15,2) DEFAULT 0,
   currency VARCHAR(3) DEFAULT 'USD',
+  ai_advisor_messages JSONB DEFAULT NULL,
+
   
   -- Timeline
   start_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -150,6 +152,13 @@ CREATE TABLE IF NOT EXISTS public.goal_insights (
 -- PERFORMANCE INDEXES
 -- ====================
 
+-- Add comment to document the column structure
+COMMENT ON COLUMN financial_goals.ai_advisor_messages IS 'AI-generated advisor messages for presentation flow pages (planMessage, insightsMessage, nextStepsMessage). Each message contains content and tone properties.';
+
+-- Create index for faster queries on advisor messages (optional, for future optimization)
+CREATE INDEX IF NOT EXISTS idx_financial_goals_advisor_messages 
+ON financial_goals USING gin (ai_advisor_messages);
+
 -- Financial Goals Indexes
 CREATE INDEX IF NOT EXISTS idx_financial_goals_user_id ON public.financial_goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_financial_goals_status ON public.financial_goals(status);
@@ -263,6 +272,15 @@ CREATE POLICY "Users can update insights for their goals" ON public.goal_insight
     )
   );
 
+-- Allow users to read guest goals (NULL user_id) for migration
+CREATE POLICY "Users can read guest goals for migration" ON financial_goals
+FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
+
+-- Allow users to claim guest goals (update NULL user_id to their own user_id)
+CREATE POLICY "Users can claim guest goals for migration" ON financial_goals
+FOR UPDATE USING (user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id);
+
 -- ====================
 -- DATABASE FUNCTIONS
 -- ====================
@@ -278,16 +296,22 @@ BEGIN
       SELECT COALESCE(SUM(CASE 
         WHEN update_type = 'amount_added' THEN amount_change 
         WHEN update_type = 'manual_adjustment' THEN new_amount - COALESCE(previous_amount, 0)
+        WHEN update_type = 'goal_progress_updated' THEN amount_change 
         ELSE 0 
       END), 0)
       FROM public.goal_progress_updates 
       WHERE goal_id = NEW.goal_id
     ),
+    updated_at = NOW()
+  WHERE id = NEW.goal_id;
+  
+  -- Update progress_percentage after current_amount is updated
+  UPDATE public.financial_goals 
+  SET 
     progress_percentage = LEAST(
       (current_amount / NULLIF(target_amount, 0)) * 100, 
       100
-    ),
-    updated_at = NOW()
+    )
   WHERE id = NEW.goal_id;
   
   RETURN NEW;

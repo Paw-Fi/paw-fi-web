@@ -2,7 +2,7 @@
 // This file contains the configuration for different goal types used in the goal creation flow
 
 export interface GoalTypeConfig {
-  id: string;
+  id: GoalType;
   name: string;
   description: string;
   color: string;
@@ -104,6 +104,22 @@ export const GOAL_TYPE_CONFIGS: Record<string, GoalTypeConfig> = {
       'Automated savings strategies',
       'Financial security milestone tracking'
     ]
+  },
+  passive_income: {
+    id: 'passive_income',
+    name: 'Passive Income',
+    description: 'Build sustainable income streams that generate money with minimal ongoing effort through strategic investments and assets.',
+    color: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+    difficulty: 'intermediate',
+    estimatedTime: '8-12 minutes',
+    benefits: [
+      'Dividend growth investing strategy',
+      'REIT and rental property income planning',
+      'High-yield investment recommendations',
+      'Multiple income stream diversification',
+      'Monthly passive income targets and milestones'
+    ],
+    isPopular: true
   },
   custom: {
     id: 'custom',

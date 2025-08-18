@@ -9,6 +9,11 @@ export interface AIResponse {
   messageId?: string;
   conversationId?: string;
   course_id?: string;
+  // Goal tracking function execution results
+  function_executed?: string;
+  function_result?: any;
+  next_actions?: string[];
+  cache_refresh_needed?: boolean;
 }
 
 export interface Message {
@@ -55,7 +60,12 @@ export async function updateConversationData(supabase: SupabaseClient, params: {
   return updateConversation(supabase, params.conversationId, params.updates);
 }
 
+/**
+ * ⚠️ DEPRECATED: Frontend should not directly save messages to database.
+ * The chat_stream backend function handles all message persistence.
+ */
 export async function addMessageToConversation(supabase: SupabaseClient, message: Message) {
+  console.warn('addMessageToConversation is deprecated. Backend handles message saving.');
   return addMessage(supabase, message);
 }
 
@@ -178,6 +188,10 @@ export const updateConversation = async (
 
 /**
  * Add a message to a conversation
+ * 
+ * ⚠️ DEPRECATED: This function is no longer used. 
+ * The chat_stream backend function now handles all message saving to prevent duplication.
+ * Only use this for legacy compatibility if needed.
  */
 export const addMessage = async (
   supabase: SupabaseClient,
@@ -253,6 +267,12 @@ export async function sendChatMessage(
     sessionId?: string | null;
     model: string;
     profile?: any;
+    // Goal context parameters for Financial Advisor
+    goalContext?: any;
+    isGlobalMode?: boolean;
+    goalId?: string;
+    goal?: any;
+    // Note: Backend fetches conversation history directly from database
   }
 ): Promise<AIResponse> {
   try {
@@ -268,7 +288,13 @@ export async function sendChatMessage(
       userId: options.userId,
       sessionId: options.sessionId,
       model: options.model,
-      userProfile: options.profile
+      userProfile: options.profile,
+      // Note: Backend fetches conversation history directly from database
+      // Include goal context parameters if provided
+      ...(options.goalContext && { goalContext: options.goalContext }),
+      ...(options.isGlobalMode !== undefined && { isGlobalMode: options.isGlobalMode }),
+      ...(options.goalId && { goalId: options.goalId }),
+      ...(options.goal && { goal: options.goal })
     };
     
     // Let Supabase handle method, headers, and JSON serialization automatically
@@ -282,7 +308,14 @@ export async function sendChatMessage(
       response: data.response || data.content,
       isComplete: true,
       messageId: data.messageId,
-      conversationId: data.conversationId // For guest sessions, backend returns new session ID
+      conversationId: data.conversationId, // For guest sessions, backend returns new session ID
+      generatedLessons: data.generatedLessons,
+      course_id: data.course_id,
+      // Goal tracking results
+      function_executed: data.function_executed,
+      function_result: data.function_result,
+      next_actions: data.next_actions,
+      cache_refresh_needed: data.cache_refresh_needed
     };
   } catch (error: any) {
     return {

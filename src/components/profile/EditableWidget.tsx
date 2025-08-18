@@ -60,7 +60,7 @@ export function EditableWidget({
       ref={setNodeRef}
       style={style}
       data-id={id}
-      className={`bg-white shadow-md rounded-xl row-span-${widget.row_span || 1} ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
+      className={`bg-white dark:bg-gray-800 shadow-md rounded-xl row-span-${widget.row_span || 1} ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
         isEditMode
           ? "border-primary-500/70 dark:border-primary-400/70 rounded-xl border-2 border-dashed shadow-md "
           : ""
@@ -91,7 +91,7 @@ export function EditableWidget({
                       type="button"
                       icon={faTrash}
                       onClick={() => onRemoveWidget(id)}
-                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                      className="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 cursor-pointer"
                     
                     />  
 
@@ -105,7 +105,7 @@ export function EditableWidget({
                     icon={(widget.row_span || 1) > 1 ? faCompress : faExpand}
                     className="h-3 w-3 text-gray-600 dark:text-gray-300"
                   />
-                  <span className="ml-1 text-xs">{widget.row_span || 1}</span>
+                  <span className="ml-1 text-xs text-gray-600 dark:text-gray-300">{widget.row_span || 1}</span>
                 </button>
 
                 {/* Toggle column span button */}
@@ -124,7 +124,7 @@ export function EditableWidget({
                 >
                   <FontAwesomeIcon
                     icon={widget.column_span === 2 ? faCompressAlt : faExpandAlt}
-                    className="h-3 w-3 text-gray-600"
+                    className="h-3 w-3 text-gray-600 dark:text-gray-300"
                   />
                 </button>
 
@@ -136,7 +136,7 @@ export function EditableWidget({
                 >
                   <FontAwesomeIcon
                     icon={faGripVertical}
-                    className="h-3 w-3 text-gray-600"
+                    className="h-3 w-3 text-gray-600 dark:text-gray-300"
                   />
                 </div>
               </div>

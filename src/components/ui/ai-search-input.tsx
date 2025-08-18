@@ -120,7 +120,7 @@ export function AISearchInput({
     }, 150);
 
     setTimeout(() => {
-      navigate({ to: "/dashboard/chat", search: { q: query } });
+      navigate({ to: "/onboarding", search: { q: query } });
     }, 500);
   };
 

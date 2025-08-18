@@ -19,6 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/auth-context';
+import { useDashboardGamification } from '@/hooks/useDashboardData';
 import { useGamification } from '@/hooks/use-gamification';
 
 interface DailyBriefingProps {
@@ -56,7 +57,10 @@ interface QuestionOfDay {
 
 export function DailyBriefing({ onCompleteQuest, userProgress }: DailyBriefingProps) {
   const { user } = useAuth();
-  const { gamificationData, completeQuest, getDailyQuests, isLoading } = useGamification();
+  const { gamificationData, isLoading } = useDashboardGamification();
+  
+  // Import specific functions from the full gamification hook when needed
+  const { completeQuest, getDailyQuests } = useGamification();
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [questionAnswered, setQuestionAnswered] = useState(false);

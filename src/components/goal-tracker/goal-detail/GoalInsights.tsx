@@ -2,47 +2,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faLightbulb,
-  faRobot,
-  faThumbsUp,
-  faThumbsDown,
-  faTimes,
-  faPlus,
-  faRefresh,
   faExclamationTriangle,
-  faInfoCircle,
-  faCheckCircle,
   faBullseye,
   faChartLine,
-  faCalendarAlt,
-  faDollarSign,
-  faShieldAlt,
-  faStar,
-  faArrowUp,
-  faArrowDown,
-  faFireFlameCurved,
-  faSpinner,
   faMagicWandSparkles,
-  faEye,
-  faChevronRight,
+  faStar,
+  faCheckCircle,
   faClock,
-  faHeart
+  faRocket,
+  faTrash,
+  faChevronLeft,
+  faChevronRight
 } from "@fortawesome/free-solid-svg-icons";
-import type { GoalInsight } from "@/components/goal-tracker/types";
 import { useState, useEffect } from "react";
+import type { Insight, AdvisorTone } from "@/components/goal-tracker/types";
 import { useAuth } from "@/contexts/auth-context";
-import { supabase } from "@/lib/supabase";
+import MonekoAdvisorMessage from "@/components/ui/MonekoAdvisorMessage";
+import monekoIcon from "@/assets/images/icon.svg";
+import { useSubscription } from "@/hooks/use-subscription";
 
 interface GoalInsightsProps {
-  insights: GoalInsight[];
-  goalId: string;
+  insights: Insight[];
+  goal: any;
   onInsightUpdate: () => void;
-}
-
-interface InsightAction {
-  id: string;
-  label: string;
-  type: 'primary' | 'secondary' | 'danger';
-  icon: any;
+  onOptimisticUpdate?: (action: { type: string; insightId?: string; insight?: any; updates?: any }) => void;
 }
 
 interface InsightTypeConfig {
@@ -53,14 +36,18 @@ interface InsightTypeConfig {
   label: string;
 }
 
-export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsightsProps) {
+export function GoalInsights({ 
+  insights,
+  goal,
+  onInsightUpdate,
+  onOptimisticUpdate
+}: GoalInsightsProps) {
   const { user } = useAuth();
-  const [expandedInsights, setExpandedInsights] = useState<Set<string>>(new Set());
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'priority' | 'date' | 'type'>('priority');
   const [error, setError] = useState<string | null>(null);
+  const { isActive } = useSubscription(user?.id);
 
   const insightTypeConfigs: Record<string, InsightTypeConfig> = {
     recommendation: {
@@ -106,71 +93,106 @@ export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsights
         return {
           color: 'text-red-600 dark:text-red-400',
           bgColor: 'bg-red-100 dark:bg-red-900/30',
-          label: 'High Priority',
-          order: 3
+          label: 'High Priority'
         };
       case 'medium':
         return {
           color: 'text-amber-600 dark:text-amber-400',
           bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-          label: 'Medium Priority',
-          order: 2
+          label: 'Medium Priority'
         };
       default:
         return {
           color: 'text-gray-600 dark:text-gray-400',
           bgColor: 'bg-gray-100 dark:bg-gray-700/30',
-          label: 'Low Priority',
-          order: 1
+          label: 'Low Priority'
         };
     }
   };
 
-  const getTimeSinceCreated = (createdAt: string) => {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const diffInHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-    return `${Math.floor(diffInHours / 168)}w ago`;
+  const getInsightTypeConfig = (insight: any): InsightTypeConfig => {
+    const insightType = insight?.insight_type || insight?.type || 'recommendation';
+    return insightTypeConfigs[insightType] || insightTypeConfigs.recommendation;
   };
 
-  const filteredAndSortedInsights = insights
-    .filter(insight => !dismissedInsights.has(insight.id))
-    .filter(insight => selectedFilter === 'all' || insight.insight_type === selectedFilter)
+  // Convert insight to advisor message format
+  const convertInsightToAdvisorMessage = (insight: Insight) => {
+    const getAdvisorTone = (priority: string, type: string): AdvisorTone => {
+      if (priority === 'high') return 'motivational';
+      if (type === 'warning') return 'reassuring';
+      if (type === 'opportunity') return 'congratulatory';
+      if (type === 'recommendation') return 'encouraging';
+      return 'informative';
+    };
+
+    return {
+      message: insight.content,
+      tone: getAdvisorTone(insight.priority || 'low', (insight as any).insight_type || (insight as any).type || 'recommendation')
+    };
+  };
+
+  // Navigation functions
+  const goToNextInsight = () => {
+    if (currentInsightIndex < filteredInsights.length - 1) {
+      setCurrentInsightIndex(currentInsightIndex + 1);
+    }
+  };
+
+  const goToPrevInsight = () => {
+    if (currentInsightIndex > 0) {
+      setCurrentInsightIndex(currentInsightIndex - 1);
+    }
+  };
+
+  const goToInsight = (index: number) => {
+    if (index >= 0 && index < filteredInsights.length) {
+      setCurrentInsightIndex(index);
+    }
+  };
+
+  // Filter insights excluding dismissed ones, sorted by priority
+  const filteredInsights = insights
+    .filter(insight => !dismissedInsights.has((insight as any).id || ''))
     .sort((a, b) => {
-      switch (sortBy) {
-        case 'priority':
-          return getPriorityConfig(b.priority).order - getPriorityConfig(a.priority).order;
-        case 'date':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'type':
-          return a.insight_type.localeCompare(b.insight_type);
-        default:
-          return 0;
-      }
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
+      return bPriority - aPriority;
     });
 
-  const toggleInsightExpansion = (insightId: string) => {
-    const newExpanded = new Set(expandedInsights);
-    if (newExpanded.has(insightId)) {
-      newExpanded.delete(insightId);
-    } else {
-      newExpanded.add(insightId);
+  // Reset index when insights change to prevent out-of-bounds errors
+  useEffect(() => {
+    if (filteredInsights.length > 0 && currentInsightIndex >= filteredInsights.length) {
+      setCurrentInsightIndex(0);
     }
-    setExpandedInsights(newExpanded);
-  };
+  }, [filteredInsights.length, currentInsightIndex]);
 
-  const dismissInsight = async (insightId: string) => {
-    if (!user?.id) {
+  // Ensure current index is within bounds and reset if needed
+  const safeCurrentIndex = filteredInsights.length > 0 ? Math.min(Math.max(0, currentInsightIndex), filteredInsights.length - 1) : 0;
+  const currentInsight = filteredInsights.length > 0 ? filteredInsights[safeCurrentIndex] : null;
+
+
+  const dismissCurrentInsight = async () => {
+    if (!currentInsight || !user?.id) {
       setError('User not authenticated');
       return;
     }
 
+    const insightId = (currentInsight as any).id;
+    setDismissedInsights(prev => new Set([...prev, insightId]));
+    
+    // Navigate to next insight or previous if this was the last one
+    if (safeCurrentIndex >= filteredInsights.length - 1) {
+      setCurrentInsightIndex(Math.max(0, safeCurrentIndex - 1));
+    }
+
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate({ type: 'dismiss', insightId });
+    }
+
     try {
-      // Mark insight as dismissed in the database
+      const { supabase } = await import('@/lib/supabase');
+      
       const { error: updateError } = await supabase
         .from('goal_insights')
         .update({ 
@@ -178,13 +200,17 @@ export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsights
           dismissed_at: new Date().toISOString()
         })
         .eq('id', insightId)
-        .eq('goal_id', goalId);
+        .eq('goal_id', goal.id);
 
       if (updateError) throw updateError;
-
-      setDismissedInsights(prev => new Set([...prev, insightId]));
       onInsightUpdate();
     } catch (error) {
+      setDismissedInsights(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(insightId);
+        return newSet;
+      });
+      onInsightUpdate();
       console.error('Failed to dismiss insight:', error);
       setError(error instanceof Error ? error.message : 'Failed to dismiss insight');
     }
@@ -195,19 +221,34 @@ export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsights
       setError('User not authenticated');
       return;
     }
+    if(!isActive)
+    {
+      setError('Subscribe to unlock this feature');
+      return;
+    }
 
     setIsGeneratingNew(true);
     setError(null);
 
     try {
-      // Call the goal-insights-generator function
+      const { supabase } = await import('@/lib/supabase');
+      
       const { data, error } = await supabase.functions.invoke('goal-insights-generator', {
-        body: { goalId, userId: user.id },
-      });    
-      if (error) {
-        throw new Error(error || 'Failed to generate insights');
-      }
+        body: {
+          goalId: goal.id,
+          userId: user.id
+        }
+      });
 
+      if (error) throw error;
+      
+      // Check if new insights were actually generated
+      if (data && data.insights && data.insights.length > 0) {
+        console.log(`Generated ${data.insights.length} new insights`);
+      } else {
+        console.log('No new insights generated - may have recent insights');
+      }
+      
       onInsightUpdate();
     } catch (error) {
       console.error('Failed to generate new insights:', error);
@@ -217,406 +258,218 @@ export function GoalInsights({ insights, goalId, onInsightUpdate }: GoalInsights
     }
   };
 
-  const handleInsightAction = async (insightId: string, action: string) => {
-    if (!user?.id) {
-      setError('User not authenticated');
-      return;
-    }
 
+  const markAsHelpful = async () => {
+    if (!currentInsight || !user?.id) return;
+
+    const insightId = (currentInsight as any).id;
     try {
-      switch (action) {
-        case 'helpful':
-          await supabase
-            .from('goal_insights')
-            .update({ user_feedback: 'helpful' })
-            .eq('id', insightId)
-            .eq('goal_id', goalId);
-          break;
-        case 'dismiss':
-          await dismissInsight(insightId);
-          break;
-        case 'implement':
-          // Track that user wants to implement this insight
-          await supabase
-            .from('goal_insights')
-            .update({ 
-              user_feedback: 'implemented',
-              implemented_at: new Date().toISOString()
-            })
-            .eq('id', insightId)
-            .eq('goal_id', goalId);
-          break;
-      }
+      const { supabase } = await import('@/lib/supabase');
+      await supabase
+        .from('goal_insights')
+        .update({ user_feedback: 'helpful' })
+        .eq('id', insightId)
+        .eq('goal_id', goal.id);
       onInsightUpdate();
     } catch (error) {
-      console.error('Failed to handle insight action:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process action');
+      console.error('Failed to mark as helpful:', error);
     }
   };
 
-  const getInsightActions = (insight: GoalInsight): InsightAction[] => {
-    const actions: InsightAction[] = [];
-    
-    if (insight.actionable) {
-      actions.push({
-        id: 'implement',
-        label: 'Implement',
-        type: 'primary',
-        icon: faCheckCircle
-      });
-    }
-    
-    actions.push(
-      {
-        id: 'helpful',
-        label: 'Helpful',
-        type: 'secondary',
-        icon: faThumbsUp
-      },
-      {
-        id: 'dismiss',
-        label: 'Dismiss',
-        type: 'danger',
-        icon: faTimes
-      }
+  const highPriorityCount = insights.filter(i => i.priority === 'high').length;
+
+  // Empty state with generate button
+  if (insights.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="bg-gradient-to-br from-white via-white to-indigo-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-indigo-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-sm p-8 text-center"
+      >
+        <div className="w-16 h-16 mx-auto bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-6">
+          <FontAwesomeIcon icon={faMagicWandSparkles} className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          Moneko Hasn't Shared Insights Yet
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Let Moneko analyze your goal and provide personalized recommendations to help you succeed.
+        </p>
+        <motion.button
+          onClick={generateNewInsights}
+          disabled={isGeneratingNew}
+          whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
+          whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
+        >
+          {isGeneratingNew ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
+            </motion.div>
+          ) : (
+            <FontAwesomeIcon icon={faRocket} className="w-4 h-4" />
+          )}
+          <span>{isGeneratingNew ? 'Moneko is thinking...' : 'Get Moneko\'s First Insights'}</span>
+        </motion.button>
+      </motion.div>
     );
-    
-    return actions;
-  };
-
-  const insightTypes = ['all', ...new Set(insights.map(i => i.insight_type))];
-  const highPriorityCount = insights.filter(i => i.priority === 'high' && !dismissedInsights.has(i.id)).length;
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative overflow-hidden"
+      transition={{ duration: 0.6 }}
+      className="space-y-6"
     >
-      <div className="relative bg-gradient-to-br from-white via-white to-pink-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-pink-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl shadow-black/5 dark:shadow-black/20">
-        
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_30%,rgba(236,72,153,0.05),transparent_60%)] dark:bg-[radial-gradient(circle_at_80%_30%,rgba(236,72,153,0.1),transparent_60%)]" />
-        
-        {/* Content */}
-        <div className="relative p-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-pink-500/20 to-pink-600/10 dark:from-pink-400/30 dark:to-pink-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-pink-500/20 dark:border-pink-400/30"
-              >
-                <FontAwesomeIcon
-                  icon={faMagicWandSparkles}
-                  className="w-7 h-7 text-pink-600 dark:text-pink-400"
-                />
-              </motion.div>
-              
-              <div>
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-center gap-3 mb-2"
-                >
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    AI Insights
-                  </h2>
-                  {highPriorityCount > 0 && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-                      <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
-                      {highPriorityCount} urgent
-                    </div>
-                  )}
-                  {insights.filter(i => i.is_ai_generated).length > 0 && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                      <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
-                      AI Powered
-                    </div>
-                  )}
-                </motion.div>
-                <motion.p
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-gray-600 dark:text-gray-400"
-                >
-                  Personalized recommendations and insights for your goal
-                </motion.p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              What Moneko Thinks
+            </h3>
+            {highPriorityCount > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
+                <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
+                {highPriorityCount} urgent
               </div>
-            </div>
-
-            {/* Generate Button */}
-            <motion.button
-              onClick={generateNewInsights}
-              disabled={isGeneratingNew}
-              whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
-              whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-              className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
-            >
-              {isGeneratingNew ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <FontAwesomeIcon icon={faSpinner} className="w-4 h-4" />
-                </motion.div>
-              ) : (
-                <FontAwesomeIcon icon={faRefresh} className="w-4 h-4" />
-              )}
-              <span>{isGeneratingNew ? 'Generating...' : 'Generate New'}</span>
-            </motion.button>
+            )}
           </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Moneko's personalized insights for your goal journey
+          </p>
+        </div>
 
-          {/* Filters and Sort */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-wrap items-center gap-4 mb-8"
-          >
-            {/* Type Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter:</span>
-              <div className="flex gap-2">
-                {insightTypes.map((type) => (
-                  <motion.button
-                    key={type}
-                    onClick={() => setSelectedFilter(type)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors capitalize ${
-                      selectedFilter === type
-                        ? 'bg-pink-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {type}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20"
-              >
-                <option value="priority">Priority</option>
-                <option value="date">Date</option>
-                <option value="type">Type</option>
-              </select>
-            </div>
-          </motion.div>
-
-          {/* Error Message */}
-          {error && (
+        {/* Generate New Button */}
+        <motion.button
+          onClick={generateNewInsights}
+          disabled={isGeneratingNew}
+          whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
+          whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
+          className="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-medium rounded-lg shadow-lg shadow-pink-500/25 transition-colors text-sm"
+        >
+          {isGeneratingNew ? (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl text-red-700 dark:text-red-400 mb-6"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             >
-              <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5" />
-              <span className="font-medium">{error}</span>
-              <button 
-                onClick={() => setError(null)}
-                className="ml-auto text-red-500 hover:text-red-700"
-              >
-                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-              </button>
-            </motion.div>
-          )}
-
-          {/* Insights List */}
-          {filteredAndSortedInsights.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="text-center py-16"
-            >
-              <div className="w-20 h-20 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
-                <FontAwesomeIcon icon={faMagicWandSparkles} className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                No Insights Available
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Generate AI insights to get personalized recommendations for your goal.
-              </p>
-              <motion.button
-                onClick={generateNewInsights}
-                disabled={isGeneratingNew}
-                whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
-                whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
-              >
-                <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                Generate First Insights
-              </motion.button>
+              <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
             </motion.div>
           ) : (
-            <div className="space-y-4">
-              <AnimatePresence>
-                {filteredAndSortedInsights.map((insight, index) => {
-                  const typeConfig = insightTypeConfigs[insight.insight_type] || insightTypeConfigs.recommendation;
-                  const priorityConfig = getPriorityConfig(insight.priority);
-                  const isExpanded = expandedInsights.has(insight.id);
-                  const actions = getInsightActions(insight);
+            <img src={monekoIcon} alt="Moneko Icon" className="size-4" />
+          )}
+          <span>{isGeneratingNew ? 'Thinking...' : 'Ask Moneko Again'}</span>
+        </motion.button>
+      </div>
 
-                  return (
-                    <motion.div
-                      key={insight.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ delay: index * 0.1 }}
-                      className={`bg-white dark:bg-gray-700/50 rounded-xl border-2 ${typeConfig.borderColor} hover:shadow-lg transition-all group`}
-                    >
-                      {/* Insight Header */}
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-start gap-4">
-                            <div className={`flex-shrink-0 w-12 h-12 ${typeConfig.bgColor} rounded-xl flex items-center justify-center`}>
-                              <FontAwesomeIcon icon={typeConfig.icon} className={`w-6 h-6 ${typeConfig.color}`} />
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                  {insight.title}
-                                </h3>
-                                
-                                <div className={`px-2 py-1 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
-                                  {priorityConfig.label}
-                                </div>
-                                
-                                <div className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} rounded-full text-xs font-medium`}>
-                                  {typeConfig.label}
-                                </div>
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm"
+        >
+          <FontAwesomeIcon icon={faExclamationTriangle} className="w-4 h-4" />
+          <span>{error}</span>
+          <button 
+            onClick={() => setError(null)}
+            className="ml-auto text-red-500 hover:text-red-700"
+          >
+            <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+          </button>
+        </motion.div>
+      )}
 
-                                {insight.is_ai_generated && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
-                                    <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
-                                    AI
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                <div className="flex items-center gap-1">
-                                  <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                                  {getTimeSinceCreated(insight.created_at)}
-                                </div>
-                                
-                                {insight.ai_confidence_score && (
-                                  <div className="flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faStar} className="w-3 h-3" />
-                                    {Math.round(insight.ai_confidence_score * 100)}% confidence
-                                  </div>
-                                )}
-                                
-                                {insight.actionable && (
-                                  <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                                    Actionable
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+      {/* Insights Navigation and Display */}
+      {filteredInsights.length > 0 && currentInsight && (
+        <div className="space-y-4">
+          {/* Navigation Header */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Insight {safeCurrentIndex + 1} of {filteredInsights.length}
+              </span>
+              {/* Priority and Type Badges */}
+              {currentInsight && (
+                <div className="flex items-center gap-2">
+                  <div className={`px-2 py-1 ${getPriorityConfig(currentInsight.priority).bgColor} ${getPriorityConfig(currentInsight.priority).color} rounded-full text-xs font-medium`}>
+                    {getPriorityConfig(currentInsight.priority).label}
+                  </div>
+                  <div className={`px-2 py-1 ${getInsightTypeConfig(currentInsight).bgColor} ${getInsightTypeConfig(currentInsight).color} rounded-full text-xs font-medium`}>
+                    {getInsightTypeConfig(currentInsight).label}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Navigation Controls */}
+            <div className="flex items-center gap-2">
+              <motion.button
+                onClick={goToPrevInsight}
+                disabled={safeCurrentIndex === 0}
+                whileHover={safeCurrentIndex > 0 ? { scale: 1.1 } : {}}
+                whileTap={safeCurrentIndex > 0 ? { scale: 0.9 } : {}}
+                className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              </motion.button>
+              
+              <motion.button
+                onClick={goToNextInsight}
+                disabled={safeCurrentIndex >= filteredInsights.length - 1}
+                whileHover={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 1.1 } : {}}
+                whileTap={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 0.9 } : {}}
+                className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              </motion.button>
+            </div>
+          </div>
 
-                          {/* Expand Button */}
-                          <motion.button
-                            onClick={() => toggleInsightExpansion(insight.id)}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                          >
-                            <motion.div
-                              animate={{ rotate: isExpanded ? 90 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-gray-400" />
-                            </motion.div>
-                          </motion.button>
-                        </div>
+          {/* Current Insight as Advisor Message */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={safeCurrentIndex}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <MonekoAdvisorMessage
+                message={convertInsightToAdvisorMessage(currentInsight)}
+                showMessage={true}
+                typewriterSpeed={80}
+              />
+            </motion.div>
+          </AnimatePresence>
 
-                        {/* Content Preview */}
-                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                          {isExpanded ? insight.content : `${insight.content.substring(0, 150)}${insight.content.length > 150 ? '...' : ''}`}
-                        </p>
-                      </div>
+      
 
-                      {/* Expanded Content */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="px-6 pb-6"
-                          >
-                            {insight.ai_confidence_score && (
-                              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    AI Confidence Score
-                                  </span>
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {Math.round(insight.ai_confidence_score * 100)}%
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                                  <motion.div
-                                    className="h-2 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${insight.ai_confidence_score * 100}%` }}
-                                    transition={{ duration: 1, delay: 0.5 }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-3">
-                              {actions.map((action) => (
-                                <motion.button
-                                  key={action.id}
-                                  onClick={() => handleInsightAction(insight.id, action.id)}
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg transition-colors ${
-                                    action.type === 'primary'
-                                      ? 'bg-pink-600 hover:bg-pink-700 text-white'
-                                      : action.type === 'danger'
-                                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                                      : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300'
-                                  }`}
-                                >
-                                  <FontAwesomeIcon icon={action.icon} className="w-3 h-3" />
-                                  {action.label}
-                                </motion.button>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+          {/* Insight Dots Navigation */}
+          {filteredInsights.length > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              {filteredInsights.map((_, index) => (
+                <motion.button
+                  key={index}
+                  onClick={() => goToInsight(index)}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
+                  className={`w-3 h-3 rounded-full transition-colors ${
+                    index === safeCurrentIndex
+                      ? 'bg-pink-600'
+                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                  }`}
+                />
+              ))}
             </div>
           )}
         </div>
-      </div>
+      )}
     </motion.div>
   );
 }

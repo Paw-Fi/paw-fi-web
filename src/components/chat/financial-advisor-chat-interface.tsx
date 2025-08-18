@@ -1,147 +1,102 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/auth-context";
-import { useFinancialHealthProfile, formatProfileForAI } from "@/hooks/use-financial-health-profile";
-import { ChatConversationDisplay, ConversationMessage } from "./chat-conversation-display";
-import {
-  fetchConversations,
-  sendChatMessage,
-} from "@/services/conversation-service";
-import { supabase } from "@/lib/supabase";
-import { OptimizedImage } from "@/components/seo/optimized-image";
-import { AI_ROLES } from "./ai-roles";
-import logo from "@/assets/images/icon.svg";
+import { useEffect } from 'react';
+import { useNavigate } from "@tanstack/react-router";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChartLine } from "@fortawesome/free-solid-svg-icons";
 
-type Message = ConversationMessage;
+import { useAuth } from "@/contexts/auth-context";
+import { useChatContext } from "@/contexts/chat-context";
+import { ChatConversationDisplay } from "./chat-conversation-display";
+import { AI_ROLES } from "./ai-roles";
+import monekoLogo from "@/assets/images/avatar/moneko.png";
 
 export function FinancialAdvisorChatInterface() {
   const { user } = useAuth();
-  const isAuthenticated = !!user;
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { loadInitialMessages } = useChatContext();
   
-  // State
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-    
-  // Load financial health profile for authenticated users
-  const { profile } = useFinancialHealthProfile(user?.id);
-  
-  // Fetch conversations for authenticated users - only once initially
-  const { 
-    data: conversationsData,
-    isLoading: isConversationsLoading,
-  } = useQuery({
-    queryKey: ['conversations', AI_ROLES.FINANCIAL_ADVISOR],
-    queryFn: () => fetchConversations(supabase, AI_ROLES.FINANCIAL_ADVISOR),
-    enabled: isAuthenticated,
-    staleTime: Infinity, // Never refetch automatically
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  const currentConversationId = useMemo(() => {
-    if (!conversationsData) {
-      return null;
-    }
-    return conversationsData.id;
-  }, [conversationsData]);
-
-const currentConversationData = conversationsData
-  // Load messages from conversation data - only once initially
-  const [hasLoadedInitialMessages, setHasLoadedInitialMessages] = useState(false);
+  // Load conversation history on mount
   useEffect(() => {
-    if (isAuthenticated && currentConversationData?.messages && !hasLoadedInitialMessages) {
-      setMessages(currentConversationData.messages);
-      setHasLoadedInitialMessages(true);
+    if (user) {
+      loadInitialMessages(AI_ROLES.FINANCIAL_ADVISOR);
     }
-  }, [isAuthenticated, currentConversationData, hasLoadedInitialMessages]);
+  }, [user, loadInitialMessages]);
   
-  // Send message function - unified for both guest and authenticated users
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isSendingMessage) return;
-    
-    setIsSendingMessage(true);
-    setConnectionError(null);
-    
-    const getConsistentTimestamp = (): number => {
-      if (typeof window === "undefined") {
-        return 1717000000000;
-      }
-      return Date.now();
-    };
-    
-    // Create optimistic user message
-    const userMessage: Message = {
-      content,
-      role: "user",
-      timestamp: getConsistentTimestamp(),
-      chat_session_id: isAuthenticated ? currentConversationId || "" : "",
-      userId: user?.id
-    };
-    
-    // Optimistically add user message to UI
-    setMessages(prev => [...prev, userMessage]);
-    
-    try {
-      // Send message using proper supabase service function
-      const response = await sendChatMessage(supabase, content, {
-        conversationId: isAuthenticated ? currentConversationId : null,
-        userId: user?.id || null,
-        model: AI_ROLES.FINANCIAL_ADVISOR,
-        profile: formatProfileForAI(user,profile)
-      });
-      
-      
-      // Create AI message from response
-      const aiMessage: Message = {
-        content: response.response || "I'm sorry, I couldn't generate a response.",
-        role: "assistant",
-        timestamp: getConsistentTimestamp(),
-        chat_session_id: response.conversationId || userMessage.chat_session_id,
-        userId: user?.id,
-      };
-      
-      // Add AI message to UI
-      setMessages(prev => [...prev, aiMessage]);
-            
-    } catch (error) {
-      // Add error message
-      const errorMessage: Message = {
-        content: "Sorry, I had trouble connecting. Please check your connection or try again.",
-        role: "assistant",
-        timestamp: getConsistentTimestamp(),
-        chat_session_id: userMessage.chat_session_id,
-        userId: user?.id,
-        metadata: { isError: true }
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-      setConnectionError("Connection error. Please try again.");
-    } finally {
-      setIsSendingMessage(false);
-    }
-  };
-
-
+  // Footer content for advisor interface
+  const footerContent = user ? (
+    // Show advisor session data for authenticated users
+    <>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+        <span className="font-medium">Advisor Session Active</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+        <span>Goal Tracking</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+        <span>Personalized guidance</span>
+      </div>
+    </>
+  ) : (
+    // Default indicators for guests or new users
+    <>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+        <span>Personal Guidance</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+        <span>Expert Advice</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+        <span>Investment Strategies</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+        <span>Budget Planning</span>
+      </div>
+    </>
+  );
+  
   return (
     <ChatConversationDisplay
-      messages={messages}
-      onMessageSend={handleSendMessage}
-      isSendingMessage={isSendingMessage}
-      agentName="Moneko AI - Financial Advisor"
-      welcomeMessage="Hi! I'm Moneko, your AI financial advisor. I provide personalized financial guidance based on your situation. What financial question can I help you with today?"
-      welcomeSubtitle="Ask me about budgeting, investing, debt management, or any financial topic!"
-      connectionError={connectionError || undefined}
-      isBackendProcessing={isConversationsLoading}
-      headerClassName="p-4"
-      agentIcon={
-        <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
-          <OptimizedImage src={logo} alt="Moneko AI" className="size-6" />
-        </div>
-      }
+      aiRole={AI_ROLES.FINANCIAL_ADVISOR}
+      chatConfig={{
+        enableGuestSessions: true,
+        enableSignupPrompt: true,
+        enableLoadingDuration: true,
+        showHeader: true,
+        showFooter: true,
+        showFloatingCloseButton: true,
+        showSignupModal: true,
+      }}  
+      agentIcon={monekoLogo}
+      agentName="Moneko"
+      initialSuggestedResponses={[
+        "I want to know how to save money", 
+        "Help me create a retirement goal", 
+        "I want to know how to invest", 
+        "Show me my current goals"
+      ]}
+      welcomeMessage="Hi! I'm Moneko, your AI financial advisor. I provide personalized financial guidance and can help you track your financial goals. What can I help you with today?"
+      welcomeSubtitle="Ask me about budgeting, investing, debt management, goal tracking, or any financial topic!"
+      navigate={navigate}
+      className="flex-1"
+      headerTitle="Moneko"
+      headerGradientColors="bg-gradient-to-r from-slate-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-100"
+      headerBackgroundColors="bg-gradient-to-r from-white to-blue-50 dark:from-slate-800 dark:to-slate-700"
+      backgroundGradient="h-full bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 dark:from-blue-950 dark:via-indigo-950 dark:to-cyan-950 flex flex-col"
+      footerContent={footerContent}
+      signupModalConfig={{
+        icon: <FontAwesomeIcon icon={faChartLine} className="text-white text-3xl" />,
+        title: "Your personalized advice is ready!",
+        description: "Register a free account to get personalized financial advice and access more features.",
+        buttonText: "Register for Free"
+      }}
     />
   );
 }

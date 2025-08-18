@@ -32,12 +32,12 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Sign In</h2>
+    <div className="w-full max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">Sign In</h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-1">
+          <label htmlFor="email" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
             Email
           </label>
           <Input
@@ -52,7 +52,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
         </div>
         
         <div>
-          <label htmlFor="password" className="block text-sm font-medium mb-1">
+          <label htmlFor="password" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
             Password
           </label>
           <Input
@@ -67,7 +67,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
         </div>
         
         {error && (
-          <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>
+          <div className="text-red-500 dark:text-red-400 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">{error}</div>
         )}
         
         <Button 

@@ -36,21 +36,25 @@ async function fetchUserActivities(userId: string): Promise<Activity[]> {
 
   const rawActivities = data.activities as ActivityRecord[];
 
-  // Extract unique goal IDs for fetching goal titles
-  const goalIds = [...new Set(
+  // Extract goal IDs that need title lookup (only for activities without goalTitle in metadata)
+  const goalIdsNeedingTitles = [...new Set(
     rawActivities
+      .filter(activity => 
+        activity.activity.metadata?.goalId && 
+        !activity.activity.metadata?.goalTitle // Only fetch if goalTitle not already in metadata
+      )
       .map(activity => activity.activity.metadata?.goalId)
       .filter(Boolean)
   )] as string[];
 
   let goalTitleMap = new Map<string, string>();
 
-  // If there are goal-related activities, fetch their titles
-  if (goalIds.length > 0) {
+  // Only fetch goal titles if there are activities without goalTitle in metadata (backward compatibility)
+  if (goalIdsNeedingTitles.length > 0) {
     const { data: goalsData, error: goalsError } = await supabase
       .from('financial_goals')
       .select('id, title')
-      .in('id', goalIds);
+      .in('id', goalIdsNeedingTitles);
 
     if (goalsError) {
       console.error('Error fetching goal titles:', goalsError);
@@ -68,7 +72,9 @@ async function fetchUserActivities(userId: string): Promise<Activity[]> {
     action: raw.activity.action as ActivityAction,
     source: raw.activity.source,
     goalId: raw.activity.metadata?.goalId,
-    goalTitle: raw.activity.metadata?.goalId ? goalTitleMap.get(raw.activity.metadata.goalId) || 'Untitled Goal' : undefined,
+    // Use goalTitle from metadata if available, otherwise fall back to fetched title
+    goalTitle: raw.activity.metadata?.goalTitle || 
+              (raw.activity.metadata?.goalId ? goalTitleMap.get(raw.activity.metadata.goalId) || 'Untitled Goal' : undefined),
     metadata: raw.activity.metadata,
   }));
 }
@@ -84,6 +90,7 @@ export function useUserActivities() {
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 3, // Retry failed requests 3 times for network resilience
   });
 
   // Set up real-time subscription

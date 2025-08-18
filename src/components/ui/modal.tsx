@@ -107,7 +107,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={classNames("fixed inset-0 z-30 flex items-center justify-center p-4",
+        className={classNames("fixed inset-0 z-[10000] flex items-center justify-center p-4",
         )}
       >
         {/* Backdrop */}
@@ -133,7 +133,7 @@ export function Modal({
           onClick={(e) => e.stopPropagation()}
           role="document"
           className={classNames(
-            "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white px-6 py-4 shadow-2xl ",
+            "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-6 py-4 shadow-2xl ",
             fullHeight ? "h-[90vh]" : "max-h-[90vh]",
             contentClassName,
             {
@@ -143,10 +143,10 @@ export function Modal({
             }
           )}
         >
-        {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 mb-2">
-            {title && <h2 className="text-xl font-semibold">{title}</h2>}
+        {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 dark:border-gray-600/50 mb-2">
+            {title && <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>}
             {description && (
-              <p className="text-sm text-gray-500">{description}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
           </div>}
 
