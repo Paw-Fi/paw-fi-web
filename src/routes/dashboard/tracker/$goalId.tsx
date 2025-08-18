@@ -52,6 +52,7 @@ import { useUserActivities } from "@/hooks/useUserActivities";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useSubscription } from "@/hooks/use-subscription";
+import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
 
 export const Route = createFileRoute("/dashboard/tracker/$goalId")({
   component: GoalDetail,
@@ -139,6 +140,7 @@ function GoalDetail() {
   const [showGoalMenu, setShowGoalMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUpdateProgressModal, setShowUpdateProgressModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   
   // Animation states
   const [numbersAnimated, setNumbersAnimated] = useState(false);
@@ -277,6 +279,11 @@ function GoalDetail() {
     } catch (error) {
       console.error('Failed to delete goal:', error);
     }
+  };
+
+  // Handle subscription requirement
+  const handleSubscriptionRequired = () => {
+    setShowSubscriptionModal(true);
   };
   
   // Inline editing functions
@@ -729,6 +736,7 @@ function GoalDetail() {
                     goal={currentGoal}
                     onInsightUpdate={refetch}
                     onOptimisticUpdate={(action) => setOptimisticInsights(action)}
+                    onSubscriptionRequired={handleSubscriptionRequired}
                   />
 
                   {/* AI Generated Strategy */}
@@ -783,6 +791,7 @@ function GoalDetail() {
                     isSubscriptionActive={isActive}
                     onMilestoneUpdate={refetch}
                     onOptimisticUpdate={(action) => setOptimisticMilestones(action)}
+                    onSubscriptionRequired={handleSubscriptionRequired}
                   />
                 </motion.div>
               )}
@@ -813,6 +822,7 @@ function GoalDetail() {
                       progressData={progressData}
                       onGoalUpdate={updateGoal}
                       isSubscriptionActive={isActive}
+                      onSubscriptionRequired={handleSubscriptionRequired}
                     />
                   </div>
                 </motion.div>
@@ -1023,6 +1033,12 @@ function GoalDetail() {
         goal={currentGoal}
         onInsightUpdate={refetch}
         onOptimisticUpdate={(action) => setOptimisticInsights(action)}
+      />
+
+      {/* Subscription Modal */}
+      <DashboardBlockModal
+        isVisible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
       />
 
       {/* Delete Confirmation Modal */}

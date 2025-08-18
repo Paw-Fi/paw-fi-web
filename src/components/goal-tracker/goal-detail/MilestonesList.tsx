@@ -36,6 +36,7 @@ interface MilestonesListProps {
   onMilestoneUpdate: (reorderedItems?: GoalMilestone[]) => void;
   onOptimisticUpdate?: (action: { type: string; milestoneId?: string; milestone?: GoalMilestone; updates?: Partial<GoalMilestone> }) => void;
   isSubscriptionActive?: boolean;
+  onSubscriptionRequired?: () => void;
 }
 
 interface MilestoneFormData {
@@ -50,7 +51,7 @@ interface MilestoneFormData {
   priority: MilestonePriority;
 }
 
-export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimisticUpdate, isSubscriptionActive }: MilestonesListProps) {
+export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimisticUpdate, isSubscriptionActive, onSubscriptionRequired }: MilestonesListProps) {
   const { user } = useAuth();
   const [orderedMilestones, setOrderedMilestones] = useState<GoalMilestone[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -408,7 +409,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
             onClick={() => {
               if(!isSubscriptionActive)
               {
-                toast.error("Subscribe to unlock this feature")
+                onSubscriptionRequired?.();
                 return
               }
               setShowCreateForm(!showCreateForm)

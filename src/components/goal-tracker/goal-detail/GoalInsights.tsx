@@ -20,12 +20,14 @@ import { useAuth } from "@/contexts/auth-context";
 import MonekoAdvisorMessage from "@/components/ui/MonekoAdvisorMessage";
 import monekoIcon from "@/assets/images/icon.svg";
 import { useSubscription } from "@/hooks/use-subscription";
+import { DashboardBlockModal } from "@/components/dashboard/DashboardBlockModal";
 
 interface GoalInsightsProps {
   insights: Insight[];
   goal: any;
   onInsightUpdate: () => void;
   onOptimisticUpdate?: (action: { type: string; insightId?: string; insight?: any; updates?: any }) => void;
+  onSubscriptionRequired?: () => void;
 }
 
 interface InsightTypeConfig {
@@ -40,7 +42,8 @@ export function GoalInsights({
   insights,
   goal,
   onInsightUpdate,
-  onOptimisticUpdate
+  onOptimisticUpdate,
+  onSubscriptionRequired
 }: GoalInsightsProps) {
   const { user } = useAuth();
   const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
@@ -223,7 +226,7 @@ export function GoalInsights({
     }
     if(!isActive)
     {
-      setError('Subscribe to unlock this feature');
+      onSubscriptionRequired?.();
       return;
     }
 

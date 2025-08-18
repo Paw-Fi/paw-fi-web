@@ -25,6 +25,7 @@ import {
   faChartBar,
   faIdCard,
   faHeadphones,
+  faCrown,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -639,8 +640,30 @@ export function Dashboard() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className="flex size-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
-                    {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
+                  <div className="relative flex-shrink-0">
+                    {/* Premium Border Container */}
+                    <div className={`relative rounded-full p-0.5 ${
+                      isActive 
+                        ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-lg shadow-amber-500/30' 
+                        : ''
+                    }`}>
+                      {/* Profile Picture */}
+                      <div className={`flex size-10 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 text-sm font-semibold text-white ${
+                        isActive ? 'shadow-md' : 'shadow-sm'
+                      }`}>
+                        {user.user_metadata?.full_name.charAt(0).toUpperCase() || "U"}
+                      </div>
+                    </div>
+                    
+                    {/* Premium Crown Icon */}
+                    {isActive && (
+                      <div className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-md">
+                        <FontAwesomeIcon 
+                          icon={faCrown} 
+                          className="size-2.5 text-amber-900" 
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground dark:text-dark-foreground">

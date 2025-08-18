@@ -20,6 +20,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { useAuth } from "@/contexts/auth-context";
 import { Modal } from "../ui/modal";
+import monekoIcon from "@assets/images/avatar/moneko.png"
 
 interface AIIntroComponentProps {
   className?: string;
@@ -746,9 +747,11 @@ Sound good?`,
       {/* Modern Chat Container with proper constraints */}
       <div className="flex flex-col" style={{ height: '600px' }}>
         <ChatConversationDisplay
+        agentName="Moneko"
+        aiRole="goal_tracker"
+        agentIcon={monekoIcon}
           chatConfig={
            {
-            aiRole: "assistant",
             useExternalMessages: true,
             externalMessages: messages,
             customMessageHandler: handleSendMessage,

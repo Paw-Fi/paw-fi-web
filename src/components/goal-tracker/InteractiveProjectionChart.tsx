@@ -25,12 +25,14 @@ export function InteractiveProjectionChart({
   goal, 
   progressData, 
   onGoalUpdate ,
-  isSubscriptionActive
+  isSubscriptionActive,
+  onSubscriptionRequired
 }: { 
   goal: any; 
   progressData: any;
   onGoalUpdate: (updates: any) => Promise<void>;
-  isSubscriptionActive?:boolean
+  isSubscriptionActive?: boolean;
+  onSubscriptionRequired?: () => void;
 }) {
   const [showProjection, setShowProjection] = useState(true);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
@@ -111,7 +113,7 @@ export function InteractiveProjectionChart({
     if (isUpdating) return;
     if(!isSubscriptionActive)
     {
-      toast.error("Subscribe to unlock this feature")
+      onSubscriptionRequired?.();
       return
     }
     
