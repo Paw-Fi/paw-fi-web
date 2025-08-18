@@ -108,42 +108,72 @@ export function useFinancialHealthProfile(userId: string | undefined) {
 }
 
 // Helper function to format profile data for AI context
-export function formatProfileForAI(user: AuthContextType['user'], profile?: Pick<FinancialHealthProfile, 'profile_description' | 'quiz_answers'> | null): string {
-  if (!profile || !profile.quiz_answers) return '';
+export function formatProfileForAI(user: AuthContextType['user'], profile?: Pick<FinancialHealthProfile, 'profile_description' | 'quiz_answers'> | null): string | undefined {
+  if (!profile || !profile.quiz_answers) return undefined;
   
   const quizAnswers = profile.quiz_answers as ComprehensiveFinancialProfile;
   
-  // Calculate total monthly expenses
-  const totalExpenses = (quizAnswers.housing_cost || 0) + 
-                       (quizAnswers.food_expenses || 0) + 
-                       (quizAnswers.transportation_expenses || 0) + 
-                       (quizAnswers.healthcare_expenses || 0) + 
-                       (quizAnswers.insurance_expenses || 0) + 
-                       (quizAnswers.entertainment_expenses || 0) + 
-                       (quizAnswers.other_monthly_expenses || 0);
+  // Helper function to handle undefined vs 0 distinction
+  const getValueOrUndefined = (value: any): number | undefined => {
+    return value !== null && value !== undefined && value !== '' ? Number(value) : undefined;
+  };
   
-  // Calculate monthly savings
-  const monthlySavings = (quizAnswers.net_monthly_income || 0) - totalExpenses;
+  // Calculate total monthly expenses only if we have expense data
+  const expenseFields = [
+    getValueOrUndefined(quizAnswers.housing_cost),
+    getValueOrUndefined(quizAnswers.food_expenses),
+    getValueOrUndefined(quizAnswers.transportation_expenses),
+    getValueOrUndefined(quizAnswers.healthcare_expenses),
+    getValueOrUndefined(quizAnswers.insurance_expenses),
+    getValueOrUndefined(quizAnswers.entertainment_expenses),
+    getValueOrUndefined(quizAnswers.other_monthly_expenses)
+  ];
+  const hasExpenseData = expenseFields.some(val => val !== undefined);
+  const totalExpenses = hasExpenseData ? expenseFields.reduce((sum, val) => sum + (val || 0), 0) : undefined;
   
-  // Calculate total assets
-  const totalAssets = (quizAnswers.checking_account || 0) + 
-                     (quizAnswers.savings_account || 0) + 
-                     (quizAnswers.investment_accounts || 0) + 
-                     (quizAnswers.retirement_accounts || 0) + 
-                     (quizAnswers.real_estate_value || 0) + 
-                     (quizAnswers.other_assets || 0);
+  // Calculate monthly savings only if we have both income and expense data
+  const netIncome = getValueOrUndefined(quizAnswers.net_monthly_income);
+  const monthlySavings = (netIncome !== undefined && totalExpenses !== undefined) ? netIncome - totalExpenses : undefined;
   
-  // Calculate total debt
-  const totalDebt = (quizAnswers.credit_card_debt || 0) + 
-                   (quizAnswers.student_loan_debt || 0) + 
-                   (quizAnswers.mortgage_balance || 0) + 
-                   (quizAnswers.auto_loan_balance || 0) + 
-                   (quizAnswers.other_debt || 0);
+  // Calculate total assets only if we have asset data
+  const assetFields = [
+    getValueOrUndefined(quizAnswers.checking_account),
+    getValueOrUndefined(quizAnswers.savings_account),
+    getValueOrUndefined(quizAnswers.investment_accounts),
+    getValueOrUndefined(quizAnswers.retirement_accounts),
+    getValueOrUndefined(quizAnswers.real_estate_value),
+    getValueOrUndefined(quizAnswers.other_assets)
+  ];
+  const hasAssetData = assetFields.some(val => val !== undefined);
+  const totalAssets = hasAssetData ? assetFields.reduce((sum, val) => sum + (val || 0), 0) : undefined;
+  
+  // Calculate total debt only if we have debt data
+  const debtFields = [
+    getValueOrUndefined(quizAnswers.credit_card_debt),
+    getValueOrUndefined(quizAnswers.student_loan_debt),
+    getValueOrUndefined(quizAnswers.mortgage_balance),
+    getValueOrUndefined(quizAnswers.auto_loan_balance),
+    getValueOrUndefined(quizAnswers.other_debt)
+  ];
+  const hasDebtData = debtFields.some(val => val !== undefined);
+  const totalDebt = hasDebtData ? debtFields.reduce((sum, val) => sum + (val || 0), 0) : undefined;
   
   // Calculate years to retirement
-  const yearsToRetirement = quizAnswers.retirement_age && quizAnswers.current_age ? 
-                           Math.max(0, quizAnswers.retirement_age - quizAnswers.current_age) : null;
+  const currentAge = getValueOrUndefined(quizAnswers.current_age);
+  const retirementAge = getValueOrUndefined(quizAnswers.retirement_age);
+  const yearsToRetirement = (currentAge !== undefined && retirementAge !== undefined) ? 
+                           Math.max(0, retirementAge - currentAge) : undefined;
   
+  // Helper function to format currency or show "Not provided"
+  const formatCurrency = (value: number | undefined): string => {
+    return value !== undefined ? `$${value.toLocaleString()}` : 'Not provided';
+  };
+
+  // Helper function to format percentage or show "Not provided"
+  const formatPercentage = (value: number | undefined): string => {
+    return value !== undefined ? `${value}%` : 'Not provided';
+  };
+
   return `
 FINANCIAL CASE FILE FOR USER:
 
@@ -152,39 +182,39 @@ ${user ? `Name: ${user?.user_metadata?.full_name}` : ''}
 ${profile.profile_description}
 
 ## Personal Information:
-- Age: ${quizAnswers.current_age || 'Not provided'}
-- Dependents: ${quizAnswers.dependents || 0}
+- Age: ${currentAge !== undefined ? currentAge : 'Not provided'}
+- Dependents: ${getValueOrUndefined(quizAnswers.dependents) !== undefined ? getValueOrUndefined(quizAnswers.dependents) : 'Not provided'}
 - Marital Status: ${quizAnswers.marital_status || 'Not provided'}
 
 ## Income & Cash Flow:
-- Gross Monthly Income: $${(quizAnswers.gross_monthly_income || 0).toLocaleString()}
-- Net Monthly Income: $${(quizAnswers.net_monthly_income || 0).toLocaleString()}
+- Gross Monthly Income: ${formatCurrency(getValueOrUndefined(quizAnswers.gross_monthly_income))}
+- Net Monthly Income: ${formatCurrency(netIncome)}
 - Income Stability: ${quizAnswers.income_stability || 'Not provided'}
-- Monthly Expenses: $${totalExpenses.toLocaleString()}
-- Monthly Savings: $${monthlySavings.toLocaleString()}
-- Savings Rate: ${quizAnswers.savings_rate || 0}%
+- Monthly Expenses: ${formatCurrency(totalExpenses)}
+- Monthly Savings: ${formatCurrency(monthlySavings)}
+- Savings Rate: ${formatPercentage(getValueOrUndefined(quizAnswers.savings_rate))}
 
 ## Assets & Investments:
-- Emergency Fund: $${(quizAnswers.emergency_fund || 0).toLocaleString()}
-- Checking Account: $${(quizAnswers.checking_account || 0).toLocaleString()}
-- Savings Account: $${(quizAnswers.savings_account || 0).toLocaleString()}
-- Investment Accounts: $${(quizAnswers.investment_accounts || 0).toLocaleString()}
-- Retirement Accounts: $${(quizAnswers.retirement_accounts || 0).toLocaleString()}
-- Real Estate Value: $${(quizAnswers.real_estate_value || 0).toLocaleString()}
-- Total Assets: $${totalAssets.toLocaleString()}
+- Emergency Fund: ${formatCurrency(getValueOrUndefined(quizAnswers.emergency_fund))}
+- Checking Account: ${formatCurrency(getValueOrUndefined(quizAnswers.checking_account))}
+- Savings Account: ${formatCurrency(getValueOrUndefined(quizAnswers.savings_account))}
+- Investment Accounts: ${formatCurrency(getValueOrUndefined(quizAnswers.investment_accounts))}
+- Retirement Accounts: ${formatCurrency(getValueOrUndefined(quizAnswers.retirement_accounts))}
+- Real Estate Value: ${formatCurrency(getValueOrUndefined(quizAnswers.real_estate_value))}
+- Total Assets: ${formatCurrency(totalAssets)}
 
 ## Debts & Liabilities:
-- Credit Card Debt: $${(quizAnswers.credit_card_debt || 0).toLocaleString()}
-- Student Loan Debt: $${(quizAnswers.student_loan_debt || 0).toLocaleString()}
-- Mortgage Balance: $${(quizAnswers.mortgage_balance || 0).toLocaleString()}
-- Auto Loan Balance: $${(quizAnswers.auto_loan_balance || 0).toLocaleString()}
-- Other Debt: $${(quizAnswers.other_debt || 0).toLocaleString()}
-- Total Debt: $${totalDebt.toLocaleString()}
+- Credit Card Debt: ${formatCurrency(getValueOrUndefined(quizAnswers.credit_card_debt))}
+- Student Loan Debt: ${formatCurrency(getValueOrUndefined(quizAnswers.student_loan_debt))}
+- Mortgage Balance: ${formatCurrency(getValueOrUndefined(quizAnswers.mortgage_balance))}
+- Auto Loan Balance: ${formatCurrency(getValueOrUndefined(quizAnswers.auto_loan_balance))}
+- Other Debt: ${formatCurrency(getValueOrUndefined(quizAnswers.other_debt))}
+- Total Debt: ${formatCurrency(totalDebt)}
 
 ## Financial Goals:
-- Target Retirement Age: ${quizAnswers.retirement_age || 'Not set'}
-${yearsToRetirement !== null ? `- Years to Retirement: ${yearsToRetirement}` : ''}
-- Desired Retirement Income: $${(quizAnswers.desired_retirement_income || 0).toLocaleString()}/month
+- Target Retirement Age: ${retirementAge !== undefined ? retirementAge : 'Not set'}
+${yearsToRetirement !== undefined ? `- Years to Retirement: ${yearsToRetirement}` : '- Years to Retirement: Not calculable'}
+- Desired Retirement Income: ${formatCurrency(getValueOrUndefined(quizAnswers.desired_retirement_income))}/month
 - Short-term Goals: ${quizAnswers.short_term_goals?.join(', ') || 'None set'}
 - Medium-term Goals: ${quizAnswers.medium_term_goals?.join(', ') || 'None set'}
 - Long-term Goals: ${quizAnswers.long_term_goals?.join(', ') || 'None set'}
@@ -198,7 +228,7 @@ ${yearsToRetirement !== null ? `- Years to Retirement: ${yearsToRetirement}` : '
 ## Financial Behavior:
 - Spending Tracking: ${quizAnswers.spending_tracking || 'Not specified'}
 - Budget Adherence: ${quizAnswers.budget_adherence || 'Not specified'}
-- Financial Stress Level: ${quizAnswers.financial_stress_level || 'Not provided'}/10
+- Financial Stress Level: ${getValueOrUndefined(quizAnswers.financial_stress_level) !== undefined ? `${getValueOrUndefined(quizAnswers.financial_stress_level)}/10` : 'Not provided'}
 
 Use this comprehensive financial information to provide personalized financial advice and create relevant lessons for this user.
 `;

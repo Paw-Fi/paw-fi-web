@@ -3,8 +3,13 @@
 
 import type { AIGoalResponse } from "./schema.ts";
 
+// Types for better type safety
+interface QuestionnaireAnswers {
+  [key: string]: string | number | boolean;
+}
+
 // Helper function to extract target amount from questionnaire answers
-export function extractTargetAmountFromAnswers(answers: any): number {
+export function extractTargetAmountFromAnswers(answers: QuestionnaireAnswers): number {
   // Actual field names from questionnaire templates
   const targetAmountFields = [
     // Direct target amounts
@@ -100,7 +105,7 @@ export function extractTargetAmountFromAnswers(answers: any): number {
 // Validation function for structured AI response
 export async function validateAndNormalizeResponse(
   structuredData: AIGoalResponse, 
-  questionnaireAnswers: any
+  questionnaireAnswers: QuestionnaireAnswers
 ): Promise<AIGoalResponse> {
   const today = new Date();
   const minTargetDate = new Date();

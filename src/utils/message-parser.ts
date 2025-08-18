@@ -57,14 +57,21 @@ export function parseMessageContent(content: string): ParsedMessage {
   const sections: MessageSection[] = [];
   let shortContent = '';
   
-  // Split on H3 markdown headers (###), which is the primary structure for Content 1.
-  const parts = content.split(/^### /gm);
+  // Split on H2 (##) or H3 (###) markdown headers, which are common structures for sections
+  let parts = content.split(/^##\s+/gm);
+  let headerLevel = '##';
+  
+  // If no H2 headers found, try H3 headers
+  if (parts.length === 1) {
+    parts = content.split(/^###\s+/gm);
+    headerLevel = '###';
+  }
   
   if (parts.length > 1) {
-    // The first part is the intro before any ### sections.
+    // The first part is the intro before any ## or ### sections.
     shortContent = parts[0].trim();
     
-    // Process each ### section.
+    // Process each section.
     for (let i = 1; i < parts.length; i++) {
       const part = parts[i];
       const lines = part.split('\n');
@@ -101,11 +108,50 @@ export function parseMessageContent(content: string): ParsedMessage {
     }
   }
 
+  // Additional pattern for "Step N:" format (common in instructional content)
+  if (sections.length === 0) {
+    // More flexible pattern to catch various step formats
+    const stepPattern = /(^|\n)(Step \d+: [^\n]+)\n([\s\S]*?)(?=(\n|^)Step \d+:|$)/g;
+    let stepMatch;
+    while ((stepMatch = stepPattern.exec(content)) !== null) {
+      const title = stepMatch[2].trim();
+      const sectionContent = stepMatch[3].trim();
+      
+      if (title && sectionContent) {
+        sections.push({
+          title,
+          content: sectionContent,
+          subsections: parseSubsections(sectionContent)
+        });
+      }
+    }
+  }
+
   // If no sections were parsed but the content is long, it's not a format we can structure.
   // However, if we still have no shortContent, create a summary.
   if (sections.length > 0 && !shortContent) {
-      const firstParagraph = content.split('\n\n')[0];
-      shortContent = firstParagraph;
+      // For step-based content, take everything before the first step header
+      const firstStepPattern = /^##\s+Step\s+1:/gm;
+      const firstStepMatch = firstStepPattern.exec(content);
+      if (firstStepMatch) {
+        shortContent = content.substring(0, firstStepMatch.index).trim();
+      } else {
+        // Try H3 step headers
+        const firstStepH3Pattern = /^###\s+Step\s+1:/gm;
+        const firstStepH3Match = firstStepH3Pattern.exec(content);
+        if (firstStepH3Match) {
+          shortContent = content.substring(0, firstStepH3Match.index).trim();
+        } else {
+          // Fallback to plain text "Step 1:"
+          const firstStepIndex = content.indexOf('Step 1:');
+          if (firstStepIndex !== -1) {
+            shortContent = content.substring(0, firstStepIndex).trim();
+          } else {
+            const firstParagraph = content.split('\n\n')[0];
+            shortContent = firstParagraph;
+          }
+        }
+      }
   }
 
   // If after all parsing, no sections were found, it's not the format we are looking for.
@@ -171,7 +217,10 @@ export function formatSectionContent(content: string): string {
   const formatted = content
     .replace(/^\s*\*\s*/gm, '• ') // Convert * bullets to • bullets
     .replace(/^\s*-\s*/gm, '• ') // Convert - bullets to • bullets
-    .replace(/\n\s*\n\s*\n/g, '\n\n') // Remove excessive line breaks
+    .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks (3+ newlines become 2)
+    .replace(/\n\s*\n/g, '\n\n') // Normalize double line breaks
+    .replace(/\n(?=\s*[•\-\*])/g, '\n\n') // Add line break before bullet points if missing
+    .replace(/(\n\n)+/g, '\n\n') // Ensure no more than double line breaks
     .trim();
   return formatted;
 }

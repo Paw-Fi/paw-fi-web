@@ -45,6 +45,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Timeline } from "@/components/timeline/Timeline";
 import { useAIChat } from "@/contexts/ai-chat-context";
+import monekoAvatar from "@/assets/images/avatar/moneko.png";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -475,706 +476,465 @@ function DashboardHome() {
   return (
     <>
       <motion.div
-        className="max-w-7xl mx-auto py-12 text-foreground dark:text-dark-foreground"
+        className="max-w-7xl mx-auto py-6 text-foreground dark:text-dark-foreground"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
-           {/* Hero Header with Level Progression */}
-           <motion.div
-        className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-500 dark:from-purple-800 dark:via-purple-700 dark:to-indigo-800 p-8 shadow-2xl"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-      >
-   
-        
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Greeting and Level Info */}
-            <div className="space-y-4">
+        {/* Welcome Header */}
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-purple-400 to-pink-400 p-1">
+                <img 
+                  src={monekoAvatar} 
+                  alt="Moneko Avatar" 
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                   {getGreeting()}
                 </h1>
-                <p className="text-purple-200 dark:text-purple-300 text-lg">
-                  Your daily financial mastery dashboard
+                <p className="text-gray-600 dark:text-gray-300">
+                  Ready to master your finances today?
                 </p>
               </div>
-              
-              {/* Current Level Badge */}
-              {currentLevelReward && (
-                <motion.div
-                  className="group relative inline-flex items-center gap-3 px-6 py-3 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl cursor-pointer"
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                  <div className={`p-2 rounded-xl bg-gradient-to-br ${currentLevelReward.color}`}>
-                    <FontAwesomeIcon icon={currentLevelReward.icon} className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-white font-semibold">Level {levelInfo.level}</div>
-                    <div className="text-purple-200 dark:text-purple-300 text-sm">{currentLevelReward.title}</div>
-                  </div>
-                  
-                  {/* Detailed hover tooltip */}
-                  <motion.div
-                    className="absolute top-full left-0 mt-2 p-4 bg-gray-900/95 dark:bg-black/90 backdrop-blur-xl border border-gray-700 dark:border-gray-600 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 min-w-80"
-                    initial={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="text-white font-semibold mb-2">Level {levelInfo.level} Details</div>
-                    <div className="text-gray-300 dark:text-gray-200 text-sm mb-3">{currentLevelReward.description}</div>
-                    <div className="text-green-400 dark:text-green-300 text-sm font-medium">✨ {currentLevelReward.reward}</div>
-                  </motion.div>
-                </motion.div>
-              )}
             </div>
             
-            {/* Streak and Stats */}
-            <div className="flex gap-4">
-              <motion.div
-                className="group relative px-6 py-4 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl cursor-pointer"
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-orange-400 to-red-500">
-                    <FontAwesomeIcon icon={faFire} className="h-5 w-5 text-white" />
+            {/* Level and Streak Info */}
+            <div className="flex items-center space-x-4">
+              {currentLevelReward && (
+                <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${currentLevelReward.color}`}>
+                    <FontAwesomeIcon icon={currentLevelReward.icon} className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-white">{currentStreak}</div>
-                    <div className="text-orange-200 dark:text-orange-300 text-sm">day streak</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Level {levelInfo.level}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">{currentLevelReward.title}</div>
                   </div>
                 </div>
-                
-                {/* Streak tooltip */}
-                <motion.div
-                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-3 bg-gray-900/95 dark:bg-black/90 backdrop-blur-xl border border-gray-700 dark:border-gray-600 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-50 whitespace-nowrap"
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="text-orange-400 dark:text-orange-300 font-semibold text-sm">Keep it burning! 🔥</div>
-                  <div className="text-gray-300 dark:text-gray-200 text-xs">Daily learning streak</div>
-                </motion.div>
-              </motion.div>
+              )}
+              
+              <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-500">
+                  <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-gray-900 dark:text-white">{currentStreak}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">day streak</div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          {/* XP Progress Bar */}
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between text-white/90">
-              <span className="text-sm font-medium">
-                {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
-              </span>
+        </motion.div>
+
+        {/* XP Progress Bar */}
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Progress to Next Level</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
+                </p>
+              </div>
               {!levelInfo.isMaxLevel && (
-                <span className="text-sm">
-                  {levelInfo.xpNeededForNext.toLocaleString()} XP to level {levelInfo.level + 1}
-                </span>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {levelInfo.xpNeededForNext.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">XP to level {levelInfo.level + 1}</div>
+                </div>
               )}
             </div>
             
-            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
+            <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full relative"
+                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
                 style={{ width: `${levelInfo.progressPercentage}%` }}
                 initial={{ width: 0 }}
                 animate={{ width: `${levelInfo.progressPercentage}%` }}
                 transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 animate-pulse"></div>
-              </motion.div>
+              />
             </div>
             
-            {/* Next Level Reward Preview & Rewards Button */}
-            <div className="flex items-center justify-between">
-              {nextLevelReward && (
-                <motion.div
-                  className="flex items-center gap-3 text-purple-200 text-sm"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.7 }}
-                >
+            {nextLevelReward && (
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                   <FontAwesomeIcon icon={faGift} className="h-4 w-4" />
-                  <span>Next reward: {nextLevelReward.reward} at Level {nextLevelReward.level}</span>
-                </motion.div>
-              )}
-              
-              <motion.button
-                onClick={() => setShowRewardsModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl text-white text-sm font-medium transition-all duration-200"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <FontAwesomeIcon icon={faTrophy} className="h-4 w-4" />
-                <span>View All Rewards</span>
-                <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
-              </motion.button>
-            </div>
+                  <span>Next reward: {nextLevelReward.reward}</span>
+                </div>
+                <button
+                  onClick={() => setShowRewardsModal(true)}
+                  className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-semibold"
+                >
+                  View All Rewards
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left Column - 2 spans */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Financial Overview Card */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      <FontAwesomeIcon icon={faDollarSign} className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Financial Overview</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Your financial snapshot</p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/dashboard/user-settings/profile"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold"
+                  >
+                    Update Profile
+                  </Link>
+                </div>
+
+                {financialProfileInsights.hasProfile ? (
+                  <div className="space-y-6">
+                    {/* Key Metrics Grid */}
+                    {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {financialProfileInsights.keyMetrics.monthlyIncome && (
+                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
+                            <FontAwesomeIcon icon={faDollarSign} className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
+                            </div>
+                            <div className="text-sm text-green-700 dark:text-green-300">Monthly Income</div>
+                          </div>
+                        )}
+
+                        {financialProfileInsights.keyMetrics.monthlySavings && (
+                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
+                            <FontAwesomeIcon icon={faPiggyBank} className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
+                            </div>
+                            <div className="text-sm text-blue-700 dark:text-blue-300">Monthly Savings</div>
+                          </div>
+                        )}
+
+                        {financialProfileInsights.keyMetrics.emergencyFund && (
+                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
+                            <FontAwesomeIcon icon={faShieldAlt} className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                              ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
+                            </div>
+                            <div className="text-sm text-purple-700 dark:text-purple-300">Emergency Fund</div>
+                          </div>
+                        )}
+
+                        {financialProfileInsights.keyMetrics.yearsToRetirement && (
+                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-yellow-50 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700">
+                            <FontAwesomeIcon icon={faCalendarAlt} className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
+                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                              {financialProfileInsights.keyMetrics.yearsToRetirement}
+                            </div>
+                            <div className="text-sm text-orange-700 dark:text-orange-300">Years to Retire</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Profile Completion */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Profile Completion</h4>
+                        <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                          {financialProfileInsights.completionPercentage}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${financialProfileInsights.completionPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faUser} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Create Your Financial Profile</h4>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">Get personalized recommendations based on your financial goals</p>
+                    <Link
+                      to="/dashboard/user-settings/profile"
+                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
+                      Create Profile
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Learning Progress Card */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                      <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Learning Progress</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Your educational journey</p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/dashboard/learning"
+                    className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold"
+                  >
+                    View All Courses
+                  </Link>
+                </div>
+
+                {learningInsights.hasCourses ? (
+                  <div className="space-y-6">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                          {learningInsights.completedLessons}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                          {learningInsights.earnedXP}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">XP Earned</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                          {Math.round(learningInsights.progress)}%
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Progress</div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                      <motion.div 
+                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${learningInsights.progress}%` }}
+                        transition={{ duration: 1, delay: 0.5 }}
+                      />
+                    </div>
+
+                    {/* Next Lesson */}
+                    {learningInsights.nextLesson && (
+                      <div className="bg-gradient-to-r from-emerald-50 dark:from-emerald-900/20 to-teal-50 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-1">Continue Learning</h4>
+                            <p className="text-emerald-700 dark:text-emerald-300 font-medium mb-1">{learningInsights.nextLesson.title}</p>
+                            <p className="text-sm text-emerald-600 dark:text-emerald-400">{learningInsights.currentCourse?.title}</p>
+                          </div>
+                          <Link
+                            to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}
+                            className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                          >
+                            Continue
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recent Activity */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Activity</h4>
+                      <Timeline/>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-100 dark:from-emerald-900/30 to-teal-100 dark:to-teal-900/30 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faBookOpen} className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Start Learning</h4>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Begin your financial education journey</p>
+                    <Link
+                      to="/dashboard/learning"
+                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg"
+                    >
+                      <FontAwesomeIcon icon={faGraduationCap} className="mr-2 h-4 w-4" />
+                      Explore Courses
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Right Column - 1 span */}
+          <div className="space-y-6">
+            
+            {/* AI Assistant Card */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 text-white">
+                    <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI Assistant</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Your financial advisor</p>
+                  </div>
+                </div>
+
+                {conversationInsights.hasConversations ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                          {conversationInsights.totalConversations}
+                        </div>
+                        <div className="text-xs text-purple-700 dark:text-purple-300">Chats</div>
+                      </div>
+                      <div className="text-center p-3 bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-700 rounded-lg">
+                        <div className="text-xl font-bold text-pink-600 dark:text-pink-400">
+                          {conversationInsights.totalMessages}
+                        </div>
+                        <div className="text-xs text-pink-700 dark:text-pink-300">Messages</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => openChat('advisor')}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
+                    >
+                      Continue Chat
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Get help with:</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2 text-purple-500" />
+                        Investment strategies
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <FontAwesomeIcon icon={faDollarSign} className="h-3 w-3 mr-2 text-purple-500" />
+                        Budget planning
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <FontAwesomeIcon icon={faShieldAlt} className="h-3 w-3 mr-2 text-purple-500" />
+                        Financial goals
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openChat('advisor')}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
+                    >
+                      Start Chat
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Quick Tools Card */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                      <FontAwesomeIcon icon={faCalculator} className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Quick Tools</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Financial calculators</p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/calculators"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold"
+                  >
+                    View All
+                  </Link>
+                </div>
+
+                <div className="space-y-3">
+                  {availableCalculators.slice(0, 4).map((calculator) => (
+                    <Link
+                      key={calculator.title}
+                      to={calculator.path}
+                      className="flex items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${calculator.color} text-white mr-3`}>
+                        <FontAwesomeIcon icon={calculator.icon} className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {calculator.title}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">{calculator.category}</div>
+                      </div>
+                      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-400" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Essential Lessons Card */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                    <FontAwesomeIcon icon={faLightbulb} className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Essential Lessons</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Foundation knowledge</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">Your 2025 Guide to Investing</h4>
+                  <p className="text-blue-700 dark:text-blue-300 text-xs mb-3">Master investment fundamentals with 20+ comprehensive lessons</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-blue-600 dark:text-blue-400">
+                      <FontAwesomeIcon icon={faBookOpen} className="mr-1" />
+                      20+ lessons available
+                    </div>
+                    <Link
+                      to="/dashboard/essentials"
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                    >
+                      Start Learning
+                      <FontAwesomeIcon icon={faArrowRight} className="ml-1 h-3 w-3" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </motion.div>
 
-        <div className="">
-      
-
-          {/* Main Content Grid */}
-          <motion.div 
-            className="grid gap-8 lg:grid-cols-12"
-            variants={containerVariants}
-          >
-            {/* Left Column - Financial Overview & Portfolio */}
-            <motion.div className="lg:col-span-8 space-y-8" variants={itemVariants}>
-              
-              {/* Financial Profile Widget */}
-              <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl border-t-purple-500/80 dark:border-t-purple-400/80"
-                variants={cardHoverVariants}
-                initial="rest"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2),transparent_50%)]"></div>
-                <div className="relative p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center">
-                      <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-indigo-600 dark:to-indigo-500 text-white shadow-xl">
-                        <FontAwesomeIcon icon={faUser} className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Profile</h3>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          {financialProfileInsights.hasProfile 
-                            ? `${financialProfileInsights.completionPercentage}% complete` 
-                            : "Complete your profile for personalized AI recommendations"
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    {financialProfileInsights.hasProfile && (
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                          {financialProfileInsights.completionPercentage}%
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Complete</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {financialProfileInsights.hasProfile ? (
-                    <>
-                      {/* Completion Progress Bar */}
-                      <div className="mb-6">
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${financialProfileInsights.completionPercentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      {/* Key Metrics Grid */}
-                      {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                          {financialProfileInsights.keyMetrics.monthlyIncome && (
-                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
-                              <FontAwesomeIcon icon={faDollarSign} className="h-4 w-4 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
-                              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-blue-700 dark:text-blue-300">Monthly Income</div>
-                            </div>
-                          )}
-
-                          {financialProfileInsights.keyMetrics.monthlySavings && (
-                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
-                              <FontAwesomeIcon icon={faPiggyBank} className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto mb-1" />
-                              <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                                ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-green-700 dark:text-green-300">Monthly Savings</div>
-                            </div>
-                          )}
-
-                          {financialProfileInsights.keyMetrics.emergencyFund && (
-                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
-                              <FontAwesomeIcon icon={faShieldAlt} className="h-4 w-4 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
-                              <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-purple-700 dark:text-purple-300">Emergency Fund</div>
-                            </div>
-                          )}
-
-                          {financialProfileInsights.keyMetrics.yearsToRetirement && (
-                            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-yellow-50 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700">
-                              <FontAwesomeIcon icon={faCalendarAlt} className="h-4 w-4 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
-                              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                                {financialProfileInsights.keyMetrics.yearsToRetirement}
-                              </div>
-                              <div className="text-xs text-orange-700 dark:text-orange-300">Years to Retire</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Profile Status */}
-                      <div className="space-y-4">
-                        {/* Filled Fields */}
-                        {financialProfileInsights.filledFields.length > 0 && (
-                          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl">
-                            <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2 flex items-center">
-                              <FontAwesomeIcon icon={faCheckCircle} className="mr-2 h-4 w-4" />
-                              Profile Information ({financialProfileInsights.filledFields.length} fields)
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {financialProfileInsights.filledFields.map((field) => (
-                                <span key={field.key} className="px-2 py-1 bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300 text-xs rounded-full">
-                                  {field.label}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Missing Fields */}
-                        {financialProfileInsights.missingFields.length > 0 && (
-                          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
-                            <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center">
-                              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 h-4 w-4" />
-                              Missing Information ({financialProfileInsights.missingFields.length} fields)
-                            </h4>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {financialProfileInsights.missingFields.map((field) => (
-                                <span key={field.key} className="px-2 py-1 bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 text-xs rounded-full">
-                                  {field.label}
-                                </span>
-                              ))}
-                            </div>
-                            <p className="text-xs text-amber-700 dark:text-amber-400">
-                              Complete these fields to help our AI provide better personalized recommendations
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-6 flex items-center justify-between">
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {financialProfileInsights.completionPercentage < 100 
-                            ? "Complete your profile for better AI recommendations" 
-                            : "Profile complete! Our AI can provide personalized advice"
-                          }
-                        </div>
-                        <Link
-                          to="/dashboard/user-settings/profile"
-                          className="flex items-center text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40"
-                        >
-                          <FontAwesomeIcon icon={faEdit} className="mr-2 h-4 w-4" />
-                          <span className="text-sm font-semibold">Update Profile</span>
-                        </Link>
-                      </div>
-                    </>
-                  ) : (
-                    /* No Profile State */
-                    <div className="text-center">
-                      <div className="mb-6 mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center shadow-lg">
-                        <FontAwesomeIcon icon={faUser} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Create Your Financial Profile</h4>
-                      <p className="text-gray-600 dark:text-gray-400 mb-6">Help our AI understand your financial situation to provide personalized recommendations tailored to your needs</p>
-                      <Link
-                        to="/dashboard/user-settings/profile"
-                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
-                        Create Profile
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Learning Progress Section */}
-              <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-400/20 border-t-4 border-t-indigo-500/80 dark:border-t-indigo-400/80"
-                variants={cardHoverVariants}
-                initial="rest"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(168,85,247,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_30%_40%,rgba(168,85,247,0.2),transparent_50%)]"></div>
-                <div className="relative p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center">
-                      <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-pink-600 dark:to-pink-500 text-white shadow-xl">
-                        <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Learning Journey</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Your educational progress and achievements</p>
-                      </div>
-                    </div>
-                    <Link
-                      to="/dashboard/learning"
-                      className="flex items-center text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
-                    >
-                      <span className="text-sm font-semibold mr-2">View All Courses</span>
-                      <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" />
-                    </Link>
-                  </div>
-
-                  {learningInsights.hasCourses ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-3 gap-6">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-green-600 mb-1">
-                            {learningInsights.completedLessons}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Lessons Completed</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-blue-600 mb-1">
-                            {learningInsights.earnedXP}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">XP Earned</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-purple-600 mb-1">
-                            {Math.round(learningInsights.progress)}%
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Progress</div>
-                        </div>
-                      </div>
-                      
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden shadow-inner">
-                        <motion.div 
-                          className="bg-gradient-to-r from-purple-500 dark:from-purple-400 via-pink-500 dark:via-pink-400 to-indigo-500 dark:to-indigo-400 h-3 rounded-full relative"
-                          initial={{ width: 0, x: -10 }}
-                          animate={{ width: `${learningInsights.progress}%`, x: 0 }}
-                          transition={{ 
-                            type: "spring",
-                            damping: 20,
-                            stiffness: 100,
-                            duration: 1.2,
-                            delay: 0.5 
-                          }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-                        </motion.div>
-                      </div>
-
-                      {learningInsights.nextLesson && (
-                        <motion.div 
-                          className="bg-gradient-to-r from-purple-50/80 dark:from-purple-900/20 to-pink-50/80 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-2xl p-6 backdrop-blur-sm border-t-4 border-t-purple-400/80 dark:border-t-purple-300/80"
-                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center mb-2">
-                                <FontAwesomeIcon icon={faBolt} className="h-4 w-4 text-purple-600 dark:text-purple-400 mr-2" />
-                                <h4 className="font-semibold text-purple-800 dark:text-purple-200">Continue Learning</h4>
-                              </div>
-                              <p className="text-purple-700 dark:text-purple-300 font-medium mb-2">{learningInsights.nextLesson.title}</p>
-                              <p className="text-purple-600 dark:text-purple-400 text-sm mb-3">{learningInsights.nextLesson.description}</p>
-                              <div className="text-xs text-purple-600 dark:text-purple-400">
-                                Course: {learningInsights.currentCourse?.title}
-                              </div>
-                            </div>
-                            <Link
-                              to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}
-                              className="ml-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                            >
-                              Continue
-                            </Link>
-                          </div>
-                        </motion.div>
-                      )}
-
-                     
-                        <div className="p-4 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Activity</h4>
-                          
-                          <Timeline/>
-
-                         
-                        </div>
-                      
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="mb-4 mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center shadow-lg">
-                        <FontAwesomeIcon icon={faBookOpen} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Start Your Learning Journey</h4>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">Unlock personalized courses tailored to your financial goals</p>
-                      <Link
-                        to="/dashboard/learning"
-                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                      >
-                        <FontAwesomeIcon icon={faGraduationCap} className="mr-2 h-4 w-4" />
-                        Explore Courses
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-
-            {/* Right Column - Quick Actions & Tools */}
-            <motion.div className="lg:col-span-4 space-y-8" variants={itemVariants}>
-              
-              {/* AI Assistant Section */}
-              <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-400/20 border-t-4 border-t-pink-500/80 dark:border-t-pink-400/80"
-                variants={cardHoverVariants}
-                initial="rest"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(236,72,153,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_70%_30%,rgba(236,72,153,0.2),transparent_50%)]"></div>
-                <div className="relative p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 dark:from-pink-400 to-purple-600 dark:to-purple-500 text-white shadow-xl">
-                      <FontAwesomeIcon icon={faComments} className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Assistant</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Your personal financial advisor</p>
-                    </div>
-                  </div>
-
-                  {conversationInsights.hasConversations ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-xl">
-                          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                            {conversationInsights.totalConversations}
-                          </div>
-                          <div className="text-xs text-purple-700 dark:text-purple-300">Conversations</div>
-                        </div>
-                        <div className="text-center p-3 bg-gradient-to-br from-pink-50 dark:from-pink-900/20 to-purple-50 dark:to-purple-900/20 border border-pink-200 dark:border-pink-700 rounded-xl">
-                          <div className="text-2xl font-bold text-pink-600 dark:text-pink-400 mb-1">
-                            {conversationInsights.totalMessages}
-                          </div>
-                          <div className="text-xs text-pink-700 dark:text-pink-300">Messages</div>
-                        </div>
-                      </div>
-
-                      {conversationInsights.recentConversation && (
-                        <div className="p-3 bg-gradient-to-r from-gray-50 dark:from-gray-800 to-white dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Recent Session</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {conversationInsights.recentConversation.updated_at && 
-                              new Date(conversationInsights.recentConversation.updated_at).toLocaleDateString()}
-                            {conversationInsights.recentConversation.is_active && (
-                              <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div
-                        onClick={() => openChat('advisor')}
-                        className="inline-flex cursor-pointer items-center w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                      >
-                        <FontAwesomeIcon icon={faComments} className="mr-2 h-4 w-4" />
-                        Continue Conversation
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">Ask me anything about:</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                          <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2 text-purple-500 dark:text-purple-400" />
-                          Investment strategies
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                          <FontAwesomeIcon icon={faDollarSign} className="h-3 w-3 mr-2 text-purple-500 dark:text-purple-400" />
-                          Budget planning
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                          <FontAwesomeIcon icon={faShieldAlt} className="h-3 w-3 mr-2 text-purple-500 dark:text-purple-400" />
-                          Financial goals
-                        </div>
-                      </div>
-                      <div
-                      onClick={() => openChat('advisor')}
-                        className="inline-flex items-center w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                      >
-                        <FontAwesomeIcon icon={faComments} className="mr-2 h-4 w-4" />
-                        Start Conversation
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Subscription Status */}
-              {/* {subscriptionInsights.isSubscribed && (
-                <motion.div
-                  className="group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl"
-                  variants={cardHoverVariants}
-                  initial="rest"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5"></div>
-                  <div className="relative p-6">
-                    <div className="flex items-center mb-4">
-                      <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md">
-                        <FontAwesomeIcon icon={faShieldAlt} className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">Subscription</h3>
-                        <p className="text-sm text-gray-600">Your plan details</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-green-800">{subscriptionInsights.plan}</span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            subscriptionInsights.isTrialing ? 'bg-yellow-100 text-yellow-800' :
-                            subscriptionInsights.isCancelled ? 'bg-red-100 text-red-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {subscriptionInsights.isTrialing ? 'Trial' :
-                             subscriptionInsights.isCancelled ? 'Ending' :
-                             'Active'}
-                          </span>
-                        </div>
-                        {subscriptionInsights.daysUntilRenewal && (
-                          <div className="text-sm text-green-700">
-                            {subscriptionInsights.isCancelled ? 'Ends' : 'Renews'} in {subscriptionInsights.daysUntilRenewal} days
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-sm text-gray-600">
-                        <div className="flex items-center justify-between">
-                          <span>Features unlocked:</span>
-                          <span className="font-semibold">{subscriptionInsights.featuresCount}</span>
-                        </div>
-                        {subscriptionInsights.billingAmount && (
-                          <div className="flex items-center justify-between mt-1">
-                            <span>Last payment:</span>
-                            <span className="font-semibold">${(subscriptionInsights.billingAmount / 100).toFixed(2)}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <Link
-                        to="/dashboard/membership"
-                        className="inline-flex items-center w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200"
-                      >
-                        <FontAwesomeIcon icon={faShieldAlt} className="mr-2 h-4 w-4" />
-                        Manage Plan
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
-              )} */}
-
-              {/* Quick Calculators */}
-              <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-400/20 border-t-4 border-t-indigo-500/80 dark:border-t-indigo-400/80"
-                variants={cardHoverVariants}
-                initial="rest"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.2),transparent_50%)]"></div>
-                <div className="relative p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-indigo-600 dark:to-indigo-500 text-white shadow-xl">
-                        <FontAwesomeIcon icon={faCalculator} className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Quick Tools</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Financial calculators</p>
-                      </div>
-                    </div>
-                    <Link
-                      to="/calculators"
-                      className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 transition-colors font-semibold"
-                    >
-                      View All ({availableCalculators.length})
-                    </Link>
-                  </div>
-
-                  <div className="space-y-3">
-                    {availableCalculators.slice(0, 4).map((calculator) => (
-                      <motion.div
-                        key={calculator.title}
-                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                      >
-                        <Link
-                          to={calculator.path}
-                          className="block group/item p-3 rounded-xl bg-gradient-to-r from-white/80 dark:from-gray-700/80 to-gray-50/80 dark:to-gray-600/80 border border-purple-200/30 dark:border-purple-700/30 hover:border-purple-300/50 dark:hover:border-purple-600/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
-                        >
-                          <div className="flex items-center">
-                            <div className={`mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${calculator.color} text-white shadow-sm`}>
-                              <FontAwesomeIcon icon={calculator.icon} className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover/item:text-gray-800 dark:group-hover/item:text-gray-200">
-                                {calculator.title}
-                              </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">{calculator.category}</div>
-                            </div>
-                            <FontAwesomeIcon 
-                              icon={faChevronRight} 
-                              className="h-3 w-3 text-gray-400 dark:text-gray-500 group-hover/item:text-purple-600 dark:group-hover/item:text-purple-400 transition-colors" 
-                            />
-                          </div>
-                        </Link>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Essential Lessons Quick Access */}
-              <motion.div
-                className="group relative overflow-hidden rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-purple-200/50 dark:border-purple-700/50 shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-400/20 border-t-4 border-t-purple-600/80 dark:border-t-purple-500/80"
-                variants={cardHoverVariants}
-                initial="rest"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 dark:from-purple-400/20 via-pink-500/5 dark:via-pink-400/10 to-indigo-500/10 dark:to-indigo-400/20"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(147,51,234,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_80%_20%,rgba(147,51,234,0.2),transparent_50%)]"></div>
-                <div className="relative p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 dark:from-purple-400 to-pink-600 dark:to-pink-500 text-white shadow-xl">
-                      <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Essential Lessons</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Foundation knowledge</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="p-4 bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
-                      <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">Your 2025 Guide to Investing</h4>
-                      <p className="text-blue-700 dark:text-blue-300 text-xs mb-3">Master investment fundamentals with 20+ comprehensive lessons</p>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-blue-600 dark:text-blue-400">
-                          <FontAwesomeIcon icon={faBookOpen} className="mr-1" />
-                          20+ lessons available
-                        </div>
-                        <Link
-                          to="/dashboard/essentials"
-                          className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                        >
-                          Start Learning
-                          <FontAwesomeIcon icon={faArrowRight} className="ml-1 h-3 w-3" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </motion.div>
-
-        {/* Rewards Modal */}
-        {showRewardsModal && (
+      {/* Rewards Modal */}
+      {showRewardsModal && (
         <>
           {/* Backdrop */}
           <motion.div

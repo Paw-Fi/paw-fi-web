@@ -104,24 +104,6 @@ export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
   );
 };
 
-// Simple loading state hook - no timer logic to prevent parent rerenders
-const useSimpleLoadingState = () => {
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  
-  const startLoading = useCallback(() => {
-    setIsSendingMessage(true);
-  }, []);
-  
-  const stopLoading = useCallback(() => {
-    setIsSendingMessage(false);
-  }, []);
-  
-  return {
-    isSendingMessage,
-    startLoading,
-    stopLoading
-  };
-};
 
 // Self-contained Loading Message Component with internal timer
 const LoadingMessage = React.memo<{
@@ -208,7 +190,7 @@ const LoadingMessage = React.memo<{
 
 LoadingMessage.displayName = 'LoadingMessage';
 
-// Memoized Messages List Component
+// Optimized Messages List Component with better memoization
 const MessagesList = React.memo<{
   messages: ConversationMessage[];
   onOpenQuizModal: () => void;
@@ -220,6 +202,7 @@ const MessagesList = React.memo<{
 }>(({ messages, onOpenQuizModal, onGoalTemplateClick, disableMsgParse, onSendMessage, agentIcon, agentName }) => {
   const memoizedMessages = useMemo(() => {
     return messages.map((message) => {
+      // More efficient hash calculation
       const contentHash = message.content.length > 0
         ? message.content.split("").reduce(
             (acc, char) => (acc * 31 + char.charCodeAt(0)) & 0xffffffff,
@@ -231,7 +214,7 @@ const MessagesList = React.memo<{
   }, [messages]);
   
   return (
-    <AnimatePresence initial={false}>
+    <AnimatePresence initial={false} mode="popLayout">
       {memoizedMessages.map((message) => (
         <motion.div
           key={`${message.timestamp}-${message.role}-${message.contentHash}`}
@@ -239,6 +222,7 @@ const MessagesList = React.memo<{
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
+          layout
         >
           <ChatMessageItem
             message={message}
@@ -252,6 +236,18 @@ const MessagesList = React.memo<{
         </motion.div>
       ))}
     </AnimatePresence>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  return (
+    prevProps.messages.length === nextProps.messages.length &&
+    prevProps.disableMsgParse === nextProps.disableMsgParse &&
+    prevProps.agentIcon === nextProps.agentIcon &&
+    prevProps.agentName === nextProps.agentName &&
+    prevProps.messages.every((msg, index) => 
+      msg.content === nextProps.messages[index]?.content &&
+      msg.timestamp === nextProps.messages[index]?.timestamp
+    )
   );
 });
 
@@ -316,13 +312,17 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   // Check if this is Financial Advisor mode
   const isFinancialAdvisorMode = aiRole === AI_ROLES.FINANCIAL_ADVISOR;
   
-  // Shared handlers
-  const handleSignupClick = () => {
+  // Memoized shared handlers
+  const handleSignupClick = useCallback(() => {
     setShowSignupPrompt(false);
     navigate?.({ to: "/register", search: { redirect: "/dashboard" } });
-  };
+  }, [navigate]);
 
-  const isConversationMaxedOut = location.pathname!='/onboarding' && !isActive&&messages.length>=8;
+  // Memoized conversation maxed out check
+  const isConversationMaxedOut = useMemo(() => 
+    location.pathname !== '/onboarding' && !isActive && messages.length >= 8,
+    [location.pathname, isActive, messages.length]
+  );
   
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
@@ -338,10 +338,10 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     });
   }, []);
   
-  // Memoized fetch suggestions to prevent unnecessary recreations
-  const fetchSuggestions = useCallback(async (lastAssistantMessage: string) => {
+  // Memoized fetch suggestions - only recreate when message count changes
+  const fetchSuggestions = useCallback(async (lastAssistantMessage: string, currentMessages: ConversationMessage[]) => {
     try {
-      const contextMessages = messages.map(msg => ({
+      const contextMessages = currentMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
@@ -357,18 +357,18 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     } catch (error) {
       setSuggestedResponses([]);
     }
-  }, [messages]);
+  }, []); // Remove messages dependency to prevent recreations
 
-  // Auto-scroll effect
+  // Optimized auto-scroll effect - only trigger on message count change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       scrollToBottom();
     }, 100);
     return () => clearTimeout(timeoutId);
-  }, [messages, scrollToBottom]);
+  }, [messages.length, scrollToBottom]); // Only depend on message count, not entire messages array
 
-  // Send message function - simplified using context
-  const handleSendMessage = async (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+  // Memoized send message function to prevent unnecessary recreations
+  const handleSendMessage = useCallback(async (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
     if (!content.trim() || isLoading) return;
     
     // If using custom message handler (like goal tracker), delegate to it
@@ -404,31 +404,37 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
       console.error('Error sending message:', error);
       setConnectionError("Connection error. Please try again.");
     }
-  };
+  }, [isLoading, chatConfig.customMessageHandler, sendMessage, aiRole, isFinancialAdvisorMode, userGoals, profile]);
 
-  const handleSuggestionClick = (suggestion: string) => {
+  // Memoized suggestion click handler
+  const handleSuggestionClick = useCallback((suggestion: string) => {
     setSuggestedResponses([]);
     handleSendMessage(suggestion);
-  };
+  }, [handleSendMessage]);
 
-  // Optimized effect for fetching suggestions
+  // Optimized effect for fetching suggestions - pass messages as parameter
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.role === 'assistant') {
-        fetchSuggestions(lastMessage.content);
+        fetchSuggestions(lastMessage.content, messages);
       }
     }
-  }, [messages, fetchSuggestions]);
+  }, [messages.length > 0 ? messages[messages.length - 1]?.content : '', fetchSuggestions]); // Only depend on last message content
 
-  const handleDashboardCreated = async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
+  // Memoized dashboard created handler
+  const handleDashboardCreated = useCallback(async (profile: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => {
     setIsQuizModalOpen(false);
     handleSendMessage("I've completed the questionnaire", profile);
     // Note: Dashboard data will be refreshed through normal user interactions
     // No React Query invalidations needed - SSR maintains state during navigation
-  };
+  }, [handleSendMessage]);
 
-  const isBackendProcessing = isAuthenticated && !isConversationLoaded(aiRole) && messages.length === 0;
+  // Memoized backend processing check
+  const isBackendProcessing = useMemo(() => 
+    isAuthenticated && !isConversationLoaded(aiRole) && messages.length === 0,
+    [isAuthenticated, isConversationLoaded, aiRole, messages.length]
+  );
 
   return (
     <>

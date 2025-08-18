@@ -9,13 +9,18 @@ import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
 import { processGoalTrackingRequest, getGeminiFunctionDeclarations } from "./goal-tracker.ts";
 
-const AI_MODEL = "gemini-2.5-pro";
+// Configuration constants
+const AI_MODEL = "gemini-2.5-flash-lite";
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_OUTPUT_TOKENS = 8000;
+const MAX_JSON_COMPLETION_ATTEMPTS = 5;
+const MESSAGE_TIMESTAMP_OFFSET_MS = 1;
 
+// Environment validation
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
-  console.error(
-    "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
-  );
+  console.error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
+  throw new Error("Missing required environment variable: GEMINI_API_KEY");
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -52,10 +57,22 @@ const RANDOM_RESPONSES = {
   ]
 };
 
-// Helper function to get a random response from an array
+// Utility functions
 function getRandomResponse(responses: string[]): string {
-  const randomIndex = Math.floor(Math.random() * responses.length);
-  return responses[randomIndex];
+  if (!responses?.length) throw new Error("Empty responses array");
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+function validateRequestData(data: any): boolean {
+  return data && typeof data === 'object' && typeof data.message === 'string' && data.message.trim().length > 0;
+}
+
+function createTimestampPair(): { userTimestamp: string; aiTimestamp: string } {
+  const baseTimestamp = new Date();
+  return {
+    userTimestamp: baseTimestamp.toISOString(),
+    aiTimestamp: new Date(baseTimestamp.getTime() + MESSAGE_TIMESTAMP_OFFSET_MS).toISOString()
+  };
 }
 
 // Helper function to detect navigation requests (like "Take me to dashboard")
@@ -147,42 +164,43 @@ Remember: Every piece of financial advice should be evaluated against these exis
   return formattedContext;
 }
 
-serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204, // No content
-      headers: corsHeaders,
-    });
-  }
+// HTTP request handlers
+function handleOptionsRequest(): Response {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+function handleMethodNotAllowed(): Response {
+  return new Response(
+    JSON.stringify({ error: "Method Not Allowed" }),
+    { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+function createErrorResponse(message: string, status: number = 500, details?: any): Response {
+  const body = details ? { error: message, details } : { error: message };
+  return new Response(
+    JSON.stringify(body),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+serve(async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") return handleOptionsRequest();
+  if (req.method !== "POST") return handleMethodNotAllowed();
 
   try {
-    let rawBody: string = await req.text();
+    // Parse and validate request body
+    const rawBody = await req.text();
     let requestData;
+    
     try {
-      if (!rawBody || rawBody.trim() === "") {
-        requestData = {};
-      } else {
-        requestData = JSON.parse(rawBody);
-      }
+      requestData = rawBody?.trim() ? JSON.parse(rawBody) : {};
     } catch (error) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid JSON in request body",
-          details: { rawBody },
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return createErrorResponse("Invalid JSON in request body", 400, { rawBody });
+    }
+    
+    if (!validateRequestData(requestData)) {
+      return createErrorResponse("Message is required and must be a non-empty string", 400);
     }
     
     
@@ -202,27 +220,20 @@ serve(async (req: Request): Promise<Response> => {
     let history: any[] = []; // Will be populated from database
     
     // Initialize Supabase client with service role for database operations
+    // Initialize Supabase client
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error("Missing Supabase credentials");
-      return new Response(JSON.stringify({ error: "Server configuration error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return createErrorResponse("Server configuration error");
     }
     
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
+    // Log user profile availability
     if (userProfile) {
       console.log("User profile provided for personalized response");
-    }
-    if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
     
     let currentConversationId = conversationId;
@@ -251,14 +262,14 @@ serve(async (req: Request): Promise<Response> => {
       console.log(`Created new chat session: ${currentConversationId} for ${userId ? 'authenticated user' : 'guest'}`);
     }
     
-    // Fetch conversation history - sorted by timestamp ascending for proper conversation order
+    // Fetch conversation history
     const { data: recentMessages, error: fetchError } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('chat_session_id', currentConversationId)
       .order('timestamp', { ascending: true })
-      .order('id', { ascending: true }) // Secondary sort by ID for messages with identical timestamps
-      .limit(20);
+      .order('id', { ascending: true })
+      .limit(MAX_HISTORY_MESSAGES);
       
     if (fetchError) {
       console.error('Error fetching conversation history:', fetchError);
@@ -376,15 +387,11 @@ serve(async (req: Request): Promise<Response> => {
             genAI
           );
           
-          // If goal tracking was successful and a function was executed, return that response
+          // Handle successful goal tracking function execution
           if (goalTrackingResult.function_executed) {
-            // Save both user and AI messages to database
+            // Save goal tracking messages to database
             if (currentConversationId) {
-              
-              // Generate consistent timestamps for message pair
-              const baseTimestamp = new Date();
-              const userTimestamp = baseTimestamp.toISOString();
-              const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+              const timestamps = createTimestampPair();
               
               const messagesToInsert = [
                 {
@@ -392,7 +399,7 @@ serve(async (req: Request): Promise<Response> => {
                   content: message,
                   role: 'user',
                   metadata: null,
-                  timestamp: userTimestamp
+                  timestamp: timestamps.userTimestamp
                 },
                 {
                   chat_session_id: currentConversationId,
@@ -402,7 +409,7 @@ serve(async (req: Request): Promise<Response> => {
                     function_executed: goalTrackingResult.function_executed,
                     function_result: goalTrackingResult.function_result 
                   },
-                  timestamp: aiTimestamp
+                  timestamp: timestamps.aiTimestamp
                 }
               ];
               
@@ -433,12 +440,9 @@ serve(async (req: Request): Promise<Response> => {
             if (isNavigationRequest(message)) {
               const fallbackResponse = generateNavigationFallback(message);
               
-              // Save both user and fallback messages to database
+              // Save navigation fallback messages to database
               if (currentConversationId) {
-                // Generate consistent timestamps for message pair
-                const baseTimestamp = new Date();
-                const userTimestamp = baseTimestamp.toISOString();
-                const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+                const timestamps = createTimestampPair();
                 
                 const messagesToInsert = [
                   {
@@ -446,14 +450,14 @@ serve(async (req: Request): Promise<Response> => {
                     content: message,
                     role: 'user',
                     metadata: null,
-                    timestamp: userTimestamp
+                    timestamp: timestamps.userTimestamp
                   },
                   {
                     chat_session_id: currentConversationId,
                     content: fallbackResponse,
                     role: 'assistant',
                     metadata: { fallback_type: 'navigation_request' },
-                    timestamp: aiTimestamp
+                    timestamp: timestamps.aiTimestamp
                   }
                 ];
                 
@@ -512,7 +516,7 @@ serve(async (req: Request): Promise<Response> => {
       }
       const generationConfig = {
         responseMimeType: "text/plain",
-        maxOutputTokens: 8000,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
       };
       
       // Helper function to check if JSON is complete
@@ -558,10 +562,9 @@ serve(async (req: Request): Promise<Response> => {
 
       let responseText = result.response.text();
       let attempts = 0;
-      const MAX_ATTEMPTS = 5;
 
-      // If JSON is incomplete, keep requesting more content
-      while (!isJsonComplete(responseText) && attempts < MAX_ATTEMPTS) {
+      // Handle incomplete JSON responses
+      while (!isJsonComplete(responseText) && attempts < MAX_JSON_COMPLETION_ATTEMPTS) {
         attempts++;
 
         // Add the current response to history and ask for continuation
@@ -808,12 +811,9 @@ ${markdownSuffix}`,
       }
     }
     
-    // Save both user and AI messages to database in a single batch for all users (authenticated and guests)
+    // Save final messages to database
     if (currentConversationId) {
-      // Generate consistent timestamps for message pair
-      const baseTimestamp = new Date();
-      const userTimestamp = baseTimestamp.toISOString();
-      const aiTimestamp = new Date(baseTimestamp.getTime() + 1).toISOString(); // AI message 1ms later
+      const timestamps = createTimestampPair();
       
       const messagesToInsert = [
         {
@@ -821,14 +821,14 @@ ${markdownSuffix}`,
           content: message,
           role: 'user',
           metadata: null,
-          timestamp: userTimestamp
+          timestamp: timestamps.userTimestamp
         },
         {
           chat_session_id: currentConversationId,
           content: finalResponse,
           role: 'assistant',
           metadata: extractedCourse ? { courseRecommendation: extractedCourse } : null,
-          timestamp: aiTimestamp
+          timestamp: timestamps.aiTimestamp
         }
       ];
       
@@ -868,18 +868,13 @@ ${markdownSuffix}`,
       },
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Internal Server Error:", errorMessage);
+    
     if (error instanceof Error && error.stack) {
       console.error("Stack trace:", error.stack);
     }
-    return new Response(
-      JSON.stringify({ error: "Internal Server Error", details: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    
+    return createErrorResponse("Internal Server Error", 500, errorMessage);
   }
 });

@@ -8,29 +8,18 @@ import {
   faTrophy, 
   faExclamationTriangle, 
   faRefresh, 
-  faCalendarAlt, 
-  faDollarSign, 
   faArrowRight,
   faBullseye,
   faWandSparkles,
   faCheckCircle,
-  faEllipsisH,
-  faFilter,
-  faHome,
-  faPlane,
-  faCar,
-  faGraduationCap,
-  faHeart,
-  faRocket,
-  faChartBar,
-  faCreditCard,
-  faShieldAlt,
-  faEye
+  faFilter
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/auth-context";
 import { useGoals } from "@/hooks/goal-tracker/use-goals";
 import { memo, useCallback, useState, useMemo, useEffect } from "react";
 import { useTrackerIndexWalkthrough } from "@/hooks/walkthrough/use-tracker-index-walkthrough";
+import { useSpotlightGoals } from "@/hooks/goal-tracker/use-spotlight-goals";
+import { getGoalIcon } from "@/lib/utils/goal-icons";
 import travelBgImage from "@/assets/images/tracker/spotlight-travel.svg";
 
 const trackerSearchSchema = z.object({
@@ -98,112 +87,8 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
       });
     }, [goals]);
     
-    const spotlightGoals = useMemo(() => {
-      if (!goals || goals.length === 0) return [];
-      
-      const activeGoals = goals.filter(goal => goal.status !== 'completed');
-      if (activeGoals.length === 0) return [];
-      
-      const currentDate = new Date();
-      const spotlightCandidates = activeGoals.map(goal => {
-        const progress = goal.current_amount && goal.target_amount 
-          ? (goal.current_amount / goal.target_amount) * 100 
-          : 0;
-        
-        const daysUntilTarget = goal.target_date 
-          ? Math.ceil((new Date(goal.target_date).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
-          : Infinity;
-        
-        // Calculate expected progress based on time elapsed
-        const totalDays = goal.target_date && goal.created_at
-          ? Math.ceil((new Date(goal.target_date).getTime() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
-          : 365; // Default to 1 year if no creation date
-        
-        const elapsedDays = goal.created_at
-          ? Math.ceil((currentDate.getTime() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
-          : 0;
-        
-        const expectedProgress = totalDays > 0 ? Math.min(100, (elapsedDays / totalDays) * 100) : 0;
-        const progressDeficit = expectedProgress - progress;
-        
-        // Calculate spotlight priority score
-        let spotlightScore = 0;
-        let spotlightType = 'progress';
-        let spotlightReason = '';
-        
-        // Critical urgency: Less than 7 days remaining
-        if (daysUntilTarget <= 7 && daysUntilTarget > 0) {
-          spotlightScore = 100;
-          spotlightType = 'critical';
-          spotlightReason = `Only ${daysUntilTarget} day${daysUntilTarget === 1 ? '' : 's'} remaining`;
-        }
-        // High urgency: Less than 30 days remaining
-        else if (daysUntilTarget <= 30 && daysUntilTarget > 7) {
-          spotlightScore = 80;
-          spotlightType = 'urgency';
-          spotlightReason = `${daysUntilTarget} days until target date`;
-        }
-        // Behind schedule: Progress deficit > 20%
-        else if (progressDeficit > 20) {
-          spotlightScore = 70;
-          spotlightType = 'attention';
-          spotlightReason = `${Math.round(progressDeficit)}% behind expected progress`;
-        }
-        // Moderate urgency: Less than 90 days remaining
-        else if (daysUntilTarget <= 90 && daysUntilTarget > 30) {
-          spotlightScore = 60;
-          spotlightType = 'upcoming';
-          spotlightReason = `${Math.round(daysUntilTarget / 30)} month${Math.round(daysUntilTarget / 30) === 1 ? '' : 's'} remaining`;
-        }
-        // Good progress: Ahead of schedule
-        else if (progressDeficit < -10 && progress > 10) {
-          spotlightScore = 50;
-          spotlightType = 'success';
-          spotlightReason = `${Math.round(Math.abs(progressDeficit))}% ahead of schedule`;
-        }
-        // Recently started: Less than 10% progress but recent activity
-        else if (progress < 10 && progress > 0) {
-          spotlightScore = 40;
-          spotlightType = 'momentum';
-          spotlightReason = 'Building momentum - keep it up!';
-        }
-        // Stagnant: No progress in a while
-        else if (progress === 0 && elapsedDays > 30) {
-          spotlightScore = 30;
-          spotlightType = 'stagnant';
-          spotlightReason = 'No progress yet - time to take action';
-        }
-        
-        return {
-          ...goal,
-          progress,
-          daysUntilTarget,
-          progressDeficit,
-          spotlightScore,
-          spotlightType,
-          spotlightReason
-        };
-      });
-      
-      // Sort by spotlight score (highest first) and select top 1-3
-      const selectedSpotlights = spotlightCandidates
-        .filter(goal => goal.spotlightScore > 0)
-        .sort((a, b) => {
-          // Primary sort: spotlight score
-          if (b.spotlightScore !== a.spotlightScore) {
-            return b.spotlightScore - a.spotlightScore;
-          }
-          // Secondary sort: closest target date
-          if (a.daysUntilTarget !== b.daysUntilTarget) {
-            return a.daysUntilTarget - b.daysUntilTarget;
-          }
-          // Tertiary sort: highest target amount (more significant goals)
-          return (b.target_amount || 0) - (a.target_amount || 0);
-        })
-        .slice(0, 3); // Maximum 3 spotlight cards
-      
-      return selectedSpotlights;
-    }, [goals]);
+    // Use the new spotlight hook for better performance
+    const spotlightGoals = useSpotlightGoals(goals);
     
     const statsData = useMemo(() => {
       if (!goals || goals.length === 0) {
@@ -299,37 +184,6 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         }
       }
     };
-    
-    const getGoalIcon = (goal) => {
-      // First check if goal has a type property for exact matching
-      if (goal.type) {
-        switch (goal.type) {
-          case 'retirement': return faRocket;
-          case 'home_buying': return faHome;
-          case 'wealth': return faChartLine;
-          case 'investment': return faChartBar;
-          case 'debt_payoff': return faCreditCard;
-          case 'emergency_fund': return faShieldAlt;
-          case 'passive_income': return faWandSparkles;
-          case 'custom': return faBullseye;
-          default: break;
-        }
-      }
-      
-      // Fallback to title-based matching for legacy goals
-      const titleLower = goal.title?.toLowerCase() || '';
-      if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
-      if (titleLower.includes('home') || titleLower.includes('house') || titleLower.includes('buying')) return faHome;
-      if (titleLower.includes('wealth') || titleLower.includes('rich')) return faChartLine;
-      if (titleLower.includes('invest') || titleLower.includes('stock') || titleLower.includes('portfolio')) return faChartBar;
-      if (titleLower.includes('debt') || titleLower.includes('loan') || titleLower.includes('payoff')) return faCreditCard;
-      if (titleLower.includes('emergency') || titleLower.includes('fund') || titleLower.includes('safety')) return faShieldAlt;
-      if (titleLower.includes('travel') || titleLower.includes('vacation')) return faPlane;
-      if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
-      if (titleLower.includes('education') || titleLower.includes('school')) return faGraduationCap;
-      if (titleLower.includes('wedding') || titleLower.includes('marriage')) return faHeart;
-      return faBullseye;
-    };
   
     return (
       <motion.main 
@@ -383,7 +237,6 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
               <div data-tour="spotlight-section">
                 <SpotlightSection 
                   spotlightGoals={spotlightGoals}
-                  getGoalIcon={getGoalIcon}
                   getGoalStatus={getGoalStatus}
                 />
               </div>
@@ -411,11 +264,9 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
 // Spotlight Section Component
 const SpotlightSection = memo(function SpotlightSection({ 
   spotlightGoals, 
-  getGoalIcon, 
   getGoalStatus 
 }: {
   spotlightGoals: any[];
-  getGoalIcon: (goal: any) => any;
   getGoalStatus: (goal: any) => string;
 }) {
   if (!spotlightGoals || spotlightGoals.length === 0) return null;
@@ -637,16 +488,6 @@ const GoalCard = memo(function GoalCard({
     return 'bg-gradient-to-r from-gray-300 to-gray-400';
   };
   
-  const getGoalIcon = (title: string) => {
-    const titleLower = title?.toLowerCase() || '';
-    if (titleLower.includes('home') || titleLower.includes('house')) return faHome;
-    if (titleLower.includes('travel') || titleLower.includes('vacation') || titleLower.includes('trip')) return faPlane;
-    if (titleLower.includes('car') || titleLower.includes('vehicle')) return faCar;
-    if (titleLower.includes('education') || titleLower.includes('school')) return faGraduationCap;
-    if (titleLower.includes('wedding') || titleLower.includes('marriage')) return faHeart;
-    if (titleLower.includes('retirement') || titleLower.includes('future')) return faRocket;
-    return faBullseye; // Default
-  };
   
   return (
     <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
@@ -659,7 +500,7 @@ const GoalCard = memo(function GoalCard({
           {/* Icon */}
           <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0">
             <FontAwesomeIcon 
-              icon={getGoalIcon(goal.title)} 
+              icon={getGoalIcon(goal)} 
               className="w-6 h-6 text-gray-600 dark:text-gray-300" 
             />
           </div>

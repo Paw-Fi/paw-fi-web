@@ -111,7 +111,15 @@ export default {
         'chart-danger': '#EF4444',
         'dark-chart-danger': '#FF7A7A',
         'chart-danger-transparent': 'rgba(239, 68, 68, 0.2)',
-        'dark-chart-danger-transparent': 'rgba(255, 122, 122, 0.2)'
+        'dark-chart-danger-transparent': 'rgba(255, 122, 122, 0.2)',
+
+        // Markdown renderer interactive button colors
+        'markdown-button': '#F3F4F6',
+        'dark-markdown-button': '#374151',
+        'markdown-button-text': '#1F2937',
+        'dark-markdown-button-text': '#F1F5F9',
+        'markdown-button-border': '#D1D5DB',
+        'dark-markdown-button-border': '#4B5563'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',

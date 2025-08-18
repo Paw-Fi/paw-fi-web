@@ -10,11 +10,11 @@ import {
   faTimes,
   faBookOpen,
   faLightbulb,
-  faCheckCircle,
   faClose,
 } from "@fortawesome/free-solid-svg-icons";
-import ReactMarkdown from "react-markdown";
 import { MessageSection, formatSectionContent } from "@/utils/message-parser";
+import { Markdown } from "@/components/ui/markdown";
+import { createMinimalMarkdownComponents } from "@/components/ui/markdown-components";
 
 interface DetailedContentModalProps {
   isOpen: boolean;
@@ -56,16 +56,9 @@ export function DetailedContentModal({
 
   const renderSectionContent = (section: MessageSection) => {
     if (section.subsections && section.subsections.length > 0) {
-      console.log("Rendering with subsections:");
-      section.subsections.forEach((sub, index) => {
-        console.log(`Subsection ${index}:`, {
-          title: sub.title,
-          content: sub.content,
-          contentLength: sub.content?.length || 0,
-        });
-      });
+      // Rendering with subsections
     } else {
-      console.log("No subsections, rendering main content only");
+      // No subsections, rendering main content only
     }
 
     // If section has subsections, render them as attractive cards
@@ -83,29 +76,11 @@ export function DetailedContentModal({
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300">
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => (
-                          <p className="mb-3 leading-relaxed last:mb-0">
-                            {children}
-                          </p>
-                        ),
-                        strong: ({ children }) => (
-                          <strong className="font-semibold text-slate-900 dark:text-slate-100">
-                            {children}
-                          </strong>
-                        ),
-                        em: ({ children }) => (
-                          <em className="italic text-slate-600 dark:text-slate-400">
-                            {children}
-                          </em>
-                        ),
-                      }}
-                    >
-                      {formatSectionContent(section.content)}
-                    </ReactMarkdown>
-                  </div>
+                  <Markdown
+                    content={formatSectionContent(section.content)}
+                    components={createMinimalMarkdownComponents()}
+                    className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300"
+                  />
                 </div>
               </div>
             </div>
@@ -134,39 +109,11 @@ export function DetailedContentModal({
                     </h4>
                     <div className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300">
                       {subsection.content ? (
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => (
-                              <p className="mb-3 leading-relaxed last:mb-0">
-                                {children}
-                              </p>
-                            ),
-                            strong: ({ children }) => (
-                              <strong className="font-semibold text-slate-900 dark:text-slate-100">
-                                {children}
-                              </strong>
-                            ),
-                            em: ({ children }) => (
-                              <em className="italic text-slate-600 dark:text-slate-400">
-                                {children}
-                              </em>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className="my-4 space-y-2">{children}</ul>
-                            ),
-                            li: ({ children }) => (
-                              <li className="flex items-start gap-2">
-                                <FontAwesomeIcon
-                                  icon={faCheckCircle}
-                                  className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500"
-                                />
-                                <span>{children}</span>
-                              </li>
-                            ),
-                          }}
-                        >
-                          {formatSectionContent(subsection.content)}
-                        </ReactMarkdown>
+                        <Markdown
+                          content={formatSectionContent(subsection.content)}
+                          components={createMinimalMarkdownComponents()}
+                          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_ul]:my-4 [&_ul]:space-y-2 [&_li]:flex [&_li]:items-start [&_li]:gap-2"
+                        />
                       ) : (
                         <div className="font-mono text-sm text-red-500">
                           DEBUG: No content found for subsection "
@@ -190,49 +137,11 @@ export function DetailedContentModal({
     // Regular section content with better styling
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300">
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => (
-                <p className="mb-4 leading-relaxed last:mb-0">{children}</p>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-semibold text-slate-900 dark:text-slate-100">
-                  {children}
-                </strong>
-              ),
-              em: ({ children }) => (
-                <em className="italic text-slate-600 dark:text-slate-400">
-                  {children}
-                </em>
-              ),
-              ul: ({ children }) => (
-                <ul className="my-4 space-y-2">{children}</ul>
-              ),
-              li: ({ children }) => (
-                <li className="flex items-start gap-2">
-                  <FontAwesomeIcon
-                    icon={faCheckCircle}
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500"
-                  />
-                  <span>{children}</span>
-                </li>
-              ),
-              h3: ({ children }) => (
-                <h3 className="mb-4 mt-6 text-xl font-bold text-slate-900 first:mt-0 dark:text-slate-100">
-                  {children}
-                </h3>
-              ),
-              h4: ({ children }) => (
-                <h4 className="mb-3 mt-5 text-lg font-semibold text-slate-800 first:mt-0 dark:text-slate-200">
-                  {children}
-                </h4>
-              ),
-            }}
-          >
-            {formatSectionContent(section.content)}
-          </ReactMarkdown>
-        </div>
+        <Markdown
+          content={formatSectionContent(section.content)}
+          components={createMinimalMarkdownComponents()}
+          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_p]:mb-4 [&_p]:leading-relaxed [&_p:last-child]:mb-0 [&_ul]:my-4 [&_ul]:space-y-2 [&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_h3]:mb-4 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3:first-child]:mt-0 dark:[&_h3]:text-slate-100 [&_h4]:mb-3 [&_h4]:mt-5 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-800 [&_h4:first-child]:mt-0 dark:[&_h4]:text-slate-200"
+        />
       </div>
     );
   };

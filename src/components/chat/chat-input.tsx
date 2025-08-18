@@ -1,4 +1,4 @@
-import { useState, useRef, FormEvent } from 'react';
+import { useState, useRef, FormEvent, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -15,12 +15,26 @@ interface ChatInputProps {
   isLoading: boolean;
   placeholder?: string;
   isMaxedOut?: boolean;
+  autoFocus?: boolean;
 }
 
-export function ChatInput({ onSendMessage, isLoading, isMaxedOut }: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading, isMaxedOut, autoFocus = true }: ChatInputProps) {
   const [message, setMessage] = useState('');
+  const [previousLoadingState, setPreviousLoadingState] = useState(isLoading);
   
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  
+  // Auto-focus input when loading state changes from true to false
+  useEffect(() => {
+    if (autoFocus && previousLoadingState && !isLoading && inputRef.current) {
+      // Small delay to ensure DOM is updated
+      const timeoutId = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+    setPreviousLoadingState(isLoading);
+  }, [isLoading, previousLoadingState, autoFocus]);
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -78,7 +92,8 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut }: ChatInputPro
                 handleFormSubmit(e as any);
               }
             }}
-            disabled={isLoading}          />
+            disabled={isLoading}
+          />
         
         </div>
         {/* <motion.div whileTap={{ scale: 0.9 }}>

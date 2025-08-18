@@ -69,6 +69,14 @@ Our color system uses Tailwind's `darkMode: 'selector'` strategy with colors def
 | `halo-light-blue-mid` | `rgba(205, 225, 245, 0.75)` | `dark-halo-light-blue-mid` (`rgba(105, 166, 200, 0.45)`) | Mid light blue halo |
 | `halo-light-blue-outer` | `rgba(220, 240, 252, 0.55)` | `dark-halo-light-blue-outer` (`rgba(145, 206, 240, 0.35)`) | Outer light blue halo |
 
+### Markdown Renderer Colors
+
+| Color Name | Light Mode | Dark Mode Variant | Usage |
+|------------|------------|-------------------|-------|
+| `markdown-button` | `#F3F4F6` | `dark-markdown-button` (`#374151`) | Interactive button backgrounds in markdown |
+| `markdown-button-text` | `#1F2937` | `dark-markdown-button-text` (`#F1F5F9`) | Interactive button text colors |
+| `markdown-button-border` | `#D1D5DB` | `dark-markdown-button-border` (`#4B5563`) | Interactive button borders |
+
 ## 🛠 Usage in Components
 
 ### Blog System
@@ -204,6 +212,47 @@ The learning system (`/routes/dashboard/learning/`) provides comprehensive dark 
   <div className="text-yellow-600 dark:text-yellow-400">Tip icon</div>
   <p className="text-gray-700 dark:text-gray-300">Learning tip content</p>
 </div>
+```
+
+### Markdown Renderer
+The markdown renderer (`/components/ui/markdown-renderer.tsx`) provides comprehensive dark mode for AI chat interactions:
+
+```jsx
+// Main markdown container with prose styling
+<div className="prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 prose-slate dark:prose-invert">
+  Markdown content
+</div>
+
+// Interactive button labels
+<p className="text-sm font-medium mb-3 text-foreground dark:text-dark-foreground">
+  Button group label
+</p>
+
+// Confirm buttons with semantic colors
+<button className="px-4 py-2 rounded-lg bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white">
+  Yes/Agree button
+</button>
+
+// Financial action buttons with color-coded backgrounds
+<button className="flex items-center gap-2 px-3 py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700">
+  <span>💰</span>
+  <span>SAVE MONEY</span>
+</button>
+
+// Quick save amount buttons
+<button className="px-3 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-800 dark:text-green-400 rounded-lg border border-green-300 dark:border-green-700">
+  $50
+</button>
+
+// AI chat buttons with gradients
+<button className="w-full bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg">
+  Chat with Moneko
+</button>
+
+// Interactive icons with color transitions
+<span className="text-purple-400 dark:text-purple-300 hover:text-cyan-400 dark:hover:text-cyan-300 transition-colors duration-300">
+  ⚡
+</span>
 ```
 
 ### Using Semantic Colors with Dark Mode Variants

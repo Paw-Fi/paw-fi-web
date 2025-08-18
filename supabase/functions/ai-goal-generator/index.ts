@@ -17,10 +17,10 @@ import {
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
-  console.error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
+  throw new Error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Initialize Supabase client
 const supabaseClient = createClient(
@@ -28,11 +28,16 @@ const supabaseClient = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
 );
 
+// Types for better type safety
+interface QuestionnaireAnswers {
+  [key: string]: string | number | boolean;
+}
+
 // Generate AI response using structured function calling
 async function generateStructuredAIResponse(
   goalType: string,
   basePrompt: string,
-  questionnaireAnswers: any
+  questionnaireAnswers: QuestionnaireAnswers
 ): Promise<AIGoalResponse> {
   console.log("Sending request to Gemini AI with structured output...");
 
@@ -114,37 +119,43 @@ async function generateStructuredAIResponse(
   return aiResponse;
 }
 
-// Create goal and related entities in database
+// Create goal and related entities in database with transaction
 async function createGoalInDatabase(
   userId: string | null,
   goalType: string,
   aiResponse: AIGoalResponse,
-  questionnaireAnswers: any
+  questionnaireAnswers: QuestionnaireAnswers
 ) {
-  // Create goal in database
-  const { data: newGoal, error: goalError } = await supabaseClient
-    .from("financial_goals")
-    .insert({
-      user_id: userId,
-      title: aiResponse.goal.title,
-      description: aiResponse.goal.description,
-      goal_type: goalType,
-      target_amount: aiResponse.goal.targetAmount,
-      target_date: aiResponse.goal.targetDate,
-      ai_questionnaire_data: questionnaireAnswers,
-      ai_generated_strategy: aiResponse.strategy,
-      ai_generated_milestones: aiResponse.milestones,
-      ai_advisor_messages: aiResponse.advisorMessages || null,
-    })
-    .select()
-    .single();
+  // Use a transaction-like approach with error handling
+  let newGoal;
+  let newMilestones: any[] = [];
+  
+  try {
+    // Create goal in database
+    const { data: goalData, error: goalError } = await supabaseClient
+      .from("financial_goals")
+      .insert({
+        user_id: userId,
+        title: aiResponse.goal.title,
+        description: aiResponse.goal.description,
+        goal_type: goalType,
+        target_amount: aiResponse.goal.targetAmount,
+        target_date: aiResponse.goal.targetDate,
+        ai_questionnaire_data: questionnaireAnswers,
+        ai_generated_strategy: aiResponse.strategy,
+        ai_generated_milestones: aiResponse.milestones,
+        ai_advisor_messages: aiResponse.advisorMessages || null,
+      })
+      .select()
+      .single();
 
-  if (goalError) {
-    console.error("Goal creation error:", goalError);
-    throw new Error(`Failed to create goal in database: ${goalError.message}`);
-  }
+    if (goalError) {
+      console.error("Goal creation error:", goalError);
+      throw new Error(`Failed to create goal in database: ${goalError.message}`);
+    }
 
-  console.log("Goal created successfully:", newGoal.id);
+    newGoal = goalData;
+    console.log("Goal created successfully:", newGoal.id);
 
   // Log the goal creation activity (only for authenticated users)
   if (userId) {
@@ -175,67 +186,84 @@ async function createGoalInDatabase(
     console.log('Skipping activity logging for guest user');
   }
 
-  // Create AI-generated milestones
-  let newMilestones: any[] = [];
-  if (aiResponse.milestones && aiResponse.milestones.length > 0) {
-    const milestoneInserts = aiResponse.milestones.map((milestone, index) => ({
-      goal_id: newGoal.id,
-      title: milestone.title,
-      description: milestone.description,
-      milestone_type: milestone.type,
-      target_amount: milestone.targetAmount || null,
-      due_date: milestone.dueDate,
-      habit_description: milestone.habitDescription || null,
-      frequency: milestone.frequency || null,
-      habit_target_value: milestone.habitTargetValue || null,
-      is_ai_generated: true,
-      display_order: index,
-      priority: milestone.priority || 'medium',
-    }));
+    // Create AI-generated milestones
+    if (aiResponse.milestones && aiResponse.milestones.length > 0) {
+      const milestoneInserts = aiResponse.milestones.map((milestone, index) => ({
+        goal_id: newGoal.id,
+        title: milestone.title,
+        description: milestone.description,
+        milestone_type: milestone.type,
+        target_amount: milestone.targetAmount || null,
+        due_date: milestone.dueDate,
+        habit_description: milestone.habitDescription || null,
+        frequency: milestone.frequency || null,
+        habit_target_value: milestone.habitTargetValue || null,
+        is_ai_generated: true,
+        display_order: index,
+        priority: milestone.priority || 'medium',
+      }));
 
-    const { data, error: milestonesError } = await supabaseClient
-      .from("goal_milestones")
-      .insert(milestoneInserts)
-      .select();
-    
-    if (milestonesError) {
-      console.error("Milestones creation error:", milestonesError);
-      console.warn("Continuing without milestones due to creation error");
-    } else {
+      const { data, error: milestonesError } = await supabaseClient
+        .from("goal_milestones")
+        .insert(milestoneInserts)
+        .select();
+      
+      if (milestonesError) {
+        // Rollback goal creation on milestone failure
+        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
+        throw new Error(`Failed to create milestones: ${milestonesError.message}`);
+      }
+      
       newMilestones = data || [];
       console.log(`Created ${newMilestones.length} milestones`);
     }
-  }
 
-  // Create AI insights if provided
-  if (aiResponse.insights && aiResponse.insights.length > 0) {
-    const insightInserts = aiResponse.insights.map((insight) => ({
-      goal_id: newGoal.id,
-      insight_type: insight.type,
-      title: insight.title,
-      content: insight.content,
-      priority: insight.priority,
-      is_ai_generated: true,
-      ai_confidence_score: 0.8, // Default confidence for initial insights
-    }));
+    // Create AI insights if provided
+    if (aiResponse.insights && aiResponse.insights.length > 0) {
+      const insightInserts = aiResponse.insights.map((insight) => ({
+        goal_id: newGoal.id,
+        insight_type: insight.type,
+        title: insight.title,
+        content: insight.content,
+        priority: insight.priority,
+        is_ai_generated: true,
+        ai_confidence_score: 0.8, // Default confidence for initial insights
+      }));
 
-    const { error: insightsError } = await supabaseClient
-      .from("goal_insights")
-      .insert(insightInserts);
+      const { error: insightsError } = await supabaseClient
+        .from("goal_insights")
+        .insert(insightInserts);
 
-    if (insightsError) {
-      console.warn("Failed to create insights:", insightsError);
+      if (insightsError) {
+        // Rollback goal and milestones on insights failure
+        await supabaseClient.from("goal_milestones").delete().eq("goal_id", newGoal.id);
+        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
+        throw new Error(`Failed to create insights: ${insightsError.message}`);
+      }
     }
-  }
 
-  return {
-    goal: newGoal,
-    milestones: newMilestones,
-    strategy: aiResponse.strategy,
-    insights: aiResponse.insights || [],
-    projections: aiResponse.projections || null,
-    advisorMessages: aiResponse.advisorMessages || null
-  };
+    return {
+      goal: newGoal,
+      milestones: newMilestones,
+      strategy: aiResponse.strategy,
+      insights: aiResponse.insights || [],
+      projections: aiResponse.projections || null,
+      advisorMessages: aiResponse.advisorMessages || null
+    };
+  } catch (error) {
+    // Rollback any created data on error
+    if (newGoal?.id) {
+      try {
+        await supabaseClient.from("goal_milestones").delete().eq("goal_id", newGoal.id);
+        await supabaseClient.from("goal_insights").delete().eq("goal_id", newGoal.id);
+        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
+        console.log("Rolled back goal creation due to error");
+      } catch (rollbackError) {
+        console.error("Failed to rollback goal creation:", rollbackError);
+      }
+    }
+    throw error;
+  }
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -255,7 +283,12 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { userId = null, goalType, questionnaireAnswers } = await req.json();
+    const body = await req.json();
+    const { userId = null, goalType, questionnaireAnswers }: {
+      userId?: string | null;
+      goalType: string;
+      questionnaireAnswers: QuestionnaireAnswers;
+    } = body;
 
     if (!goalType || !questionnaireAnswers) {
       return new Response(
@@ -290,12 +323,17 @@ serve(async (req: Request): Promise<Response> => {
     
     console.log(`Using local template for goal type: ${goalType}`);
 
-    // Generate AI response using structured function calling
-    const aiResponse = await generateStructuredAIResponse(
-      goalType,
-      template.ai_prompt_template,
-      questionnaireAnswers
-    );
+    // Generate AI response using structured function calling with timeout
+    const aiResponse = await Promise.race([
+      generateStructuredAIResponse(
+        goalType,
+        template.ai_prompt_template,
+        questionnaireAnswers
+      ),
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('AI generation timeout after 60 seconds')), 60000)
+      )
+    ]);
 
     // Final validation before database insertion
     const validation = validateFinalResponse(aiResponse);
