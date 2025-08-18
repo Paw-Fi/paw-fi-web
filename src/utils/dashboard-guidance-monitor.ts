@@ -46,6 +46,18 @@ export interface UserGuidanceState {
 const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   // === ONBOARDING FLOW ===
   {
+    id: 'first_dashboard_visit_finni_intro',
+    route: '/dashboard/',
+    agentId: 'educator',
+    message: 'Welcome to your financial dashboard! I\'m Finni, your financial educator. Chat with me to get personalized financial lessons tailored just for you! 📚✨',
+    priority: 'high',
+    conditions: [
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
     id: 'first_goal_created',
     route: '/dashboard/advisor/{goalId}',
     agentId: 'advisor',

@@ -1,12 +1,12 @@
 import type { AdvisorMessage, AdvisorTone } from '@/components/ui/MonekoAdvisorMessage';
 import type { GoalType } from '@/data/questionnaire-templates';
-import type { FinancialProfileData } from '@/types/financial-quiz-constants';
+import { ComprehensiveFinancialProfile } from '@/types/financial-quiz-constants';
 
 export class GoalAdvisorMessageGenerator {
   static getCategoryMessage(
     categoryId: string, 
     goalType: GoalType,
-    answers: Partial<FinancialProfileData>
+    answers: Partial<ComprehensiveFinancialProfile>
   ): AdvisorMessage | null {
     
     switch (categoryId) {
@@ -42,7 +42,7 @@ export class GoalAdvisorMessageGenerator {
     }
   }
 
-  private static getPersonalInfoMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getPersonalInfoMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const age = answers['current-age'] as number;
     const employmentStatus = answers['employment-status'] as string;
     
@@ -81,7 +81,7 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getIncomeMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getIncomeMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const monthlyIncome = answers['monthly-gross-income'] as number;
     const additionalIncome = answers['additional_income_sources'] as string[];
     
@@ -115,7 +115,7 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getExpensesMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getExpensesMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const monthlyExpenses = answers['monthly-living-expenses'] as number;
     const monthlyIncome = answers['monthly-gross-income'] as number;
     
@@ -151,7 +151,7 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getAssetsMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getAssetsMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const emergencyFund = answers['emergency-fund'] as number;
     const currentSavings = answers['current-savings'] as number;
     const monthlyExpenses = answers['monthly-living-expenses'] as number;
@@ -190,7 +190,7 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getDebtsMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getDebtsMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const monthlyDebtPayments = answers['monthly-debt-payments'] as number;
     const monthlyIncome = answers['monthly-gross-income'] as number;
     
@@ -233,14 +233,14 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getGoalsMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getGoalsMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     return {
       message: `I love that you're thinking beyond just one financial goal! Having multiple goals shows great financial planning mindset. We'll make sure your ${this.getGoalTypeDisplayName(goalType)} goal fits perfectly with your other aspirations.`,
       tone: 'congratulatory'
     };
   }
 
-  private static getRiskProfileMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getRiskProfileMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const riskTolerance = answers['risk-tolerance'] as string;
     const investmentExperience = answers['investment-experience'] as string;
     
@@ -274,14 +274,14 @@ export class GoalAdvisorMessageGenerator {
     };
   }
 
-  private static getBehaviorMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getBehaviorMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     return {
       message: `Understanding your financial habits and behaviors helps me create a ${this.getGoalTypeDisplayName(goalType)} plan that actually works with your lifestyle. The best plan is one you can stick to consistently!`,
       tone: 'encouraging'
     };
   }
 
-  private static getGoalSpecificMessage(answers: Partial<FinancialProfileData>, goalType: GoalType): AdvisorMessage {
+  private static getGoalSpecificMessage(answers: Partial<ComprehensiveFinancialProfile>, goalType: GoalType): AdvisorMessage {
     const targetAmount = answers['target-amount'] as number;
     const timeframe = answers['target-timeframe'] as number;
     

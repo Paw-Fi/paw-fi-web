@@ -23,7 +23,7 @@ export const useDashboardGuidance = (options: UseDashboardGuidanceOptions = {}) 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
 
-    // Initialize the monitor with tooltip callback
+    // Initialize the monitor with tooltip callbacks
     const showTooltip = (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => {
       if (sidebarRef?.current) {
         // Small delay to ensure component is ready
@@ -33,7 +33,16 @@ export const useDashboardGuidance = (options: UseDashboardGuidanceOptions = {}) 
       }
     };
 
-    dashboardGuidanceMonitor.initialize(showTooltip);
+    const hideTooltip = (agentId: AI_ID) => {
+      if (sidebarRef?.current) {
+        sidebarRef.current?.hideTooltip(agentId);
+      }
+    };
+
+    dashboardGuidanceMonitor.initialize({
+      onShowTooltip: showTooltip,
+      onHideTooltip: hideTooltip
+    });
 
     // Update preferences
     dashboardGuidanceMonitor.updatePreferences({

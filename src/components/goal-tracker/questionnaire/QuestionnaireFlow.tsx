@@ -19,7 +19,7 @@ import type {
   GoalType, 
   QuestionnaireTemplate, 
 } from "@/data/questionnaire-templates";
-import type { FinancialProfileData, CategoryInfo, Question, QuestionCategory } from "@/types/financial-quiz-constants";
+import type { ComprehensiveFinancialProfile, CategoryInfo, Question, QuestionCategory } from "@/types/financial-quiz-constants";
 import { categories as allCategories } from "@/types/financial-quiz-constants";
 
 interface QuestionnaireFlowProps {
@@ -37,7 +37,7 @@ export function QuestionnaireFlow({
   onCancel,
   userId 
 }: QuestionnaireFlowProps) {
-  const [answers, setAnswers] = useState<Partial<FinancialProfileData>>({});
+  const [answers, setAnswers] = useState<Partial<ComprehensiveFinancialProfile>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<AdvisorMessage | null>(null);
@@ -96,7 +96,7 @@ export function QuestionnaireFlow({
     let isValid = true;
     
     questions.forEach((q) => {
-      const value = answers[q.id as keyof FinancialProfileData];
+      const value = answers[q.id as keyof ComprehensiveFinancialProfile];
       
       // Required field validation
       if (q.validation?.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -192,7 +192,7 @@ export function QuestionnaireFlow({
     return questions
       .filter(q => q.validation?.required)
       .every(q => {
-        const value = answers[q.id as keyof FinancialProfileData];
+        const value = answers[q.id as keyof ComprehensiveFinancialProfile];
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
       });
   }, [questions, answers]);
@@ -368,7 +368,7 @@ export function QuestionnaireFlow({
   const isCategoryComplete = useCallback((categoryId: string) => {
     const categoryQuestions = questionsByCategory[categoryId] || [];
     return categoryQuestions.every(q => {
-      const value = answers[q.id as keyof FinancialProfileData];
+      const value = answers[q.id as keyof ComprehensiveFinancialProfile];
       if (q.validation?.required) {
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
       }
@@ -509,7 +509,7 @@ export function QuestionnaireFlow({
                   description={question.description}
                   type={question.type}
                   options={question.options}
-                  value={answers[question.id as keyof FinancialProfileData]}
+                  value={answers[question.id as keyof ComprehensiveFinancialProfile]}
                   onChange={(value) => handleAnswerChange(question.id, value)}
                   error={errors[question.id]}
                   placeholder={question.placeholder}
