@@ -51,6 +51,25 @@ export function GoalPresentationFlow({
     if (canGoNext) {
       const nextPage = PAGES[currentPageIndex + 1].id;
       setCurrentPage(nextPage);
+      
+      // Scroll to top smoothly for better UX
+      setTimeout(() => {
+        if ('scrollBehavior' in document.documentElement.style) {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } else {
+          const scrollToTop = () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 0) {
+              window.requestAnimationFrame(scrollToTop);
+              window.scrollTo(0, currentScroll - (currentScroll / 8));
+            }
+          };
+          scrollToTop();
+        }
+      }, 50);
     }
   };
   
@@ -58,6 +77,25 @@ export function GoalPresentationFlow({
     if (canGoBack) {
       const prevPage = PAGES[currentPageIndex - 1].id;
       setCurrentPage(prevPage);
+      
+      // Scroll to top smoothly for better UX
+      setTimeout(() => {
+        if ('scrollBehavior' in document.documentElement.style) {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } else {
+          const scrollToTop = () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 0) {
+              window.requestAnimationFrame(scrollToTop);
+              window.scrollTo(0, currentScroll - (currentScroll / 8));
+            }
+          };
+          scrollToTop();
+        }
+      }, 50);
     }
   };
   
@@ -92,7 +130,7 @@ export function GoalPresentationFlow({
   };
   
   return (
-      <div className="flex-1 overflow-scroll px-4 py-8">
+      <div className="flex-1 flex flex-col px-4 py-8">
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -134,18 +172,20 @@ export function GoalPresentationFlow({
         </div>
         
         {/* Page Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPage}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="mb-8"
-          >
-            {renderCurrentPage()}
-          </motion.div>
-        </AnimatePresence>
+        <div className="flex-1 min-h-0 mb-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentPage}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="h-full overflow-auto"
+            >
+              {renderCurrentPage()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
         
         {/* Navigation */}
         <div className="flex justify-between items-center">

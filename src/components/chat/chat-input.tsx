@@ -16,9 +16,10 @@ interface ChatInputProps {
   placeholder?: string;
   isMaxedOut?: boolean;
   autoFocus?: boolean;
+  agentName:string;
 }
 
-export function ChatInput({ onSendMessage, isLoading, isMaxedOut, autoFocus = true }: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, autoFocus = true }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [previousLoadingState, setPreviousLoadingState] = useState(isLoading);
   
@@ -77,7 +78,7 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut, autoFocus = tr
             ref={inputRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Ask Moneko anything..."
+            placeholder={`Ask ${agentName} anything...`}
             className={classNames("w-full h-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-4 py-2.5 pr-24 text-sm text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200",
               {
                 "cursor-not-allowed": isLoading,

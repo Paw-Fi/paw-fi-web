@@ -998,6 +998,7 @@ function GoalDetail() {
         goal={currentGoal}
         progressData={progressData}
         milestones={currentMilestones || []}
+        insights={currentInsights || []}
         activeTab={trackerActiveTab}
         setActiveTab={setTrackerActiveTab}
         savingsGap={savingsGap}

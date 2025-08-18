@@ -199,6 +199,7 @@ Please generate a comprehensive financial profile description based on this data
 
   const profileDescription = result.response.text();
   console.log("AI generated profile description:", profileDescription);
+  console.log("Backend calculated profileData:", JSON.stringify(profileData, null, 2));
 
   console.log(`${isUpdate ? 'Upserting' : 'Inserting'} profile in database for user:`, userId);
   const { data: dbResult, error: dbError } = await supabaseClient
@@ -207,7 +208,7 @@ Please generate a comprehensive financial profile description based on this data
       user_id: userId,
       profile_description: profileDescription,
       quiz_answers: quizAnswers,
-      profile_data: profileData,
+      profile_data: profileData, // Always use backend's calculated data
     }, { onConflict: 'user_id' })
     .select()
     .single();
@@ -222,12 +223,14 @@ Please generate a comprehensive financial profile description based on this data
     JSON.stringify({
       success: true,
       profileDescription: profileDescription,
-      profileData: profileData,
+      profileData: profileData, // Backend's calculated data, not AI's
       profileId: dbResult?.id || null,
       debug: {
         message: `Profile ${isUpdate ? 'updated' : 'created'} and stored successfully`,
         timestamp: new Date().toISOString(),
         stored_in_db: !dbError,
+        backend_calculated_monthly_savings: profileData.calculated_metrics.monthly_savings,
+        backend_calculated_total_assets: profileData.calculated_metrics.total_assets,
       },
     }),
     {

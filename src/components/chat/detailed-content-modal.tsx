@@ -34,12 +34,50 @@ export function DetailedContentModal({
   const handleNext = () => {
     if (currentPage < sections.length - 1) {
       setCurrentPage(currentPage + 1);
+      
+      // Scroll to top smoothly for better UX
+      setTimeout(() => {
+        if ('scrollBehavior' in document.documentElement.style) {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } else {
+          const scrollToTop = () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 0) {
+              window.requestAnimationFrame(scrollToTop);
+              window.scrollTo(0, currentScroll - (currentScroll / 8));
+            }
+          };
+          scrollToTop();
+        }
+      }, 50);
     }
   };
 
   const handlePrev = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
+      
+      // Scroll to top smoothly for better UX
+      setTimeout(() => {
+        if ('scrollBehavior' in document.documentElement.style) {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } else {
+          const scrollToTop = () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 0) {
+              window.requestAnimationFrame(scrollToTop);
+              window.scrollTo(0, currentScroll - (currentScroll / 8));
+            }
+          };
+          scrollToTop();
+        }
+      }, 50);
     }
   };
 

@@ -8,12 +8,14 @@ export function TrackerModal({
   onClose, 
   goal,
   progressData,
-  milestones}: { 
+  milestones,
+  insights}: { 
   isOpen: boolean; 
   onClose: () => void; 
   goal: any;
   progressData: any;
   milestones: any[];
+  insights?: any[];
   activeTab: 'activity' | 'milestones';
   setActiveTab: (tab: 'activity' | 'milestones') => void;
   savingsGap: number;
@@ -58,7 +60,7 @@ export function TrackerModal({
       created_at: milestone.created_at,
       updated_at: milestone.updated_at
     })),
-    insights: goal.goal_insights || [],
+    insights: insights || [],
     projections: {
       monthlyRequired: progressData.requiredMonthly,
       projectedFinalAmount: progressData.targetAmount,
@@ -67,8 +69,8 @@ export function TrackerModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" width="xwide">
-      <div className="h-[80vh] flex flex-col">
+    <Modal isOpen={isOpen} onClose={onClose} title="" width="xwide" fullHeight={true}>
+      <div className="flex flex-col min-h-0 flex-1">
         <GoalPresentationFlow
           goalData={goalData}
           isLoggedIn={true} // Assuming user is logged in if they can view goal details

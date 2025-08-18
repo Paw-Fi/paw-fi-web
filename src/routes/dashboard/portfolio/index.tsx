@@ -360,7 +360,7 @@ function Profile() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200" >
                       Portfolio
                     </h1>
                   

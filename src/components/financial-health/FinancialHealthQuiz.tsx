@@ -18,7 +18,7 @@ import {
 } from "./quiz-calculations";
 import { toast } from "react-toastify";
 import { User } from "@/contexts/auth-context";
-import { FinancialHealthProfile } from "@/hooks/use-financial-health-profile";
+import { FinancialHealthProfile, useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { FinancialAdvisorMessageGenerator, AdvisorMessage } from "./financial-advisor-messages";
 import { PresetProfileSelector } from "./PresetProfileSelector";
 import MonekoAdvisorMessage from "@/components/ui/MonekoAdvisorMessage";
@@ -191,6 +191,9 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const {onDashboardCreated, user} = props;
   const { createDashboardFromQuiz } = useQuizDashboard();
   const [financialProfile, setFinancialProfile] = useState<Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'> | null>(null);
+  
+  // Fetch existing financial health profile for auto-fill
+  const { profile, isLoading: isProfileLoading } = useFinancialHealthProfile(user?.id);
 
   // State for error handling
   const [error, setError] = useState<string | null>(null);
@@ -268,6 +271,96 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
     "Rebalance your portfolio periodically to maintain your target asset allocation.",
     "Compound interest is powerful - start investing early and consistently."
   ];
+
+  // Auto-fill quiz with existing profile data
+  useEffect(() => {
+    if (profile?.quiz_answers && !state.isComplete) {
+      const existingData = profile.quiz_answers as any;
+      
+      // Map existing data to quiz state (with backwards compatibility)
+      const autoFillAnswers: Record<string, any> = {
+        // Personal Information
+        'current_age': existingData['current_age'] || existingData['current-age'] || undefined,
+        'marital_status': existingData['marital_status'] || existingData['marital-status'] || undefined,
+        'dependents': existingData['dependents'] || undefined,
+        
+        // Income Details
+        'gross_monthly_income': existingData['gross_monthly_income'] || existingData['gross-monthly-income'] || undefined,
+        'net_monthly_income': existingData['net_monthly_income'] || existingData['net-monthly-income'] || undefined,
+        'income_stability': existingData['income_stability'] || existingData['income-stability'] || undefined,
+        'additional_income_sources': existingData['additional_income_sources'] || existingData['additional-income-sources'] || [],
+        'annual_bonus': existingData['annual_bonus'] || existingData['annual-bonus'] || undefined,
+        
+        // Detailed Expenses
+        'housing_cost': existingData['housing_cost'] || existingData['housing-cost'] || undefined,
+        'housing_type': existingData['housing_type'] || existingData['housing-type'] || undefined,
+        'food_expenses': existingData['food_expenses'] || existingData['food-expenses'] || undefined,
+        'transportation_expenses': existingData['transportation_expenses'] || existingData['transportation-expenses'] || undefined,
+        'healthcare_expenses': existingData['healthcare_expenses'] || existingData['healthcare-expenses'] || undefined,
+        'insurance_expenses': existingData['insurance_expenses'] || existingData['insurance-expenses'] || undefined,
+        'entertainment_expenses': existingData['entertainment_expenses'] || existingData['entertainment-expenses'] || undefined,
+        'other_monthly_expenses': existingData['other_monthly_expenses'] || existingData['other-monthly-expenses'] || undefined,
+        
+        // Assets & Savings
+        'emergency_fund': existingData['emergency_fund'] || existingData['emergency-fund'] || undefined,
+        'checking_account': existingData['checking_account'] || existingData['checking-account'] || undefined,
+        'savings_account': existingData['savings_account'] || existingData['savings-account'] || undefined,
+        'investment_accounts': existingData['investment_accounts'] || existingData['investment-accounts'] || undefined,
+        'retirement_accounts': existingData['retirement_accounts'] || existingData['retirement-accounts'] || undefined,
+        'real_estate_value': existingData['real_estate_value'] || existingData['real-estate-value'] || undefined,
+        'other_assets': existingData['other_assets'] || existingData['other-assets'] || undefined,
+        
+        // Debts & Liabilities
+        'credit_card_debt': existingData['credit_card_debt'] || existingData['credit-card-debt'] || undefined,
+        'credit_card_interest_rate': existingData['credit_card_interest_rate'] || existingData['credit-card-interest-rate'] || undefined,
+        'student_loan_debt': existingData['student_loan_debt'] || existingData['student-loan-debt'] || undefined,
+        'student_loan_interest_rate': existingData['student_loan_interest_rate'] || existingData['student-loan-interest-rate'] || undefined,
+        'mortgage_balance': existingData['mortgage_balance'] || existingData['mortgage-balance'] || undefined,
+        'mortgage_interest_rate': existingData['mortgage_interest_rate'] || existingData['mortgage-interest-rate'] || undefined,
+        'auto_loan_balance': existingData['auto_loan_balance'] || existingData['auto-loan-balance'] || undefined,
+        'auto_loan_interest_rate': existingData['auto_loan_interest_rate'] || existingData['auto-loan-interest-rate'] || undefined,
+        'other_debt': existingData['other_debt'] || existingData['other-debt'] || undefined,
+        'other_debt_interest_rate': existingData['other_debt_interest_rate'] || existingData['other-debt-interest-rate'] || undefined,
+        'debt-details': existingData['debt-details'] || [],
+        
+        // Financial Goals
+        'retirement_age': existingData['retirement_age'] || existingData['retirement-age'] || undefined,
+        'desired_retirement_income': existingData['desired_retirement_income'] || existingData['desired-retirement-income'] || undefined,
+        'short_term_goals': existingData['short_term_goals'] || existingData['short-term-goals'] || [],
+        'medium_term_goals': existingData['medium_term_goals'] || existingData['medium-term-goals'] || [],
+        'long_term_goals': existingData['long_term_goals'] || existingData['long-term-goals'] || [],
+        'major_purchase_timeline': existingData['major_purchase_timeline'] || existingData['major-purchase-timeline'] || undefined,
+        
+        // Risk Profile & Investment
+        'risk_tolerance': existingData['risk_tolerance'] || existingData['risk-tolerance'] || undefined,
+        'investment_experience': existingData['investment_experience'] || existingData['investment-experience'] || undefined,
+        'investment_timeline': existingData['investment_timeline'] || existingData['investment-timeline'] || undefined,
+        'investment_priorities': existingData['investment_priorities'] || existingData['investment-priorities'] || [],
+        
+        // Financial Behavior
+        'savings_rate': existingData['savings_rate'] || existingData['savings-rate'] || undefined,
+        'spending_tracking': existingData['spending_tracking'] || existingData['spending-tracking'] || undefined,
+        'budget_adherence': existingData['budget_adherence'] || existingData['budget-adherence'] || undefined,
+        'financial_stress_level': existingData['financial_stress_level'] || existingData['financial-stress-level'] || undefined,
+      };
+      
+      // Filter out undefined values to avoid overriding empty inputs
+      const filteredAnswers = Object.fromEntries(
+        Object.entries(autoFillAnswers).filter(([_, value]) => value !== undefined)
+      );
+      
+      // Only apply auto-fill if we have actual data to fill
+      if (Object.keys(filteredAnswers).length > 2) { // More than just debt-details and additional_income_sources arrays
+        setState(prev => ({
+          ...prev,
+          answers: {
+            ...prev.answers,
+            ...filteredAnswers,
+          },
+        }));
+      }
+    }
+  }, [profile, state.isComplete]);
 
   // Rotate through investment tips during processing
   useEffect(() => {
@@ -424,6 +517,27 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
       ...prev,
       activeCategory: category,
     }));
+    
+    // Scroll to top smoothly for better UX - use setTimeout to ensure state update happens first
+    setTimeout(() => {
+      // Try modern smooth scrolling first
+      if ('scrollBehavior' in document.documentElement.style) {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback for older browsers with manual smooth scrolling
+        const scrollToTop = () => {
+          const currentScroll = window.pageYOffset;
+          if (currentScroll > 0) {
+            window.requestAnimationFrame(scrollToTop);
+            window.scrollTo(0, currentScroll - (currentScroll / 8));
+          }
+        };
+        scrollToTop();
+      }
+    }, 50);
   }, []);
 
   // Handle dashboard name change
@@ -512,29 +626,94 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
   const handleCompleteQuiz = useCallback((precomputedResults?: CalculationResults) => {
     // Debug: Log the answers to see what we're working with
     console.log('Quiz answers:', state.answers);
+    console.log('Financial profile from AI:', financialProfile);
     
-    // Use precomputed results from edge function if available, otherwise calculate client-side
-    const baseResults = precomputedResults || calculateResults(state.answers);
+    // Use AI-generated profile data if available, otherwise fallback to client-side calculation
+    let baseResults: CalculationResults;
+    let healthScore: number;
+    let projectedRetirementFund: number;
+    let monthlyRetirementIncome: number;
+    let currentAge: number;
+    let retirementAge: number;
     
-    // Debug: Log the base results
-    console.log('Base results:', baseResults);
-    console.log('Portfolio projection:', baseResults.portfolioProjection);
+    // Always use client-side calculation to ensure accuracy
+    // The AI may not provide reliable numeric data, so calculate from raw answers
+    console.log('Using client-side calculation with raw answers for accuracy');
     
-    // Calculate financial health score using our quiz calculations
-    const healthScore = calculateFinancialHealthScore(state.answers);
+    currentAge = Number(state.answers['current_age']) || 28;
+    retirementAge = Number(state.answers['retirement_age']) || 65;
     
-    // Ensure proper number conversion for age values
-    const currentAge = Number(state.answers['current-age']) || 30;
-    const retirementAge = Number(state.answers['retirement-age']) || 65;
+    // Calculate from the original answers to ensure accuracy
+    const netIncome = Number(state.answers['net_monthly_income']) || 0;
+    const totalExpenses = Number(state.answers['housing_cost'] || 0) + 
+                         Number(state.answers['food_expenses'] || 0) + 
+                         Number(state.answers['transportation_expenses'] || 0) + 
+                         Number(state.answers['healthcare_expenses'] || 0) + 
+                         Number(state.answers['insurance_expenses'] || 0) + 
+                         Number(state.answers['entertainment_expenses'] || 0) + 
+                         Number(state.answers['other_monthly_expenses'] || 0);
+    const actualMonthlySavings = netIncome - totalExpenses;
+    const emergencyFund = Number(state.answers['emergency_fund']) || 0;
+    const emergencyFundMonths = totalExpenses > 0 ? emergencyFund / totalExpenses : 0;
+    const grossIncome = Number(state.answers['gross_monthly_income']) || 0;
+    const totalDebt = Number(state.answers['credit_card_debt'] || 0) + 
+                     Number(state.answers['student_loan_debt'] || 0) + 
+                     Number(state.answers['mortgage_balance'] || 0) + 
+                     Number(state.answers['auto_loan_balance'] || 0) + 
+                     Number(state.answers['other_debt'] || 0);
+    const debtToIncomeRatio = grossIncome > 0 ? totalDebt / (grossIncome * 12) : 0;
     
-    // Use retirement projections from the new calculation system
-    const projectedRetirementFund = baseResults.portfolioProjection.futureValue || 0;
+    // Calculate net worth from original answers
+    const allAssets = Number(state.answers['emergency_fund'] || 0) + 
+                     Number(state.answers['checking_account'] || 0) + 
+                     Number(state.answers['savings_account'] || 0) + 
+                     Number(state.answers['investment_accounts'] || 0) + 
+                     Number(state.answers['retirement_accounts'] || 0) + 
+                     Number(state.answers['real_estate_value'] || 0) + 
+                     Number(state.answers['other_assets'] || 0);
+    const netWorth = allAssets - totalDebt;
     
-    // Debug: Log the projected retirement fund
-    console.log('Projected retirement fund:', projectedRetirementFund);
+    // Calculate health score based on actual data
+    healthScore = 30; // Base score
+    if (netWorth > 50000) healthScore += 20;
+    else if (netWorth > 0) healthScore += 10;
     
-    // Calculate monthly retirement income (4% withdrawal rule)
-    const monthlyRetirementIncome = (projectedRetirementFund * 0.04) / 12;
+    if (actualMonthlySavings > 1000) healthScore += 20;
+    else if (actualMonthlySavings > 0) healthScore += 10;
+    
+    if (emergencyFundMonths >= 6) healthScore += 20;
+    else if (emergencyFundMonths >= 3) healthScore += 15;
+    else if (emergencyFundMonths >= 1) healthScore += 5;
+    
+    if (debtToIncomeRatio < 0.2) healthScore += 15;
+    else if (debtToIncomeRatio < 0.3) healthScore += 10;
+    else if (debtToIncomeRatio < 0.4) healthScore += 5;
+    
+    healthScore = Math.min(100, Math.max(0, healthScore));
+    
+    // Project retirement fund based on current savings and time to retirement
+    const yearsToRetirement = retirementAge - currentAge;
+    const annualSavings = actualMonthlySavings * 12;
+    const growthRate = 0.07; // Assume 7% annual return
+    
+    // Future value calculation: FV = PMT * [((1 + r)^n - 1) / r] + PV * (1 + r)^n
+    const futureValueAnnuity = annualSavings > 0 ? 
+      annualSavings * (Math.pow(1 + growthRate, yearsToRetirement) - 1) / growthRate : 0;
+    const futureValuePresent = allAssets * Math.pow(1 + growthRate, yearsToRetirement);
+    projectedRetirementFund = futureValueAnnuity + futureValuePresent;
+    
+    monthlyRetirementIncome = (projectedRetirementFund * 0.04) / 12;
+    
+    // Use the existing calculateResults function for proper type compatibility but override key values
+    baseResults = calculateResults(state.answers);
+    
+    // Override with our more accurate calculations
+    baseResults.cashFlow.monthlySavings = actualMonthlySavings;
+    baseResults.cashFlow.savingsRatePercent = netIncome > 0 ? Math.round((actualMonthlySavings / netIncome) * 100) : 0;
+    baseResults.portfolioProjection.futureValue = projectedRetirementFund;
+    
+    // Debug: Log the results
+    console.log('Final results:', { healthScore, projectedRetirementFund, monthlyRetirementIncome });
     
     // Determine health assessment based on score
     const getHealthAssessment = (score: number): string => {
@@ -565,7 +744,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
         isProcessing: false, // End processing state
       };
     });
-  }, [state.answers]);
+  }, [state.answers, financialProfile]);
 
   // Handle dashboard creation
   const handleCreateDashboard = useCallback(async () => {
@@ -730,7 +909,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {inputQuestions.map((question) => (
             <div key={question.id}>
-              <h3 className="mb-1 text-sm font-medium text-gray-800">
+              <h3 className="mb-1 text-sm font-medium text-gray-800 dark:text-gray-200">
                 {question.question}
                {question.type === "slider" &&  <span className="text-md ml-2 font-bold text-green-500">
               {(state.answers[question.id] as number) || (question.validation?.min || 0)}%
@@ -738,7 +917,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               </span>}
               </h3>
               {question.description && (
-                <p className="mb-2 text-xs text-gray-600">
+                <p className="mb-2 text-xs text-gray-600 dark:text-gray-400">
                   {question.description}
                 </p>
               )}
@@ -1130,7 +1309,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                         )
                         .map((question) => (
                           <div key={question.id} className="">
-                            <h3 className="mb-1 text-sm font-medium text-gray-800">
+                            <h3 className="mb-1 text-sm font-medium text-gray-800 dark:text-gray-200">
                               {question.question}
                             </h3>
                             {question.description && (

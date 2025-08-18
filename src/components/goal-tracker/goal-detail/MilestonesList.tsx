@@ -58,6 +58,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
+  const [inlineEditingMilestone, setInlineEditingMilestone] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<MilestoneFormData>({
@@ -103,6 +104,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
     });
     setShowCreateForm(false);
     setEditingMilestone(null);
+    setInlineEditingMilestone(null);
     setError(null);
   };
 
@@ -170,8 +172,11 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
       onMilestoneUpdate();
       resetForm();
+      toast.success(editingMilestone ? 'Milestone updated successfully!' : 'Milestone created successfully!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save milestone');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save milestone';
+      setError(errorMessage);
+      toast.error(errorMessage);
       onMilestoneUpdate(); // Revert optimistic updates
     } finally {
       setIsSubmitting(false);
@@ -210,8 +215,10 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
       if (error) throw error;
       onMilestoneUpdate();
+      toast.success(`Milestone ${newStatus === 'completed' ? 'completed' : 'reopened'} successfully!`);
     } catch (err) {
       console.error('Failed to toggle milestone completion:', err);
+      toast.error('Failed to update milestone status');
       
       // Revert the optimistic update
       setOptimisticMilestones({ type: 'update', milestoneId: milestone.id, updates: originalUpdates });
@@ -248,8 +255,10 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
       if (error) throw error;
       onMilestoneUpdate();
+      toast.success('Milestone deleted successfully!');
     } catch (err) {
       console.error('Failed to delete milestone:', err);
+      toast.error('Failed to delete milestone');
       
       // Revert the optimistic delete by adding the milestone back
       setOptimisticMilestones({ type: 'add', milestone: milestoneToDelete });
@@ -270,6 +279,81 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
       newExpanded.add(milestoneId);
     }
     setExpandedMilestones(newExpanded);
+  };
+
+  const startInlineEdit = (milestone: GoalMilestone) => {
+    if (!isSubscriptionActive) {
+      toast.error("Subscribe to unlock this feature");
+      return;
+    }
+    
+    setInlineEditingMilestone(milestone.id);
+    setFormData({
+      title: milestone.title,
+      description: milestone.description,
+      milestone_type: milestone.milestone_type,
+      target_amount: milestone.target_amount,
+      due_date: milestone.due_date,
+      habit_description: milestone.habit_description,
+      frequency: milestone.frequency,
+      habit_target_value: milestone.habit_target_value,
+      priority: milestone.priority
+    });
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditingMilestone(null);
+    setFormData({
+      title: '',
+      description: '',
+      milestone_type: 'amount',
+      due_date: '',
+      priority: 'medium'
+    });
+    setError(null);
+  };
+
+  const saveInlineEdit = async (milestoneId: string) => {
+    if (!user?.id) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const milestoneData = {
+        ...formData,
+        goal_id: goalId,
+        user_id: user.id,
+      };
+
+      // Optimistically update milestone
+      const optimisticUpdates = { ...milestoneData, updated_at: new Date().toISOString() };
+      setOptimisticMilestones({ type: 'update', milestoneId, updates: optimisticUpdates });
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate({ type: 'update', milestoneId, updates: optimisticUpdates });
+      }
+
+      const { error } = await supabase.functions.invoke('goal-milestone-manager', {
+        body: {
+          action: 'update',
+          payload: { ...milestoneData, id: milestoneId },
+          userId: user.id,
+        },
+      });
+
+      if (error) throw error;
+
+      onMilestoneUpdate();
+      setInlineEditingMilestone(null);
+      toast.success('Milestone updated successfully!');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update milestone';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      onMilestoneUpdate(); // Revert optimistic updates
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getMilestoneIcon = (type: MilestoneType) => {
@@ -546,6 +630,13 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() => startInlineEdit(milestone)}
+                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                        title="Edit milestone"
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="w-3 h-3" />
+                      </button>
+                      <button
                         onClick={() => toggleExpanded(milestone.id)}
                         className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
@@ -557,6 +648,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                       <button
                         onClick={() => deleteMilestone(milestone.id)}
                         className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                        title="Delete milestone"
                       >
                         <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
                       </button>
@@ -564,7 +656,166 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                   </div>
 
                   <AnimatePresence>
-                    {isExpanded && (
+                    {inlineEditingMilestone === milestone.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-3 overflow-hidden border-t border-gray-200 dark:border-gray-600 pt-3"
+                      >
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          saveInlineEdit(milestone.id);
+                        }} className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Title
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.title}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Due Date
+                              </label>
+                              <input
+                                type="date"
+                                value={formData.due_date}
+                                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Type
+                              </label>
+                              <select
+                                value={formData.milestone_type}
+                                onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                              >
+                                <option value="amount">Amount</option>
+                                <option value="habit">Habit</option>
+                                <option value="action">Action</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Priority
+                              </label>
+                              <select
+                                value={formData.priority}
+                                onChange={(e) => setFormData({ ...formData, priority: e.target.value as MilestonePriority })}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                              >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                              </select>
+                            </div>
+                            {formData.milestone_type === 'amount' && (
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Amount ($)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={formData.target_amount || ''}
+                                  onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) || undefined })}
+                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {formData.milestone_type === 'habit' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Habit Description
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formData.habit_description || ''}
+                                  onChange={(e) => setFormData({ ...formData, habit_description: e.target.value })}
+                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                  placeholder="e.g., Read for 30 minutes"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Frequency
+                                </label>
+                                <select
+                                  value={formData.frequency || 'daily'}
+                                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value as MilestoneFrequency })}
+                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                >
+                                  <option value="daily">Daily</option>
+                                  <option value="weekly">Weekly</option>
+                                  <option value="monthly">Monthly</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Description
+                            </label>
+                            <textarea
+                              value={formData.description}
+                              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm resize-none"
+                              rows={2}
+                              required
+                            />
+                          </div>
+
+                          {error && (
+                            <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-xs">
+                              {error}
+                            </div>
+                          )}
+
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={cancelInlineEdit}
+                              className="px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isSubmitting}
+                              className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium flex items-center gap-1"
+                            >
+                              {isSubmitting ? (
+                                <FontAwesomeIcon icon={faClock} className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                              )}
+                              Save Changes
+                            </button>
+                          </div>
+                        </form>
+                      </motion.div>
+                    )}
+                    {isExpanded && inlineEditingMilestone !== milestone.id && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}

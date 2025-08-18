@@ -143,7 +143,7 @@ export function KeyInsightsPage({ insights, isLoggedIn, advisorMessage }: KeyIns
   };
   
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 w-full">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

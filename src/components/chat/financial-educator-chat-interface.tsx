@@ -76,7 +76,7 @@ export function FinancialEducatorChatInterface() {
       }}
       agentIcon={finniLogo}
       agentName="Finni"
-      welcomeMessage="Hi I'm Moneko! I'll help you learn about personal finance. Type 'start' to begin or ask me anything."
+      welcomeMessage="Hi I'm Finni! I'll help you learn about personal finance. Type 'start' to begin or ask me anything."
       welcomeSubtitle="Ask me anything to get started!"
       navigate={navigate}
       className="flex-1"

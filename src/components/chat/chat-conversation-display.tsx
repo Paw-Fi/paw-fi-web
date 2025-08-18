@@ -59,8 +59,8 @@ interface ChatConversationDisplayProps {
   chatConfig: ChatConfig;
   
   // Optional customization
-  agentName?: string;
-  agentIcon?: React.ReactNode;
+  agentName: string;
+  agentIcon: React.ReactNode;
   welcomeMessage?: string;
   welcomeSubtitle?: string;
   
@@ -618,6 +618,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         onSendMessage={handleSendMessage} 
         isLoading={isLoading||isConversationMaxedOut} 
         isMaxedOut={isConversationMaxedOut}
+        agentName={agentName}
       />
         </div>
 

@@ -162,7 +162,36 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Strategy</h2>
         </div>
         <article className={`prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6 ${!isLoggedIn ? 'line-clamp-2' : ''}`}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} >
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Add proper spacing for paragraphs and other elements
+              p: ({children}) => <p className="mb-4 leading-relaxed">{children}</p>,
+              h1: ({children}) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
+              h2: ({children}) => <h2 className="text-xl font-semibold mb-3 mt-5">{children}</h2>,
+              h3: ({children}) => <h3 className="text-lg font-medium mb-2 mt-4">{children}</h3>,
+              ul: ({children}) => <ul className="mb-4 pl-6 space-y-2">{children}</ul>,
+              ol: ({children}) => <ol className="mb-4 pl-6 space-y-2">{children}</ol>,
+              li: ({children}) => <li className="leading-relaxed">{children}</li>,
+              blockquote: ({children}) => <blockquote className="border-l-4 border-purple-300 dark:border-purple-600 pl-4 my-4 italic">{children}</blockquote>,
+              // Handle details/summary for collapsible sections
+              details: ({children}) => (
+                <details className="mb-4 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                  {children}
+                </details>
+              ),
+              summary: ({children}) => (
+                <summary className="cursor-pointer bg-gray-50 dark:bg-gray-700 px-4 py-3 font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                  {children}
+                </summary>
+              ),
+              // Add spacing for other common elements
+              strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
+              em: ({children}) => <em className="italic text-gray-700 dark:text-gray-300">{children}</em>,
+              code: ({children}) => <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm font-mono">{children}</code>,
+              pre: ({children}) => <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto mb-4">{children}</pre>,
+            }}
+          >
             {goalData.strategy}
           </ReactMarkdown>
         </article>
