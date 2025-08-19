@@ -215,6 +215,11 @@ export function useCreateGoalWithAI() {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: goalQueryKeys.lists() });
         queryClient.invalidateQueries({ queryKey: goalQueryKeys.metrics(userId) });
+        
+        // CRITICAL: Invalidate financial health profile cache so next questionnaire 
+        // load gets the updated profile with latest quiz answers
+        queryClient.invalidateQueries({ queryKey: ['financialHealthProfile', userId] });
+        console.log('Invalidated financial health profile cache for user:', userId);
       }
       
       // Reset progress after a short delay

@@ -68,7 +68,7 @@ export function QuestionnaireFlow({
     error: createError
   } = useCreateGoalWithAI();
 
-  const simulatedProgress = useSimulatedProgress(isLoading, 350);
+  const simulatedProgress = useSimulatedProgress(isLoading, 200);
 
   const questions: FinancialProfileQuestion[] = useMemo(() => 
     typeof template.questions === 'string' 

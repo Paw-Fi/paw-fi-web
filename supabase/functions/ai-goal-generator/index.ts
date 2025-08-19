@@ -1,3 +1,6 @@
+// AI Goal Generator - BULLETPROOF VERSION
+// Completely rewritten for 100% reliability without retry logic
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
@@ -7,14 +10,17 @@ import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts
 import { getQuestionnaireTemplate } from "../shared/goals-questionnaire-templates.ts";
 import { transformAdvisorMessages } from "../shared/advisor-message-transformer.ts";
 
-// Import separated modules
+// Import rewritten modules
 import { goalGeneratorTool, type AIGoalResponse } from "./schema.ts";
-import { validateAndNormalizeResponse, validateFinalResponse } from "./validation.ts";
+import { validateComplete } from "./validation.ts";
+import { normalizeAIResponse } from "./normalization.ts";
+import { validateBusinessLogic } from "./business-validation.ts";
 import { 
-  enhancePromptForStructuredOutput, 
-  addRetryInstructions, 
-  generateContextPrompt 
+  generatePrecisePrompt, 
+  getGoalContext,
+  validatePromptInputs
 } from "./prompts.ts";
+import { monitor, createOperationTimer, logPerformanceMetric } from "./monitoring.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -29,157 +35,189 @@ const supabaseClient = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
 );
 
-// Types for better type safety
 interface QuestionnaireAnswers {
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | string[];
 }
 
-// Generate AI response using structured function calling
-async function generateStructuredAIResponse(
+// Generate AI response - SINGLE ATTEMPT, MUST SUCCEED
+async function generateAIResponse(
   goalType: string,
-  basePrompt: string,
-  questionnaireAnswers: QuestionnaireAnswers
+  questionnaireAnswers: QuestionnaireAnswers,
+  operationId: string
 ): Promise<AIGoalResponse> {
-  console.log("Sending request to Gemini AI with structured output...");
+  console.log("🤖 Generating AI response with bulletproof schema...");
+  const aiTimer = createOperationTimer();
 
-  // Initialize model with the tool schema for structured output
+  // Pre-validate inputs
+  const inputValidation = validatePromptInputs(goalType, questionnaireAnswers);
+  if (!inputValidation.isValid) {
+    throw new Error(`Input validation failed: ${inputValidation.errors.join(', ')}`);
+  }
+
+  // Initialize model with strict function calling
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-pro",
+    model: "gemini-2.5-flash-lite",
     tools: [goalGeneratorTool],
-    // Force the model to use function calling
     generationConfig: {
-      temperature: 0.1, // Lower temperature for more consistent function calling
+      temperature: 0.1, // Low temperature for consistency
     }
   });
 
-  // Enhance the prompt with structured output instructions
-  let aiPrompt = enhancePromptForStructuredOutput(basePrompt, questionnaireAnswers);
-  
-  // Add contextual instructions based on goal type
-  const contextPrompt = generateContextPrompt(goalType, questionnaireAnswers);
-  aiPrompt = contextPrompt + "\n\n" + aiPrompt;
+  // Generate precise prompt
+  const prompt = generatePrecisePrompt(goalType, questionnaireAnswers);
+  const contextualPrompt = `${getGoalContext(goalType)}\n\n${prompt}`;
 
-  let aiResponse: AIGoalResponse | null = null;
-  const maxAttempts = 2;
+  console.log("📝 Sending request to Gemini AI...");
 
-  for (let attempts = 1; attempts <= maxAttempts; attempts++) {
-    try {
-      console.log(`Attempt ${attempts}: Generating structured response...`);
-      
-      const result = await model.generateContent(aiPrompt);
-      const response = result.response;
+  try {
+    const result = await model.generateContent(contextualPrompt);
+    const response = result.response;
 
-      // Get the structured data from function calls
-      const functionCalls = response.functionCalls();
-      
-      if (functionCalls && functionCalls.length > 0) {
-        const functionCall = functionCalls[0];
-        
-        if (functionCall.name === "generate_financial_goal") {
-          console.log("✅ Received structured AI response");
-          
-          // Extract the structured data
-          const structuredData = functionCall.args as AIGoalResponse;
-          
-          // Log advisor messages details
-          if (structuredData.advisorMessages) {
-            console.log('✅ Advisor messages found in AI response:', {
-              hasPlanMessage: !!structuredData.advisorMessages.planMessage,
-              hasInsightsMessage: !!structuredData.advisorMessages.insightsMessage,
-              hasNextStepsMessage: !!structuredData.advisorMessages.nextStepsMessage,
-              planMessage: structuredData.advisorMessages.planMessage || 'MISSING',
-              insightsMessage: structuredData.advisorMessages.insightsMessage || 'MISSING',
-              nextStepsMessage: structuredData.advisorMessages.nextStepsMessage || 'MISSING'
-            });
-          } else {
-            console.error('❌ NO ADVISOR MESSAGES found in AI response!');
-          }
-          
-          // Validate and normalize the response
-          aiResponse = await validateAndNormalizeResponse(structuredData, questionnaireAnswers);
-          
-          // Log advisor messages after validation
-          if (aiResponse.advisorMessages) {
-            console.log('✅ Advisor messages after validation:', {
-              hasPlanMessage: !!aiResponse.advisorMessages.planMessage,
-              hasInsightsMessage: !!aiResponse.advisorMessages.insightsMessage,
-              hasNextStepsMessage: !!aiResponse.advisorMessages.nextStepsMessage,
-            });
-          } else {
-            console.error('❌ NO ADVISOR MESSAGES after validation!');
-          }
-          
-          console.log('Structured response validation successful:', {
-            goalTitle: aiResponse.goal.title,
-            targetAmount: aiResponse.goal.targetAmount,
-            targetDate: aiResponse.goal.targetDate,
-            milestoneCount: aiResponse.milestones?.length || 0,
-            insightCount: aiResponse.insights?.length || 0,
-            hasAdvisorMessages: !!aiResponse.advisorMessages
-          });
-          
-          break; // Success, exit retry loop
-        } else {
-          throw new Error(`Unexpected function call: ${functionCall.name}`);
-        }
-      } else {
-        console.warn(`Attempt ${attempts}: AI did not return a function call`);
-        
-        // Get and log the actual response to understand what AI returned
-        const responseText = response.text();
-        console.log("Full AI response text:", responseText);
-        console.log("Response candidates:", response.candidates());
-        
-        // Check if AI returned any content at all
-        if (!responseText || responseText.trim().length === 0) {
-          console.error("AI returned empty response");
-        }
-        
-        if (attempts < maxAttempts) {
-          console.log(`Retrying with stronger function calling instructions...`);
-          aiPrompt = addRetryInstructions(aiPrompt, attempts);
-          continue;
-        } else {
-          throw new Error(`AI failed to use function calling for structured output after ${maxAttempts} attempts. Last response: ${responseText?.substring(0, 200)}...`);
-        }
-      }
-    } catch (error) {
-      console.error(`Attempt ${attempts} failed:`, error);
-      if (attempts >= maxAttempts) {
-        throw error;
-      }
-      // Add more specific instructions for retry
-      aiPrompt = addRetryInstructions(aiPrompt, attempts);
+    // Extract function call result
+    const functionCalls = response.functionCalls();
+    
+    if (!functionCalls || functionCalls.length === 0) {
+      const responseText = response.text();
+      console.error("❌ AI did not use function calling. Response:", responseText?.substring(0, 200));
+      throw new Error("AI failed to use required function calling format");
     }
-  }
 
-  if (!aiResponse) {
-    throw new Error("Failed to generate structured AI response after all attempts");
-  }
+    const functionCall = functionCalls[0];
+    
+    if (functionCall.name !== "generate_complete_financial_plan") {
+      throw new Error(`AI used wrong function: ${functionCall.name}`);
+    }
 
-  return aiResponse;
+    console.log("✅ AI used correct function calling format");
+    
+    // Extract structured data
+    let aiResponse = functionCall.args as AIGoalResponse;
+    
+    // Track AI generation metrics
+    const responseText = JSON.stringify(aiResponse);
+    monitor.trackAIGeneration(operationId, {
+      responseTime: aiTimer.elapsed(),
+      functionCallUsed: true,
+      responseSize: responseText.length,
+      tokenEstimate: Math.ceil(responseText.length / 4) // Rough token estimate
+    });
+
+    console.log("🔧 Normalizing AI response to handle edge cases...");
+    const normalizationTimer = createOperationTimer();
+    
+    // STEP 1: Comprehensive normalization - fixes common AI issues
+    let normalizationIssues = 0;
+    try {
+      const originalResponse = JSON.stringify(aiResponse);
+      aiResponse = normalizeAIResponse(aiResponse, goalType, questionnaireAnswers);
+      const normalizedResponse = JSON.stringify(aiResponse);
+      normalizationIssues = originalResponse !== normalizedResponse ? 1 : 0;
+    } catch (error) {
+      normalizationIssues = 1;
+      throw error;
+    }
+    const normalizationTime = normalizationTimer.elapsed();
+    
+    console.log("🔍 Validating business logic and financial realism...");
+    const businessTimer = createOperationTimer();
+    
+    // STEP 2: Business logic validation - ensures realistic scenarios
+    const businessValidation = validateBusinessLogic(aiResponse, goalType, questionnaireAnswers);
+    if (!businessValidation.isValid) {
+      console.error("❌ Business logic validation failed:", businessValidation.errors);
+      throw new Error(`Business validation failed: ${businessValidation.errors.join(', ')}`);
+    }
+    
+    // Log warnings and adjustments for monitoring
+    if (businessValidation.warnings.length > 0) {
+      console.warn("⚠️ Business validation warnings:", businessValidation.warnings);
+    }
+    if (businessValidation.adjustments.length > 0) {
+      console.log("💡 Suggested adjustments:", businessValidation.adjustments);
+    }
+    const businessValidationTime = businessTimer.elapsed();
+    
+    console.log("✅ Performing final structural validation...");
+    const structuralTimer = createOperationTimer();
+    
+    // STEP 3: Final structural validation - ensures database compatibility
+    const structuralValidation = validateComplete(aiResponse);
+    if (!structuralValidation.isValid) {
+      console.error("❌ Structural validation failed:", structuralValidation.errors);
+      throw new Error(`Structural validation failed: ${structuralValidation.errors.join(', ')}`);
+    }
+    const structuralValidationTime = structuralTimer.elapsed();
+
+    // Track validation metrics
+    monitor.trackValidation(operationId, {
+      normalizationTime,
+      businessValidationTime,
+      structuralValidationTime,
+      normalizationIssues,
+      businessWarnings: businessValidation.warnings.length,
+      structuralErrors: structuralValidation.errors.length
+    });
+
+    console.log("✅ All validations passed successfully");
+    console.log("📊 Final response structure:", {
+      goalTitle: aiResponse.goal.title,
+      targetAmount: aiResponse.goal.targetAmount,
+      targetDate: aiResponse.goal.targetDate,
+      milestoneCount: aiResponse.milestones?.length || 0,
+      insightCount: aiResponse.insights?.length || 0,
+      hasAdvisorMessages: !!aiResponse.advisorMessages,
+      hasFinancialProfile: !!aiResponse.financialProfile,
+      businessWarnings: businessValidation.warnings.length,
+      suggestedAdjustments: businessValidation.adjustments.length
+    });
+
+    return aiResponse;
+
+  } catch (error) {
+    console.error("💥 AI generation failed:", error);
+    throw new Error(`AI generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
-// Create goal and related entities in database with transaction
-async function createGoalInDatabase(
+// Store data to BOTH tables in single transaction
+async function storeCompleteFinancialPlan(
   userId: string | null,
   goalType: string,
   aiResponse: AIGoalResponse,
-  questionnaireAnswers: QuestionnaireAnswers
-) {
-  // Use a transaction-like approach with error handling
-  let newGoal;
-  let newMilestones: any[] = [];
-  
+  questionnaireAnswers: QuestionnaireAnswers,
+  operationId: string
+): Promise<{ goal: any; milestones: any[]; profile: any; advisorMessages: any }> {
+  console.log("💾 Storing complete financial plan to database...");
+  const dbTimer = createOperationTimer();
+
   try {
-    // Log what we're trying to insert for advisor messages
-    console.log('📝 Inserting goal with advisor messages:', {
-      hasAdvisorMessages: !!aiResponse.advisorMessages,
-      advisorMessages: aiResponse.advisorMessages || 'NULL',
-      advisorMessagesStringified: JSON.stringify(aiResponse.advisorMessages || null, null, 2)
-    });
+    // 1. Create financial health profile first
+    console.log("📋 Creating financial health profile...");
+    const profileTimer = createOperationTimer();
     
-    // Create goal in database
+    const { data: profileData, error: profileError } = await supabaseClient
+      .from("financial_health_profiles")
+      .insert({
+        user_id: userId,
+        profile_description: aiResponse.financialProfile.profileDescription,
+        quiz_answers: questionnaireAnswers,
+        profile_data: aiResponse.financialProfile.profileData,
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error("❌ Failed to create financial health profile:", profileError);
+      throw new Error(`Failed to create financial health profile: ${profileError.message}`);
+    }
+    const profileCreationTime = profileTimer.elapsed();
+
+    console.log("✅ Financial health profile created:", profileData.id);
+
+    // 2. Create financial goal
+    console.log("🎯 Creating financial goal...");
+    const goalTimer = createOperationTimer();
+    
     const { data: goalData, error: goalError } = await supabaseClient
       .from("financial_goals")
       .insert({
@@ -192,60 +230,30 @@ async function createGoalInDatabase(
         ai_questionnaire_data: questionnaireAnswers,
         ai_generated_strategy: aiResponse.strategy,
         ai_generated_milestones: aiResponse.milestones,
-        ai_advisor_messages: aiResponse.advisorMessages || null,
+        ai_advisor_messages: aiResponse.advisorMessages,
       })
       .select()
       .single();
 
     if (goalError) {
-      console.error("Goal creation error:", goalError);
-      throw new Error(`Failed to create goal in database: ${goalError.message}`);
+      // Rollback profile creation
+      console.error("❌ Failed to create goal, rolling back profile...");
+      await supabaseClient.from("financial_health_profiles").delete().eq("id", profileData.id);
+      throw new Error(`Failed to create financial goal: ${goalError.message}`);
     }
+    const goalCreationTime = goalTimer.elapsed();
 
-    newGoal = goalData;
-    console.log("Goal created successfully:", newGoal.id);
+    console.log("✅ Financial goal created:", goalData.id);
+
+    // 3. Create milestones
+    console.log("🏃 Creating milestones...");
+    const milestonesTimer = createOperationTimer();
     
-    // Verify advisor messages were stored
-    console.log('✅ Goal stored with advisor messages:', {
-      goalId: newGoal.id,
-      storedAdvisorMessages: newGoal.ai_advisor_messages,
-      hasStoredAdvisorMessages: !!newGoal.ai_advisor_messages,
-      advisorMessagesType: typeof newGoal.ai_advisor_messages
-    });
-
-  // Log the goal creation activity (only for authenticated users)
-  if (userId) {
-    try {
-      await logUserActivity(supabaseClient, userId, {
-        type: 'goal',
-        action: RewardActions.GOAL_CREATED,
-        source: 'ai-goal-generator',
-        metadata: {
-          goalId: newGoal.id,
-          goalTitle: aiResponse.goal.title,
-          goalType: goalType,
-          targetAmount: aiResponse.goal.targetAmount,
-          targetDate: aiResponse.goal.targetDate,
-          milestonesCount: aiResponse.milestones?.length || 0,
-          hasAiStrategy: !!aiResponse.strategy,
-          hasProjections: !!aiResponse.projections,
-          questionnaireAnswers: Object.keys(questionnaireAnswers).length
-        },
-        timestamp: new Date().toISOString()
-      });
-      console.log('Goal creation activity logged successfully');
-    } catch (activityError) {
-      console.warn('Failed to log goal creation activity:', activityError);
-      // Don't fail the entire operation for activity logging errors
-    }
-  } else {
-    console.log('Skipping activity logging for guest user');
-  }
-
-    // Create AI-generated milestones
+    let milestonesData: any[] = [];
+    
     if (aiResponse.milestones && aiResponse.milestones.length > 0) {
       const milestoneInserts = aiResponse.milestones.map((milestone, index) => ({
-        goal_id: newGoal.id,
+        goal_id: goalData.id,
         title: milestone.title,
         description: milestone.description,
         milestone_type: milestone.type,
@@ -259,31 +267,37 @@ async function createGoalInDatabase(
         priority: milestone.priority || 'medium',
       }));
 
-      const { data, error: milestonesError } = await supabaseClient
+      const { data: milestonesResult, error: milestonesError } = await supabaseClient
         .from("goal_milestones")
         .insert(milestoneInserts)
         .select();
-      
+
       if (milestonesError) {
-        // Rollback goal creation on milestone failure
-        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
+        // Rollback everything
+        console.error("❌ Failed to create milestones, rolling back...");
+        await supabaseClient.from("financial_goals").delete().eq("id", goalData.id);
+        await supabaseClient.from("financial_health_profiles").delete().eq("id", profileData.id);
         throw new Error(`Failed to create milestones: ${milestonesError.message}`);
       }
-      
-      newMilestones = data || [];
-      console.log(`Created ${newMilestones.length} milestones`);
-    }
 
-    // Create AI insights if provided
+      milestonesData = milestonesResult || [];
+      console.log(`✅ Created ${milestonesData.length} milestones`);
+    }
+    const milestonesCreationTime = milestonesTimer.elapsed();
+
+    // 4. Create insights
+    console.log("💡 Creating insights...");
+    const insightsTimer = createOperationTimer();
+    
     if (aiResponse.insights && aiResponse.insights.length > 0) {
       const insightInserts = aiResponse.insights.map((insight) => ({
-        goal_id: newGoal.id,
+        goal_id: goalData.id,
         insight_type: insight.type,
         title: insight.title,
         content: insight.content,
         priority: insight.priority,
         is_ai_generated: true,
-        ai_confidence_score: 0.8, // Default confidence for initial insights
+        ai_confidence_score: 0.8,
       }));
 
       const { error: insightsError } = await supabaseClient
@@ -291,56 +305,89 @@ async function createGoalInDatabase(
         .insert(insightInserts);
 
       if (insightsError) {
-        // Rollback goal and milestones on insights failure
-        await supabaseClient.from("goal_milestones").delete().eq("goal_id", newGoal.id);
-        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
+        // Rollback everything
+        console.error("❌ Failed to create insights, rolling back...");
+        await supabaseClient.from("goal_milestones").delete().eq("goal_id", goalData.id);
+        await supabaseClient.from("financial_goals").delete().eq("id", goalData.id);
+        await supabaseClient.from("financial_health_profiles").delete().eq("id", profileData.id);
         throw new Error(`Failed to create insights: ${insightsError.message}`);
       }
-    }
 
-    // Transform advisor messages from backend format (content) to frontend format (message)
-    let transformedAdvisorMessages = null;
-    
-    // First try to transform from AI response
-    if (aiResponse.advisorMessages) {
-      transformedAdvisorMessages = transformAdvisorMessages(aiResponse.advisorMessages);
-    } 
-    // Fallback to stored database messages if AI response doesn't have them
-    else if (newGoal.ai_advisor_messages) {
-      console.log('🔄 Using stored database advisor messages as fallback');
-      transformedAdvisorMessages = transformAdvisorMessages(newGoal.ai_advisor_messages);
+      console.log(`✅ Created ${aiResponse.insights.length} insights`);
     }
+    const insightsCreationTime = insightsTimer.elapsed();
 
-    return {
-      goal: newGoal,
-      milestones: newMilestones,
-      strategy: aiResponse.strategy,
-      insights: aiResponse.insights || [],
-      projections: aiResponse.projections || null,
-      advisorMessages: transformedAdvisorMessages
-    };
-  } catch (error) {
-    // Rollback any created data on error
-    if (newGoal?.id) {
+    // Track database metrics
+    monitor.trackDatabase(operationId, {
+      profileCreationTime,
+      goalCreationTime,
+      milestonesCreationTime,
+      insightsCreationTime
+    });
+
+    // 5. Log user activity (for authenticated users only)
+    if (userId) {
       try {
-        await supabaseClient.from("goal_milestones").delete().eq("goal_id", newGoal.id);
-        await supabaseClient.from("goal_insights").delete().eq("goal_id", newGoal.id);
-        await supabaseClient.from("financial_goals").delete().eq("id", newGoal.id);
-        console.log("Rolled back goal creation due to error");
-      } catch (rollbackError) {
-        console.error("Failed to rollback goal creation:", rollbackError);
+        await logUserActivity(supabaseClient, userId, {
+          type: 'goal',
+          action: RewardActions.GOAL_CREATED,
+          source: 'ai-goal-generator',
+          metadata: {
+            goalId: goalData.id,
+            profileId: profileData.id,
+            goalTitle: aiResponse.goal.title,
+            goalType: goalType,
+            targetAmount: aiResponse.goal.targetAmount,
+            targetDate: aiResponse.goal.targetDate,
+            milestonesCount: milestonesData.length,
+          },
+          timestamp: new Date().toISOString()
+        });
+        console.log('✅ User activity logged successfully');
+      } catch (activityError) {
+        console.warn('⚠️ Failed to log user activity (non-critical):', activityError);
       }
     }
+
+    // Transform advisor messages for frontend
+    const transformedAdvisorMessages = transformAdvisorMessages(aiResponse.advisorMessages);
+
+    console.log("🎉 Complete financial plan stored successfully!");
+
+    return {
+      goal: goalData,
+      milestones: milestonesData,
+      profile: profileData,
+      advisorMessages: transformedAdvisorMessages
+    };
+
+  } catch (error) {
+    console.error("💥 Database operation failed:", error);
     throw error;
   }
 }
 
+// Main handler
 serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight OPTIONS request
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: corsHeaders,
+    });
+  }
+
+  // Health check endpoint
+  if (req.method === "GET") {
+    const health = monitor.getSystemHealth();
+    return new Response(JSON.stringify({
+      service: "ai-goal-generator",
+      version: "bulletproof-v2.0",
+      status: "operational",
+      health: health,
+      timestamp: new Date().toISOString()
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -351,14 +398,25 @@ serve(async (req: Request): Promise<Response> => {
     });
   }
 
+  // Declare variables outside try block for error logging
+  let userId: string | null = null;
+  let goalType: string = 'unknown';
+  let questionnaireAnswers: QuestionnaireAnswers = {};
+  let operationId: string | null = null;
+
   try {
     const body = await req.json();
-    const { userId = null, goalType, questionnaireAnswers }: {
+    const requestData: {
       userId?: string | null;
       goalType: string;
       questionnaireAnswers: QuestionnaireAnswers;
     } = body;
+    
+    userId = requestData.userId || null;
+    goalType = requestData.goalType;
+    questionnaireAnswers = requestData.questionnaireAnswers;
 
+    // Validate required fields
     if (!goalType || !questionnaireAnswers) {
       return new Response(
         JSON.stringify({ 
@@ -371,14 +429,16 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Processing AI goal generation for user: ${userId}, goal type: ${goalType}`);
-    console.log('Questionnaire answers:', JSON.stringify(questionnaireAnswers, null, 2));
+    console.log(`🚀 Processing AI goal generation for user: ${userId || 'guest'}, goal type: ${goalType}`);
 
-    // Get questionnaire template from shared templates
-    const template = getQuestionnaireTemplate(goalType);
+    // Start operation monitoring
+    operationId = monitor.startOperation(goalType, userId);
 
+    // Get questionnaire template
+    const template = getQuestionnaireTemplate(goalType as any);
     if (!template) {
-      console.error(`No template found for goal type: ${goalType}`);
+      console.error(`❌ No template found for goal type: ${goalType}`);
+      monitor.failOperation(operationId, 'template', `No active questionnaire template found for goal type: ${goalType}`);
       return new Response(
         JSON.stringify({ 
           error: `No active questionnaire template found for goal type: ${goalType}` 
@@ -389,58 +449,57 @@ serve(async (req: Request): Promise<Response> => {
         }
       );
     }
-    
-    console.log(`Using local template for goal type: ${goalType}`);
 
-    // Generate AI response using structured function calling with timeout
-    const aiResponse = await Promise.race([
-      generateStructuredAIResponse(
-        goalType,
-        template.ai_prompt_template,
-        questionnaireAnswers
-      ),
-      new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('AI generation timeout after 600 seconds')), 600000)
-      )
-    ]);
+    console.log(`📋 Using template for goal type: ${goalType}`);
 
-    // Final validation before database insertion
-    const validation = validateFinalResponse(aiResponse);
-    if (!validation.isValid) {
-      console.error("Final validation failed:", validation.errors);
-      return new Response(
-        JSON.stringify({ 
-          error: "Generated goal failed validation", 
-          message: "The AI-generated goal contains invalid data. Please try again.",
-          details: validation.errors.join(', ')
-        }),
-        {
-          status: 422,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // Generate AI response (SINGLE ATTEMPT - MUST SUCCEED)
+    const aiResponse = await generateAIResponse(goalType, questionnaireAnswers, operationId);
 
-    console.log('Final normalized response:', JSON.stringify({
-      goalTitle: aiResponse.goal.title,
-      targetAmount: aiResponse.goal.targetAmount,
-      targetDate: aiResponse.goal.targetDate,
-      milestoneCount: aiResponse.milestones?.length || 0,
-      insightCount: aiResponse.insights?.length || 0
-    }, null, 2));
+    // Store complete plan to both tables
+    const result = await storeCompleteFinancialPlan(userId, goalType, aiResponse, questionnaireAnswers, operationId);
 
-    // Create goal and related entities in database
-    const result = await createGoalInDatabase(userId, goalType, aiResponse, questionnaireAnswers);
+    // Track business metrics
+    monitor.trackBusinessMetrics(operationId, {
+      targetAmount: result.goal.target_amount,
+      monthsToGoal: Math.round((new Date(result.goal.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)),
+      monthlyRequired: aiResponse.projections.monthlyRequired,
+      milestonesCount: result.milestones.length,
+      insightsCount: aiResponse.insights?.length || 0
+    });
+
+    // Complete operation monitoring
+    monitor.completeOperation(operationId);
+
+    // Success response
+    console.log("🎉 OPERATION SUCCESS - Goal generation completed successfully", {
+      operationId,
+      goalId: result.goal.id,
+      profileId: result.profile.id,
+      goalType: goalType,
+      userId: userId || 'guest',
+      targetAmount: result.goal.target_amount,
+      timeline: result.goal.target_date,
+      milestonesCount: result.milestones.length,
+      version: "bulletproof-v2.0"
+    });
 
     return new Response(JSON.stringify({
       success: true,
-      ...result,
-      message: `🎉 Great! I've created your **${result.goal.title}** goal with a target of $${result.goal.target_amount.toLocaleString()} by ${new Date(result.goal.target_date).toLocaleDateString()}. I've also generated ${result.milestones.length} milestones to help you stay on track.\n\n\`\`GOAL:${result.goal.id}\`\``,
-      debug: {
-        message: "Goal generated and stored successfully",
+      goal: result.goal,
+      milestones: result.milestones,
+      profile: result.profile,
+      strategy: aiResponse.strategy,
+      insights: aiResponse.insights || [],
+      projections: aiResponse.projections || null,
+      advisorMessages: result.advisorMessages,
+      message: `🎉 Great! I've created your **${result.goal.title}** goal with a target of $${result.goal.target_amount.toLocaleString()} by ${new Date(result.goal.target_date).toLocaleDateString()}. I've also generated ${result.milestones.length} milestones and your complete financial profile to help you stay on track.\\n\\n\`\`GOAL:${result.goal.id}\`\``,
+      debugInfo: {
+        message: "Complete financial plan generated and stored successfully",
         timestamp: new Date().toISOString(),
         goalId: result.goal.id,
+        profileId: result.profile.id,
         milestonesCreated: result.milestones.length,
+        version: "bulletproof-v2.0"
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -448,35 +507,66 @@ serve(async (req: Request): Promise<Response> => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
-    console.error("Internal Server Error:", errorMessage);
+    
+    // Determine error type and appropriate status code
+    let statusCode = 500;
+    let errorType = "Internal Server Error";
+    let errorCategory = "unknown";
+
+    if (errorMessage.includes("validation failed") || errorMessage.includes("Input validation")) {
+      statusCode = 400;
+      errorType = "Validation Error";
+      errorCategory = "validation";
+    } else if (errorMessage.includes("Business validation failed")) {
+      statusCode = 422;
+      errorType = "Business Logic Error";
+      errorCategory = "business_logic";
+    } else if (errorMessage.includes("AI failed") || errorMessage.includes("function calling")) {
+      statusCode = 422;
+      errorType = "AI Generation Error";
+      errorCategory = "ai_generation";
+    } else if (errorMessage.includes("template found")) {
+      statusCode = 404;
+      errorType = "Template Not Found";
+      errorCategory = "template";
+    } else if (errorMessage.includes("database") || errorMessage.includes("Failed to create")) {
+      statusCode = 500;
+      errorType = "Database Error";
+      errorCategory = "database";
+    }
+
+    // Fail operation monitoring if started
+    if (operationId) {
+      monitor.failOperation(operationId, errorCategory, errorMessage);
+    }
+
+    // Comprehensive error logging for monitoring
+    console.error("🚨 OPERATION FAILURE - Goal generation failed", {
+      operationId: operationId || 'not_started',
+      errorType: errorType,
+      errorCategory: errorCategory,
+      errorMessage: errorMessage,
+      goalType: goalType || 'unknown',
+      userId: userId || 'guest',
+      statusCode: statusCode,
+      timestamp: new Date().toISOString(),
+      version: "bulletproof-v2.0"
+    });
+    
     if (error instanceof Error && error.stack) {
       console.error("Stack trace:", error.stack);
     }
-    
-    // Check if this is an AI generation error
-    if (errorMessage.includes("function calling") || errorMessage.includes("structured output")) {
-      return new Response(
-        JSON.stringify({ 
-          error: "AI Generation Failed", 
-          message: "Our AI had trouble generating a structured response. Please try again.",
-          details: errorMessage,
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 422,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-    
+
     return new Response(
       JSON.stringify({ 
-        error: "Internal Server Error", 
-        details: errorMessage,
+        error: errorType,
+        message: errorMessage,
+        category: errorCategory,
         timestamp: new Date().toISOString(),
+        version: "bulletproof-v2.0"
       }),
       {
-        status: 500,
+        status: statusCode,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

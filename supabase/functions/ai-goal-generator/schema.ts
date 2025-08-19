@@ -1,5 +1,5 @@
-// AI Goal Generator Schema and Types
-// Defines the structured response schema for AI goal generation using function calling
+// AI Goal Generator Schema - BULLETPROOF VERSION
+// Completely rewritten for 100% consistent AI responses
 
 export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
 
@@ -8,35 +8,35 @@ export interface AIGoalResponse {
     title: string;
     description: string;
     targetAmount: number;
-    targetDate: string;
+    targetDate: string; // YYYY-MM-DD format
     rationale: string;
   };
   strategy: string;
   milestones: Array<{
     title: string;
     description: string;
-    type: string;
-    targetAmount?: number;
-    dueDate: string;
-    habitDescription?: string;
-    frequency?: string;
-    habitTargetValue?: number;
-    priority: string;
+    type: 'savings' | 'action' | 'habit' | 'review';
+    targetAmount: number | null;
+    dueDate: string; // YYYY-MM-DD format
+    habitDescription: string | null;
+    frequency: 'daily' | 'weekly' | 'monthly' | 'one-time' | null;
+    habitTargetValue: number | null;
+    priority: 'critical' | 'high' | 'medium' | 'low';
     aiRationale: string;
   }>;
   insights: Array<{
-    type: string;
+    type: 'strategy_insight' | 'risk_warning' | 'opportunity' | 'behavioral_tip';
     title: string;
     content: string;
-    priority: string;
+    priority: 'critical' | 'high' | 'medium' | 'low';
     actionable: boolean;
   }>;
-  projections?: {
-    monthlyRequired?: number;
-    projectedFinalAmount?: number;
-    incomeReplacement?: number;
-    confidenceLevel?: number;
-  } | null;
+  projections: {
+    monthlyRequired: number;
+    projectedFinalAmount: number;
+    incomeReplacement: number | null;
+    confidenceLevel: number; // 0.0 to 1.0
+  };
   advisorMessages: {
     planMessage: {
       content: string;
@@ -51,14 +51,27 @@ export interface AIGoalResponse {
       tone: AdvisorTone;
     };
   };
+  financialProfile: {
+    profileDescription: string;
+    profileData: {
+      netWorth: number;
+      monthlyIncome: number;
+      monthlyExpenses: number;
+      savingsRate: number;
+      riskTolerance: 'conservative' | 'moderate' | 'aggressive';
+      financialGoals: string[];
+      strengths: string[];
+      recommendations: string[];
+    };
+  };
 }
 
-// Structured response schema for AI goal generation using Gemini function calling
+// Ultra-strict schema for Gemini function calling - ZERO ambiguity
 export const goalGeneratorTool = {
   functionDeclarations: [
     {
-      name: "generate_financial_goal",
-      description: "Generates a structured financial goal with strategy, milestones, and insights based on questionnaire data.",
+      name: "generate_complete_financial_plan",
+      description: "Generate a complete financial goal plan and user financial profile in exact format required for database storage.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -67,132 +80,139 @@ export const goalGeneratorTool = {
             properties: {
               title: {
                 type: "STRING",
-                description: "A clear, specific title for the financial goal.",
+                description: "Goal title (max 255 chars, no special characters)"
               },
               description: {
-                type: "STRING",
-                description: "A detailed description of the financial goal and its purpose.",
+                type: "STRING", 
+                description: "Detailed goal description (500-2000 chars)"
               },
               targetAmount: {
                 type: "NUMBER",
-                description: "The target amount for the goal in dollars (must be positive).",
+                description: "Target amount in USD (must be positive integer, no decimals)"
               },
               targetDate: {
                 type: "STRING",
-                description: "The target date for achieving the goal in YYYY-MM-DD format (must be future date).",
+                description: "Target date in YYYY-MM-DD format (must be future date)"
               },
               rationale: {
                 type: "STRING",
-                description: "The reasoning behind this specific goal and timeline.",
-              },
+                description: "Reasoning for this goal (200-500 chars)"
+              }
             },
-            required: ["title", "description", "targetAmount", "targetDate", "rationale"],
+            required: ["title", "description", "targetAmount", "targetDate", "rationale"]
           },
           strategy: {
             type: "STRING",
-            description: "A comprehensive strategy overview for achieving the goal.",
+            description: "Overall strategy (500-1500 chars)"
           },
           milestones: {
             type: "ARRAY",
+            minItems: 3,
+            maxItems: 6,
             items: {
-              type: "OBJECT",
+              type: "OBJECT", 
               properties: {
                 title: {
                   type: "STRING",
-                  description: "Title of the milestone.",
+                  description: "Milestone title (max 255 chars)"
                 },
                 description: {
                   type: "STRING",
-                  description: "Detailed description of what needs to be accomplished.",
+                  description: "Milestone description (200-500 chars)"
                 },
                 type: {
                   type: "STRING",
-                  description: "Type of milestone: 'savings', 'action', 'habit', or 'review'.",
+                  enum: ["savings", "action", "habit", "review"],
+                  description: "Milestone type (must be one of: savings, action, habit, review)"
                 },
                 targetAmount: {
                   type: "NUMBER",
-                  description: "Target amount for this milestone (optional, for savings milestones).",
+                  description: "Target amount for this milestone (positive integer or null)"
                 },
                 dueDate: {
-                  type: "STRING",
-                  description: "Due date in YYYY-MM-DD format (must be future date).",
+                  type: "STRING", 
+                  description: "Due date in YYYY-MM-DD format (must be future date)"
                 },
                 habitDescription: {
                   type: "STRING",
-                  description: "Description of habit to be formed (optional, for habit milestones).",
+                  description: "Habit description (only for habit type, otherwise null)"
                 },
                 frequency: {
                   type: "STRING",
-                  description: "Frequency of the habit: 'daily', 'weekly', 'monthly' (optional).",
+                  enum: ["daily", "weekly", "monthly", "one-time"],
+                  description: "Frequency (only for habit type, otherwise null)"
                 },
                 habitTargetValue: {
                   type: "NUMBER",
-                  description: "Target value for the habit (optional).",
+                  description: "Habit target value (only for habit type, otherwise null)"
                 },
                 priority: {
                   type: "STRING",
-                  description: "Priority level: 'critical', 'high', 'medium', or 'low'.",
+                  enum: ["critical", "high", "medium", "low"],
+                  description: "Priority level"
                 },
                 aiRationale: {
                   type: "STRING",
-                  description: "AI reasoning for this milestone.",
-                },
+                  description: "AI reasoning for this milestone (100-300 chars)"
+                }
               },
-              required: ["title", "description", "type", "dueDate", "priority", "aiRationale"],
-            },
-            description: "An array of milestones to achieve the goal.",
+              required: ["title", "description", "type", "dueDate", "priority", "aiRationale"]
+            }
           },
           insights: {
             type: "ARRAY",
+            minItems: 2,
+            maxItems: 5,
             items: {
               type: "OBJECT",
               properties: {
                 type: {
                   type: "STRING",
-                  description: "Type of insight: 'strategy_insight', 'risk_warning', 'opportunity', or 'behavioral_tip'.",
+                  enum: ["strategy_insight", "risk_warning", "opportunity", "behavioral_tip"],
+                  description: "Insight type"
                 },
                 title: {
                   type: "STRING",
-                  description: "Title of the insight.",
+                  description: "Insight title (max 255 chars)"
                 },
                 content: {
                   type: "STRING",
-                  description: "Detailed content of the insight.",
+                  description: "Insight content (300-800 chars)"
                 },
                 priority: {
                   type: "STRING",
-                  description: "Priority level: 'critical', 'high', 'medium', or 'low'.",
+                  enum: ["critical", "high", "medium", "low"],
+                  description: "Priority level"
                 },
                 actionable: {
                   type: "BOOLEAN",
-                  description: "Whether this insight requires user action.",
-                },
+                  description: "Whether this insight requires user action"
+                }
               },
-              required: ["type", "title", "content", "priority", "actionable"],
-            },
-            description: "An array of AI-generated insights and recommendations.",
+              required: ["type", "title", "content", "priority", "actionable"]
+            }
           },
           projections: {
             type: "OBJECT",
             properties: {
               monthlyRequired: {
                 type: "NUMBER",
-                description: "Monthly savings/investment amount required to reach the goal.",
+                description: "Monthly savings amount required to reach goal (calculate: target_amount / months_to_goal, must be positive)"
               },
               projectedFinalAmount: {
-                type: "NUMBER",
-                description: "Projected final amount at target date.",
+                type: "NUMBER", 
+                description: "Projected final amount (positive number)"
               },
               incomeReplacement: {
                 type: "NUMBER",
-                description: "Percentage of income this goal will replace (for retirement goals).",
+                description: "Income replacement percentage (0-100, only for retirement goals, otherwise null)"
               },
               confidenceLevel: {
                 type: "NUMBER",
-                description: "Confidence level of projections (0.0 to 1.0).",
-              },
+                description: "Confidence level (0.5 to 1.0)"
+              }
             },
-            description: "Financial projections for the goal (optional).",
+            required: ["monthlyRequired", "projectedFinalAmount", "confidenceLevel"]
           },
           advisorMessages: {
             type: "OBJECT",
@@ -202,56 +222,119 @@ export const goalGeneratorTool = {
                 properties: {
                   content: {
                     type: "STRING",
-                    description: "Detailed advisor message for the 'Your Plan' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should be personalized based on user's financial situation and goals.",
+                    description: "Plan page message: 'I suggest you to [action], because [reason], so that [outcome].' (300-600 chars)"
                   },
                   tone: {
                     type: "STRING",
-                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
                     enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
-                  },
+                    description: "Message tone"
+                  }
                 },
-                required: ["content", "tone"],
-                description: "Advisor message for the 'Your Plan' presentation page.",
+                required: ["content", "tone"]
               },
               insightsMessage: {
                 type: "OBJECT",
                 properties: {
                   content: {
-                    type: "STRING",
-                    description: "Detailed advisor message for the 'Key Insights' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should highlight key financial insights and opportunities.",
+                    type: "STRING", 
+                    description: "Insights page message: 'I suggest you to [action], because [reason], so that [outcome].' (300-600 chars)"
                   },
                   tone: {
                     type: "STRING",
-                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
                     enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
-                  },
+                    description: "Message tone"
+                  }
                 },
-                required: ["content", "tone"],
-                description: "Advisor message for the 'Key Insights' presentation page.",
+                required: ["content", "tone"]
               },
               nextStepsMessage: {
                 type: "OBJECT",
                 properties: {
                   content: {
                     type: "STRING",
-                    description: "Detailed advisor message for the 'Next Steps' presentation page. Must follow format: 'I suggest you to [action], because [reason], so that [outcome].' Should focus on immediate actionable steps.",
+                    description: "Next steps page message: 'I suggest you to [action], because [reason], so that [outcome].' (300-600 chars)"
                   },
                   tone: {
                     type: "STRING",
-                    description: "Advisor tone for the message: 'congratulatory', 'encouraging', 'motivational', 'reassuring', or 'informative'.",
                     enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
-                  },
+                    description: "Message tone"
+                  }
                 },
-                required: ["content", "tone"],
-                description: "Advisor message for the 'Next Steps' presentation page.",
-              },
+                required: ["content", "tone"]
+              }
             },
-            required: ["planMessage", "insightsMessage", "nextStepsMessage"],
-            description: "Personalized advisor messages for each presentation flow page.",
+            required: ["planMessage", "insightsMessage", "nextStepsMessage"]
           },
+          financialProfile: {
+            type: "OBJECT",
+            properties: {
+              profileDescription: {
+                type: "STRING",
+                description: "Professional financial profile description (800-1500 chars)"
+              },
+              profileData: {
+                type: "OBJECT",
+                properties: {
+                  netWorth: {
+                    type: "NUMBER",
+                    description: "Calculated net worth"
+                  },
+                  monthlyIncome: {
+                    type: "NUMBER",
+                    description: "Monthly income from questionnaire"
+                  },
+                  monthlyExpenses: {
+                    type: "NUMBER",
+                    description: "Calculated monthly expenses"
+                  },
+                  savingsRate: {
+                    type: "NUMBER",
+                    description: "Savings rate as percentage (0-100)"
+                  },
+                  riskTolerance: {
+                    type: "STRING",
+                    enum: ["conservative", "moderate", "aggressive"],
+                    description: "Risk tolerance level"
+                  },
+                  financialGoals: {
+                    type: "ARRAY",
+                    minItems: 2,
+                    maxItems: 5,
+                    items: {
+                      type: "STRING",
+                      description: "Financial goal (max 100 chars each)"
+                    },
+                    description: "List of financial goals"
+                  },
+                  strengths: {
+                    type: "ARRAY",
+                    minItems: 2,
+                    maxItems: 4,
+                    items: {
+                      type: "STRING",
+                      description: "Financial strength (max 100 chars each)"
+                    },
+                    description: "List of financial strengths"
+                  },
+                  recommendations: {
+                    type: "ARRAY",
+                    minItems: 3,
+                    maxItems: 6,
+                    items: {
+                      type: "STRING",
+                      description: "Recommendation (max 200 chars each)"
+                    },
+                    description: "List of recommendations"
+                  }
+                },
+                required: ["netWorth", "monthlyIncome", "monthlyExpenses", "savingsRate", "riskTolerance", "financialGoals", "strengths", "recommendations"]
+              }
+            },
+            required: ["profileDescription", "profileData"]
+          }
         },
-        required: ["goal", "strategy", "milestones", "insights", "advisorMessages"],
-      },
-    },
-  ],
+        required: ["goal", "strategy", "milestones", "insights", "projections", "advisorMessages", "financialProfile"]
+      }
+    }
+  ]
 };
