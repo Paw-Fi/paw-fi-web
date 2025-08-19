@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}${redirectUrl || '/dashboard'}`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectUrl || '/dashboard')}`,
           data: userData
         },
       });
