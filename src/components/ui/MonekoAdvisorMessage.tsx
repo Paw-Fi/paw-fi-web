@@ -15,13 +15,15 @@ interface MonekoAdvisorMessageProps {
   showMessage: boolean;
   typewriterSpeed?: number;
   className?: string;
+  transparentBackground?: boolean;
 }
 
 export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
   message,
   showMessage,
   typewriterSpeed = 25,
-  className = ''
+  className = '',
+  transparentBackground = false
 }) => {
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   
@@ -68,7 +70,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className={`bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-blue-800 ${className}`}
+      className={`${transparentBackground ? '' : 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-blue-800'} ${className}`}
     >
       <div className="flex items-start space-x-4">
         {/* Moneko Avatar */}
@@ -98,7 +100,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
             </div>
             
          {message.message&&   <TypewriterText
-              text={message.message}
+              text={`${message.message}`}
               speed={typewriterSpeed}
               delay={300}
               className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"

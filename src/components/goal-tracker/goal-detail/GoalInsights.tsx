@@ -390,13 +390,16 @@ export function GoalInsights({
 
       {/* Insights Navigation and Display */}
       {filteredInsights.length > 0 && currentInsight && (
-        <div className="space-y-4">
+        <div className="bg-gradient-to-br from-white via-white to-pink-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-pink-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-sm overflow-hidden">
           {/* Navigation Header */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200/60 dark:border-gray-700/60">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Insight {safeCurrentIndex + 1} of {filteredInsights.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <img src={monekoIcon} alt="Moneko" className="size-5" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Insight {safeCurrentIndex + 1} of {filteredInsights.length}
+                </span>
+              </div>
               {/* Priority and Type Badges */}
               {currentInsight && (
                 <div className="flex items-center gap-2">
@@ -434,28 +437,29 @@ export function GoalInsights({
             </div>
           </div>
 
-          {/* Current Insight as Advisor Message */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={safeCurrentIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <MonekoAdvisorMessage
-                message={convertInsightToAdvisorMessage(currentInsight)}
-                showMessage={true}
-                typewriterSpeed={80}
-              />
-            </motion.div>
-          </AnimatePresence>
+          {/* MonekoAdvisorMessage Content */}
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={safeCurrentIndex}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MonekoAdvisorMessage
+                  message={convertInsightToAdvisorMessage(currentInsight)}
+                  showMessage={true}
+                  typewriterSpeed={80}
+                  transparentBackground={true}
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
-      
-
-          {/* Insight Dots Navigation */}
+          {/* Bottom Navigation Dots */}
           {filteredInsights.length > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-4">
+            <div className="flex items-center justify-center gap-2 p-4 bg-gray-50/50 dark:bg-gray-800/50">
               {filteredInsights.map((_, index) => (
                 <motion.button
                   key={index}
