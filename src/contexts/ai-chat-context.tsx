@@ -33,6 +33,7 @@ interface AIChatContextType {
   messages: Record<AI_ID, ConversationMessage[]>;
   addMessage: (aiId: AI_ID, message: ConversationMessage) => void;
   clearMessages: (aiId: AI_ID) => void;
+  clearAllMessages: () => void; // Clear all chat history for user logout
   getMessages: (aiId: AI_ID) => ConversationMessage[];
 }
 
@@ -65,37 +66,11 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAI, setSelectedAI] = useState<AI_ID>('advisor');
   
-  // Initialize messages from localStorage if available
-  // TODO: Remove this when we have a proper backend for chat history
-  const [messages, setMessages] = useState<Record<AI_ID, ConversationMessage[]>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('ai-chat-messages');
-        if (stored) {
-          return JSON.parse(stored);
-        }
-      } catch (error) {
-        console.warn('Failed to load chat messages from localStorage:', error);
-      }
-    }
-    return {
-      advisor: [],
-      tracker: [],
-      educator: []
-    };
-  });
-
-  // Save messages to localStorage whenever they change
-  // TODO: Remove this when we have a proper backend for chat history
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('ai-chat-messages', JSON.stringify(messages));
-      } catch (error) {
-        console.warn('Failed to save chat messages to localStorage:', error);
-      }
-    }
-  }, [messages]);
+  // Initialize messages as empty - chat history should come from database only
+  const [messages, setMessages] = useState<Record<AI_ID, ConversationMessage[]>>(() => ({
+    advisor: [],
+    educator: []
+  }));
 
   const openChat = (aiId?: AI_ID) => {
     if (aiId) {
@@ -130,6 +105,13 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     }));
   };
 
+  const clearAllMessages = () => {
+    setMessages({
+      advisor: [],
+      educator: []
+    });
+  };
+
   const getMessages = (aiId: AI_ID) => {
     return messages[aiId] || [];
   };
@@ -144,6 +126,7 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     messages,
     addMessage,
     clearMessages,
+    clearAllMessages,
     getMessages
   };
 

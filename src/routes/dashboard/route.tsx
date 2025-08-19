@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { useChatContext } from "@/contexts/chat-context";
 import { getCanonicalUrl } from '@/utils/canonical';
 import { useUserCourses } from "@/services/course-service";
 import { supabase } from "@/lib/supabase";
@@ -103,8 +105,14 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
+  // Query client for cache invalidation
+  const queryClient = useQueryClient();
+  
   // AI Chat context
-  const { isOpen: aiChatOpen, selectedAI, openChat, closeChat } = useAIChat();
+  const { isOpen: aiChatOpen, selectedAI, openChat, closeChat, clearAllMessages } = useAIChat();
+  
+  // Chat context for conversation management
+  const { clearAllConversations } = useChatContext();
   
   // Track chat usage
   useEffect(() => {
@@ -361,6 +369,30 @@ export function Dashboard() {
     try {
       const result = await signOut();
       if (result.success) {
+        // Clear all chat context state immediately
+        clearAllMessages(); // Clear AI chat messages (ai-chat-context)
+        clearAllConversations(); // Clear all conversations (chat-context)
+        
+        // Invalidate all TanStack Query cache on signout
+        queryClient.invalidateQueries();
+        
+        // Clear all chat-related localStorage data
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ai-chat-messages');
+          // Clear any other chat-related storage
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('chat') || key.includes('conversation') || key.includes('message'))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          
+          // Clear guest session cookies
+          document.cookie = "moneko-guest-session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+        
         toast.success("You have been signed out.");
       }
     } catch (error) {

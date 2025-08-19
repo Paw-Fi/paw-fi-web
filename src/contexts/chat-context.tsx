@@ -32,6 +32,7 @@ interface ChatContextValue {
   ) => Promise<any>;
   addMessage: (aiRole: AI_ROLE, message: ConversationMessage) => void;
   clearConversation: (aiRole: AI_ROLE) => void;
+  clearAllConversations: () => void; // Clear all conversations for signout
   
   // Loading states
   isSendingMessage: (aiRole: AI_ROLE) => boolean;
@@ -235,6 +236,21 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }));
   }, []);
 
+  const clearAllConversations = useCallback(() => {
+    setConversations({
+      [AI_ROLES.FINANCIAL_ADVISOR]: { ...initialConversationState },
+      [AI_ROLES.FINANCIAL_EDUCATOR]: { ...initialConversationState },
+      [AI_ROLES.GOAL_TRACKER]: { ...initialConversationState },
+    } as Record<AI_ROLE, ConversationState>);
+    
+    // Also reset sending states
+    setSendingStates({
+      [AI_ROLES.FINANCIAL_ADVISOR]: false,
+      [AI_ROLES.FINANCIAL_EDUCATOR]: false,
+      [AI_ROLES.GOAL_TRACKER]: false,
+    } as Record<AI_ROLE, boolean>);
+  }, []);
+
   const isSendingMessage = useCallback((aiRole: AI_ROLE) => {
     return sendingStates[aiRole];
   }, [sendingStates]);
@@ -253,6 +269,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
     sendMessage,
     addMessage,
     clearConversation,
+    clearAllConversations,
     isSendingMessage,
     getMessages,
     isConversationLoaded,
