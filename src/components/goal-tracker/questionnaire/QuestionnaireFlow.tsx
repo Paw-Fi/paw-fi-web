@@ -11,6 +11,7 @@ import { CategoryProgress } from "@/components/ui/category-progress";
 import { FormNavigation } from "@/components/ui/form-navigation";
 import { useCreateGoalWithAI } from "@/hooks/goal-tracker/use-create-goal";
 import { useSimulatedProgress } from "@/hooks/use-simulated-progress";
+import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import MonekoAdvisorMessage, { type AdvisorMessage } from "@/components/ui/MonekoAdvisorMessage";
@@ -45,6 +46,9 @@ export function QuestionnaireFlow({
   
   // Cookie utilities for guest profile management
   const { getCookie, setCookie } = useCookie();
+
+  // Fetch existing financial profile for auto-fill
+  const { profile, isLoading: isLoadingProfile } = useFinancialHealthProfile(userId || undefined);
 
   // Guest financial health profile management functions
   const getGuestProfileIds = (): string[] => {
@@ -180,6 +184,91 @@ export function QuestionnaireFlow({
     }
   };
 
+  // Auto-fill questionnaire with existing profile data
+  useEffect(() => {
+    if (profile?.quiz_answers && Object.keys(answers).length === 0) {
+      const existingData = profile.quiz_answers as any;
+      
+      // Map existing data to questionnaire answers (with backwards compatibility)
+      const autoFillAnswers: Record<string, any> = {
+        // Personal Information
+        'current_age': existingData['current_age'] || existingData['current-age'] || undefined,
+        'marital_status': existingData['marital_status'] || existingData['marital-status'] || undefined,
+        'dependents': existingData['dependents'] || undefined,
+        
+        // Income Details
+        'gross_monthly_income': existingData['gross_monthly_income'] || existingData['gross-monthly-income'] || undefined,
+        'net_monthly_income': existingData['net_monthly_income'] || existingData['net-monthly-income'] || undefined,
+        'income_stability': existingData['income_stability'] || existingData['income-stability'] || undefined,
+        'additional_income_sources': existingData['additional_income_sources'] || existingData['additional-income-sources'] || [],
+        'annual_bonus': existingData['annual_bonus'] || existingData['annual-bonus'] || undefined,
+        
+        // Detailed Expenses
+        'housing_cost': existingData['housing_cost'] || existingData['housing-cost'] || undefined,
+        'housing_type': existingData['housing_type'] || existingData['housing-type'] || undefined,
+        'food_expenses': existingData['food_expenses'] || existingData['food-expenses'] || undefined,
+        'transportation_expenses': existingData['transportation_expenses'] || existingData['transportation-expenses'] || undefined,
+        'healthcare_expenses': existingData['healthcare_expenses'] || existingData['healthcare-expenses'] || undefined,
+        'insurance_expenses': existingData['insurance_expenses'] || existingData['insurance-expenses'] || undefined,
+        'entertainment_expenses': existingData['entertainment_expenses'] || existingData['entertainment-expenses'] || undefined,
+        'other_monthly_expenses': existingData['other_monthly_expenses'] || existingData['other-monthly-expenses'] || undefined,
+        
+        // Assets & Savings
+        'emergency_fund': existingData['emergency_fund'] || existingData['emergency-fund'] || undefined,
+        'checking_account': existingData['checking_account'] || existingData['checking-account'] || undefined,
+        'savings_account': existingData['savings_account'] || existingData['savings-account'] || undefined,
+        'investment_accounts': existingData['investment_accounts'] || existingData['investment-accounts'] || undefined,
+        'retirement_accounts': existingData['retirement_accounts'] || existingData['retirement-accounts'] || undefined,
+        'real_estate_value': existingData['real_estate_value'] || existingData['real-estate-value'] || undefined,
+        'other_assets': existingData['other_assets'] || existingData['other-assets'] || undefined,
+        
+        // Debts & Liabilities
+        'credit_card_debt': existingData['credit_card_debt'] || existingData['credit-card-debt'] || undefined,
+        'credit_card_interest_rate': existingData['credit_card_interest_rate'] || existingData['credit-card-interest-rate'] || undefined,
+        'student_loan_debt': existingData['student_loan_debt'] || existingData['student-loan-debt'] || undefined,
+        'student_loan_interest_rate': existingData['student_loan_interest_rate'] || existingData['student-loan-interest-rate'] || undefined,
+        'mortgage_balance': existingData['mortgage_balance'] || existingData['mortgage-balance'] || undefined,
+        'mortgage_interest_rate': existingData['mortgage_interest_rate'] || existingData['mortgage-interest-rate'] || undefined,
+        'auto_loan_balance': existingData['auto_loan_balance'] || existingData['auto-loan-balance'] || undefined,
+        'auto_loan_interest_rate': existingData['auto_loan_interest_rate'] || existingData['auto-loan-interest-rate'] || undefined,
+        'other_debt': existingData['other_debt'] || existingData['other-debt'] || undefined,
+        'other_debt_interest_rate': existingData['other_debt_interest_rate'] || existingData['other-debt-interest-rate'] || undefined,
+        'debt-details': existingData['debt-details'] || [],
+        
+        // Financial Goals
+        'retirement_age': existingData['retirement_age'] || existingData['retirement-age'] || undefined,
+        'desired_retirement_income': existingData['desired_retirement_income'] || existingData['desired-retirement-income'] || undefined,
+        'short_term_goals': existingData['short_term_goals'] || existingData['short-term-goals'] || [],
+        'medium_term_goals': existingData['medium_term_goals'] || existingData['medium-term-goals'] || [],
+        'long_term_goals': existingData['long_term_goals'] || existingData['long-term-goals'] || [],
+        'major_purchase_timeline': existingData['major_purchase_timeline'] || existingData['major-purchase-timeline'] || undefined,
+        
+        // Risk Profile & Investment
+        'risk_tolerance': existingData['risk_tolerance'] || existingData['risk-tolerance'] || undefined,
+        'investment_experience': existingData['investment_experience'] || existingData['investment-experience'] || undefined,
+        'investment_timeline': existingData['investment_timeline'] || existingData['investment-timeline'] || undefined,
+        'investment_priorities': existingData['investment_priorities'] || existingData['investment-priorities'] || [],
+        
+        // Financial Behavior
+        'savings_rate': existingData['savings_rate'] || existingData['savings-rate'] || undefined,
+        'spending_tracking': existingData['spending_tracking'] || existingData['spending-tracking'] || undefined,
+        'budget_adherence': existingData['budget_adherence'] || existingData['budget-adherence'] || undefined,
+        'financial_stress_level': existingData['financial_stress_level'] || existingData['financial-stress-level'] || undefined,
+      };
+      
+      // Filter out undefined values to avoid overriding empty inputs
+      const filteredAnswers = Object.fromEntries(
+        Object.entries(autoFillAnswers).filter(([_, value]) => value !== undefined)
+      );
+      
+      // Only apply auto-fill if we have actual data to fill
+      if (Object.keys(filteredAnswers).length > 2) { // More than just debt-details and additional_income_sources arrays
+        console.log('Auto-filling questionnaire with existing profile data:', Object.keys(filteredAnswers));
+        setAnswers(filteredAnswers);
+      }
+    }
+  }, [profile, answers]);
+
   // Real-time validation effect - validates instantly when answers change
   useEffect(() => {
     // Only run validation if we have some answers to avoid initial validation noise
@@ -281,6 +370,10 @@ export function QuestionnaireFlow({
             if (!userId && profileData?.profile?.id) {
               console.log('Storing guest financial health profile ID in cookie:', profileData.profile.id);
               addGuestProfileId(profileData.profile.id);
+              
+              // Verify the ID was stored correctly
+              const storedIds = getGuestProfileIds();
+              console.log('Current guest profile IDs in cookies:', storedIds);
             }
           } else {
             console.warn('Financial health profile creation/update returned unsuccessful response:', profileData);
@@ -443,6 +536,23 @@ export function QuestionnaireFlow({
 
   if (isLoading) {
     return <GeneratingGoalView progress={simulatedProgress} error={createError?.message} onCancel={onCancel} />;
+  }
+
+  // Show loading state while fetching profile data for auto-fill
+  if (userId && isLoadingProfile) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16">
+        <div className="w-16 h-16 mx-auto mb-6">
+          <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          Loading Your Profile
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          We're loading your existing information to save you time...
+        </p>
+      </div>
+    );
   }
 
   return (

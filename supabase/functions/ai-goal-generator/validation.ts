@@ -143,6 +143,16 @@ export async function validateAndNormalizeResponse(
   structuredData.milestones = structuredData.milestones || [];
   structuredData.insights = structuredData.insights || [];
 
+  // Ensure advisor messages are preserved (CRITICAL for frontend display)
+  if (!structuredData.advisorMessages) {
+    console.warn('⚠️ Advisor messages missing in AI response - this will cause display issues');
+  }
+
+  console.log('🔍 Validation preserving advisor messages:', {
+    hasAdvisorMessages: !!structuredData.advisorMessages,
+    advisorMessages: structuredData.advisorMessages || 'MISSING'
+  });
+
   return structuredData;
 }
 
@@ -176,6 +186,29 @@ export function validateFinalResponse(aiResponse: AIGoalResponse): { isValid: bo
   if (!aiResponse.strategy || aiResponse.strategy.trim() === '') {
     errors.push('Goal strategy is required');
   }
+
+  // Validate advisor messages (CRITICAL for frontend display)
+  if (!aiResponse.advisorMessages) {
+    console.warn('⚠️ MISSING: Advisor messages not found in AI response');
+    // Don't fail validation, but log warning since this affects UX
+  } else {
+    if (!aiResponse.advisorMessages.planMessage || !aiResponse.advisorMessages.planMessage.content) {
+      console.warn('⚠️ MISSING: Plan message missing or has no content');
+    }
+    if (!aiResponse.advisorMessages.insightsMessage || !aiResponse.advisorMessages.insightsMessage.content) {
+      console.warn('⚠️ MISSING: Insights message missing or has no content');
+    }
+    if (!aiResponse.advisorMessages.nextStepsMessage || !aiResponse.advisorMessages.nextStepsMessage.content) {
+      console.warn('⚠️ MISSING: Next steps message missing or has no content');
+    }
+  }
+
+  console.log('🔍 Final validation - advisor messages check:', {
+    hasAdvisorMessages: !!aiResponse.advisorMessages,
+    hasPlan: !!(aiResponse.advisorMessages?.planMessage?.content),
+    hasInsights: !!(aiResponse.advisorMessages?.insightsMessage?.content),
+    hasNextSteps: !!(aiResponse.advisorMessages?.nextStepsMessage?.content)
+  });
 
   return {
     isValid: errors.length === 0,

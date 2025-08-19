@@ -130,16 +130,19 @@ export function NextStepsPage({ milestones, strategy, isLoggedIn, advisorMessage
       </motion.div>
 
       {/* Moneko Advisor Message - Next Steps Message */}
-      {advisorMessage && (
+      {advisorMessage?.content && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
           <MonekoAdvisorMessage
-            message={advisorMessage}
+            message={{
+              message: advisorMessage.content,
+              tone: advisorMessage.tone
+            }}
             showMessage={true}
-            typewriterSpeed={25}
+            typewriterSpeed={75}
           />
         </motion.div>
       )}

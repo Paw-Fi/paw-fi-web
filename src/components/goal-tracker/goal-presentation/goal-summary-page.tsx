@@ -113,9 +113,12 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
           transition={{ delay: 0.15 }}
         >
           <MonekoAdvisorMessage
-            message={goalData.advisorMessages.planMessage}
+            message={{
+              message: goalData.advisorMessages.planMessage.content,
+              tone: goalData.advisorMessages.planMessage.tone
+            }}
             showMessage={true}
-            typewriterSpeed={25}
+            typewriterSpeed={75}
           />
         </motion.div>
       )}

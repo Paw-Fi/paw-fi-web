@@ -65,7 +65,8 @@ export function TrackerModal({
       monthlyRequired: progressData.requiredMonthly,
       projectedFinalAmount: progressData.targetAmount,
       confidenceLevel: progressData.progressPercentage >= 80 ? 0.9 : 0.7
-    }
+    },
+    advisorMessages:goal.ai_advisor_messages
   };
 
   return (

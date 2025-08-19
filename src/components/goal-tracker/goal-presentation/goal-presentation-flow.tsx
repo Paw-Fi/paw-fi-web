@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -52,24 +52,15 @@ export function GoalPresentationFlow({
       const nextPage = PAGES[currentPageIndex + 1].id;
       setCurrentPage(nextPage);
       
-      // Scroll to top smoothly for better UX
+      // Scroll to top after 100ms delay
       setTimeout(() => {
-        if ('scrollBehavior' in document.documentElement.style) {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
+        const modalScrollContainer = document.querySelector('.overflow-scroll');
+        if (modalScrollContainer) {
+          modalScrollContainer.scrollTo(0, 0);
         } else {
-          const scrollToTop = () => {
-            const currentScroll = window.pageYOffset;
-            if (currentScroll > 0) {
-              window.requestAnimationFrame(scrollToTop);
-              window.scrollTo(0, currentScroll - (currentScroll / 8));
-            }
-          };
-          scrollToTop();
+        window.scrollTo(0, 0);
         }
-      }, 50);
+      }, 400);
     }
   };
   
@@ -78,24 +69,15 @@ export function GoalPresentationFlow({
       const prevPage = PAGES[currentPageIndex - 1].id;
       setCurrentPage(prevPage);
       
-      // Scroll to top smoothly for better UX
+      // Scroll to top after 100ms delay
       setTimeout(() => {
-        if ('scrollBehavior' in document.documentElement.style) {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
+        const modalScrollContainer = document.querySelector('.overflow-scroll');
+        if (modalScrollContainer) {
+          modalScrollContainer.scrollTo(0, 0);
         } else {
-          const scrollToTop = () => {
-            const currentScroll = window.pageYOffset;
-            if (currentScroll > 0) {
-              window.requestAnimationFrame(scrollToTop);
-              window.scrollTo(0, currentScroll - (currentScroll / 8));
-            }
-          };
-          scrollToTop();
+          window.scrollTo(0, 0);
         }
-      }, 50);
+      }, 100);
     }
   };
   

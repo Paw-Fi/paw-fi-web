@@ -25,7 +25,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
 }) => {
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   
-  if (!showMessage) return null;
+  if (!showMessage||!message.message) return null;
 
   const getToneBadge = (tone: AdvisorTone) => {
     switch (tone) {
@@ -97,7 +97,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
               </span>
             </div>
             
-            <TypewriterText
+         {message.message&&   <TypewriterText
               text={message.message}
               speed={typewriterSpeed}
               delay={300}
@@ -105,7 +105,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
               showCursor={true}
               cursorClassName="animate-pulse text-blue-400 dark:text-blue-300"
               onComplete={handleTypewriterComplete}
-            />
+            />}
           </div>
         </div>
       </div>

@@ -246,27 +246,45 @@ export function Dashboard() {
     try {
       console.log(`Migrating ${guestProfileIds.length} guest financial health profiles to user ${userId}`);
       
+      let successfulMigrations = 0;
+      
       // Update each guest profile with the user ID
       for (const profileId of guestProfileIds) {
-        // Update the profile with user ID
-        const { error: updateError } = await supabase
+        // Update the profile with user ID and get the updated data
+        const { data: updatedProfile, error: updateError } = await supabase
           .from('financial_health_profiles')
           .update({ user_id: userId })
           .eq('id', profileId)
-          .is('user_id', null);
+          .is('user_id', null)
+          .select('id, profile_description, created_at')
+          .single();
         
         if (updateError) {
           console.error(`Failed to migrate guest profile ${profileId}:`, updateError);
           continue;
         }
         
-        console.log(`Successfully migrated guest financial health profile ${profileId} to user ${userId}`);
+        if (updatedProfile) {
+          successfulMigrations++;
+          console.log(`Successfully migrated guest financial health profile ${profileId} to user ${userId}`);
+          console.log(`Profile created at: ${updatedProfile.created_at}`);
+        }
       }
       
-      // Clear guest profile IDs after successful migration
+      // Clear guest profile IDs after migration attempt
       clearGuestProfileIds();
       setHasCheckedGuestProfiles(true);
-      console.log(`Completed migration of ${guestProfileIds.length} guest financial health profiles`);
+      
+      if (successfulMigrations > 0) {
+        console.log(`Completed migration of ${successfulMigrations}/${guestProfileIds.length} guest financial health profiles`);
+        
+        // Show a toast notification to the user about the successful migration
+        if (typeof toast !== 'undefined') {
+          toast.success(`Successfully migrated your ${successfulMigrations} financial profile${successfulMigrations > 1 ? 's' : ''} to your account!`);
+        }
+      } else if (guestProfileIds.length > 0) {
+        console.warn('No guest profiles were successfully migrated');
+      }
       
     } catch (error) {
       console.error('Failed to migrate guest profiles:', error);
@@ -276,9 +294,15 @@ export function Dashboard() {
   // Handle guest goal and profile migration on login
   useEffect(() => {
     if (user?.id && !hasCheckedGuestGoals) {
+      console.log('User logged in, checking for guest goals to migrate...');
+      const guestGoalIds = getGuestGoalIds();
+      console.log('Found guest goal IDs:', guestGoalIds);
       migrateGuestGoals(user.id);
     }
     if (user?.id && !hasCheckedGuestProfiles) {
+      console.log('User logged in, checking for guest profiles to migrate...');
+      const guestProfileIds = getGuestProfileIds();
+      console.log('Found guest profile IDs:', guestProfileIds);
       migrateGuestProfiles(user.id);
     }
   }, [user]);

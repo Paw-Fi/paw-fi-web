@@ -5,6 +5,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { logUserActivity } from "../shared/activity-logger.ts";
 import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
 import { getQuestionnaireTemplate } from "../shared/goals-questionnaire-templates.ts";
+import { transformAdvisorMessages } from "../shared/advisor-message-transformer.ts";
 
 // Import separated modules
 import { goalGeneratorTool, type AIGoalResponse } from "./schema.ts";
@@ -45,6 +46,10 @@ async function generateStructuredAIResponse(
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-pro",
     tools: [goalGeneratorTool],
+    // Force the model to use function calling
+    generationConfig: {
+      temperature: 0.1, // Lower temperature for more consistent function calling
+    }
   });
 
   // Enhance the prompt with structured output instructions
@@ -76,15 +81,41 @@ async function generateStructuredAIResponse(
           // Extract the structured data
           const structuredData = functionCall.args as AIGoalResponse;
           
+          // Log advisor messages details
+          if (structuredData.advisorMessages) {
+            console.log('✅ Advisor messages found in AI response:', {
+              hasPlanMessage: !!structuredData.advisorMessages.planMessage,
+              hasInsightsMessage: !!structuredData.advisorMessages.insightsMessage,
+              hasNextStepsMessage: !!structuredData.advisorMessages.nextStepsMessage,
+              planMessage: structuredData.advisorMessages.planMessage || 'MISSING',
+              insightsMessage: structuredData.advisorMessages.insightsMessage || 'MISSING',
+              nextStepsMessage: structuredData.advisorMessages.nextStepsMessage || 'MISSING'
+            });
+          } else {
+            console.error('❌ NO ADVISOR MESSAGES found in AI response!');
+          }
+          
           // Validate and normalize the response
           aiResponse = await validateAndNormalizeResponse(structuredData, questionnaireAnswers);
+          
+          // Log advisor messages after validation
+          if (aiResponse.advisorMessages) {
+            console.log('✅ Advisor messages after validation:', {
+              hasPlanMessage: !!aiResponse.advisorMessages.planMessage,
+              hasInsightsMessage: !!aiResponse.advisorMessages.insightsMessage,
+              hasNextStepsMessage: !!aiResponse.advisorMessages.nextStepsMessage,
+            });
+          } else {
+            console.error('❌ NO ADVISOR MESSAGES after validation!');
+          }
           
           console.log('Structured response validation successful:', {
             goalTitle: aiResponse.goal.title,
             targetAmount: aiResponse.goal.targetAmount,
             targetDate: aiResponse.goal.targetDate,
             milestoneCount: aiResponse.milestones?.length || 0,
-            insightCount: aiResponse.insights?.length || 0
+            insightCount: aiResponse.insights?.length || 0,
+            hasAdvisorMessages: !!aiResponse.advisorMessages
           });
           
           break; // Success, exit retry loop
@@ -93,13 +124,23 @@ async function generateStructuredAIResponse(
         }
       } else {
         console.warn(`Attempt ${attempts}: AI did not return a function call`);
-        console.log("Full response:", response.text());
+        
+        // Get and log the actual response to understand what AI returned
+        const responseText = response.text();
+        console.log("Full AI response text:", responseText);
+        console.log("Response candidates:", response.candidates());
+        
+        // Check if AI returned any content at all
+        if (!responseText || responseText.trim().length === 0) {
+          console.error("AI returned empty response");
+        }
         
         if (attempts < maxAttempts) {
+          console.log(`Retrying with stronger function calling instructions...`);
           aiPrompt = addRetryInstructions(aiPrompt, attempts);
           continue;
         } else {
-          throw new Error("AI failed to use function calling for structured output");
+          throw new Error(`AI failed to use function calling for structured output after ${maxAttempts} attempts. Last response: ${responseText?.substring(0, 200)}...`);
         }
       }
     } catch (error) {
@@ -131,6 +172,13 @@ async function createGoalInDatabase(
   let newMilestones: any[] = [];
   
   try {
+    // Log what we're trying to insert for advisor messages
+    console.log('📝 Inserting goal with advisor messages:', {
+      hasAdvisorMessages: !!aiResponse.advisorMessages,
+      advisorMessages: aiResponse.advisorMessages || 'NULL',
+      advisorMessagesStringified: JSON.stringify(aiResponse.advisorMessages || null, null, 2)
+    });
+    
     // Create goal in database
     const { data: goalData, error: goalError } = await supabaseClient
       .from("financial_goals")
@@ -156,6 +204,14 @@ async function createGoalInDatabase(
 
     newGoal = goalData;
     console.log("Goal created successfully:", newGoal.id);
+    
+    // Verify advisor messages were stored
+    console.log('✅ Goal stored with advisor messages:', {
+      goalId: newGoal.id,
+      storedAdvisorMessages: newGoal.ai_advisor_messages,
+      hasStoredAdvisorMessages: !!newGoal.ai_advisor_messages,
+      advisorMessagesType: typeof newGoal.ai_advisor_messages
+    });
 
   // Log the goal creation activity (only for authenticated users)
   if (userId) {
@@ -242,13 +298,26 @@ async function createGoalInDatabase(
       }
     }
 
+    // Transform advisor messages from backend format (content) to frontend format (message)
+    let transformedAdvisorMessages = null;
+    
+    // First try to transform from AI response
+    if (aiResponse.advisorMessages) {
+      transformedAdvisorMessages = transformAdvisorMessages(aiResponse.advisorMessages);
+    } 
+    // Fallback to stored database messages if AI response doesn't have them
+    else if (newGoal.ai_advisor_messages) {
+      console.log('🔄 Using stored database advisor messages as fallback');
+      transformedAdvisorMessages = transformAdvisorMessages(newGoal.ai_advisor_messages);
+    }
+
     return {
       goal: newGoal,
       milestones: newMilestones,
       strategy: aiResponse.strategy,
       insights: aiResponse.insights || [],
       projections: aiResponse.projections || null,
-      advisorMessages: aiResponse.advisorMessages || null
+      advisorMessages: transformedAdvisorMessages
     };
   } catch (error) {
     // Rollback any created data on error

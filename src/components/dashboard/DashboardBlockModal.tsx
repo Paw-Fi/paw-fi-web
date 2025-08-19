@@ -12,6 +12,12 @@ import {
   faChessKnight,
   faBookOpen,
   faCalculator,
+  faBullseye,
+  faFlag,
+  faTrophy,
+  faRocket,
+  faWandSparkles,
+  faCheckCircle,
 } from '@fortawesome/free-solid-svg-icons';
 import { Link, useLocation } from '@tanstack/react-router';
 import logo from '@assets/images/icon.svg';
@@ -69,6 +75,22 @@ const getPageConfig = (path: string, user: any): PageConfig => {
         { icon: faHeartbeat, text: "Adaptive Learning Paths" }
       ],
       ctaText: user ? "Upgrade for Custom Courses" : "Sign In to Start Learning"
+    };
+  } else if (path.startsWith("/dashboard/tracker")) {
+    config = {
+      ...config,
+      backgroundImage: dashboardHomeImage, // Could use a tracker-specific image if available
+      title: "Unlock AI-Powered Goal Tracking",
+      description: user ? "Subscribe to access advanced goal tracking with AI insights and milestone management" : "Sign in to create and track your financial goals with AI-powered recommendations",
+      features: [
+        { icon: faBullseye, text: "Smart Goal Creation & Management" },
+        { icon: faWandSparkles, text: "AI-Generated Milestones" },
+        { icon: faChartLine, text: "Interactive Progress Projections" },
+        { icon: faTrophy, text: "Spotlight Goal Prioritization" },
+        { icon: faFlag, text: "Advanced Milestone Tracking" },
+        { icon: faCheckCircle, text: "Progress Analytics & Insights" }
+      ],
+      ctaText: user ? "Upgrade for AI Goal Tracking" : "Sign In to Track Your Goals"
     };
   } else if (path.startsWith("/dashboard/essentials")) {
     config = {

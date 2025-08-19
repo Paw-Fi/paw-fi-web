@@ -9,7 +9,7 @@ interface PresetProfileSelectorProps {
 }
 
 export function PresetProfileSelector({ onProfileSelect }: PresetProfileSelectorProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const handleProfileSelect = (profile: PresetProfile) => {
     onProfileSelect(profile.answers, profile.name);

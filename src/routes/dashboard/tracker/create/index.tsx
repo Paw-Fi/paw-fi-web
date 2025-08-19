@@ -1,314 +1,187 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faRocket } from "@fortawesome/free-solid-svg-icons";
-import { GoalTypeSelector } from "@/components/goal-tracker/questionnaire/GoalTypeSelector";
-import { QuestionnaireFlow } from "@/components/goal-tracker/questionnaire/QuestionnaireFlow";
-import { useQuestionnaireTemplate } from "@/hooks/goal-tracker/use-questionnaire-template";
-import { GOAL_TYPE_CONFIGS, type GoalType } from "@/components/goal-tracker/types";
-import { Button } from "@/components/ui/button";
+import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { GoalTypeSelector } from '@/components/goal-tracker/questionnaire/GoalTypeSelector';
+import { QuestionnaireFlow } from '@/components/goal-tracker/questionnaire/QuestionnaireFlow';
+import { getQuestionnaireTemplate } from '@/data/questionnaire-templates';
+import { useAuth } from '@/contexts/auth-context';
+import type { 
+  GoalType, 
+  GoalCreationState,
+  GoalCreationResult 
+} from '@/components/goal-tracker/types';
 
-export const Route = createFileRoute("/dashboard/tracker/create/")({
-  component: CreateGoal,
-  head: () => ({
-    meta: [
-      { title: 'Create Goal | Moneko' },
-      { 
-        name: 'description', 
-        content: 'Create a new financial goal with AI-powered strategy and milestone generation. Choose from retirement, home buying, wealth building, and more.' 
-      },
-    ],
-  }),
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
+
+export const Route = createFileRoute('/dashboard/tracker/create/')({
+  component: CreateGoalPage,
+  head: () => {
+    const pageUrl = getCanonicalUrl("/dashboard/tracker/create");
+    const title = "Create New Financial Goal | Moneko Goal Tracker";
+    const description = "Start your financial journey by creating a new personalized goal with Moneko's AI-powered goal tracker. Define your objectives and get a tailored plan.";
+    const keywords = "create financial goal, new goal, financial planning, goal setting, AI goal tracker, Moneko";
+    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+
+    return {
+      meta: seo({
+        title,
+        description,
+        keywords,
+        image: imageUrl,
+        url: pageUrl,
+      }),
+      link: [
+        {
+          rel: "canonical",
+          href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": title,
+            "description": description,
+            "url": pageUrl,
+          })
+        }
+      ]
+    };
+  },
 });
 
-type CreateGoalStep = 'goal-type' | 'questionnaire' | 'generating' | 'complete';
+function CreateGoalPage() {
+  const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
+  const [state, setState] = useState<GoalCreationState>({ currentStep: 'goal_type_selection' });
 
-function CreateGoal() {
-  const [currentStep, setCurrentStep] = useState<CreateGoalStep>('goal-type');
-  const [selectedGoalType, setSelectedGoalType] = useState<GoalType | null>(null);
-  const [createdGoal, setCreatedGoal] = useState<any>(null);
-  
-  const { template, isLoading: templateLoading, error: templateError } = useQuestionnaireTemplate(
-    selectedGoalType || undefined
-  );
+  // Show loading if auth is still loading
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleGoalTypeSelect = (goalType: GoalType) => {
-    setSelectedGoalType(goalType);
-    setCurrentStep('questionnaire');
+    /* eslint-disable */console.log(...oo_oo(`4180365050_78_4_78_75_4`,'Starting authenticated goal creation for user:', user?.id));
+    setState({ currentStep: 'questionnaire', selectedGoalType: goalType });
   };
 
-  const handleBackToGoalTypes = () => {
-    setSelectedGoalType(null);
-    setCurrentStep('goal-type');
+  const handleQuestionnaireComplete = (result: GoalCreationResult) => {
+    setState({ currentStep: 'complete', result });
   };
 
-  const handleQuestionnaireComplete = (result: any) => {
-    setCreatedGoal(result);
-    setCurrentStep('complete');
-  };
-
-  const handleCancel = () => {
-    window.location.href = '/dashboard/tracker';
-  };
-
-  const handleGoToGoal = () => {
-    if (createdGoal?.goal?.id) {
-      window.location.href = `/dashboard/tracker/${createdGoal.goal.id}`;
+  const handleBack = () => {
+    if (state.currentStep === 'questionnaire') {
+      setState({ currentStep: 'goal_type_selection' });
     } else {
-      window.location.href = '/dashboard/tracker';
+      navigate({ to: '/dashboard/tracker' });
+    }
+  };
+
+  const renderStep = () => {
+    switch (state.currentStep) {
+      case 'goal_type_selection':
+        return <GoalTypeSelector onSelect={handleGoalTypeSelect} />;
+      case 'questionnaire':
+        const template = getQuestionnaireTemplate(state.selectedGoalType!);
+        if (!template) {
+          return <div>Error: Questionnaire template not found.</div>;
+        }
+        return (
+          <QuestionnaireFlow
+            goalType={state.selectedGoalType!}
+            template={template}
+            onComplete={handleQuestionnaireComplete}
+            onCancel={handleBack}
+            userId={user?.id || null}
+          />
+        );
+      case 'complete':
+        return <GoalCreationSuccess result={state.result!} onGoToDashboard={() => navigate({ to: '/dashboard/tracker' })} />;
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background dark:from-dark-background to-purple-50/50 dark:to-purple-900/10">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center justify-between mb-8"
-        >
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={currentStep === 'questionnaire' ? handleBackToGoalTypes : handleCancel}
-              className="p-2"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground dark:text-dark-foreground">
-                Create Financial Goal
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {getStepDescription(currentStep, selectedGoalType)}
+    <div className="h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-900/50 dark:to-gray-900 p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-7xl">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={state.currentStep}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function GoalCreationSuccess({ result, onGoToDashboard }: { result: GoalCreationResult; onGoToDashboard: () => void; }) {
+  return (
+    <div className="text-center p-8">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        className="w-24 h-24 mx-auto bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-lg"
+      >
+        <FontAwesomeIcon icon={faCheck} className="w-12 h-12 text-white" />
+      </motion.div>
+      <motion.h1 
+        initial={{ y: 20, opacity: 0 }} 
+        animate={{ y: 0, opacity: 1, transition: { delay: 0.2 } }} 
+        className="text-4xl font-bold text-gray-900 dark:text-white mb-4"
+      >
+        Goal Created!
+      </motion.h1>
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }} 
+        animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }}
+        className="mb-8"
+      >
+        {result?.goal && (
+          <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {result.goal.title}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Target: ${result.goal.target_amount?.toLocaleString()} by {new Date(result.goal.target_date).toLocaleDateString()}
+            </p>
+            {result.milestones && result.milestones.length > 0 && (
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                {result.milestones.length} milestones created to help you reach your goal
               </p>
-            </div>
+            )}
           </div>
-          
-          {/* Progress Indicator */}
-          <div className="hidden md:flex items-center space-x-2">
-            <StepIndicator step={1} currentStep={currentStep} label="Goal Type" />
-            <div className="w-8 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
-            <StepIndicator step={2} currentStep={currentStep} label="Details" />
-            <div className="w-8 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
-            <StepIndicator step={3} currentStep={currentStep} label="Complete" />
-          </div>
-        </motion.div>
-
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          <AnimatePresence mode="wait">
-            {currentStep === 'goal-type' && (
-              <motion.div
-                key="goal-type"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <GoalTypeSelector
-                  onSelect={handleGoalTypeSelect}
-                  onCancel={handleCancel}
-                />
-              </motion.div>
-            )}
-
-            {currentStep === 'questionnaire' && selectedGoalType && template && (
-              <motion.div
-                key="questionnaire"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <QuestionnaireFlow
-                  goalType={selectedGoalType}
-                  template={template}
-                  onComplete={handleQuestionnaireComplete}
-                  onCancel={handleBackToGoalTypes}
-                />
-              </motion.div>
-            )}
-
-            {currentStep === 'complete' && createdGoal && (
-              <motion.div
-                key="complete"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.5 }}
-              >
-                <GoalCreationSuccess
-                  goal={createdGoal}
-                  onGoToGoal={handleGoToGoal}
-                  onCreateAnother={() => setCurrentStep('goal-type')}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Loading States */}
-          {templateLoading && currentStep === 'questionnaire' && (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">Loading questionnaire...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error States */}
-          {templateError && (
-            <div className="text-center py-16">
-              <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-                  <FontAwesomeIcon icon={faRocket} className="w-8 h-8 text-red-600 dark:text-red-400" />
-                </div>
-                <h2 className="text-xl font-bold text-foreground dark:text-dark-foreground mb-4">
-                  Failed to Load Questionnaire
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  {templateError.message || 'Something went wrong. Please try again.'}
-                </p>
-                <Button onClick={handleBackToGoalTypes} variant="outline">
-                  Go Back
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StepIndicator({ 
-  step, 
-  currentStep, 
-  label 
-}: { 
-  step: number; 
-  currentStep: CreateGoalStep; 
-  label: string;
-}) {
-  const stepMap = {
-    'goal-type': 1,
-    'questionnaire': 2,
-    'generating': 2,
-    'complete': 3,
-  };
-  
-  const current = stepMap[currentStep];
-  const isActive = step <= current;
-  const isCurrent = step === current;
-
-  return (
-    <div className="flex items-center space-x-2">
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-          isActive
-            ? isCurrent
-              ? 'bg-primary text-white'
-              : 'bg-green-500 text-white'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-        }`}
-      >
-        {step <= current - 1 ? '✓' : step}
-      </div>
-      <span
-        className={`text-sm font-medium ${
-          isActive
-            ? 'text-foreground dark:text-dark-foreground'
-            : 'text-gray-600 dark:text-gray-400'
-        }`}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function GoalCreationSuccess({ 
-  goal, 
-  onGoToGoal, 
-  onCreateAnother 
-}: { 
-  goal: any; 
-  onGoToGoal: () => void; 
-  onCreateAnother: () => void;
-}) {
-  return (
-    <div className="text-center py-16">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 200, 
-          damping: 20,
-          delay: 0.2 
-        }}
-        className="w-24 h-24 mx-auto bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-8"
-      >
-        <FontAwesomeIcon icon={faRocket} className="w-12 h-12 text-white" />
+        )}
+        <p className="text-lg text-gray-600 dark:text-gray-400">
+          You're all set to start working on your financial future.
+        </p>
       </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <h2 className="text-3xl font-bold text-foreground dark:text-dark-foreground mb-4">
-          Goal Created Successfully! 🎉
-        </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
-          <strong>{goal.goal?.title}</strong>
-        </p>
-        <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-          Your AI-powered strategy is ready with {goal.milestones?.length || 0} smart milestones 
-          to help you achieve your goal of ${typeof goal.goal?.target_amount === 'number' ? goal.goal.target_amount.toLocaleString() : 'a certain amount'}.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              onClick={onGoToGoal}
-              className="bg-primary hover:bg-primary-dark text-white px-8 py-3"
-            >
-              View Your Goal
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              onClick={onCreateAnother}
-              variant="outline"
-              className="px-8 py-3"
-            >
-              Create Another Goal
-            </Button>
-          </motion.div>
-        </div>
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.4 } }}>
+        <Button onClick={onGoToDashboard} size="lg">
+          Go to Dashboard
+        </Button>
       </motion.div>
     </div>
   );
-}
-
-function getStepDescription(step: CreateGoalStep, goalType: GoalType | null): string {
-  switch (step) {
-    case 'goal-type':
-      return 'Choose the type of financial goal you want to create';
-    case 'questionnaire':
-      return goalType 
-        ? `Answer questions about your ${GOAL_TYPE_CONFIGS[goalType]?.name.toLowerCase()} goal`
-        : 'Answer questions about your goal';
-    case 'generating':
-      return 'AI is creating your personalized strategy and milestones';
-    case 'complete':
-      return 'Your goal has been created successfully';
-    default:
-      return '';
-  }
 }

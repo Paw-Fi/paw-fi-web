@@ -284,7 +284,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
 
   const startInlineEdit = (milestone: GoalMilestone) => {
     if (!isSubscriptionActive) {
-      toast.error("Subscribe to unlock this feature");
+      onSubscriptionRequired?.();
       return;
     }
     

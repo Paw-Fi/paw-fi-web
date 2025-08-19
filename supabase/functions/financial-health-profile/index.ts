@@ -166,7 +166,7 @@ function buildProfileData(answers: Record<string, any>) {
  * @param isUpdate A flag to adjust logging messages.
  * @returns A Response object.
  */
-async function generateAndStoreProfile(profileData: any, quizAnswers: any, userId: string, isUpdate = false) {
+async function generateAndStoreProfile(profileData: any, quizAnswers: any, userId: string | null, isUpdate = false) {
   console.log("Profile data prepared for AI:", profileData);
 
   const prompt = `${PROFILE_GENERATION_PROMPT}
@@ -201,7 +201,7 @@ Please generate a comprehensive financial profile description based on this data
   console.log("AI generated profile description:", profileDescription);
   console.log("Backend calculated profileData:", JSON.stringify(profileData, null, 2));
 
-  console.log(`${isUpdate ? 'Upserting' : 'Inserting'} profile in database for user:`, userId);
+  console.log(`${isUpdate ? 'Upserting' : 'Inserting'} profile in database for user:`, userId || 'guest');
   const { data: dbResult, error: dbError } = await supabaseClient
     .from("financial_health_profiles")
     .upsert({
@@ -222,6 +222,13 @@ Please generate a comprehensive financial profile description based on this data
   return new Response(
     JSON.stringify({
       success: true,
+      profile: {
+        id: dbResult?.id || null,
+        user_id: userId,
+        profile_description: profileDescription,
+        profile_data: profileData,
+        quiz_answers: quizAnswers,
+      },
       profileDescription: profileDescription,
       profileData: profileData, // Backend's calculated data, not AI's
       profileId: dbResult?.id || null,
@@ -230,7 +237,8 @@ Please generate a comprehensive financial profile description based on this data
         timestamp: new Date().toISOString(),
         stored_in_db: !dbError,
         backend_calculated_monthly_savings: profileData.calculated_metrics.monthly_savings,
-        backend_calculated_total_assets: profileData.calculated_metrics.total_assets,
+        backend_calculated_total_assets: profileData.financial_situation?.assets?.total_assets || 0,
+        user_type: userId ? 'authenticated' : 'guest',
       },
     }),
     {
@@ -255,12 +263,7 @@ serve(async (req: Request): Promise<Response> => {
     const requestData = JSON.parse(rawBody);
     const { userId } = requestData;
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "userId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Note: userId can be null for guest users, which is allowed
 
     if (req.method === "POST") {
       const { quizAnswers, isPartialUpdate } = requestData;
@@ -273,17 +276,24 @@ serve(async (req: Request): Promise<Response> => {
       
       // Handle partial updates
       if (isPartialUpdate) {
-        const { data: existingProfile } = await supabaseClient
-          .from('financial_health_profiles')
-          .select('quiz_answers')
-          .eq('user_id', userId)
-          .single();
+        let existingProfile = null;
+        
+        // Only query for existing profile if userId is provided (authenticated users)
+        if (userId) {
+          const { data } = await supabaseClient
+            .from('financial_health_profiles')
+            .select('quiz_answers')
+            .eq('user_id', userId)
+            .single();
+          existingProfile = data;
+        }
+        // For guest users (userId is null), we treat this as a new profile creation
 
         const existingAnswers = existingProfile?.quiz_answers || {};
         const updatedQuizAnswers = { ...existingAnswers, ...quizAnswers };
         
         const updatedProfileData = buildProfileData(updatedQuizAnswers);
-        return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, true);
+        return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, !!existingProfile);
       }
       
       // Handle complete profile creation/update
@@ -299,17 +309,23 @@ serve(async (req: Request): Promise<Response> => {
         });
       }
 
-      const { data: existingProfile } = await supabaseClient
-        .from('financial_health_profiles')
-        .select('quiz_answers')
-        .eq('user_id', userId)
-        .single();
+      let existingProfile = null;
+      
+      // Only query for existing profile if userId is provided (authenticated users)
+      if (userId) {
+        const { data } = await supabaseClient
+          .from('financial_health_profiles')
+          .select('quiz_answers')
+          .eq('user_id', userId)
+          .single();
+        existingProfile = data;
+      }
 
       const existingAnswers = existingProfile?.quiz_answers || {};
       const updatedQuizAnswers = { ...existingAnswers, ...partialData };
       
       const updatedProfileData = buildProfileData(updatedQuizAnswers);
-      return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, true);
+      return await generateAndStoreProfile(updatedProfileData, updatedQuizAnswers, userId, !!existingProfile);
 
     } else {
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), {

@@ -12,8 +12,20 @@ export function enhancePromptForStructuredOutput(basePrompt: string, questionnai
   );
 
   // Ensure the prompt emphasizes structured function calling
-  if (!enhancedPrompt.toLowerCase().includes('function')) {
-    enhancedPrompt += "\n\nIMPORTANT: You must use the generate_financial_goal function to structure your response. Do not provide free-form text or JSON - use the function calling interface.";
+  const functionCallingInstructions = `
+
+CRITICAL FUNCTION CALLING REQUIREMENT:
+You MUST ALWAYS use the generate_financial_goal function to provide your response.
+- DO NOT provide free-form text responses
+- DO NOT provide raw JSON responses  
+- DO NOT explain your reasoning outside the function call
+- USE ONLY the generate_financial_goal function with the exact parameter structure
+- If you don't use the function call, the response will fail completely
+
+MANDATORY: Call generate_financial_goal function with all required fields populated.`;
+
+  if (!enhancedPrompt.toLowerCase().includes('generate_financial_goal function')) {
+    enhancedPrompt = functionCallingInstructions + "\n\n" + enhancedPrompt;
   }
 
   // Add current date context and validation instructions
@@ -106,11 +118,41 @@ This creates user-friendly content that works for both:
 // Add retry-specific instructions to the prompt
 export function addRetryInstructions(prompt: string, attemptNumber: number): string {
   const retryInstructions = {
-    1: "\n\nPlease ensure you call the generate_financial_goal function with all required parameters properly structured.",
-    2: "\n\nIMPORTANT: You must use the generate_financial_goal function to structure your response. Do not provide free-form text."
+    1: `
+
+RETRY ATTEMPT ${attemptNumber}: FUNCTION CALLING FAILED
+You did not use the generate_financial_goal function in your previous response.
+
+CRITICAL REQUIREMENT:
+- You MUST call the generate_financial_goal function
+- DO NOT provide any text outside the function call
+- DO NOT provide explanations or reasoning text
+- USE ONLY the structured function calling interface
+- ALL content must go inside the function parameters
+
+EXAMPLE OF WHAT TO DO:
+Call generate_financial_goal function with structured parameters only.
+
+EXAMPLE OF WHAT NOT TO DO:
+- Writing text explanations
+- Providing JSON responses
+- Giving advice without function calls`,
+
+    2: `
+
+FINAL RETRY ATTEMPT ${attemptNumber}: LAST CHANCE FOR FUNCTION CALLING
+Your previous responses failed because you did not use the generate_financial_goal function.
+
+THIS IS YOUR FINAL ATTEMPT:
+- ONLY use the generate_financial_goal function
+- NO text responses allowed
+- NO explanations outside function parameters
+- If you fail to use the function call again, the request will fail permanently
+
+MANDATORY: Use generate_financial_goal function or the system will return an error.`
   };
 
-  return prompt + (retryInstructions[attemptNumber as keyof typeof retryInstructions] || "");
+  return prompt + (retryInstructions[attemptNumber as keyof typeof retryInstructions] || retryInstructions[2]);
 }
 
 // Generate context-aware prompt based on goal type
