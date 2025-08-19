@@ -3,6 +3,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { profile } from 'console';
+import { useEffect } from 'react';
+import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
+import { useAuth } from '@/contexts/auth-context';
 
 export const Route = createFileRoute('/onboarding/')({
   component: RouteComponent,
@@ -38,12 +42,15 @@ export const Route = createFileRoute('/onboarding/')({
 
 function RouteComponent() {
   const { q } = Route.useSearch();
+  const { user } = useAuth();
+  const { profile } = useFinancialHealthProfile(user?.id);
+  const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   if (user&&profile) {
-  //     navigate({ to: '/dashboard' });
-  //   }
-  // }, [user, navigate,profile]);
+  useEffect(() => {
+    if (user&&profile) {
+      navigate({ to: '/dashboard' });
+    }
+  }, [user, navigate,profile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20">
