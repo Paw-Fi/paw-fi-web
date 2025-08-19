@@ -919,7 +919,6 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       icon: 'fas fa-coffee',
       column_span: 2,
       row_span: 4,
-      data:{},
       order:8
     });
 
@@ -930,7 +929,6 @@ export function generateDashboardWidgets(results: CalculationResults): Widget[] 
       icon: 'fas fa-dollar-sign',
       column_span: 2,
       row_span: 4,
-      data:{},
       order:9
     });
   

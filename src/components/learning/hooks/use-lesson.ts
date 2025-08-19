@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Course, Lesson, Question } from "@/types/learning.types";
+import type { Course, Lesson, LearningQuizQuestion } from "@/types/learning.types";
 import {
   areAllAnswersCorrect,
   isAnswerCorrect,

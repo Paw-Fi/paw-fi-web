@@ -78,7 +78,6 @@ export function StrategyModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Complete AI Strategy"
-      size="large"
     >
       <div className="p-6">
         {/* Header */}

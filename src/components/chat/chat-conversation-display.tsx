@@ -19,7 +19,7 @@ import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { useAIChat } from '@/contexts/ai-chat-context';
 import { FinancialHealthProfile, useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
-import { useUserGoals, createAllGoalsContext } from '@/hooks/goal-tracker/use-user-goals';
+import { useUserGoals, createAllGoalsContext, GoalContextSummary } from '@/hooks/goal-tracker/use-user-goals';
 import { AI_ROLES, AI_ROLE } from './ai-roles';
 import { BetaPill } from '../ui/beta-pill';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -385,7 +385,12 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
     
     try {
       // Create goal context for Financial Advisor mode
-      let goalContext = null;
+      let goalContext: {
+        totalGoals: number;
+        activeGoals: number;
+        totalProgress: number;
+        goalsSummary: GoalContextSummary[];
+      } | null = null;
       if (isFinancialAdvisorMode && userGoals && userGoals.length > 0) {
         goalContext = createAllGoalsContext(userGoals);
       }

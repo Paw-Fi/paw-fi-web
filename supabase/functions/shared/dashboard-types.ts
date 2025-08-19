@@ -17,7 +17,7 @@ export interface DashboardWidget {
   title: string;
   icon: string;
   column_span: 1 | 2;
-  row_span: 1 | 2;
+  row_span: 1 | 2 | 3 | 4;
   data: any;
   created_at: string;
   updated_at: string;
@@ -39,7 +39,7 @@ export interface DashboardTemplateWidget {
   title: string;
   icon: string;
   column_span: 1 | 2;
-  row_span: 1 | 2;
+  row_span: 1 | 2 | 3 | 4;
   data: any;
   created_at: string;
 }
@@ -67,7 +67,7 @@ export interface UpdateWidgetRequest {
   title?: string;
   icon?: string;
   column_span?: 1 | 2;
-  row_span?: 1 | 2;
+  row_span?: 1 | 2 | 3 | 4;
   data?: any;
 }
 
@@ -77,7 +77,7 @@ export interface CreateWidgetRequest {
   title: string;
   icon: string;
   column_span: 1 | 2;
-  row_span?: 1 | 2;
+  row_span?: 1 | 2 | 3 | 4;
   data: any;
 }
 

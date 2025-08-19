@@ -1,11 +1,11 @@
-import { goalsQuestionTemplate, type Question } from "@/types/financial-quiz-constants";
+import { goalsQuestionTemplate, type FinancialProfileQuestion } from "@/types/financial-quiz-constants";
 
 export interface QuestionnaireTemplate {
   id: string;
   goal_type: GoalType;
   template_name: string;
   description: string;
-  questions: Question[];  
+  questions: FinancialProfileQuestion[];  
   created_at?: string;
   updated_at?: string;
 }

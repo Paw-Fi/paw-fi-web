@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Header } from '../Header';
+import { Header } from '../index/header';
 
 interface PageLayoutProps {
   children: ReactNode;

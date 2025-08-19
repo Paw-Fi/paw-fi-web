@@ -33,6 +33,18 @@ export interface DashboardTemplate {
   updated_at: string;
 }
 
+export interface DashboardTemplateWidget {
+  id: string;
+  template_id: string;
+  type: string;
+  title: string;
+  icon: string;
+  column_span: 1 | 2;
+  row_span: 1 | 2 | 3 | 4;
+  data: any;
+  created_at: string;
+}
+
 // Request/Response types
 export interface CreateViewFromTemplateRequest {
   templateId: string;

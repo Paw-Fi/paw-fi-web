@@ -166,8 +166,8 @@ export const saveDashboard = createAsyncThunk(
           type: widget.type,
           icon: widget.icon,
           column_span: widget.column_span as 1 | 2,
-          row_span: widget.row_span as 1 | 2,
-          data: widget.data
+          row_span: widget.row_span as 1 | 2 | 3 | 4,
+          data: 'data' in widget ? widget.data : undefined
         }))
       });
       
@@ -288,14 +288,6 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        
-        if (action.payload === 'no_views') {
-          state.status = 'no_views';
-          state.data = [];
-          state.originalData = [];
-          state.hasInitialLoad = true;
-          return;
-        }
         
         // Handle the response with views and widgets
         if (action.payload && typeof action.payload === 'object' && 'views' in action.payload) {

@@ -447,7 +447,7 @@ export const MortgageCalculator = () => {
                 </div>
               )}
               
-              {includePMI && downPaymentPercent < 20 && (
+              {includePMI && (typeof downPaymentPercent === 'number' ? downPaymentPercent : 0) < 20 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">PMI</span>
                   <span className="font-semibold text-foreground dark:text-dark-foreground">{formatCurrency(mortgageDetails.monthlyPMI)}</span>
@@ -467,7 +467,7 @@ export const MortgageCalculator = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground dark:text-dark-muted-foreground">Total Loan Amount</span>
-                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatCurrency(loanAmount)}</span>
+                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatCurrency(typeof loanAmount === 'number' ? loanAmount : 0)}</span>
               </div>
               
               <div className="flex justify-between">
@@ -482,7 +482,7 @@ export const MortgageCalculator = () => {
               
               <div className="flex justify-between">
                 <span className="text-muted-foreground dark:text-dark-muted-foreground">Loan Payoff Date</span>
-                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatDate(startDate, loanTerm * 12)}</span>
+                <span className="font-semibold text-foreground dark:text-dark-foreground">{formatDate(startDate, (typeof loanTerm === 'number' ? loanTerm : 0) * 12)}</span>
               </div>
             </div>
           </div>
@@ -492,7 +492,7 @@ export const MortgageCalculator = () => {
             <h3 className="text-lg font-semibold mb-3 text-foreground dark:text-dark-foreground">Total Payment Distribution</h3>
             <PieChart
               labels={["Principal", "Interest"]}
-              data={[loanAmount, mortgageDetails.totalInterestPaid]}
+              data={[typeof loanAmount === 'number' ? loanAmount : 0, mortgageDetails.totalInterestPaid]}
               title="Principal vs. Interest Paid"
             />
             <div className="flex justify-between mt-2 text-sm">
@@ -546,7 +546,7 @@ export const MortgageCalculator = () => {
               <tbody className="bg-card dark:bg-dark-card divide-y divide-subtle-border dark:divide-dark-subtle-border">
                 {/* Only show first year, then every 12th payment */}
                 {mortgageDetails.amortizationSchedule
-                  .filter(row => row.paymentNumber <= 12 || row.paymentNumber % 12 === 0 || row.paymentNumber === loanTerm * 12)
+                  .filter(row => row.paymentNumber <= 12 || row.paymentNumber % 12 === 0 || row.paymentNumber === (typeof loanTerm === 'number' ? loanTerm : 0) * 12)
                   .map((row) => (
                     <tr key={row.paymentNumber} className={row.paymentNumber % 12 === 0 ? 'bg-table-row-even dark:bg-dark-table-row-even' : 'bg-table-row-odd dark:bg-dark-table-row-odd'}>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground dark:text-dark-muted-foreground">

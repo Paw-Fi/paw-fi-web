@@ -7,10 +7,10 @@ import MatchQuestion from "@/components/learning/question-types/match-question";
 import MatrixRatingQuestion from "@/components/learning/question-types/matrix-rating-question";
 import TextInputQuestion from "@/components/learning/question-types/text-input-question";
 import { ImageChoiceQuestion } from "@/components/learning/question-types/image-choice-question";
-import type { Question } from "@/types/learning.types";
+import type { LearningQuizQuestion } from "@/types/learning.types";
 
 interface QuestionContentProps {
-  question: Question;
+  question: LearningQuizQuestion;
   countdownSeconds: number;
   onAnswer: (questionId: string, answer: any) => void;
   value: any;

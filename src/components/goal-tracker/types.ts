@@ -3,11 +3,8 @@
 
 // Re-export types from data files for compatibility
 export type { 
-  QuestionnaireTemplate, 
-  Question, 
-  QuestionOption, 
-  QuestionValidation,
-  AIModelConfig
+  QuestionnaireTemplate,
+  QuestionnaireData
 } from '@/data/questionnaire-templates';
 
 export type { 

@@ -10,7 +10,7 @@ import {
   faExclamationTriangle,
   faInfoCircle
 } from "@fortawesome/free-solid-svg-icons";
-import type { FinancialGoal } from "@/components/goal-tracker/types";
+import type { FinancialGoal } from "@/components/goal-tracker/types/goal-types";
 import { useState, useEffect, useOptimistic } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";

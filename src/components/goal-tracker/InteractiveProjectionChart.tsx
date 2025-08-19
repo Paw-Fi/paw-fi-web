@@ -80,9 +80,9 @@ export function InteractiveProjectionChart({
     const targetDateObj = new Date(targetDate);
     const monthsToTarget = Math.max(1, Math.ceil((targetDateObj.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
     
-    const labels = [];
-    const projectedData = [];
-    const targetLine = [];
+    const labels: string[] = [];
+    const projectedData: number[] = [];
+    const targetLine: number[] = [];
     
     // Generate monthly projections
     for (let i = 0; i <= monthsToTarget; i++) {

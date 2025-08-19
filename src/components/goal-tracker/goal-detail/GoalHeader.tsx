@@ -13,7 +13,7 @@ import {
   faFireFlameCurved,
   faStar
 } from "@fortawesome/free-solid-svg-icons";
-import type { FinancialGoal } from "@/components/goal-tracker/types";
+import type { FinancialGoal } from "@/components/goal-tracker/types/goal-types";
 import { useState, useEffect } from "react";
 
 interface GoalHeaderProps {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { goalsQuestionTemplate, Question } from '@/types/financial-quiz-constants';
+import { goalsQuestionTemplate, FinancialProfileQuestion } from '@/types/financial-quiz-constants';
 import { getQuestionnaireTemplate } from "@/data/questionnaire-templates";
 
 export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'custom' | 'passive_income';

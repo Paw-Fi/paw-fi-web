@@ -20,7 +20,7 @@ import type {
   GoalType, 
   QuestionnaireTemplate, 
 } from "@/data/questionnaire-templates";
-import type { ComprehensiveFinancialProfile, CategoryInfo, Question, QuestionCategory } from "@/types/financial-quiz-constants";
+import type { ComprehensiveFinancialProfile, CategoryInfo, FinancialProfileQuestion, QuestionCategory } from "@/types/financial-quiz-constants";
 import { categories as allCategories } from "@/types/financial-quiz-constants";
 
 interface QuestionnaireFlowProps {
@@ -70,7 +70,7 @@ export function QuestionnaireFlow({
 
   const simulatedProgress = useSimulatedProgress(isLoading, 350);
 
-  const questions: Question[] = useMemo(() => 
+  const questions: FinancialProfileQuestion[] = useMemo(() => 
     typeof template.questions === 'string' 
       ? JSON.parse(template.questions) 
       : template.questions, 
@@ -83,7 +83,7 @@ export function QuestionnaireFlow({
   }, [questions]);
 
   const questionsByCategory = useMemo(() => {
-    const grouped: Record<string, Question[]> = {};
+    const grouped: Record<string, FinancialProfileQuestion[]> = {};
     categories.forEach(c => grouped[c.id] = []);
     questions.forEach((question) => {
       if (grouped[question.category]) {

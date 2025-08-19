@@ -366,22 +366,6 @@ export interface IInsuranceCoverageWidget extends IBaseWidget {
 }
 export type Priority = 'low' | 'medium' | 'high';
 
-export interface IChecklistItem {
-  id: string; // (Mandatory) Unique ID for the task
-  task: string; // (Mandatory) The task description
-  isCompleted: boolean; // (Mandatory) Whether the task is completed
-  dueDate?: string; // (Optional) Optional due date (e.g., "2025-06-30")
-  priority?: Priority; // (Optional) Priority of the task
-  category?: string; // (Optional) Optional grouping within the checklist
-  notes?: string; // (Optional) Additional notes for the task
-  displayOrder?: number; // (Optional) Numeric hint for display sorting
-}
-export interface IChecklistData {
-  items: IChecklistItem[]; // (Mandatory) Array of tasks
-  showCompleted?: boolean; // (Optional) Whether to show completed tasks
-  sortBy?: 'dueDate' | 'priority' | 'alphabetical' | 'custom'; // (Optional) Sorting preference
-}
-
 export interface IChecklistWidget extends IBaseWidget {
   type: 'checklist';
   data: IChecklistData;

@@ -4,8 +4,8 @@ import { LineChart } from '../../../components/ui/line-chart';
 
 export function AutoLoanCalculator() {
   const [autoPrice, setAutoPrice] = useState<number | ''>(30000);
-  const [loanTermMonths, setLoanTermMonths] = useState<number | ''>(60);
-  const [interestRate, setInterestRate] = useState<number | ''>(5.0);
+  const [loanTermMonths, setLoanTermMonths] = useState<number>(60);
+  const [interestRate, setInterestRate] = useState<number>(5.0);
   const [cashIncentives, setCashIncentives] = useState<number | ''>(0);
   const [downPayment, setDownPayment] = useState<number | ''>(5000);
   const [tradeInValue, setTradeInValue] = useState<number | ''>(0);
@@ -168,8 +168,8 @@ export function AutoLoanCalculator() {
       <div className="mt-12">
         <AmortizationLineChart
           principal={loanAmount}
-          interestRate={interestRate}
-          months={loanTermMonths}
+          interestRate={interestRateNum}
+          months={loanTermMonthsNum}
           monthlyPayment={monthlyPayment}
         />
       </div>

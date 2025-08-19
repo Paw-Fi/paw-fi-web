@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Question, QuestionType } from '@/types/learning.types';
+import type { LearningQuizQuestion, QuestionType } from '@/types/learning.types';
 import { generateUniqueId } from '@/utils/id-generator';
 
 interface QuestionEditorProps {
-  question: Question;
-  onUpdate: (updatedQuestion: Question) => void;
+  question: LearningQuizQuestion;
+  onUpdate: (updatedQuestion: LearningQuizQuestion) => void;
 }
 
 export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
@@ -30,7 +30,7 @@ export function QuestionEditor({ question, onUpdate }: QuestionEditorProps) {
   }, [question]);
 
   const handleSave = () => {
-    const updatedQuestion: Question = {
+    const updatedQuestion: LearningQuizQuestion = {
       ...question,
       question: questionText,
       explanation,

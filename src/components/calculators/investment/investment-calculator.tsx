@@ -125,7 +125,7 @@ function ReturnRateTab() {
     const n = inputs.years * c;
     const r = rate / 100 / c;
     let balance = Number(inputs.startingAmount);
-    const schedule = [];
+    const schedule: Array<{ year: number; balance: number }> = [];
     for (let i = 1; i <= n; i++) {
       balance += Number(inputs.contribution);
       balance *= 1 + r;
@@ -204,7 +204,7 @@ function StartingAmountTab() {
     const n = inputs.years * c;
     const r = Number(inputs.rate) / 100 / c;
     let balance = start;
-    const schedule = [];
+    const schedule: Array<{ year: number; balance: number }> = [];
     for (let i = 1; i <= n; i++) {
       balance += Number(inputs.contribution);
       balance *= 1 + r;
@@ -285,7 +285,7 @@ function InvestmentLengthTab() {
     const n = Math.ceil(years * c);
     const r = Number(inputs.rate) / 100 / c;
     let balance = Number(inputs.startingAmount);
-    const schedule = [];
+    const schedule: Array<{ year: number; balance: number }> = [];
     for (let i = 1; i <= n; i++) {
       balance += Number(inputs.contribution);
       balance *= 1 + r;
@@ -536,7 +536,7 @@ function calculateAdditionalContribution(inputs: AdditionalContributionInputs): 
   let balance = inputs.startingAmount;
   let totalContrib = 0;
   let totalInterest = 0;
-  const schedule = [];
+  const schedule: Array<{ year: number; deposit: number; interest: number; endingBalance: number }> = [];
   for (let i = 1; i <= periods; i++) {
     if (inputs.contributionTiming === "beginning") balance += pmt;
     const interest = balance * rate;
@@ -907,7 +907,7 @@ function calculateEndAmount(inputs: EndAmountInputs): EndAmountResult {
   let balance = startingAmount;
   let totalContrib = 0;
   let totalInterest = 0;
-  const schedule = [];
+  const schedule: Array<{ year: number; deposit: number; interest: number; endingBalance: number }> = [];
   for (let i = 1; i <= periods; i++) {
     if (inputs.contributionTiming === "beginning") balance += contribPerPeriod;
     const interest = balance * rate;
@@ -1106,7 +1106,7 @@ function EndAmountBarChart({ schedule }: { schedule: EndAmountResult["schedule"]
   const barSpacing = chartWidth / schedule.length * 0.3;
   
   // Generate grid lines
-  const gridLines = [];
+  const gridLines: React.ReactElement[] = [];
   const numGridLines = 5;
   for (let i = 0; i <= numGridLines; i++) {
     const y = padding.top + chartHeight - (i / numGridLines) * chartHeight;
@@ -1126,7 +1126,7 @@ function EndAmountBarChart({ schedule }: { schedule: EndAmountResult["schedule"]
   }
   
   // Generate Y-axis labels
-  const yAxisLabels = [];
+  const yAxisLabels: React.ReactElement[] = [];
   for (let i = 0; i <= numGridLines; i++) {
     const y = padding.top + chartHeight - (i / numGridLines) * chartHeight;
     const value = (i / numGridLines) * maxY;

@@ -142,7 +142,10 @@ export function PieChartForm({ data: widgetData, onDataChange }: WidgetFormProps
   const handleShowLegendChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onDataChange({
       ...widgetData,
-      showLegend: e.target.checked
+      data: {
+        ...chartData,
+        showLegend: e.target.checked
+      }
     });
   };
 
@@ -150,7 +153,10 @@ export function PieChartForm({ data: widgetData, onDataChange }: WidgetFormProps
     const height = parseInt(e.target.value, 10);
     onDataChange({
       ...widgetData,
-      height: isNaN(height) ? undefined : height
+      data: {
+        ...chartData,
+        height: isNaN(height) ? undefined : height
+      }
     });
   };
 
@@ -164,7 +170,7 @@ export function PieChartForm({ data: widgetData, onDataChange }: WidgetFormProps
               id="show-legend"
               type="checkbox"
               className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              checked={widgetData.showLegend ?? true}
+              checked={chartData.showLegend ?? true}
               onChange={handleShowLegendChange}
             />
             <label htmlFor="show-legend" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
@@ -180,7 +186,7 @@ export function PieChartForm({ data: widgetData, onDataChange }: WidgetFormProps
             type="number"
             min={100}
             step={10}
-            value={widgetData.height || ''}
+            value={chartData.height || ''}
             onChange={handleHeightChange}
             placeholder="Auto"
           />

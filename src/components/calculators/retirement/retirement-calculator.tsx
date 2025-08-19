@@ -22,7 +22,14 @@ function getRetirementProjection(
   const years = Math.max(0, retirementAge - currentAge);
   let balance = retirementSavings;
   let income = currentIncome;
-  const data = [];
+  const data: Array<{
+    year: number;
+    age: number;
+    startBalance: number;
+    contribution: number;
+    growth: number;
+    endBalance: number;
+  }> = [];
   for (let i = 0; i <= years; i++) {
     const contribution = income * (futureSavingsPct / 100);
     const growth = balance * (investmentReturn / 100);
@@ -190,12 +197,12 @@ export function RetirementCalculator() {
   const [futureSavingsPct, setFutureSavingsPct] = useState<number | ''>(10);
 
   const data = getRetirementProjection(
-    currentAge,
-    retirementAge,
-    currentIncome,
-    investmentReturn,
-    retirementSavings,
-    futureSavingsPct
+    typeof currentAge === 'number' ? currentAge : 0,
+    typeof retirementAge === 'number' ? retirementAge : 0,
+    typeof currentIncome === 'number' ? currentIncome : 0,
+    typeof investmentReturn === 'number' ? investmentReturn : 0,
+    typeof retirementSavings === 'number' ? retirementSavings : 0,
+    typeof futureSavingsPct === 'number' ? futureSavingsPct : 0
   );
 
   const chartData = {
@@ -271,27 +278,27 @@ export function RetirementCalculator() {
 
       <div className="mt-8">
         <RetirementProjectionTable
-          currentAge={currentAge}
-          retirementAge={retirementAge}
-          currentIncome={currentIncome}
-          investmentReturn={investmentReturn}
-          retirementSavings={retirementSavings}
-          futureSavingsPct={futureSavingsPct}
+          currentAge={typeof currentAge === 'number' ? currentAge : 0}
+          retirementAge={typeof retirementAge === 'number' ? retirementAge : 0}
+          currentIncome={typeof currentIncome === 'number' ? currentIncome : 0}
+          investmentReturn={typeof investmentReturn === 'number' ? investmentReturn : 0}
+          retirementSavings={typeof retirementSavings === 'number' ? retirementSavings : 0}
+          futureSavingsPct={typeof futureSavingsPct === 'number' ? futureSavingsPct : 0}
         />
       </div>
 
       <div className="mt-8">
         <RetirementResults
-          currentAge={currentAge}
-          retirementAge={retirementAge}
-          lifeExpectancy={lifeExpectancy}
-          currentIncome={currentIncome}
-          incomeIncrease={incomeIncrease}
-          incomeNeededPct={incomeNeededPct}
-          investmentReturn={investmentReturn}
-          otherIncome={otherIncome}
-          retirementSavings={retirementSavings}
-          futureSavingsPct={futureSavingsPct}
+          currentAge={typeof currentAge === 'number' ? currentAge : 0}
+          retirementAge={typeof retirementAge === 'number' ? retirementAge : 0}
+          lifeExpectancy={typeof lifeExpectancy === 'number' ? lifeExpectancy : 0}
+          currentIncome={typeof currentIncome === 'number' ? currentIncome : 0}
+          incomeIncrease={typeof incomeIncrease === 'number' ? incomeIncrease : 0}
+          incomeNeededPct={typeof incomeNeededPct === 'number' ? incomeNeededPct : 0}
+          investmentReturn={typeof investmentReturn === 'number' ? investmentReturn : 0}
+          otherIncome={typeof otherIncome === 'number' ? otherIncome : 0}
+          retirementSavings={typeof retirementSavings === 'number' ? retirementSavings : 0}
+          futureSavingsPct={typeof futureSavingsPct === 'number' ? futureSavingsPct : 0}
         />
       </div>
     </div>

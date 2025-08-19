@@ -83,7 +83,6 @@ export function EditGoalModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Goal"
-      size="medium"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Title */}

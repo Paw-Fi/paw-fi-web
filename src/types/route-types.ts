@@ -59,21 +59,24 @@ declare module '@tanstack/react-router' {
     }
     '/dashboard/learning/$courseId/lesson/$lessonId': {
       parentRoute: RegisteredRoutes['/dashboard/learning/$courseId']
-    }
-    '/dashboard/essentials': {
+    }   
+    '/dashboard/timeline': {
       parentRoute: RegisteredRoutes['/dashboard']
-    }
-    '/dashboard/learning/$courseId': {
-      parentRoute: RegisteredRoutes['/dashboard/essentials']
-    }
-    '/dashboard/learning/$courseId/lesson/$lessonId': {
-      parentRoute: RegisteredRoutes['/dashboard/learning/$courseId']
     }
     '/blogs/$blogId': {
       parentRoute: RegisteredRoutes['/']
     }
     '/author/import': {
       parentRoute: RegisteredRoutes['/']
+    }
+    '/author/course/$courseId': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/signup': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/dashboard/tracker/$goalId': {
+      parentRoute: RegisteredRoutes['/dashboard']
     }
   }
 }

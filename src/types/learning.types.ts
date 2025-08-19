@@ -1,10 +1,23 @@
 // Learning system types
 
 // Types of content blocks for structured content
-export type ContentBlockType = 'paragraph' | 'bulletList' | 'numberedList' | 'scenario';
+export type ContentBlockType =
+  | "paragraph"
+  | "bulletList"
+  | "numberedList"
+  | "scenario";
 
 // Types of questions - using string to be compatible with JSON data
-export type QuestionType = 'mcq' | 'scq' | 'sort-order' | 'sort-categories' | 'match' | 'matrix-rating' | 'text-input' | 'image-choice' | string;
+export type QuestionType =
+  | "mcq"
+  | "scq"
+  | "sort-order"
+  | "sort-categories"
+  | "match"
+  | "matrix-rating"
+  | "text-input"
+  | "image-choice"
+  | string;
 
 // Base item for any question option
 export type Item = {
@@ -25,12 +38,12 @@ export type ChoiceOption = Item & {
 
 // Option for image choice questions
 export type ImageChoiceOption = ChoiceOption & {
-  imageUrl?: string;  // URL to an image
+  imageUrl?: string; // URL to an image
   imagePrompt?: string; // Mermaid diagram code
   caption?: string; // Optional text to display under the image
 };
 
-// Rating option for matrix rating questions 
+// Rating option for matrix rating questions
 export type RatingOption = Item & {
   color?: string; // Optional color for styling (e.g., 'green', 'yellow', 'red')
 };
@@ -70,17 +83,17 @@ export type BaseQuestion = {
   caption?: string;
 };
 
-export type Tutorial={
+export type Tutorial = {
   id: string;
   tutorial_id: string;
   lesson_id: string;
   title: string;
   content: string;
   key_points: string[];
-}
+};
 
 // A fully flexible Question type to accommodate JSON data
-export interface Question {
+export interface LearningQuizQuestion {
   id: string;
   question_id: string;
   type: QuestionType;
@@ -115,41 +128,47 @@ export interface Question {
 }
 
 // Type aliases for cleaner code - all based on the flexible Question type
-export type ChoiceQuestion = Question;
-export type SortQuestion = Question;
-export type SortCategoriesQuestion = Question;
-export type MatchQuestion = Question;
-export type MatrixRatingQuestion = Question;
-export type TextInputQuestion = Question;
-export type ImageChoiceQuestion = Question;
+export type ChoiceQuestion = LearningQuizQuestion;
+export type SortQuestion = LearningQuizQuestion;
+export type SortCategoriesQuestion = LearningQuizQuestion;
+export type MatchQuestion = LearningQuizQuestion;
+export type MatrixRatingQuestion = LearningQuizQuestion;
+export type TextInputQuestion = LearningQuizQuestion;
+export type ImageChoiceQuestion = LearningQuizQuestion;
 
 // Common type guards to check question types
-export function isChoiceQuestion(question: Question): question is Question {
-  return question.type === 'mcq' || question.type === 'scq';
+export function isChoiceQuestion(question: LearningQuizQuestion): question is LearningQuizQuestion {
+  return question.type === "mcq" || question.type === "scq";
 }
 
-export function isSortQuestion(question: Question): question is Question {
-  return question.type === 'sort-order';
+export function isSortQuestion(question: LearningQuizQuestion): question is LearningQuizQuestion {
+  return question.type === "sort-order";
 }
 
-export function isSortCategoriesQuestion(question: Question): question is Question {
-  return question.type === 'sort-categories';
+export function isSortCategoriesQuestion(
+  question: LearningQuizQuestion,
+): question is LearningQuizQuestion {
+  return question.type === "sort-categories";
 }
 
-export function isMatchQuestion(question: Question): question is Question {
-  return question.type === 'match';
+export function isMatchQuestion(question: LearningQuizQuestion): question is LearningQuizQuestion {
+  return question.type === "match";
 }
 
-export function isMatrixRatingQuestion(question: Question): question is Question {
-  return question.type === 'matrix-rating';
+export function isMatrixRatingQuestion(
+  question: LearningQuizQuestion,
+): question is LearningQuizQuestion {
+  return question.type === "matrix-rating";
 }
 
-export function isTextInputQuestion(question: Question): question is Question {
-  return question.type === 'text-input';
+export function isTextInputQuestion(question: LearningQuizQuestion): question is LearningQuizQuestion {
+  return question.type === "text-input";
 }
 
-export function isImageChoiceQuestion(question: Question): question is Question {
-  return question.type === 'image-choice';
+export function isImageChoiceQuestion(
+  question: LearningQuizQuestion,
+): question is LearningQuizQuestion {
+  return question.type === "image-choice";
 }
 
 // Lesson structure
@@ -162,7 +181,7 @@ export interface Lesson {
   unlocked: boolean;
   icon?: string;
   tutorials: Tutorial[];
-  questions: Question[];
+  questions: LearningQuizQuestion[];
   content_blocks?: ContentBlock[] | any[];
   help_tips?: string;
 }
@@ -195,7 +214,7 @@ export interface CommunityStats {
 }
 
 export interface CommunityMetadata {
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
   duration: string;
   lessons: number;
   category: string;
@@ -222,7 +241,13 @@ export interface CommunityCourse {
   trending: boolean;
 }
 
-export type SortOption = 'trending' | 'recent' | 'popular' | 'highest-rated' | 'most-views' | 'most-likes';
+export type SortOption =
+  | "trending"
+  | "recent"
+  | "popular"
+  | "highest-rated"
+  | "most-views"
+  | "most-likes";
 
 export interface SortOptionConfig {
   value: SortOption;

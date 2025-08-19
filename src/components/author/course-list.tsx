@@ -29,6 +29,7 @@ export function AuthorCourseList() {
     // Initialize a new empty course
     const newCourse: Course = {
       id: newCourseId,
+      course_id: newCourseId,
       title: "Untitled Course",
       description: "Course description",
       icon: "📚",
@@ -131,7 +132,7 @@ export function AuthorCourseList() {
                     </svg>
                   </button>
                   <button
-                    onClick={(e) => handleDeleteCourse(course.id, e)}
+                    onClick={(e) => handleDeleteCourse(course.id || course.course_id, e)}
                     className="p-2 text-red-500 hover:text-red-700 transition-colors"
                     aria-label="Delete course"
                   >

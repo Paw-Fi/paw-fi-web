@@ -1,5 +1,5 @@
 // src/data/lessons.ts
-import type { Course, Lesson, Question, ContentBlock, ContentBlockType, QuestionType } from "@/types/learning.types";
+import type { Course, Lesson, LearningQuizQuestion, ContentBlock, ContentBlockType, QuestionType } from "@/types/learning.types";
 import basicCourseDataFile from '@/data/basic-lessons.json'; // Renamed to avoid conflict with Course type
 
 // Type assertion for the imported JSON data to give it a basic structure
@@ -72,8 +72,9 @@ function transformRawContentBlock(rawBlock: RawContentBlock): ContentBlock {
 }
 
 // Helper to transform raw question from JSON
-function transformRawQuestion(rawQuestion: RawQuestionData): Question {
+function transformRawQuestion(rawQuestion: RawQuestionData): LearningQuizQuestion {
   return {
+    id: rawQuestion.id || `gen-id-${Math.random().toString(36).substr(2, 9)}`, // Ensure id exists
     question_id: rawQuestion.question_id || rawQuestion.id || `gen-qid-${Math.random().toString(36).substr(2, 9)}`, // Ensure question_id exists
     type: rawQuestion.type as QuestionType, // Assumes QuestionType includes string or JSON is compliant
     question: rawQuestion.question,

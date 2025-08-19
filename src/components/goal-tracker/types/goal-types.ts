@@ -178,7 +178,7 @@ export type {
 } from './milestone-types';
 
 export type {
-  Question,
+  FinancialProfileQuestion as Question,
   QuestionType,
   QuestionOption,
   QuestionValidation,

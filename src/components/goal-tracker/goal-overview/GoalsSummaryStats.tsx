@@ -9,7 +9,7 @@ import {
   faArrowDown,
   faMinus
 } from "@fortawesome/free-solid-svg-icons";
-import type { GoalMetrics } from "@/components/goal-tracker/types";
+import type { GoalMetrics } from "@/components/goal-tracker/types/goal-types";
 
 interface GoalsSummaryStatsProps {
   metrics?: GoalMetrics;

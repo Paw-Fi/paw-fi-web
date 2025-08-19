@@ -4,7 +4,6 @@ export const MOCK_AI_RESPONSE: GoalCreationResult = {
     "success": true,
     "goal": {
         "id": "148ac48f-5e60-4be2-a089-8f434a844c7a",
-        "user_id": "77b1fd0b-f477-4a23-9d4e-aa632fd9efba",
         "title": "Achieve Homeownership: Your $400,000 Dream Home in 5 Years!",
         "description": "Your goal is to purchase a $400,000 home with a 10% down payment within 5 years. This includes not only the down payment but also estimated closing costs and moving expenses, ensuring you are fully prepared for all upfront financial commitments.",
         "goal_type": "home_buying",

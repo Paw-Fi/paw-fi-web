@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lesson, Question, QuestionType } from '@/types/learning.types';
+import { Lesson, LearningQuizQuestion, QuestionType } from '@/types/learning.types';
 import { generateUniqueId } from '@/utils/id-generator';
 import { QuestionEditor } from './question-editor';
 import { QuestionTypeSelector } from './question-type-selector';
@@ -16,7 +16,7 @@ export function LessonEditor({ lesson, onUpdate }: LessonEditorProps) {
   const [description, setDescription] = useState(lesson.description);
   const [xp, setXp] = useState(lesson.xp);
   const [icon, setIcon] = useState(lesson.icon || '📝');
-  const [questions, setQuestions] = useState<Question[]>(lesson.questions);
+  const [questions, setQuestions] = useState<LearningQuizQuestion[]>(lesson.questions);
   const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
 
@@ -42,8 +42,9 @@ export function LessonEditor({ lesson, onUpdate }: LessonEditorProps) {
   };
 
   const handleAddQuestion = (questionType: QuestionType) => {
-    const newQuestion: Question = {
+    const newQuestion: LearningQuizQuestion = {
       id: generateUniqueId(),
+      question_id: generateUniqueId(),
       type: questionType,
       question: 'New Question',
       explanation: 'Explanation of the correct answer',
@@ -75,7 +76,7 @@ export function LessonEditor({ lesson, onUpdate }: LessonEditorProps) {
     setIsAddingQuestion(false);
   };
 
-  const handleUpdateQuestion = (updatedQuestion: Question) => {
+  const handleUpdateQuestion = (updatedQuestion: LearningQuizQuestion) => {
     const updatedQuestions = questions.map(q => 
       q.id === updatedQuestion.id ? updatedQuestion : q
     );

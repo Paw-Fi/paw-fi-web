@@ -48,12 +48,17 @@ export interface QuestionValidation {
 export interface ConditionalLogic {
   show_if: {
     question_id: string;
-    operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+    operator:
+      | "equals"
+      | "not_equals"
+      | "greater_than"
+      | "less_than"
+      | "contains";
     value: any;
   }[];
 }
 
-export interface Question {
+export interface FinancialProfileQuestion {
   id: keyof ComprehensiveFinancialProfile;
   type: QuestionType;
   category: QuestionCategory;
@@ -74,8 +79,7 @@ export interface Question {
 }
 
 // Backwards compatibility alias
-export type QuizQuestion = Question;
-
+export type QuizQuestion = FinancialProfileQuestion;
 
 export interface CategoryInfo {
   id: QuestionCategory;
@@ -89,18 +93,22 @@ export interface ComprehensiveFinancialProfile {
   // Personal Information
   current_age: number;
   dependents: number;
-  marital_status: 'single' | 'married' | 'divorced' | 'widowed';
+  marital_status: "single" | "married" | "divorced" | "widowed";
 
   // Income Details
   gross_monthly_income: number;
   net_monthly_income: number;
-  income_stability: 'very_stable' | 'stable' | 'somewhat_unstable' | 'very_unstable';
+  income_stability:
+    | "very_stable"
+    | "stable"
+    | "somewhat_unstable"
+    | "very_unstable";
   additional_income_sources: string[];
   annual_bonus: number;
 
   // Detailed Expenses
   housing_cost: number;
-  housing_type: 'rent' | 'mortgage' | 'owned_outright' | 'living_with_family';
+  housing_type: "rent" | "mortgage" | "owned_outright" | "living_with_family";
   food_expenses: number;
   transportation_expenses: number;
   healthcare_expenses: number;
@@ -138,29 +146,38 @@ export interface ComprehensiveFinancialProfile {
   major_purchase_timeline: string;
 
   // Risk Profile & Investment
-  risk_tolerance: 'conservative' | 'moderate' | 'aggressive' | 'very_aggressive';
-  investment_experience: 'none' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  investment_timeline: 'short' | 'medium' | 'long';
+  risk_tolerance:
+    | "conservative"
+    | "moderate"
+    | "aggressive"
+    | "very_aggressive";
+  investment_experience:
+    | "none"
+    | "beginner"
+    | "intermediate"
+    | "advanced"
+    | "expert";
+  investment_timeline: "short" | "medium" | "long";
   investment_priorities: string[];
 
   // Financial Behavior
   savings_rate: number;
-  spending_tracking: 'never' | 'occasionally' | 'monthly' | 'weekly' | 'daily';
-  budget_adherence: 'never' | 'sometimes' | 'usually' | 'always';
+  spending_tracking: "never" | "occasionally" | "monthly" | "weekly" | "daily";
+  budget_adherence: "never" | "sometimes" | "usually" | "always";
   financial_stress_level: number; // 1-10 scale
 }
 
 export const defaultProfile: ComprehensiveFinancialProfile = {
   current_age: 0,
   dependents: 0,
-  marital_status: 'single',
+  marital_status: "single",
   gross_monthly_income: 0,
   net_monthly_income: 0,
-  income_stability: 'stable',
+  income_stability: "stable",
   additional_income_sources: [],
   annual_bonus: 0,
   housing_cost: 0,
-  housing_type: 'rent',
+  housing_type: "rent",
   food_expenses: 0,
   transportation_expenses: 0,
   healthcare_expenses: 0,
@@ -189,109 +206,121 @@ export const defaultProfile: ComprehensiveFinancialProfile = {
   short_term_goals: [],
   medium_term_goals: [],
   long_term_goals: [],
-  major_purchase_timeline: '',
-  risk_tolerance: 'moderate',
-  investment_experience: 'beginner',
-  investment_timeline: 'long',
+  major_purchase_timeline: "",
+  risk_tolerance: "moderate",
+  investment_experience: "beginner",
+  investment_timeline: "long",
   investment_priorities: [],
   savings_rate: 0,
-  spending_tracking: 'occasionally',
-  budget_adherence: 'sometimes',
+  spending_tracking: "occasionally",
+  budget_adherence: "sometimes",
   financial_stress_level: 5,
 };
 
 // Option constants
 export const maritalStatusOptions: QuestionOption[] = [
-  { value: 'single', label: 'Single' },
-  { value: 'married', label: 'Married' },
-  { value: 'divorced', label: 'Divorced' },
-  { value: 'widowed', label: 'Widowed' },
+  { value: "single", label: "Single" },
+  { value: "married", label: "Married" },
+  { value: "divorced", label: "Divorced" },
+  { value: "widowed", label: "Widowed" },
 ];
 
 export const incomeStabilityOptions: QuestionOption[] = [
-  { value: 'very_stable', label: 'Very Stable (salaried, guaranteed)' },
-  { value: 'stable', label: 'Stable (regular but may fluctuate)' },
-  { value: 'somewhat_unstable', label: 'Somewhat Unstable (commission, gig work)' },
-  { value: 'very_unstable', label: 'Very Unstable (seasonal, irregular)' },
+  { value: "very_stable", label: "Very Stable (salaried, guaranteed)" },
+  { value: "stable", label: "Stable (regular but may fluctuate)" },
+  {
+    value: "somewhat_unstable",
+    label: "Somewhat Unstable (commission, gig work)",
+  },
+  { value: "very_unstable", label: "Very Unstable (seasonal, irregular)" },
 ];
 
 export const additionalIncomeOptions: QuestionOption[] = [
-  { value: 'rental_income', label: 'Rental Income' },
-  { value: 'investment_dividends', label: 'Investment Dividends' },
-  { value: 'freelance_work', label: 'Freelance Work' },
-  { value: 'side_business', label: 'Side Business' },
-  { value: 'government_benefits', label: 'Government Benefits' },
-  { value: 'alimony', label: 'Alimony/Child Support' },
+  { value: "rental_income", label: "Rental Income" },
+  { value: "investment_dividends", label: "Investment Dividends" },
+  { value: "freelance_work", label: "Freelance Work" },
+  { value: "side_business", label: "Side Business" },
+  { value: "government_benefits", label: "Government Benefits" },
+  { value: "alimony", label: "Alimony/Child Support" },
 ];
 
 export const housingTypeOptions: QuestionOption[] = [
-  { value: 'rent', label: 'Renting' },
-  { value: 'mortgage', label: 'Own with Mortgage' },
-  { value: 'owned_outright', label: 'Own Outright' },
-  { value: 'living_with_family', label: 'Living with Family' },
+  { value: "rent", label: "Renting" },
+  { value: "mortgage", label: "Own with Mortgage" },
+  { value: "owned_outright", label: "Own Outright" },
+  { value: "living_with_family", label: "Living with Family" },
 ];
 
 export const shortTermGoalOptions: QuestionOption[] = [
-  { value: 'emergency_fund', label: 'Build Emergency Fund' },
-  { value: 'vacation', label: 'Plan a Vacation' },
-  { value: 'car_purchase', label: 'Buy a Car' },
-  { value: 'debt_payoff', label: 'Pay Off Debt' },
-  { value: 'home_down_payment', label: 'Save for Home Down Payment' },
+  { value: "emergency_fund", label: "Build Emergency Fund" },
+  { value: "vacation", label: "Plan a Vacation" },
+  { value: "car_purchase", label: "Buy a Car" },
+  { value: "debt_payoff", label: "Pay Off Debt" },
+  { value: "home_down_payment", label: "Save for Home Down Payment" },
 ];
 
 export const mediumTermGoalOptions: QuestionOption[] = [
-  { value: 'home_purchase', label: 'Buy a Home' },
-  { value: 'career_change', label: 'Career Change/Education' },
-  { value: 'start_business', label: 'Start a Business' },
-  { value: 'major_renovation', label: 'Major Home Renovation' },
-  { value: 'children_education', label: 'Children\'s Education Fund' },
+  { value: "home_purchase", label: "Buy a Home" },
+  { value: "career_change", label: "Career Change/Education" },
+  { value: "start_business", label: "Start a Business" },
+  { value: "major_renovation", label: "Major Home Renovation" },
+  { value: "children_education", label: "Children's Education Fund" },
 ];
 
 export const longTermGoalOptions: QuestionOption[] = [
-  { value: 'comfortable_retirement', label: 'Comfortable Retirement' },
-  { value: 'early_retirement', label: 'Early Retirement (FIRE)' },
-  { value: 'legacy_wealth', label: 'Build Legacy Wealth' },
-  { value: 'charity_giving', label: 'Major Charitable Giving' },
-  { value: 'multiple_properties', label: 'Own Multiple Properties' },
+  { value: "comfortable_retirement", label: "Comfortable Retirement" },
+  { value: "early_retirement", label: "Early Retirement (FIRE)" },
+  { value: "legacy_wealth", label: "Build Legacy Wealth" },
+  { value: "charity_giving", label: "Major Charitable Giving" },
+  { value: "multiple_properties", label: "Own Multiple Properties" },
 ];
 
 export const riskToleranceOptions: QuestionOption[] = [
-  { value: 'conservative', label: 'Conservative - Prefer stability over returns' },
-  { value: 'moderate', label: 'Moderate - Balanced approach' },
-  { value: 'aggressive', label: 'Aggressive - Higher risk for higher returns' },
-  { value: 'very_aggressive', label: 'Very Aggressive - Maximum growth potential' },
+  {
+    value: "conservative",
+    label: "Conservative - Prefer stability over returns",
+  },
+  { value: "moderate", label: "Moderate - Balanced approach" },
+  { value: "aggressive", label: "Aggressive - Higher risk for higher returns" },
+  {
+    value: "very_aggressive",
+    label: "Very Aggressive - Maximum growth potential",
+  },
 ];
 
 export const investmentExperienceOptions: QuestionOption[] = [
-  { value: 'none', label: 'None - Never invested before' },
-  { value: 'beginner', label: 'Beginner - Basic understanding' },
-  { value: 'intermediate', label: 'Intermediate - Some experience' },
-  { value: 'advanced', label: 'Advanced - Comfortable with complex investments' },
-  { value: 'expert', label: 'Expert - Professional knowledge' },
+  { value: "none", label: "None - Never invested before" },
+  { value: "beginner", label: "Beginner - Basic understanding" },
+  { value: "intermediate", label: "Intermediate - Some experience" },
+  {
+    value: "advanced",
+    label: "Advanced - Comfortable with complex investments",
+  },
+  { value: "expert", label: "Expert - Professional knowledge" },
 ];
 
 export const investmentPriorityOptions: QuestionOption[] = [
-  { value: 'growth', label: 'Long-term Growth' },
-  { value: 'income', label: 'Regular Income/Dividends' },
-  { value: 'stability', label: 'Capital Preservation' },
-  { value: 'tax_efficiency', label: 'Tax Efficiency' },
-  { value: 'liquidity', label: 'Easy Access to Funds' },
-  { value: 'diversification', label: 'Risk Diversification' },
+  { value: "growth", label: "Long-term Growth" },
+  { value: "income", label: "Regular Income/Dividends" },
+  { value: "stability", label: "Capital Preservation" },
+  { value: "tax_efficiency", label: "Tax Efficiency" },
+  { value: "liquidity", label: "Easy Access to Funds" },
+  { value: "diversification", label: "Risk Diversification" },
 ];
 
 export const spendingTrackingOptions: QuestionOption[] = [
-  { value: 'never', label: 'Never track spending' },
-  { value: 'occasionally', label: 'Check occasionally' },
-  { value: 'monthly', label: 'Review monthly' },
-  { value: 'weekly', label: 'Track weekly' },
-  { value: 'daily', label: 'Track daily' },
+  { value: "never", label: "Never track spending" },
+  { value: "occasionally", label: "Check occasionally" },
+  { value: "monthly", label: "Review monthly" },
+  { value: "weekly", label: "Track weekly" },
+  { value: "daily", label: "Track daily" },
 ];
 
 export const budgetAdherenceOptions: QuestionOption[] = [
-  { value: 'never', label: 'Don\'t follow a budget' },
-  { value: 'sometimes', label: 'Try but often overspend' },
-  { value: 'usually', label: 'Usually stick to budget' },
-  { value: 'always', label: 'Strictly follow budget' },
+  { value: "never", label: "Don't follow a budget" },
+  { value: "sometimes", label: "Try but often overspend" },
+  { value: "usually", label: "Usually stick to budget" },
+  { value: "always", label: "Strictly follow budget" },
 ];
 
 export const investmentTimelineOptions: QuestionOption[] = [
@@ -308,17 +337,17 @@ export interface DebtDetail {
 }
 
 export const debtTypes = [
-  { value: 'credit-card', label: 'Credit Card' },
-  { value: 'student-loan', label: 'Student Loan' },
-  { value: 'personal-loan', label: 'Personal Loan' },
-  { value: 'auto-loan', label: 'Auto Loan' },
-  { value: 'mortgage', label: 'Mortgage' },
-  { value: 'medical-debt', label: 'Medical Debt' },
-  { value: 'other', label: 'Other' },
+  { value: "credit-card", label: "Credit Card" },
+  { value: "student-loan", label: "Student Loan" },
+  { value: "personal-loan", label: "Personal Loan" },
+  { value: "auto-loan", label: "Auto Loan" },
+  { value: "mortgage", label: "Mortgage" },
+  { value: "medical-debt", label: "Medical Debt" },
+  { value: "other", label: "Other" },
 ];
 
 // Category information
-export const goalsQuestionTemplate: Question[] = [
+export const goalsQuestionTemplate: FinancialProfileQuestion[] = [
   // Personal Information
   {
     id: "current_age",
@@ -779,5 +808,5 @@ export const categories: CategoryInfo[] = [
     title: "Goal Specifics",
     description: "Questions related to your specific financial goal.",
     color: "bg-yellow-100 text-yellow-600",
-  }
+  },
 ];

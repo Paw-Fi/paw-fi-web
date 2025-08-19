@@ -1,12 +1,12 @@
 "use client";
 
-import type { Question } from "@/types/learning.types";
+import type { LearningQuizQuestion } from "@/types/learning.types";
 
 
 /**
  * Checks if all answers in a lesson are correct
  */
-export function areAllAnswersCorrect(questions: Question[], answers: Record<string, any>): boolean {
+export function areAllAnswersCorrect(questions: LearningQuizQuestion[], answers: Record<string, any>): boolean {
   // Loop through all questions and verify answers
   return questions.every((question) => {
     const userAnswer = answers[question.id];
@@ -24,7 +24,7 @@ export function areAllAnswersCorrect(questions: Question[], answers: Record<stri
 /**
  * Checks if a specific answer to a question is correct
  */
-export function isAnswerCorrect(question: Question, answer: any): boolean {
+export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): boolean {
   // If no answer, it's incorrect
   if (answer === undefined || answer === null) {
     return false;
@@ -226,7 +226,7 @@ export function isAnswerCorrect(question: Question, answer: any): boolean {
 /**
  * Checks if the current question has been answered
  */
-export function isCurrentQuestionAnswered(currentQuestion: Question, answer: any): boolean {
+export function isCurrentQuestionAnswered(currentQuestion: LearningQuizQuestion, answer: any): boolean {
   // If no answer yet, question is not answered
   if (!answer) return false;
 

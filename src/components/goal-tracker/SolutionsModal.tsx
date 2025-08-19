@@ -116,7 +116,6 @@ export function SolutionsModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Savings Gap Solutions"
-      size="large"
     >
       <div className="p-6">
         {/* Header */}

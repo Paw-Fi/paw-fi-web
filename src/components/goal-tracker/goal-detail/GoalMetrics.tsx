@@ -9,7 +9,7 @@ import {
   faExclamationTriangle,
   faCheckCircle
 } from "@fortawesome/free-solid-svg-icons";
-import type { FinancialGoal, GoalMilestone } from "@/components/goal-tracker/types";
+import type { FinancialGoal, GoalMilestone } from "@/components/goal-tracker/types/goal-types";
 import { useState, useMemo } from "react";
 
 interface GoalMetricsProps {

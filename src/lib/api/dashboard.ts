@@ -362,7 +362,7 @@ export function convertWidgetToDashboardWidget(
     icon: widget.icon,
     column_span: widget.column_span,
     row_span: rowSpan,
-    data: widget.data,
+    data: 'data' in widget ? widget.data : undefined,
   };
 }
 

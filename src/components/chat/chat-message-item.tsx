@@ -67,7 +67,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
       />
        </div>
       ) : (
-        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName} className="size-10" /> : iconContainer("size-6")
+        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName || "Agent"} className="size-10" /> : iconContainer("size-6")
       )
      }
     </div>

@@ -1,9 +1,10 @@
-import type { Question } from "@/types/learning.types";
+import type { LearningQuizQuestion } from "@/types/learning.types";
 
 // Define all Chat questions
-export const questions: Question[] = [
+export const questions: LearningQuizQuestion[] = [
     {
       id: 'investingExperience',
+      question_id: 'investingExperience',
       type: 'scq',
       question: "What's your experience with investing?",
       explanation: "This helps me tailor content to your needs.",
@@ -30,6 +31,7 @@ export const questions: Question[] = [
     },
     {
       id: 'financialGoals',
+      question_id: 'financialGoals',
       type: 'mcq',
       question: "What are your financial goals?",
       explanation: "Select all that apply to your situation.",
@@ -49,6 +51,7 @@ export const questions: Question[] = [
     },
     {
       id: 'monthlySavings',
+      question_id: 'monthlySavings',
       type: 'text-input',
       question: "How much can you save monthly?",
       explanation: "Even small amounts add up over time! This helps me suggest realistic goals.",

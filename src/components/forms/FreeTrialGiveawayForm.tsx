@@ -345,7 +345,7 @@ export function FreeTrialGiveawayForm() {
                 <MultiSelectDropdown
                   options={financialGoalOptions}
                   selectedValues={formData.financialGoals}
-                  onChange={(value) => handleMultiSelectChange(value, 'financialGoals', 2)}
+                  onChange={(value) => handleMultiSelectChange(value, 'financialGoals')}
                   placeholder="Select your financial goals"
                   label="What are your top financial goals right now?"
                 />
@@ -356,7 +356,7 @@ export function FreeTrialGiveawayForm() {
                 <MultiSelectDropdown
                   options={featureOptions}
                   selectedValues={formData.interestedFeatures}
-                  onChange={(value) => handleMultiSelectChange(value, 'interestedFeatures', 2)}
+                  onChange={(value) => handleMultiSelectChange(value, 'interestedFeatures')}
                   placeholder="Select features you're excited about"
                   label="Which Moneko features are you most excited about?"
                 />

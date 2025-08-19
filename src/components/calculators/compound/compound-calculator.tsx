@@ -50,7 +50,13 @@ const CompoundCalculator = () => {
     const periodicContribution = annualContributionNum / periods;
 
     // Store yearly data for chart
-    const yearlyData = [];
+    const yearlyData: Array<{
+      year: number;
+      totalAmount: number;
+      totalContributions: number;
+      yearlyInterest: number;
+      totalInterest: number;
+    }> = [];
 
     for (let period = 1; period <= totalPeriods; period++) {
       // Add periodic contribution

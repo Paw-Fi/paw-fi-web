@@ -70,8 +70,9 @@ export function getEssentialCourses(): Promise<Course[]> {
         tutorial_id: `tutorial-${index}`,
         lesson_id: lesson.lesson_id
       })) as Tutorial[],
-      questions: lesson.questions.map(question => ({
+      questions: lesson.questions.map((question, qIndex) => ({
         ...question,
+        id: question.question_id || `question-${lesson.lesson_id}-${qIndex}`, // Ensure id field is present
         // Transform content_blocks to match ContentBlock type if they exist
         content_blocks: question.content_blocks ? 
           question.content_blocks.map(block => ({

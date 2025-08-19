@@ -16,16 +16,22 @@ interface SavingGoalsResult {
 }
 
 function calculateRequiredContribution(inputs: SavingGoalsInputs): SavingGoalsResult {
+  // Convert inputs to numbers
+  const targetAmount = typeof inputs.targetAmount === 'number' ? inputs.targetAmount : 0;
+  const currentSavings = typeof inputs.currentSavings === 'number' ? inputs.currentSavings : 0;
+  const years = typeof inputs.years === 'number' ? inputs.years : 0;
+  const returnRate = typeof inputs.returnRate === 'number' ? inputs.returnRate : 0;
+
   const compoundMap = { annually: 1, quarterly: 4, monthly: 12, daily: 365 };
   const n = compoundMap[inputs.compound];
-  const periods = inputs.years * n;
-  const rate = inputs.returnRate / 100 / n;
+  const periods = years * n;
+  const rate = returnRate / 100 / n;
   const contribPeriods = inputs.contributionFrequency === 'month' ? 12 : 1;
   // Future Value of a series formula rearranged for payment (PMT)
   // FV = PV*(1+r)^n + PMT*(((1+r)^n-1)/r)
   // Solve for PMT (required contribution)
-  const fv = inputs.targetAmount;
-  const pv = inputs.currentSavings;
+  const fv = targetAmount;
+  const pv = currentSavings;
   let requiredContribution = 0;
   if (rate === 0) {
     requiredContribution = (fv - pv) / periods;

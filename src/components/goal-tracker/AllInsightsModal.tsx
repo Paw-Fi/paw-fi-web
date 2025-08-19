@@ -285,7 +285,12 @@ export function AllInsightsModal({
   };
 
   const getInsightActions = (insight: any) => {
-    const actions = [];
+    const actions: Array<{
+      id: string;
+      label: string;
+      type: string;
+      icon: any;
+    }> = [];
     
     if (insight.actionable) {
       actions.push({

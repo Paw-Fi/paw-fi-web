@@ -291,7 +291,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
     setInlineEditingMilestone(milestone.id);
     setFormData({
       title: milestone.title,
-      description: milestone.description,
+      description: milestone.description || '',
       milestone_type: milestone.milestone_type,
       target_amount: milestone.target_amount,
       due_date: milestone.due_date,
