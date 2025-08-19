@@ -136,6 +136,7 @@ function CreateGoalPage() {
 }
 
 function GoalCreationSuccess({ result, onGoToDashboard }: { result: GoalCreationResult; onGoToDashboard: () => void; }) {
+  const navigate = useNavigate();
   return (
     <div className="text-center p-8">
       <motion.div
@@ -178,8 +179,8 @@ function GoalCreationSuccess({ result, onGoToDashboard }: { result: GoalCreation
         </p>
       </motion.div>
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.4 } }}>
-        <Button onClick={onGoToDashboard} size="lg">
-          Go to Dashboard
+        <Button onClick={() => navigate({ to: '/dashboard/tracker/$goalId', params: { goalId: result.goal.id } })} size="lg">
+          Check your goal
         </Button>
       </motion.div>
     </div>

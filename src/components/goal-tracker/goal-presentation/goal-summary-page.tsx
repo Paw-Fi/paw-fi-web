@@ -12,6 +12,7 @@ import {
 import type { GoalCreationResult } from '@/components/goal-tracker/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
 
 interface GoalSummaryPageProps {
@@ -167,6 +168,7 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
         <article className={`prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6 ${!isLoggedIn ? 'line-clamp-2' : ''}`}>
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
             components={{
               // Add proper spacing for paragraphs and other elements
               p: ({children}) => <p className="mb-4 leading-relaxed">{children}</p>,

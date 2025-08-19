@@ -400,7 +400,7 @@ serve(async (req: Request): Promise<Response> => {
         questionnaireAnswers
       ),
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('AI generation timeout after 60 seconds')), 60000)
+        setTimeout(() => reject(new Error('AI generation timeout after 600 seconds')), 600000)
       )
     ]);
 
