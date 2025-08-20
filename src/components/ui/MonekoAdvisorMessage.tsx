@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TypewriterText from './TypewriterText';
- import monekoIconGif from '@/assets/images/avatar/moneko-avatar.gif';
+ import monekoIconGif from '@/assets/images/logo/moneko-avatar.gif';
 
 export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
 

@@ -373,7 +373,7 @@ function FinancialProfileSettings() {
             <div className="text-sm text-gray-600">Monthly Net Income</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">{formatCurrency(profileData.emergency_fund + profileData.savings_account)}</div>
+            <div className="text-3xl font-bold text-blue-600">{formatCurrency(Number(profileData.emergency_fund || 0) + Number(profileData.savings_account || 0))}</div>
             <div className="text-sm text-gray-600">Total Savings</div>
           </div>
           <div className="text-center">
@@ -483,13 +483,13 @@ function FinancialProfileSettings() {
             <span className="text-sm text-gray-500">Total Monthly</span>
             <div className="font-semibold text-lg">
               {formatCurrency(
-                profileData.housing_cost +
-                profileData.food_expenses +
-                profileData.transportation_expenses +
-                profileData.healthcare_expenses +
-                profileData.insurance_expenses +
-                profileData.entertainment_expenses +
-                profileData.other_monthly_expenses
+                Number(profileData.housing_cost || 0) +
+                Number(profileData.food_expenses || 0) +
+                Number(profileData.transportation_expenses || 0) +
+                Number(profileData.healthcare_expenses || 0) +
+                Number(profileData.insurance_expenses || 0) +
+                Number(profileData.entertainment_expenses || 0) +
+                Number(profileData.other_monthly_expenses || 0)
               )}
             </div>
           </div>
@@ -535,13 +535,13 @@ function FinancialProfileSettings() {
             <span className="text-sm text-gray-500">Total Assets</span>
             <div className="font-semibold text-lg">
               {formatCurrency(
-                profileData.emergency_fund +
-                profileData.checking_account +
-                profileData.savings_account +
-                profileData.investment_accounts +
-                profileData.retirement_accounts +
-                profileData.real_estate_value +
-                profileData.other_assets
+                Number(profileData.emergency_fund || 0) +
+                Number(profileData.checking_account || 0) +
+                Number(profileData.savings_account || 0) +
+                Number(profileData.investment_accounts || 0) +
+                Number(profileData.retirement_accounts || 0) +
+                Number(profileData.real_estate_value || 0) +
+                Number(profileData.other_assets || 0)
               )}
             </div>
           </div>

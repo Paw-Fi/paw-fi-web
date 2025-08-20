@@ -20,7 +20,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { useAuth } from "@/contexts/auth-context";
 import { Modal } from "../ui/modal";
-import monekoIcon from "@assets/images/avatar/moneko.png"
+import monekoIcon from "@assets/images/logo/moneko.png"
 
 interface AIIntroComponentProps {
   className?: string;

@@ -5,8 +5,8 @@ import { OptimizedImage } from '@/components/seo/optimized-image';
 import { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLightbulb,  faTimes } from '@fortawesome/free-solid-svg-icons';
-import monekoLogo from '@/assets/images/avatar/moneko.png';
-import finniLogo from '@/assets/images/avatar/finni.png';
+import monekoLogo from '@/assets/images/logo/moneko.png';
+import finniLogo from '@/assets/images/logo/finni.png';
 
 interface ChatAgent {
   id: string;

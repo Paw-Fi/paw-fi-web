@@ -98,6 +98,8 @@ export function useFinancialHealthProfile(userId: string | undefined) {
     },
   });
 
+  console.log('Financial health profile:', profile);
+
   return {
     profile,
     isLoading,

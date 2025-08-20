@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useChatContext } from "@/contexts/chat-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
-import finniLogo from '@/assets/images/avatar/finni.png';
+import finniLogo from '@/assets/images/logo/finni.png';
 
 export function FinancialEducatorChatInterface() {
   const { user } = useAuth();

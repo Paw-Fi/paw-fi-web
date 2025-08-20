@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useChatContext } from "@/contexts/chat-context";
 import { ChatConversationDisplay } from "./chat-conversation-display";
 import { AI_ROLES } from "./ai-roles";
-import monekoLogo from "@/assets/images/avatar/moneko.png";
+import monekoLogo from "@/assets/images/logo/moneko.png";
 
 export function FinancialAdvisorChatInterface() {
   const { user } = useAuth();

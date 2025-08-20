@@ -45,7 +45,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Timeline } from "@/components/timeline/Timeline";
 import { useAIChat } from "@/contexts/ai-chat-context";
-import monekoAvatar from "@/assets/images/avatar/moneko.png";
+import monekoAvatar from "@/assets/images/logo/moneko.png";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,

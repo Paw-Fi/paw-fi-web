@@ -54,6 +54,20 @@ const RANDOM_RESPONSES = {
     "Your financial education journey awaits! I can tailor lessons specifically for your learning preferences.\n\nTo create the perfect curriculum for you, please click ``QUESTIONNAIRE`` and share your learning goals with me.",
     "I have so many great lessons to share with you, but I want to make sure they're perfectly suited to your needs.\n\nClick ``QUESTIONNAIRE`` to tell me about your learning style and goals, and I'll create a customized educational experience just for you.",
     "Ready to dive deep into financial knowledge? I can craft lessons that match exactly how you learn best.\n\nTo get started with your personalized learning journey, click ``QUESTIONNAIRE`` and complete your educational assessment."
+  ],
+  FINANCIAL_ADVISOR_PARTIAL_PROFILE: [
+    "I can see you've started your financial profile ({{completionRate}}% complete), but I need more information to provide you with the most accurate advice.\n\nPlease complete your full financial assessment by clicking ``QUESTIONNAIRE`` to unlock personalized recommendations tailored specifically for your situation.",
+    "Thanks for beginning your financial profile! You're {{completionRate}}% of the way there.\n\nTo give you the most relevant and actionable advice, I need a complete picture of your finances. Click ``QUESTIONNAIRE`` to finish your assessment and get personalized guidance.",
+    "I notice your financial profile is partially complete ({{completionRate}}%). While I can provide general advice, completing your full assessment will unlock much more personalized and effective recommendations.\n\nClick ``QUESTIONNAIRE`` to finish your profile and get advice tailored specifically to your goals and situation.",
+    "Great start on your financial profile! You've completed {{completionRate}}% so far.\n\nTo provide you with the most accurate financial strategies and goal recommendations, I need the complete picture. Please click ``QUESTIONNAIRE`` to finish your assessment.",
+    "I can see you've made progress on your financial profile ({{completionRate}}% complete). The more information you provide, the better I can help you achieve your financial goals.\n\nClick ``QUESTIONNAIRE`` to complete your assessment and unlock personalized financial strategies designed specifically for you."
+  ],
+  EDUCATOR_PARTIAL_PROFILE: [
+    "I see you've started building your learning profile ({{completionRate}}% complete)! To create the most effective educational experience for you, I'd love to know more about your learning preferences.\n\nClick ``QUESTIONNAIRE`` to complete your assessment and unlock personalized lessons designed just for you.",
+    "Thanks for beginning your educational assessment! You're {{completionRate}}% complete.\n\nTo design lessons that truly match your learning style and goals, I need a bit more information. Click ``QUESTIONNAIRE`` to finish your profile and get customized educational content.",
+    "I notice your learning profile is partially complete ({{completionRate}}%). While I can provide general financial education, completing your assessment will help me create lessons perfectly suited to how you learn best.\n\nClick ``QUESTIONNAIRE`` to finish your profile for a truly personalized educational journey.",
+    "Good progress on your learning profile! You've completed {{completionRate}}% so far.\n\nThe more I know about your learning preferences and goals, the better I can tailor my teaching approach for you. Please click ``QUESTIONNAIRE`` to complete your assessment.",
+    "I can see you've started your educational profile ({{completionRate}}% complete). Finishing your assessment will help me create engaging lessons that match your exact learning style and financial education goals.\n\nClick ``QUESTIONNAIRE`` to complete your profile and unlock your personalized learning experience."
   ]
 };
 
@@ -61,6 +75,41 @@ const RANDOM_RESPONSES = {
 function getRandomResponse(responses: string[]): string {
   if (!responses?.length) throw new Error("Empty responses array");
   return responses[Math.floor(Math.random() * responses.length)];
+}
+
+// Function to check financial profile completeness
+function checkProfileCompleteness(userProfile: any): { isComplete: boolean; isPartial: boolean; completionRate: number } {
+  if (!userProfile) {
+    return { isComplete: false, isPartial: false, completionRate: 0 };
+  }
+
+  // Define essential fields for a complete financial profile
+  const essentialFields = [
+    'current_age',
+    'marital_status', 
+    'gross_monthly_income',
+    'net_monthly_income',
+    'housing_cost',
+    'emergency_fund',
+    'savings_account',
+    'retirement_age',
+    'risk_tolerance',
+    'investment_experience'
+  ];
+
+  // Count completed essential fields
+  let completedFields = 0;
+  essentialFields.forEach(field => {
+    if (userProfile[field] !== undefined && userProfile[field] !== null && userProfile[field] !== '' && userProfile[field] !== 0) {
+      completedFields++;
+    }
+  });
+
+  const completionRate = Math.round((completedFields / essentialFields.length) * 100);
+  const isComplete = completionRate >= 80; // Consider 80%+ as complete
+  const isPartial = completionRate >= 30 && completionRate < 80; // 30-79% is partial
+
+  return { isComplete, isPartial, completionRate };
 }
 
 function validateRequestData(data: any): boolean {
@@ -282,7 +331,7 @@ serve(async (req: Request): Promise<Response> => {
     
     // Note: User message will be saved to database after AI response is generated
 
-    let aiResponse: string;
+    let aiResponse: string = "";
 
     let userActivities=null;
 
@@ -301,24 +350,54 @@ serve(async (req: Request): Promise<Response> => {
     }
   
     
-    // Check if user is authenticated but has no profile
-    if (userId && !userProfile) {
-      // Check if this is the first message by looking at conversation history
-      const isFirstMessage = !history || history.length <=1;
+    // Check if user is authenticated and handle profile completeness
+    if (userId) {
+      const profileStatus = checkProfileCompleteness(userProfile);
       
-      if (isFirstMessage) {
-        // First message - welcome message with random variation
-        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
-        {
-          aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
-        }
-        else
-        {
-          aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
-        }
-      } else {
-        // Has conversation history - encourage completing assessment with random variation
-        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+      // Check if user has no profile or incomplete profile
+      if (!userProfile || !profileStatus.isComplete) {
+        // Check if this is the first message by looking at conversation history
+        const isFirstMessage = !history || history.length <=1;
+        
+        if (!userProfile) {
+          // No profile at all
+          if (isFirstMessage) {
+            // First message - welcome message with random variation
+            if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
+            }
+            else
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
+            }
+          } else {
+            // Has conversation history - encourage completing assessment with random variation
+            if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
+            }
+            else
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
+            }
+          }
+        } else if (profileStatus.isPartial) {
+          // Partial profile - encourage completion with progress information
+          let partialResponse;
+          if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+          {
+            partialResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_PARTIAL_PROFILE);
+          }
+          else
+          {
+            partialResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_PARTIAL_PROFILE);
+          }
+          // Replace the completion rate placeholder
+          aiResponse = partialResponse.replace(/{{completionRate}}/g, profileStatus.completionRate.toString());
+        } else {
+          // Profile exists but completion rate is too low, treat as no profile
+          if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
           {
             aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
           }
@@ -326,7 +405,7 @@ serve(async (req: Request): Promise<Response> => {
           {
             aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
           }
-        
+        }
       }
     } else {
       // User has profile, generate AI response using Gemini
@@ -598,7 +677,7 @@ serve(async (req: Request): Promise<Response> => {
         responseText += "\n" + continuationText;
 
         // If the combined response now has complete JSON, or we've reached max attempts, exit
-        if (isJsonComplete(responseText) || attempts >= MAX_ATTEMPTS) {
+        if (isJsonComplete(responseText) || attempts >= MAX_JSON_COMPLETION_ATTEMPTS) {
           break;
         }
       }
