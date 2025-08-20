@@ -20,8 +20,8 @@ import type {
   GoalType, 
   QuestionnaireTemplate, 
 } from "@/data/questionnaire-templates";
-import type { ComprehensiveFinancialProfile, CategoryInfo, FinancialProfileQuestion, QuestionCategory } from "@/types/financial-quiz-constants";
-import { categories as allCategories } from "@/types/financial-quiz-constants";
+import type { ComprehensiveFinancialProfile, CategoryInfo, FinancialProfileQuestion, QuestionCategory, GoalSpecificAnswers } from "@/types/financial-quiz-constants";
+import { categories as allCategories, getGoalSpecificQuestions } from "@/types/financial-quiz-constants";
 
 interface QuestionnaireFlowProps {
   goalType: GoalType;
@@ -39,6 +39,7 @@ export function QuestionnaireFlow({
   userId 
 }: QuestionnaireFlowProps) {
   const [answers, setAnswers] = useState<Partial<ComprehensiveFinancialProfile>>({});
+  const [goalSpecificAnswers, setGoalSpecificAnswers] = useState<GoalSpecificAnswers>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<AdvisorMessage | null>(null);
@@ -77,21 +78,33 @@ export function QuestionnaireFlow({
     [template.questions]
   );
 
+  // Get goal-specific questions
+  const goalSpecificQuestions: FinancialProfileQuestion[] = useMemo(() => 
+    getGoalSpecificQuestions(goalType), 
+    [goalType]
+  );
+
+  // Combine template questions with goal-specific questions
+  const allQuestions: FinancialProfileQuestion[] = useMemo(() => [
+    ...questions,
+    ...goalSpecificQuestions
+  ], [questions, goalSpecificQuestions]);
+
   const categories: CategoryInfo[] = useMemo(() => {
-    const categoryIds = [...new Set(questions.map(q => q.category))];
+    const categoryIds = [...new Set(allQuestions.map(q => q.category))];
     return allCategories.filter(c => categoryIds.includes(c.id));
-  }, [questions]);
+  }, [allQuestions]);
 
   const questionsByCategory = useMemo(() => {
     const grouped: Record<string, FinancialProfileQuestion[]> = {};
     categories.forEach(c => grouped[c.id] = []);
-    questions.forEach((question) => {
+    allQuestions.forEach((question) => {
       if (grouped[question.category]) {
         grouped[question.category].push(question);
       }
     });
     return grouped;
-  }, [questions, categories]);
+  }, [allQuestions, categories]);
 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id || '');
 
@@ -99,8 +112,12 @@ export function QuestionnaireFlow({
     const newErrors: Record<string, string> = {};
     let isValid = true;
     
-    questions.forEach((q) => {
-      const value = answers[q.id as keyof ComprehensiveFinancialProfile];
+    allQuestions.forEach((q) => {
+      // Determine if this is a goal-specific question or regular question
+      const isGoalSpecific = goalSpecificQuestions.some(gq => gq.id === q.id);
+      const value = isGoalSpecific ? 
+        goalSpecificAnswers[q.id as keyof GoalSpecificAnswers] :
+        answers[q.id as keyof ComprehensiveFinancialProfile];
       
       // Required field validation
       if (q.validation?.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -164,10 +181,17 @@ export function QuestionnaireFlow({
     
     setErrors(newErrors);
     return isValid;
-  }, [questions, answers]);
+  }, [allQuestions, answers, goalSpecificAnswers, goalSpecificQuestions]);
 
   const handleAnswerChange = (questionId: string, value: any) => {
-    setAnswers(prev => ({ ...prev, [questionId]: value }));
+    // Determine if this is a goal-specific question
+    const isGoalSpecific = goalSpecificQuestions.some(q => q.id === questionId);
+    
+    if (isGoalSpecific) {
+      setGoalSpecificAnswers(prev => ({ ...prev, [questionId]: value }));
+    } else {
+      setAnswers(prev => ({ ...prev, [questionId]: value }));
+    }
     
     // Clear any existing error for this field
     if (errors[questionId]) {
@@ -278,13 +302,16 @@ export function QuestionnaireFlow({
   }, [answers, validate]);
 
   const isFormComplete = useMemo(() => {
-    return questions
+    return allQuestions
       .filter(q => q.validation?.required)
       .every(q => {
-        const value = answers[q.id as keyof ComprehensiveFinancialProfile];
+        const isGoalSpecific = goalSpecificQuestions.some(gq => gq.id === q.id);
+        const value = isGoalSpecific ? 
+          goalSpecificAnswers[q.id as keyof GoalSpecificAnswers] :
+          answers[q.id as keyof ComprehensiveFinancialProfile];
         return value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0);
       });
-  }, [questions, answers]);
+  }, [allQuestions, answers, goalSpecificAnswers, goalSpecificQuestions]);
 
   const handleSubmit = async () => {
     // Clear previous errors
@@ -293,7 +320,7 @@ export function QuestionnaireFlow({
     // Validate and show errors if validation fails
     if (!validate()) {
       // Find the first category with validation errors
-      const firstErrorQuestion = questions.find(q => errors[q.id]);
+      const firstErrorQuestion = allQuestions.find(q => errors[q.id]);
       if (firstErrorQuestion) {
         const errorCategory = Object.keys(questionsByCategory).find(categoryId =>
           questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
@@ -333,9 +360,17 @@ export function QuestionnaireFlow({
     
     try {
       console.log('Submitting goal creation with answers:', answers);
+      console.log('Goal-specific answers:', goalSpecificAnswers);
+      
+      // Combine answers with goal-specific answers for backend
+      const combinedAnswers = {
+        ...answers,
+        ...goalSpecificAnswers
+      };
+      
       const requestParams: any = {
         goalType,
-        questionnaireAnswers: answers,
+        questionnaireAnswers: combinedAnswers,
         userId,
       };
 
@@ -352,10 +387,11 @@ export function QuestionnaireFlow({
           console.log('Creating/updating financial health profile with questionnaire answers...');
           
           // Use the correct parameter structure for the financial-health-profile function
+          // NOTE: Only pass regular answers to profile, goal-specific answers are not stored
           const { data: profileData, error: profileError } = await supabase.functions.invoke('financial-health-profile', {
             body: {
               userId: userId, // null for guest users
-              quizAnswers: answers,
+              quizAnswers: answers, // Only regular profile answers, NOT goal-specific answers
               isPartialUpdate: true // Flag to indicate this is a partial update from questionnaire
             }
           });
@@ -389,46 +425,40 @@ export function QuestionnaireFlow({
       
       let errorMessage = 'An unexpected error occurred. Please try again.';
       
-      // Parse different types of errors from the backend
+      // Enhanced error parsing for the new bulletproof backend
       if (error instanceof Error) {
         if (error.message.includes('Validation failed:')) {
           // Frontend validation errors
           errorMessage = error.message.replace('Validation failed: ', '');
         } else {
-          // Try to parse backend API errors
-          try {
-            // Check if it's a structured API error response
-            const apiError = JSON.parse(error.message);
-            if (apiError.error && apiError.details) {
-              errorMessage = `${apiError.error}: ${apiError.details}`;
-            } else if (apiError.message) {
-              errorMessage = apiError.message;
-            } else {
-              errorMessage = error.message;
-            }
-          } catch {
-            // Not JSON, use the raw error message
-            errorMessage = error.message;
-          }
+          // Use the error message directly from the hook (already parsed)
+          errorMessage = error.message;
         }
       }
       
-      // Try to match error messages to specific questions for validation errors
-      if (errorMessage.includes('Validation failed:') || errorMessage.includes('must be at least')) {
+      // Check if it's a validation error that should highlight specific fields
+      const isValidationError = errorMessage.includes('Validation failed:') || 
+                               errorMessage.includes('must be at least') ||
+                               errorMessage.includes('is required') ||
+                               errorMessage.includes('must be a valid');
+      
+      if (isValidationError) {
         const backendErrors: Record<string, string> = {};
         
-        questions.forEach(q => {
-          if (errorMessage.includes(q.question) || errorMessage.includes(q.id)) {
+        // Try to match error messages to specific questions
+        allQuestions.forEach(q => {
+          if (errorMessage.toLowerCase().includes(q.question.toLowerCase()) || 
+              errorMessage.includes(q.id)) {
             backendErrors[q.id] = errorMessage;
           }
         });
         
-        // If we found specific field errors, show them
+        // If we found specific field errors, show them and navigate to the category
         if (Object.keys(backendErrors).length > 0) {
           setErrors(prev => ({ ...prev, ...backendErrors }));
           
           // Navigate to the category containing the first error
-          const firstErrorQuestion = questions.find(q => backendErrors[q.id]);
+          const firstErrorQuestion = allQuestions.find(q => backendErrors[q.id]);
           if (firstErrorQuestion) {
             const errorCategory = Object.keys(questionsByCategory).find(categoryId =>
               questionsByCategory[categoryId].some(q => q.id === firstErrorQuestion.id)
@@ -438,11 +468,11 @@ export function QuestionnaireFlow({
             }
           }
         } else {
-          // Show general error if we couldn't match to specific fields
+          // Show general validation error message
           setGeneralError(errorMessage);
         }
       } else {
-        // Show the actual backend error message
+        // Show the backend error message directly (user-friendly messages from new backend)
         setGeneralError(errorMessage);
       }
       
@@ -472,7 +502,9 @@ export function QuestionnaireFlow({
   // Generate advisor message for current category
   const updateAdvisorMessage = useCallback(() => {
     if (isCategoryComplete(activeCategory)) {
-      const message = GoalAdvisorMessageGenerator.getCategoryMessage(activeCategory, goalType, answers);
+      // Combine both answer sets for advisor message generation
+      const combinedAnswersForAdvisor = { ...answers, ...goalSpecificAnswers };
+      const message = GoalAdvisorMessageGenerator.getCategoryMessage(activeCategory, goalType, combinedAnswersForAdvisor);
       if (message) {
         setAdvisorMessage(message);
         setShowAdvisorMessage(true);
@@ -480,7 +512,7 @@ export function QuestionnaireFlow({
     } else {
       setShowAdvisorMessage(false);
     }
-  }, [activeCategory, goalType, answers, isCategoryComplete]);
+  }, [activeCategory, goalType, answers, goalSpecificAnswers, isCategoryComplete]);
 
   // Update advisor message when answers change or category is complete
   useEffect(() => {
@@ -619,7 +651,11 @@ export function QuestionnaireFlow({
                   description={question.description}
                   type={question.type}
                   options={question.options}
-                  value={answers[question.id as keyof ComprehensiveFinancialProfile]}
+                  value={
+                    goalSpecificQuestions.some(q => q.id === question.id) ?
+                    goalSpecificAnswers[question.id as keyof GoalSpecificAnswers] :
+                    answers[question.id as keyof ComprehensiveFinancialProfile]
+                  }
                   onChange={(value) => handleAnswerChange(question.id, value)}
                   error={errors[question.id]}
                   placeholder={question.placeholder}

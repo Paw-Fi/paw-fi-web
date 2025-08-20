@@ -145,7 +145,7 @@ async function createGoalWithAI(params: CreateGoalWithAIParams): Promise<any> {
     throw new Error(`Validation failed: ${errorMessage}`);
   }
 
-  // Call the AI goal generator function
+  // Call the new bulletproof AI goal generator function
   const requestBody = {
     userId,
     goalType,
@@ -158,11 +158,43 @@ async function createGoalWithAI(params: CreateGoalWithAIParams): Promise<any> {
 
   if (error) {
     console.error('Error calling AI goal generator:', error);
-    throw new Error(error.message || 'Failed to generate goal with AI');
+    
+    // Enhanced error parsing for the new backend
+    let errorMessage = 'Failed to generate goal with AI';
+    
+    if (error.message) {
+      try {
+        // Try to parse structured error response from new backend
+        const parsedError = JSON.parse(error.message);
+        if (parsedError.error?.message) {
+          errorMessage = parsedError.error.message;
+        } else if (parsedError.message) {
+          errorMessage = parsedError.message;
+        } else {
+          errorMessage = error.message;
+        }
+      } catch {
+        // Not JSON, use raw error message
+        errorMessage = error.message;
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 
   if (!data?.success) {
-    throw new Error(data?.error || 'AI goal generation failed');
+    // Handle structured error responses from new backend
+    let errorMessage = 'AI goal generation failed';
+    
+    if (data?.error?.message) {
+      errorMessage = data.error.message;
+    } else if (data?.error && typeof data.error === 'string') {
+      errorMessage = data.error;
+    } else if (data?.message) {
+      errorMessage = data.message;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   return data;

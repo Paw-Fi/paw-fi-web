@@ -1,10 +1,10 @@
-// AI Schema Definition - Strict Function Calling Schema
-// Defines exact structure for Gemini function calling to ensure consistent responses
+// Simplified AI Schema - Reduced complexity for Gemini function calling
+// Minimal schema that avoids "too many states" error
 
-export const AISchema = {
+export const SimpleAISchema = {
   goalGeneratorFunction: {
     name: "generate_complete_financial_plan",
-    description: "Generate a complete financial goal plan with all required components for database storage.",
+    description: "Generate a complete financial goal plan with essential components.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -13,80 +13,63 @@ export const AISchema = {
           properties: {
             title: {
               type: "STRING",
-              description: "Clear, concise goal title (max 255 characters)"
+              description: "Goal title"
             },
             description: {
               type: "STRING", 
-              description: "Detailed description of the goal and approach (500-2000 characters)"
+              description: "Goal description"
             },
             targetAmount: {
               type: "NUMBER",
-              description: "Target amount in USD (positive integer)"
+              description: "Target amount in USD"
             },
             targetDate: {
               type: "STRING",
-              description: "Target completion date in YYYY-MM-DD format (must be future date, minimum 6 months from today)"
+              description: "Target date in YYYY-MM-DD format"
             },
             rationale: {
               type: "STRING",
-              description: "Explanation of why this goal and timeline make sense (200-500 characters)"
+              description: "Explanation of goal rationale"
             }
           },
           required: ["title", "description", "targetAmount", "targetDate", "rationale"]
         },
         strategy: {
           type: "STRING",
-          description: "Overall strategy explanation (500-1500 characters)"
+          description: "Overall strategy explanation"
         },
         milestones: {
           type: "ARRAY",
-          minItems: 3,
-          maxItems: 5,
           items: {
             type: "OBJECT", 
             properties: {
               title: {
                 type: "STRING",
-                description: "Milestone title (max 255 characters)"
+                description: "Milestone title"
               },
               description: {
                 type: "STRING",
-                description: "Milestone description (200-500 characters)"
+                description: "Milestone description"
               },
               type: {
                 type: "STRING",
-                enum: ["savings", "action", "habit", "review"],
-                description: "Type of milestone"
+                description: "Type: savings, action, habit, or review"
               },
               targetAmount: {
                 type: "NUMBER",
-                description: "Target amount for savings milestones (positive integer or null for non-savings)"
+                description: "Target amount for savings milestones"
               },
               dueDate: {
                 type: "STRING", 
-                description: "Due date in YYYY-MM-DD format (must be future date)"
-              },
-              habitDescription: {
-                type: "STRING",
-                description: "Description for habit milestones only (null for other types)"
-              },
-              frequency: {
-                type: "STRING",
-                enum: ["daily", "weekly", "monthly", "one-time"],
-                description: "Frequency for habit milestones only (null for other types)"
-              },
-              habitTargetValue: {
-                type: "NUMBER",
-                description: "Target value for habit milestones only (null for other types)"
+                description: "Due date in YYYY-MM-DD format"
               },
               priority: {
                 type: "STRING",
-                enum: ["critical", "high", "medium", "low"],
-                description: "Priority level"
+                description: "Priority: critical, high, medium, or low"
               },
               aiRationale: {
                 type: "STRING",
-                description: "AI's reasoning for this milestone (100-300 characters)"
+                description: "AI reasoning for this milestone"
               }
             },
             required: ["title", "description", "type", "dueDate", "priority", "aiRationale"]
@@ -94,32 +77,28 @@ export const AISchema = {
         },
         insights: {
           type: "ARRAY",
-          minItems: 2,
-          maxItems: 4,
           items: {
             type: "OBJECT",
             properties: {
               type: {
                 type: "STRING",
-                enum: ["strategy_insight", "risk_warning", "opportunity", "behavioral_tip"],
                 description: "Type of insight"
               },
               title: {
                 type: "STRING",
-                description: "Insight title (max 255 characters)"
+                description: "Insight title"
               },
               content: {
                 type: "STRING",
-                description: "Insight content (300-800 characters)"
+                description: "Insight content"
               },
               priority: {
                 type: "STRING",
-                enum: ["critical", "high", "medium", "low"],
                 description: "Priority level"
               },
               actionable: {
                 type: "BOOLEAN",
-                description: "Whether this insight requires user action"
+                description: "Whether this requires user action"
               }
             },
             required: ["type", "title", "content", "priority", "actionable"]
@@ -130,19 +109,19 @@ export const AISchema = {
           properties: {
             monthlyRequired: {
               type: "NUMBER",
-              description: "Monthly amount needed to reach goal (positive number, calculate as: targetAmount / months_to_goal)"
+              description: "Monthly amount needed to reach goal"
             },
             projectedFinalAmount: {
               type: "NUMBER", 
-              description: "Projected final amount at completion (positive number)"
+              description: "Projected final amount"
             },
             incomeReplacement: {
               type: "NUMBER",
-              description: "Income replacement percentage for retirement goals only (0-100, null for other goal types)"
+              description: "Income replacement percentage for retirement goals only"
             },
             confidenceLevel: {
               type: "NUMBER",
-              description: "Confidence level in projections (0.5 to 1.0)"
+              description: "Confidence level between 0.5 and 1.0"
             }
           },
           required: ["monthlyRequired", "projectedFinalAmount", "confidenceLevel"]
@@ -155,11 +134,10 @@ export const AISchema = {
               properties: {
                 content: {
                   type: "STRING",
-                  description: "Plan page message: 'I suggest you to [action], because [reason], so that [outcome].' Format required (300-600 characters)"
+                  description: "Plan message content"
                 },
                 tone: {
                   type: "STRING",
-                  enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
                   description: "Message tone"
                 }
               },
@@ -169,12 +147,11 @@ export const AISchema = {
               type: "OBJECT",
               properties: {
                 content: {
-                  type: "STRING", 
-                  description: "Insights page message: 'I suggest you to [action], because [reason], so that [outcome].' Format required (300-600 characters)"
+                  type: "STRING",
+                  description: "Insights message content"
                 },
                 tone: {
                   type: "STRING",
-                  enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
                   description: "Message tone"
                 }
               },
@@ -185,11 +162,10 @@ export const AISchema = {
               properties: {
                 content: {
                   type: "STRING",
-                  description: "Next steps page message: 'I suggest you to [action], because [reason], so that [outcome].' Format required (300-600 characters)"
+                  description: "Next steps message content"
                 },
                 tone: {
                   type: "STRING",
-                  enum: ["congratulatory", "encouraging", "motivational", "reassuring", "informative"],
                   description: "Message tone"
                 }
               },
@@ -203,58 +179,51 @@ export const AISchema = {
           properties: {
             profileDescription: {
               type: "STRING",
-              description: "Professional summary of user's financial profile (800-1500 characters)"
+              description: "Financial profile summary"
             },
             profileData: {
               type: "OBJECT",
               properties: {
                 netWorth: {
                   type: "NUMBER",
-                  description: "Calculated net worth from questionnaire data"
+                  description: "Net worth"
                 },
                 monthlyIncome: {
                   type: "NUMBER",
-                  description: "Monthly income from questionnaire (positive number)"
+                  description: "Monthly income"
                 },
                 monthlyExpenses: {
                   type: "NUMBER",
-                  description: "Estimated monthly expenses (positive number)"
+                  description: "Monthly expenses"
                 },
                 savingsRate: {
                   type: "NUMBER",
-                  description: "Savings rate percentage (0-100)"
+                  description: "Savings rate percentage"
                 },
                 riskTolerance: {
                   type: "STRING",
-                  enum: ["conservative", "moderate", "aggressive"],
-                  description: "Risk tolerance level from questionnaire"
+                  description: "Risk tolerance level"
                 },
                 financialGoals: {
                   type: "ARRAY",
-                  minItems: 2,
-                  maxItems: 4,
                   items: {
-                    type: "STRING",
-                    description: "Financial goal description (max 100 characters each)"
-                  }
+                    type: "STRING"
+                  },
+                  description: "List of financial goals"
                 },
                 strengths: {
                   type: "ARRAY",
-                  minItems: 2,
-                  maxItems: 4,
                   items: {
-                    type: "STRING",
-                    description: "Financial strength (max 100 characters each)"
-                  }
+                    type: "STRING"
+                  },
+                  description: "Financial strengths"
                 },
                 recommendations: {
                   type: "ARRAY",
-                  minItems: 3,
-                  maxItems: 5,
                   items: {
-                    type: "STRING",
-                    description: "Actionable recommendation (max 200 characters each)"
-                  }
+                    type: "STRING"
+                  },
+                  description: "Recommendations"
                 }
               },
               required: ["netWorth", "monthlyIncome", "monthlyExpenses", "savingsRate", "riskTolerance", "financialGoals", "strengths", "recommendations"]
