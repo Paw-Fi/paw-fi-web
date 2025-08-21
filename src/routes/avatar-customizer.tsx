@@ -159,7 +159,7 @@ const svgAssets: { [category: string]: { [assetName: string]: string } } = {
 
 // Category configuration with display names and icons
 const categoryConfig = {
-  face: { name: 'Face Shape', color: 'from-pink-500 to-rose-600' },
+  face: { name: 'Face', color: 'from-pink-500 to-rose-600' },
   ears: { name: 'Ears', color: 'from-amber-500 to-orange-600' },
   shirts: { name: 'Clothing', color: 'from-blue-500 to-indigo-600' },
   hair: { name: 'Hair Style', color: 'from-purple-500 to-violet-600' },
@@ -188,6 +188,22 @@ const initialAssets: { [key: string]: string[] } = {
   stars: ['Star1', 'Star2', 'Star3', 'Star4', 'Star5', 'Star6'],
 }
 
+// Color display names for UI labels
+const colorDisplayNames = {
+  hair: 'Hair',
+  eyes: 'Eyes', 
+  mouth: 'Mouth',
+  background: 'Background',
+}
+
+// Color palettes for randomization
+const colorPalettes = {
+  hair: ['#8B4513', '#654321', '#4A4A4A', '#2C1810', '#B8860B', '#800080', '#FF6347', '#32CD32', '#1E90FF'],
+  eyes: ['#4A4A4A', '#8B4513', '#006400', '#0000FF', '#800080', '#2F4F4F', '#B8860B'],
+  mouth: ['#FF6B6B', '#DC143C', '#CD5C5C', '#F08080', '#FF1493', '#C71585'],
+  background: ['#f0f0f0', '#e8f4f8', '#f8e8f4', '#f4f8e8', '#e8e8f8', '#f8f4e8', '#ffffff', '#e0e0e0', '#f5f5f5'],
+}
+
 function AvatarCustomizer() {
   const { user,isLoading } = useAuth()
   const navigate = useNavigate()
@@ -206,12 +222,12 @@ function AvatarCustomizer() {
     stars: 'Star1',
   })
 
-  const [activeCategory, setActiveCategory] = useState('face')
+  const [activeCategory, setActiveCategory] = useState('hair')
   const [colors, setColors] = useState({
     hair: '#8B4513',
-    face: '#FDBCB4',
     eyes: '#4A4A4A',
     mouth: '#FF6B6B',
+    background: '#f0f0f0',
   })
 
   const [svgContents, setSvgContents] = useState<{ [key: string]: string | null }>({})
@@ -359,33 +375,18 @@ function AvatarCustomizer() {
 
     // Randomize colors with appropriate constraints
     const newColors = {
-      hair: getRandomHairColor(),
-      face: getRandomSkinColor(),
-      eyes: getRandomEyeColor(),
-      mouth: getRandomMouthColor(),
+      hair: getRandomColor('hair'),
+      eyes: getRandomColor('eyes'),
+      mouth: getRandomColor('mouth'),
+      background: getRandomColor('background'),
     }
     setColors(newColors)
   }
 
-  // Helper functions for color randomization
-  const getRandomHairColor = () => {
-    const hairColors = ['#8B4513', '#654321', '#4A4A4A', '#2C1810', '#B8860B', '#800080', '#FF6347', '#32CD32', '#1E90FF']
-    return hairColors[Math.floor(Math.random() * hairColors.length)]
-  }
-
-  const getRandomSkinColor = () => {
-    const skinColors = ['#FDBCB4', '#F1C27D', '#E0AC69', '#C68642', '#8D5524', '#ECBCB4', '#DDB7AB', '#CB9E82']
-    return skinColors[Math.floor(Math.random() * skinColors.length)]
-  }
-
-  const getRandomEyeColor = () => {
-    const eyeColors = ['#4A4A4A', '#8B4513', '#006400', '#0000FF', '#800080', '#2F4F4F', '#B8860B']
-    return eyeColors[Math.floor(Math.random() * eyeColors.length)]
-  }
-
-  const getRandomMouthColor = () => {
-    const mouthColors = ['#FF6B6B', '#DC143C', '#CD5C5C', '#F08080', '#FF1493', '#C71585']
-    return mouthColors[Math.floor(Math.random() * mouthColors.length)]
+  // Helper function for color randomization
+  const getRandomColor = (type: keyof typeof colorPalettes) => {
+    const palette = colorPalettes[type]
+    return palette[Math.floor(Math.random() * palette.length)]
   }
 
   return (
@@ -443,7 +444,8 @@ function AvatarCustomizer() {
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl blur-xl"></div>
                     <div 
                       ref={avatarRef} 
-                      className="avatar-preview relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-2xl overflow-hidden border-2 border-gray-300/50 dark:border-white/20"
+                      className="avatar-preview relative w-full h-full rounded-2xl overflow-hidden border-2 border-gray-300/50 dark:border-white/20"
+                      style={{ backgroundColor: colors.background }}
                     >
                       {assetCategories.map((category) => {
                         const svgContent = svgContents[category]
@@ -452,8 +454,6 @@ function AvatarCustomizer() {
                         let coloredSvg = svgContent
                         if (category === 'hair') {
                           coloredSvg = applyColorToSvg(svgContent, colors.hair)
-                        } else if (category === 'face') {
-                          coloredSvg = applyColorToSvg(svgContent, colors.face)
                         } else if (category === 'eyes') {
                           coloredSvg = applyColorToSvg(svgContent, colors.eyes)
                         } else if (category === 'mouth') {
@@ -478,7 +478,7 @@ function AvatarCustomizer() {
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(colors).map(([part, color]) => (
                       <div key={part} className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600 dark:text-gray-300 capitalize min-w-12">{part}</label>
+                        <label className="text-sm text-gray-600 dark:text-gray-300 min-w-12">{colorDisplayNames[part as keyof typeof colorDisplayNames]}</label>
                         <div className="relative">
                           <input
                             type="color"
@@ -582,7 +582,6 @@ function AvatarCustomizer() {
               {/* Asset Gallery - Flex 1 with scrolling */}
               <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-gray-200/50 dark:border-white/20 shadow-xl dark:shadow-2xl flex-1 flex flex-col min-h-0">
                 <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                  <span className="text-2xl">{categoryConfig[activeCategory as keyof typeof categoryConfig].icon}</span>
                   <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
                     {categoryConfig[activeCategory as keyof typeof categoryConfig].name}
                   </h3>
