@@ -28,6 +28,7 @@ import {
   faIdCard,
   faHeadphones,
   faCrown,
+  faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -348,7 +349,7 @@ export function Dashboard() {
 
   const menuItems = [
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
-    { id: "tracker", label: "Goal Guide", icon: faChartBar, path: "/dashboard/tracker"},
+    { id: "tracker", label: "Goal Guide", icon: faTrophy, path: "/dashboard/tracker"},
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
     {
       id: "learning",

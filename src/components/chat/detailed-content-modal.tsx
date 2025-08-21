@@ -13,6 +13,7 @@ import {
   faClose,
 } from "@fortawesome/free-solid-svg-icons";
 import { MessageSection, formatSectionContent } from "@/utils/message-parser";
+import { ExtractedContent } from "@/utils/smart-content-extractor";
 import { Markdown } from "@/components/ui/markdown";
 import { createMinimalMarkdownComponents } from "@/components/ui/markdown-components";
 
@@ -21,6 +22,7 @@ interface DetailedContentModalProps {
   onClose: () => void;
   sections: MessageSection[];
   title?: string;
+  extractedContent?: ExtractedContent | null;
 }
 
 export function DetailedContentModal({
@@ -28,26 +30,27 @@ export function DetailedContentModal({
   onClose,
   sections,
   title = "Detailed Information",
+  extractedContent,
 }: DetailedContentModalProps) {
   const [currentPage, setCurrentPage] = useState(0);
 
   const handleNext = () => {
     if (currentPage < sections.length - 1) {
       setCurrentPage(currentPage + 1);
-      
+
       // Scroll to top smoothly for better UX
       setTimeout(() => {
-        if ('scrollBehavior' in document.documentElement.style) {
+        if ("scrollBehavior" in document.documentElement.style) {
           window.scrollTo({
             top: 0,
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         } else {
           const scrollToTop = () => {
             const currentScroll = window.pageYOffset;
             if (currentScroll > 0) {
               window.requestAnimationFrame(scrollToTop);
-              window.scrollTo(0, currentScroll - (currentScroll / 8));
+              window.scrollTo(0, currentScroll - currentScroll / 8);
             }
           };
           scrollToTop();
@@ -59,20 +62,20 @@ export function DetailedContentModal({
   const handlePrev = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
-      
+
       // Scroll to top smoothly for better UX
       setTimeout(() => {
-        if ('scrollBehavior' in document.documentElement.style) {
+        if ("scrollBehavior" in document.documentElement.style) {
           window.scrollTo({
             top: 0,
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         } else {
           const scrollToTop = () => {
             const currentScroll = window.pageYOffset;
             if (currentScroll > 0) {
               window.requestAnimationFrame(scrollToTop);
-              window.scrollTo(0, currentScroll - (currentScroll / 8));
+              window.scrollTo(0, currentScroll - currentScroll / 8);
             }
           };
           scrollToTop();
@@ -89,8 +92,7 @@ export function DetailedContentModal({
   if (!sections.length) return null;
 
   const currentSection = sections[currentPage];
-  if(!isOpen)
-    return null
+  if (!isOpen) return null;
 
   const renderSectionContent = (section: MessageSection) => {
     if (section.subsections && section.subsections.length > 0) {
@@ -150,7 +152,7 @@ export function DetailedContentModal({
                         <Markdown
                           content={formatSectionContent(subsection.content)}
                           components={createMinimalMarkdownComponents()}
-                          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_ul]:my-4 [&_ul]:space-y-2 [&_li]:flex [&_li]:items-start [&_li]:gap-2"
+                          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_ul]:my-4 [&_ul]:space-y-2"
                         />
                       ) : (
                         <div className="font-mono text-sm text-red-500">
@@ -178,7 +180,7 @@ export function DetailedContentModal({
         <Markdown
           content={formatSectionContent(section.content)}
           components={createMinimalMarkdownComponents()}
-          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_p]:mb-4 [&_p]:leading-relaxed [&_p:last-child]:mb-0 [&_ul]:my-4 [&_ul]:space-y-2 [&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_h3]:mb-4 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3:first-child]:mt-0 dark:[&_h3]:text-slate-100 [&_h4]:mb-3 [&_h4]:mt-5 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-800 [&_h4:first-child]:mt-0 dark:[&_h4]:text-slate-200"
+          className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 [&_h3:first-child]:mt-0 [&_h3]:mb-4 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-900 dark:[&_h3]:text-slate-100 [&_h4:first-child]:mt-0 [&_h4]:mb-3 [&_h4]:mt-5 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-800 dark:[&_h4]:text-slate-200 [&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_p:last-child]:mb-0 [&_p]:mb-4 [&_p]:leading-relaxed [&_ul]:my-4 [&_ul]:space-y-2"
         />
       </div>
     );
@@ -224,7 +226,11 @@ export function DetailedContentModal({
               Previous
             </Button>
             {currentPage === sections.length - 1 ? (
-              <Button onClick={handleClose} size="sm" className="bg-gradient-to-br from-green-500 to-green-600">
+              <Button
+                onClick={handleClose}
+                size="sm"
+                className="bg-gradient-to-br from-green-500 to-green-600"
+              >
                 Finish Reading
               </Button>
             ) : (
@@ -250,12 +256,13 @@ export function DetailedContentModal({
       <div className="py-4">
         {/* Section header with page info */}
         <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {currentSection?.title}
-            </h2>
+          <div className="mb-2 flex items-center justify-between">              {currentSection?.title && (
+              <div className="px-6">
+                  <Markdown content={currentSection.title} /> 
+                </div>
+              )}
             {sections.length > 1 && (
-              <div className="rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 px-3 py-1 dark:from-purple-900/30 dark:to-indigo-900/30">
+              <div className="rounded-full bg-gradient-to-r text-nowrap from-purple-100 to-indigo-100 px-3 py-1 dark:from-purple-900/30 dark:to-indigo-900/30">
                 <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
                   {currentPage + 1} of {sections.length}
                 </span>

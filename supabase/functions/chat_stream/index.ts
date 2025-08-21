@@ -63,6 +63,31 @@ function getRandomResponse(responses: string[]): string {
   return responses[Math.floor(Math.random() * responses.length)];
 }
 
+// Helper function to check if profile is complete
+function isProfileComplete(profile: any): boolean {
+  if (!profile || !profile.quiz_answers) return false;
+  
+  const quizAnswers = profile.quiz_answers;
+  
+  // Key fields that should have values for a complete profile
+  const requiredFields = [
+    'current_age',
+    'gross_monthly_income',
+    'net_monthly_income',
+    'housing_cost',
+    'emergency_fund',
+    'retirement_age',
+    'risk_tolerance',
+    'investment_experience'
+  ];
+  
+  // Check if all required fields have non-empty values
+  return requiredFields.every(field => {
+    const value = quizAnswers[field];
+    return value !== null && value !== undefined && value !== '';
+  });
+}
+
 function validateRequestData(data: any): boolean {
   return data && typeof data === 'object' && typeof data.message === 'string' && data.message.trim().length > 0;
 }
@@ -282,7 +307,7 @@ serve(async (req: Request): Promise<Response> => {
     
     // Note: User message will be saved to database after AI response is generated
 
-    let aiResponse: string;
+    let aiResponse: string = "";
 
     let userActivities=null;
 
@@ -301,35 +326,43 @@ serve(async (req: Request): Promise<Response> => {
     }
   
     
-    // Check if user is authenticated but has no profile
-    if (userId && !userProfile) {
+    // Check if user is authenticated but has no profile or incomplete profile
+    if (userId && (!userProfile || !isProfileComplete(userProfile))) {
       // Check if this is the first message by looking at conversation history
       const isFirstMessage = !history || history.length <=1;
       
-      if (isFirstMessage) {
-        // First message - welcome message with random variation
-        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
-        {
-          aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
-        }
-        else
-        {
-          aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
-        }
-      } else {
-        // Has conversation history - encourage completing assessment with random variation
-        if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+      if (!userProfile) {
+        // No profile at all
+        if (isFirstMessage) {
+          // First message - welcome message with random variation
+          if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
           {
-            aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FIRST);
           }
           else
           {
-            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
           }
-        
+        } else {
+          // Has conversation history - encourage completing assessment with random variation
+          if(chatModel === AI_ROLES.FINANCIAL_ADVISOR)
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.FINANCIAL_ADVISOR_FOLLOWUP);
+            }
+            else
+            {
+              aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
+            }
+        }
+      } else {
+        // Has partial profile - generate AI response but include encouragement message
+        // Fall through to normal AI processing but will add encouragement in the response
       }
-    } else {
-      // User has profile, generate AI response using Gemini
+    }
+    
+    // Generate AI response if we have a profile (complete or partial) or if no blocking conditions
+    if (!userId || userProfile) {
+      // User has profile or is not authenticated, generate AI response using Gemini
       
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
       
@@ -598,12 +631,13 @@ serve(async (req: Request): Promise<Response> => {
         responseText += "\n" + continuationText;
 
         // If the combined response now has complete JSON, or we've reached max attempts, exit
-        if (isJsonComplete(responseText) || attempts >= MAX_ATTEMPTS) {
+        if (isJsonComplete(responseText) || attempts >= MAX_JSON_COMPLETION_ATTEMPTS) {
           break;
         }
       }
       
       aiResponse = responseText;
+      
     }
 
     // Clean up the response - if we have multiple ```json markers from continuations, fix it
@@ -773,16 +807,14 @@ serve(async (req: Request): Promise<Response> => {
         unlocked: parsedJson.unlocked,
         lesson_count: parsedJson.lessons ? parsedJson.lessons.length : 0
       };
-      
-      // Convert the simplified JSON object to a properly formatted string
-      const simpleJsonString = JSON.stringify(simpleJsonObject, null, 2);
 
-      // Reconstruct the response with preamble, sanitized JSON, and epilogue
+      // Create an HTML course card element instead of JSON markdown
+      const courseCardHtml = `<course-card data-course='${JSON.stringify(simpleJsonObject)}'></course-card>`;
+      
+      // Reconstruct the response with preamble, course card HTML, and epilogue
       const fullMessageParts = [
         preamble,
-        `${markdownJsonPrefix}
-${simpleJsonString}
-${markdownSuffix}`,
+        courseCardHtml,
         epilogue,
       ].filter(Boolean);
       finalResponse = fullMessageParts.join("\n\n");
