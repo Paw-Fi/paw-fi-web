@@ -7,7 +7,8 @@ import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartLine, faChevronRight, faCog, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faChevronRight, faCog, faUser, faPen } from '@fortawesome/free-solid-svg-icons';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 export const Route = createFileRoute('/dashboard/user-settings/')({  
   component: UserSettings,
@@ -121,7 +122,36 @@ export function UserSettings() {
       <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-dark-foreground">Settings</h1>     
       
       <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
+        <h2 className="text-xl font-semibold mb-6">Profile Information</h2>
+        
+        {/* Avatar Section */}
+        <div className="mb-6 pb-6 border-b border-subtle-border dark:border-dark-subtle-border">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <UserAvatar 
+                size="xl"
+                showPremiumBorder={true}
+                showPremiumCrown={true}
+              />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-foreground dark:text-dark-foreground mb-1">Profile Avatar</h3>
+              <p className="text-xs text-muted-foreground dark:text-dark-muted-foreground mb-3">
+                Customize your avatar appearance
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate({ to: '/avatar-customizer' })}
+                className="flex items-center space-x-2"
+              >
+                <FontAwesomeIcon icon={faPen} className="size-3" />
+                <span>Edit Avatar</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+        
         <form onSubmit={handleUpdateProfile} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">

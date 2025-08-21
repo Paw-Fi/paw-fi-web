@@ -8,6 +8,7 @@ import { DISCORD_URL } from "@/routes";
 import classNames from "classnames";
 import { useAuth } from "@/contexts/auth-context";
 import { useNavigate } from "@tanstack/react-router";
+import { Avatar } from "../ui/avatar";
 
 export const HomeHeader=()=>{
 
@@ -63,20 +64,31 @@ export const HomeHeader=()=>{
         </a>
       </div>
     <div className="flex items-center gap-x-5">     
-    
-        <Button
-        className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
-        onClick={()=>{
-            if(user){
-                navigate({to:"/dashboard"})
-            }else{
-                navigate({to:"/onboarding"})
-            }
-        }}
-        >
-          Get Started <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-        </Button>
-
+        {user ? (
+          <div className="flex items-center gap-3">
+            <Avatar 
+              size="sm"
+              name={user.user_metadata?.full_name || user.email}
+              onClick={() => navigate({ to: "/dashboard" })}
+              className="cursor-pointer"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate({ to: "/dashboard" })}
+              className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
+            >
+              Dashboard
+            </Button>
+          </div>
+        ) : (
+          <Button
+            className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
+            onClick={() => navigate({ to: "/onboarding" })}
+          >
+            Get Started <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+          </Button>
+        )}
   </div>
   </div>
   

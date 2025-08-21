@@ -1,11 +1,161 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { fetchSvgContent, applyColorToSvg } from '../lib/svg-utils'
-import * as domtoimage from 'dom-to-image'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { applyColorToSvg } from '../lib/svg-utils'
+import { useAvatar } from '@/hooks/use-avatar'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from 'react-toastify'
+
+// Import all SVG files as modules
+// Face assets
+import Face1 from '@/assets/images/avatar/1.face/Face1.svg?raw'
+import Face2 from '@/assets/images/avatar/1.face/Face2.svg?raw'
+import Face3 from '@/assets/images/avatar/1.face/Face3.svg?raw'
+import Face4 from '@/assets/images/avatar/1.face/Face4.svg?raw'
+import Face5 from '@/assets/images/avatar/1.face/Face5.svg?raw'
+import Face6 from '@/assets/images/avatar/1.face/Face6.svg?raw'
+import Face7 from '@/assets/images/avatar/1.face/Face7.svg?raw'
+import Face8 from '@/assets/images/avatar/1.face/Face8.svg?raw'
+
+// Ear assets
+import Ear1 from '@/assets/images/avatar/2.ears/Ear1.svg?raw'
+import Ear2 from '@/assets/images/avatar/2.ears/Ear2.svg?raw'
+import Ear3 from '@/assets/images/avatar/2.ears/Ear3.svg?raw'
+import Ear4 from '@/assets/images/avatar/2.ears/Ear4.svg?raw'
+import Ear5 from '@/assets/images/avatar/2.ears/Ear5.svg?raw'
+import Ear6 from '@/assets/images/avatar/2.ears/Ear6.svg?raw'
+import Ear7 from '@/assets/images/avatar/2.ears/Ear7.svg?raw'
+import Ear8 from '@/assets/images/avatar/2.ears/Ear8.svg?raw'
+import Ear9 from '@/assets/images/avatar/2.ears/Ear9.svg?raw'
+import Ear10 from '@/assets/images/avatar/2.ears/Ear10.svg?raw'
+
+// Shirt assets
+import Shirt1 from '@/assets/images/avatar/3.shirts/Shirt1.svg?raw'
+import Shirt2 from '@/assets/images/avatar/3.shirts/Shirt2.svg?raw'
+import Shirt3 from '@/assets/images/avatar/3.shirts/Shirt3.svg?raw'
+import Shirt4 from '@/assets/images/avatar/3.shirts/Shirt4.svg?raw'
+import Shirt5 from '@/assets/images/avatar/3.shirts/Shirt5.svg?raw'
+import Shirt6 from '@/assets/images/avatar/3.shirts/Shirt6.svg?raw'
+import Shirt7 from '@/assets/images/avatar/3.shirts/Shirt7.svg?raw'
+import Shirt8 from '@/assets/images/avatar/3.shirts/Shirt8.svg?raw'
+
+// Hair assets
+import hair1 from '@/assets/images/avatar/4.hair/hair1.svg?raw'
+import hair2 from '@/assets/images/avatar/4.hair/hair2.svg?raw'
+import hair3 from '@/assets/images/avatar/4.hair/hair3.svg?raw'
+import hair4 from '@/assets/images/avatar/4.hair/hair4.svg?raw'
+import hair5 from '@/assets/images/avatar/4.hair/hair5.svg?raw'
+import hair6 from '@/assets/images/avatar/4.hair/hair6.svg?raw'
+import hair7 from '@/assets/images/avatar/4.hair/hair7.svg?raw'
+import hair8 from '@/assets/images/avatar/4.hair/hair8.svg?raw'
+import hair9 from '@/assets/images/avatar/4.hair/hair9.svg?raw'
+import hair10 from '@/assets/images/avatar/4.hair/hair10.svg?raw'
+
+// Brow assets
+import Brow1 from '@/assets/images/avatar/5.brow/Brow1.svg?raw'
+import Brow2 from '@/assets/images/avatar/5.brow/Brow2.svg?raw'
+import Brow3 from '@/assets/images/avatar/5.brow/Brow3.svg?raw'
+import Brow4 from '@/assets/images/avatar/5.brow/Brow4.svg?raw'
+import Brow5 from '@/assets/images/avatar/5.brow/Brow5.svg?raw'
+import Brow6 from '@/assets/images/avatar/5.brow/Brow6.svg?raw'
+import Brow7 from '@/assets/images/avatar/5.brow/Brow7.svg?raw'
+import Brow8 from '@/assets/images/avatar/5.brow/Brow8.svg?raw'
+
+// Eyes assets
+import Eyes1 from '@/assets/images/avatar/6.eyes/Eyes1.svg?raw'
+import Eyes2 from '@/assets/images/avatar/6.eyes/Eyes2.svg?raw'
+import Eyes3 from '@/assets/images/avatar/6.eyes/Eyes3.svg?raw'
+import Eyes4 from '@/assets/images/avatar/6.eyes/Eyes4.svg?raw'
+import Eyes5 from '@/assets/images/avatar/6.eyes/Eyes5.svg?raw'
+import Eyes6 from '@/assets/images/avatar/6.eyes/Eyes6.svg?raw'
+import Eyes7 from '@/assets/images/avatar/6.eyes/Eyes7.svg?raw'
+import Eyes8 from '@/assets/images/avatar/6.eyes/Eyes8.svg?raw'
+
+// Nose assets
+import Nose1 from '@/assets/images/avatar/7.nose/Nose1.svg?raw'
+import Nose2 from '@/assets/images/avatar/7.nose/Nose2.svg?raw'
+import Nose3 from '@/assets/images/avatar/7.nose/Nose3.svg?raw'
+import Nose4 from '@/assets/images/avatar/7.nose/Nose4.svg?raw'
+import Nose5 from '@/assets/images/avatar/7.nose/Nose5.svg?raw'
+import Nose6 from '@/assets/images/avatar/7.nose/Nose6.svg?raw'
+import Nose7 from '@/assets/images/avatar/7.nose/Nose7.svg?raw'
+import Nose8 from '@/assets/images/avatar/7.nose/Nose8.svg?raw'
+
+// Mouth assets
+import Mouth1 from '@/assets/images/avatar/8.mouth/Mouth1.svg?raw'
+import Mouth2 from '@/assets/images/avatar/8.mouth/Mouth2.svg?raw'
+import Mouth3 from '@/assets/images/avatar/8.mouth/Mouth3.svg?raw'
+import Mouth4 from '@/assets/images/avatar/8.mouth/Mouth4.svg?raw'
+import Mouth5 from '@/assets/images/avatar/8.mouth/Mouth5.svg?raw'
+import Mouth6 from '@/assets/images/avatar/8.mouth/Mouth6.svg?raw'
+import Mouth7 from '@/assets/images/avatar/8.mouth/Mouth7.svg?raw'
+import Mouth8 from '@/assets/images/avatar/8.mouth/Mouth8.svg?raw'
+
+// Blush assets
+import blush1 from '@/assets/images/avatar/9.blush/blush1.svg?raw'
+import blush2 from '@/assets/images/avatar/9.blush/blush2.svg?raw'
+import blush3 from '@/assets/images/avatar/9.blush/blush3.svg?raw'
+import blush4 from '@/assets/images/avatar/9.blush/blush4.svg?raw'
+import blush5 from '@/assets/images/avatar/9.blush/blush5.svg?raw'
+import blush6 from '@/assets/images/avatar/9.blush/blush6.svg?raw'
+
+// Accessories assets
+import Accessories1 from '@/assets/images/avatar/10.accessories/Accessories1.svg?raw'
+import Accessories2 from '@/assets/images/avatar/10.accessories/Accessories2.svg?raw'
+import Accessories3 from '@/assets/images/avatar/10.accessories/Accessories3.svg?raw'
+import Accessories4 from '@/assets/images/avatar/10.accessories/Accessories4.svg?raw'
+import Accessories5 from '@/assets/images/avatar/10.accessories/Accessories5.svg?raw'
+import Accessories6 from '@/assets/images/avatar/10.accessories/Accessories6.svg?raw'
+import Accessories7 from '@/assets/images/avatar/10.accessories/Accessories7.svg?raw'
+import Accessories8 from '@/assets/images/avatar/10.accessories/Accessories8.svg?raw'
+
+// Stars assets
+import Star1 from '@/assets/images/avatar/11.stars/Star1.svg?raw'
+import Star2 from '@/assets/images/avatar/11.stars/Star2.svg?raw'
+import Star3 from '@/assets/images/avatar/11.stars/Star3.svg?raw'
+import Star4 from '@/assets/images/avatar/11.stars/Star4.svg?raw'
+import Star5 from '@/assets/images/avatar/11.stars/Star5.svg?raw'
+import Star6 from '@/assets/images/avatar/11.stars/Star6.svg?raw'
 
 export const Route = createFileRoute('/avatar-customizer')({
   component: AvatarCustomizer,
 })
+
+// SVG content mapping
+const svgAssets: { [category: string]: { [assetName: string]: string } } = {
+  face: {
+    Face1, Face2, Face3, Face4, Face5, Face6, Face7, Face8
+  },
+  ears: {
+    Ear1, Ear2, Ear3, Ear4, Ear5, Ear6, Ear7, Ear8, Ear9, Ear10
+  },
+  shirts: {
+    Shirt1, Shirt2, Shirt3, Shirt4, Shirt5, Shirt6, Shirt7, Shirt8
+  },
+  hair: {
+    hair1, hair2, hair3, hair4, hair5, hair6, hair7, hair8, hair9, hair10
+  },
+  brow: {
+    Brow1, Brow2, Brow3, Brow4, Brow5, Brow6, Brow7, Brow8
+  },
+  eyes: {
+    Eyes1, Eyes2, Eyes3, Eyes4, Eyes5, Eyes6, Eyes7, Eyes8
+  },
+  nose: {
+    Nose1, Nose2, Nose3, Nose4, Nose5, Nose6, Nose7, Nose8
+  },
+  mouth: {
+    Mouth1, Mouth2, Mouth3, Mouth4, Mouth5, Mouth6, Mouth7, Mouth8
+  },
+  blush: {
+    blush1, blush2, blush3, blush4, blush5, blush6
+  },
+  accessories: {
+    Accessories1, Accessories2, Accessories3, Accessories4, Accessories5, Accessories6, Accessories7, Accessories8
+  },
+  stars: {
+    Star1, Star2, Star3, Star4, Star5, Star6
+  }
+}
 
 // Category configuration with display names and icons
 const categoryConfig = {
@@ -39,6 +189,9 @@ const initialAssets: { [key: string]: string[] } = {
 }
 
 function AvatarCustomizer() {
+  const { user,isLoading } = useAuth()
+  const navigate = useNavigate()
+  const { saveAvatar, skipAvatarForNow, customization, isCustomizationLoading, isUploading, uploadProgress } = useAvatar()
   const [selectedElements, setSelectedElements] = useState({
     face: 'Face1',
     ears: 'Ear1',
@@ -63,29 +216,42 @@ function AvatarCustomizer() {
 
   const [svgContents, setSvgContents] = useState<{ [key: string]: string | null }>({})
   const [assetPreviews, setAssetPreviews] = useState<{ [key: string]: { [key: string]: string | null } }>({})
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const avatarRef = useRef<HTMLDivElement>(null)
 
+  // Redirect if not authenticated
   useEffect(() => {
-    const loadSvgs = async () => {
+    if (!isLoading && !user) {
+      navigate({ to: '/login', search: { redirect: '/avatar-customizer' } })
+    }
+  }, [user, isLoading, navigate])
+
+  // Load saved avatar customization from cache
+  useEffect(() => {
+    if (customization && !isCustomizationLoading) {
+      if (customization.elements) {
+        setSelectedElements(prevElements => ({
+          ...prevElements,
+          ...customization.elements
+        }));
+      }
+      
+      if (customization.colors) {
+        setColors(prevColors => ({
+          ...prevColors,
+          ...customization.colors
+        }));
+      }
+    }
+  }, [customization, isCustomizationLoading]);
+
+  useEffect(() => {
+    const loadSvgs = () => {
       const newSvgContents: { [key: string]: string | null } = {}
       for (const category of assetCategories) {
         const assetName = selectedElements[category as keyof typeof selectedElements]
-        if (assetName) {
-          const categoryMap: { [key: string]: string } = {
-            face: '1.face',
-            ears: '2.ears',
-            shirts: '3.shirts',
-            hair: '4.hair',
-            brow: '5.brow',
-            eyes: '6.eyes',
-            nose: '7.nose',
-            mouth: '8.mouth',
-            blush: '9.blush',
-            accessories: '10.accessories',
-            stars: '11.stars',
-          }
-          const path = `/src/assets/images/avatar/${categoryMap[category]}/${assetName}.svg`
-          newSvgContents[category] = await fetchSvgContent(path)
+        if (assetName && svgAssets[category] && svgAssets[category][assetName]) {
+          newSvgContents[category] = svgAssets[category][assetName]
         } else {
           newSvgContents[category] = null
         }
@@ -97,27 +263,16 @@ function AvatarCustomizer() {
 
   // Load preview images for the active category
   useEffect(() => {
-    const loadPreviews = async () => {
+    const loadPreviews = () => {
       if (assetPreviews[activeCategory]) return // Already loaded
       
-      const categoryMap: { [key: string]: string } = {
-        face: '1.face',
-        ears: '2.ears',
-        shirts: '3.shirts',
-        hair: '4.hair',
-        brow: '5.brow',
-        eyes: '6.eyes',
-        nose: '7.nose',
-        mouth: '8.mouth',
-        blush: '9.blush',
-        accessories: '10.accessories',
-        stars: '11.stars',
-      }
-
       const previews: { [key: string]: string | null } = {}
       for (const asset of initialAssets[activeCategory]) {
-        const path = `/src/assets/images/avatar/${categoryMap[activeCategory]}/${asset}.svg`
-        previews[asset] = await fetchSvgContent(path)
+        if (svgAssets[activeCategory] && svgAssets[activeCategory][asset]) {
+          previews[asset] = svgAssets[activeCategory][asset]
+        } else {
+          previews[asset] = null
+        }
       }
       
       setAssetPreviews(prev => ({ ...prev, [activeCategory]: previews }))
@@ -133,25 +288,63 @@ function AvatarCustomizer() {
     setColors((prev) => ({ ...prev, [part]: color }))
   }
 
-  const exportAvatar = () => {
-    if (avatarRef.current) {
-      domtoimage.toPng(avatarRef.current, {
-        width: 400,
-        height: 400,
-        style: {
-          transform: 'scale(2)',
-          transformOrigin: 'top left'
-        }
+  const handleSaveAvatar = async () => {
+    if (!avatarRef.current) return
+
+    setSaveSuccess(false)
+    const result = await saveAvatar(avatarRef.current, {
+      avatarElements: selectedElements,
+      avatarColors: colors
+    })
+    
+    if (result.success) {
+      setSaveSuccess(true)
+      toast.success('Avatar saved successfully! Redirecting to dashboard...', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       })
-        .then(function (dataUrl: any) {
-          const link = document.createElement('a')
-          link.download = 'my-avatar.png'
-          link.href = dataUrl
-          link.click()
-        })
-        .catch(function (error: any) {
-          console.error('Export failed:', error)
-        })
+      // Navigate to dashboard after successful save
+      setTimeout(() => {
+        navigate({ to: '/dashboard' })
+      }, 2000)
+    } else {
+      toast.error(result.error || 'Failed to save avatar. Please try again.', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
+    }
+  }
+
+  const handleSkipAvatar = async () => {
+    const result = await skipAvatarForNow()
+    
+    if (result.success) {
+      toast.info('Avatar creation skipped. You can create one later from your profile settings.', {
+        position: 'top-right',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
+      navigate({ to: '/dashboard' })
+    } else {
+      toast.error(result.error || 'Failed to skip avatar creation. Please try again.', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
     }
   }
 
@@ -164,6 +357,7 @@ function AvatarCustomizer() {
     })
     setSelectedElements(newSelection)
   }
+
 
   return (
     <>
@@ -274,16 +468,59 @@ function AvatarCustomizer() {
                 <div className="space-y-2">
                   <button
                     onClick={randomizeAvatar}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-500 dark:hover:to-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                    disabled={isUploading}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-500 dark:hover:to-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     🎲 Randomize
                   </button>
+                  
                   <button
-                    onClick={exportAvatar}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 dark:from-cyan-600 dark:to-blue-600 dark:hover:from-cyan-500 dark:hover:to-blue-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-cyan-500/25"
+                    onClick={handleSaveAvatar}
+                    disabled={isUploading}
+                    className={`w-full font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                      saveSuccess 
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-500/25' 
+                        : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 dark:from-cyan-600 dark:to-blue-600 dark:hover:from-cyan-500 dark:hover:to-blue-500 text-white hover:shadow-cyan-500/25'
+                    }`}
                   >
-                    💾 Export Avatar
+                    {isUploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {uploadProgress > 0 ? `Saving... ${uploadProgress}%` : 'Saving...'}
+                      </span>
+                    ) : saveSuccess ? (
+                      '✓ Saved! Redirecting...'
+                    ) : (
+                      '💾 Save Avatar'
+                    )}
                   </button>
+                  
+                  <button
+                    onClick={handleSkipAvatar}
+                    disabled={isUploading}
+                    className="w-full bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Skip for now
+                  </button>
+                  
+                  {/* Progress Bar */}
+                  {isUploading && uploadProgress > 0 && (
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  )}
+                  
+                  
+                  {/* Skip Info */}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    You can always create your avatar later from your profile settings
+                  </p>
                 </div>
               </div>
             </div>

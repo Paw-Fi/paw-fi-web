@@ -11,6 +11,7 @@ import { formatTime as defaultFormatTime } from "@/utils/sanitize-course";
 import { GoalType } from "../goal-tracker/types";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { OptimizedImage } from "../seo/optimized-image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 interface Message {
   content: string;
@@ -29,6 +30,10 @@ interface ChatMessageItemProps {
   onSendMessage?: (message: string) => void;
   agentIcon?: string;
   agentName?: string;
+  userAvatarUrl?: string | null;
+  isUserAvatarLoading?: boolean;
+  user?: any;
+  isActive?: boolean;
 }
 
 const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
@@ -40,10 +45,13 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   onSendMessage,
   agentIcon,
   agentName,
+  userAvatarUrl,
+  isUserAvatarLoading,
+  user,
+  isActive,
 }) => {
   const isUser = message.role === "user";
-  const { user } = useAuth();
-
+  // user is already passed as prop, no need to get it from useAuth
   const { hasProfile, refetch: refetchProfile } = useFinancialHealthProfile(user?.id);
 
 
@@ -59,13 +67,20 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
     <div>
      {
       isUser ? (
-       <div className="flex items-center justify-center h-10 w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
-
-<FontAwesomeIcon
-        icon={isUser ? faUser : faLightbulb}
-        className={`size-4 ${isUser ? "text-slate-500 dark:text-slate-300" : "text-white"}`}
-      />
-       </div>
+        user ? (
+          <UserAvatar
+            size="md"
+            showPremiumBorder={true}
+            showPremiumCrown={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-10 w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
+            <FontAwesomeIcon
+              icon={faUser}
+              className="size-4 text-slate-500 dark:text-slate-300"
+            />
+          </div>
+        )
       ) : (
         agentIcon ? <OptimizedImage src={agentIcon} alt={agentName || "Agent"} className="size-10" /> : iconContainer("size-6")
       )

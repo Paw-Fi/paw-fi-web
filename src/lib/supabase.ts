@@ -78,12 +78,8 @@ const createSafeClient = () => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
-      },
-      global: {
-        headers: {
-          'Content-Type': 'application/json'
-        }
       }
+      // Removed global Content-Type header to allow proper MIME types for file uploads
     });
   } catch (error) {
     console.error('Error creating Supabase client:', error);

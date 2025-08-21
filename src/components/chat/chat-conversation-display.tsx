@@ -13,6 +13,7 @@ import { GoalType } from '../goal-tracker/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatContext } from '@/contexts/chat-context';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useAvatar } from '@/hooks/use-avatar';
 import { useLocation } from '@tanstack/react-router';
 import FinancialHealthQuiz from '../financial-health/FinancialHealthQuiz';
 import { Modal } from '../ui/modal';
@@ -199,7 +200,11 @@ const MessagesList = React.memo<{
   onSendMessage: (content: string, manual_profile?: Pick<FinancialHealthProfile, 'profile_description' | 'profile_data'>) => Promise<void>;
   agentIcon?: any;
   agentName?: string;
-}>(({ messages, onOpenQuizModal, onGoalTemplateClick, disableMsgParse, onSendMessage, agentIcon, agentName }) => {
+  userAvatarUrl?: string | null;
+  isUserAvatarLoading?: boolean;
+  user?: any;
+  isActive?: boolean;
+}>(({ messages, onOpenQuizModal, onGoalTemplateClick, disableMsgParse, onSendMessage, agentIcon, agentName, userAvatarUrl, isUserAvatarLoading, user, isActive }) => {
   const memoizedMessages = useMemo(() => {
     return messages.map((message) => {
       // More efficient hash calculation
@@ -232,6 +237,10 @@ const MessagesList = React.memo<{
             onSendMessage={onSendMessage}
             agentIcon={agentIcon}
             agentName={agentName}
+            userAvatarUrl={userAvatarUrl}
+            isUserAvatarLoading={isUserAvatarLoading}
+            user={user}
+            isActive={isActive}
           />
         </motion.div>
       ))}
@@ -244,6 +253,10 @@ const MessagesList = React.memo<{
     prevProps.disableMsgParse === nextProps.disableMsgParse &&
     prevProps.agentIcon === nextProps.agentIcon &&
     prevProps.agentName === nextProps.agentName &&
+    prevProps.userAvatarUrl === nextProps.userAvatarUrl &&
+    prevProps.isUserAvatarLoading === nextProps.isUserAvatarLoading &&
+    prevProps.user?.id === nextProps.user?.id &&
+    prevProps.isActive === nextProps.isActive &&
     prevProps.messages.every((msg, index) => 
       msg.content === nextProps.messages[index]?.content &&
       msg.timestamp === nextProps.messages[index]?.timestamp
@@ -281,6 +294,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   const { user } = useAuth();
   const { closeChat } = useAIChat();
   const { isActive } = useSubscription(user?.id || '');
+  const { avatarUrl, isAvatarLoading } = useAvatar();
   const location = useLocation();
   const isAuthenticated = !!user;
 
@@ -597,6 +611,10 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
           onSendMessage={handleSendMessage}
           agentIcon={agentIcon}
           agentName={agentName}
+          userAvatarUrl={avatarUrl}
+          isUserAvatarLoading={isAvatarLoading}
+          user={user}
+          isActive={isActive}
         />
 
         {/* Loading Message */}

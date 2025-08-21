@@ -22,12 +22,31 @@ export const Route = createFileRoute('/auth/confirm')({
         });
 
         if (!error) {
-          // Successfully verified, redirect to the intended destination
-          const redirectTo = next || '/dashboard';
-          throw redirect({
-            to: redirectTo,
-            replace: true,
-          });
+          // Successfully verified, check if user needs to create avatar
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            // Check if user has avatar_url
+            const { data: userData } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', user.id)
+              .single();
+            
+            // If no avatar, redirect to avatar customizer, otherwise use intended destination
+            const redirectTo = (!userData?.avatar_url) ? '/avatar-customizer' : (next || '/dashboard');
+            throw redirect({
+              to: redirectTo,
+              replace: true,
+            });
+          } else {
+            // Fallback if no user data
+            const redirectTo = next || '/dashboard';
+            throw redirect({
+              to: redirectTo,
+              replace: true,
+            });
+          }
         }
       } catch (error) {
         // If it's a redirect, re-throw it

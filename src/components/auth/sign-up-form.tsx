@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useAvatar } from '@/hooks/use-avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -21,6 +22,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const [otpCode, setOtpCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const { signUp, isLoading } = useAuth();
+  const { checkUserHasAvatar } = useAvatar();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,8 +38,14 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         if (result.data?.user?.confirmation_sent_at) {
           setVerificationSent(true);
         } else {
-          // If no confirmation needed, navigate to redirect URL or chat
-          navigate({ to: redirectUrl || '/dashboard' });
+          // If no confirmation needed, check avatar and navigate accordingly
+          const hasAvatar = await checkUserHasAvatar();
+          
+          if (!hasAvatar) {
+            navigate({ to: '/avatar-customizer' });
+          } else {
+            navigate({ to: redirectUrl || '/dashboard' });
+          }
         }
       }
     } catch (error: any) {
@@ -82,9 +90,15 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       
       if (data.session) {
         // Successfully verified and logged in
-        // Use the same redirect logic as the email verification link
-        const targetUrl = redirectUrl || '/dashboard';
-        navigate({ to: targetUrl });
+        // Check if user has avatar, if not redirect to avatar customizer
+        const hasAvatar = await checkUserHasAvatar();
+        
+        if (!hasAvatar) {
+          navigate({ to: '/avatar-customizer' });
+        } else {
+          const targetUrl = redirectUrl || '/dashboard';
+          navigate({ to: targetUrl });
+        }
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);

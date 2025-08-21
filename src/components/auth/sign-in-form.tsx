@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useAvatar } from '@/hooks/use-avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@tanstack/react-router';
@@ -15,6 +16,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { signIn, isLoading } = useAuth();
+  const { shouldPromptForAvatar } = useAvatar();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +26,14 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        navigate({ to: redirectUrl || '/dashboard' });
+        // Check if user needs to create an avatar
+        const needsAvatar = await shouldPromptForAvatar();
+        
+        if (needsAvatar) {
+          navigate({ to: '/avatar-customizer' });
+        } else {
+          navigate({ to: redirectUrl || '/dashboard' });
+        }
       }
     } catch (error: any) {
       setError(error.message || 'Invalid email or password');
