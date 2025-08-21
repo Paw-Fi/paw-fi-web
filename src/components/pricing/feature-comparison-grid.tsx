@@ -22,9 +22,24 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
       description: "Expert-generated courses by financial advisors"
     },
     {
+      category: "AI Conversations",
+      key: "aiConversations" as const,
+      description: "Chat with Moneko & Finni AI assistants"
+    },
+    {
       category: "AI Personalized Lessons",
       key: "aiPersonalizedLessons" as const, 
       description: "Custom lessons based on your goals"
+    },
+    {
+      category: "Goal Creation",
+      key: "goalCreation" as const,
+      description: "Create and track financial goals"
+    },
+    {
+      category: "Goal Modification",
+      key: "goalModification" as const,
+      description: "Modify and AI-refine your goals"
     },
     {
       category: "Portfolio Tracking",

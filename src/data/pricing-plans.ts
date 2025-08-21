@@ -9,6 +9,18 @@ import {
   faBullseye,
   faCalendarCheck,
   faStar,
+  faBook, 
+  faUsers, 
+  faHeadset, 
+  faChartLine, 
+  faUserTie, 
+  faTools,
+  faGraduationCap,
+  faUserGraduate,
+  faRobot,
+  faComments,
+  faLock,
+  faEdit
 } from "@fortawesome/free-solid-svg-icons";
 
 // Basic plan option interface used in PlanSelector
@@ -41,6 +53,9 @@ export interface FeatureComparison {
   basicLessons: FeatureDetail;
   advancedCourses: FeatureDetail;
   aiPersonalizedLessons: FeatureDetail;
+  aiConversations: FeatureDetail;
+  goalCreation: FeatureDetail;
+  goalModification: FeatureDetail;
   portfolioTracking: FeatureDetail;
   support: FeatureDetail;
   oneOnOneGuidance: FeatureDetail;
@@ -101,9 +116,9 @@ export const planData: Record<string, PlanData> = {
   free: {
     id: "free",
     name: "Free",
-    title: "Starter",
+    title: "Free",
     subtitle: "Perfect for Financial Beginners",
-    description: "Start your financial education journey with essential lessons",
+    description: "Start your financial education journey with AI guidance and basic tools",
     monthlyPrice: 0,
     yearlyPrice: 0,
     priceMonthly: "$0",
@@ -116,20 +131,27 @@ export const planData: Record<string, PlanData> = {
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "Access to 3 of 10 basic lessons",
+      "Limited conversations with Moneko & Finni AI",
+      "Basic goal creation (view-only)",
+      "Portfolio tracking",
       "Standard community access",
       "Basic financial education content"
     ],
     featureItems: [
-      { text: "Access to 3 of 10 basic lessons", icon: faBook },
+      { text: "Limited conversations with Moneko & Finni AI", icon: faComments },
+      { text: "Basic goal creation (view-only)", icon: faBullseye },
+      { text: "Portfolio tracking", icon: faChartLine },
       { text: "Standard community access", icon: faUsers },
       { text: "Basic financial education content", icon: faGraduationCap }
     ],
     featureComparison: {
-      basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "3 of 10" },
+      basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "Limited Access" },
       advancedCourses: { description: "Expert-generated advanced courses", isIncluded: false },
       aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: false },
-      portfolioTracking: { description: "Track your investments", isIncluded: false },
+      aiConversations: { description: "Chat with Moneko & Finni AI assistants", isIncluded: true, limit: "Limited conversations" },
+      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Create only (view-only)" },
+      goalModification: { description: "Modify and AI-refine your goals", isIncluded: false },
+      portfolioTracking: { description: "Track your investments", isIncluded: true },
       support: { description: "Get help when needed", isIncluded: true, limit: "Standard Access" },
       oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: false },
       communityAccess: { description: "Join our financial community", isIncluded: true, limit: "Standard Access" }
@@ -139,7 +161,7 @@ export const planData: Record<string, PlanData> = {
   plus: {
     id: "plus",
     name: "Plus",
-    title: "Investor",
+    title: "Plus",
     subtitle: "For Serious Learners Ready to Invest",
     description: "Comprehensive education and tools for confident investing",
     monthlyPrice: 9.99,
@@ -161,19 +183,24 @@ export const planData: Record<string, PlanData> = {
     features: [
       "All 10 basic lessons unlocked",
       "10 advanced courses by financial advisors",
+      "Unlimited AI conversations with Moneko & Finni",
+      "Full goal creation & modification with AI refinement",
       "Priority support (24hr response)",
-      "Connect 1 brokerage account"
     ],
     featureItems: [
       { text: "All 10 basic lessons unlocked", icon: faBook },
       { text: "10 advanced courses by financial advisors", icon: faUserGraduate },
+      { text: "Unlimited AI conversations with Moneko & Finni", icon: faRobot },
+      { text: "Full goal creation & modification with AI refinement", icon: faEdit },
       { text: "Priority support (24hr response)", icon: faHeadset },
-      { text: "Connect 1 brokerage account", icon: faChartLine }
     ],
     featureComparison: {
       basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "All 10", highlight: true },
-      advancedCourses: { description: "Expert-generated advanced courses", isIncluded: true, limit: "10 Courses", highlight: true },
-      aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: false },
+      advancedCourses: { description: "Expert-generated advanced courses", isIncluded: true, limit: "Unlimited Access", highlight: true },
+      aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: true },
+      aiConversations: { description: "Chat with Moneko & Finni AI assistants", isIncluded: true, limit: "Unlimited", highlight: true },
+      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Full access", highlight: true },
+      goalModification: { description: "Modify and AI-refine your goals", isIncluded: true, limit: "With AI refinement", highlight: true },
       portfolioTracking: { description: "Track your investments", isIncluded: true, limit: "1 Brokerage Account" },
       support: { description: "Get help when needed", isIncluded: true, limit: "Priority (24hr response)" },
       oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: false },
@@ -184,7 +211,7 @@ export const planData: Record<string, PlanData> = {
   premium: {
     id: "premium",
     name: "Premium",
-    title: "Wealth Builder",
+    title: "Premium",
     subtitle: "For Advanced Investors Building Wealth",
     description: "Unlimited AI-powered guidance and premium features",
     monthlyPrice: 19.99,
@@ -203,14 +230,18 @@ export const planData: Record<string, PlanData> = {
     features: [
       "All 10 basic lessons unlocked",
       "Unlimited advanced courses by advisors",
+      "Unlimited AI conversations with Moneko & Finni",
       "Unlimited AI-personalized lessons",
+      "Advanced goal management with AI optimization",
       "Monthly 1-on-1 guidance sessions",
       "Unlimited brokerage connections"
     ],
     featureItems: [
       { text: "All 10 basic lessons unlocked", icon: faBook },
       { text: "Unlimited advanced courses by advisors", icon: faUserGraduate },
-      { text: "Unlimited AI-personalized lessons", icon: faRobot },
+      { text: "Unlimited AI conversations with Moneko & Finni", icon: faRobot },
+      { text: "Unlimited AI-personalized lessons", icon: faGift },
+      { text: "Advanced goal management with AI optimization", icon: faBullseye },
       { text: "Monthly 1-on-1 guidance sessions", icon: faUserTie },
       { text: "Unlimited brokerage connections", icon: faChartLine }
     ],
@@ -218,6 +249,9 @@ export const planData: Record<string, PlanData> = {
       basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "All 10" },
       advancedCourses: { description: "Expert-generated advanced courses", isIncluded: true, limit: "Unlimited Access", highlight: true },
       aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: true, limit: "Unlimited", highlight: true },
+      aiConversations: { description: "Chat with Moneko & Finni AI assistants", isIncluded: true, limit: "Unlimited", highlight: true },
+      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Advanced management", highlight: true },
+      goalModification: { description: "Modify and AI-refine your goals", isIncluded: true, limit: "AI optimization", highlight: true },
       portfolioTracking: { description: "Track your investments", isIncluded: true, limit: "Unlimited Accounts", highlight: true },
       support: { description: "Get help when needed", isIncluded: true, limit: "1-on-1 Priority Channel" },
       oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: true, limit: "Monthly Sessions", highlight: true },
@@ -261,16 +295,3 @@ export function getPricingTiers(isYearly: boolean = false): PricingTier[] {
     borderColor: plan.borderColor,
   }));
 }
-
-// Missing icon definitions - adding them here
-import { 
-  faBook, 
-  faUsers, 
-  faHeadset, 
-  faChartLine, 
-  faUserTie, 
-  faTools,
-  faGraduationCap,
-  faUserGraduate,
-  faRobot
-} from "@fortawesome/free-solid-svg-icons";

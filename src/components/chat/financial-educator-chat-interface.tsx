@@ -74,6 +74,11 @@ export function FinancialEducatorChatInterface() {
         showFloatingCloseButton: true,
         showSignupModal: true,
       }}
+      initialSuggestedResponses={[
+        "I want to learn about investing",
+        "I want to learn about saving",
+        "I want to learn about stocks"
+      ]}
       agentIcon={finniLogo}
       agentName="Finni"
       welcomeMessage="Hi I'm Finni! I'll help you learn about personal finance. Type 'start' to begin or ask me anything."

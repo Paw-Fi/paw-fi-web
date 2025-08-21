@@ -56,6 +56,44 @@ export interface FinancialHealthProfile {
   updated_at: string;
 }
 
+// Helper function to check if profile is complete
+function isProfileComplete(profile: FinancialHealthProfile | null): boolean {
+  if (!profile || !profile.profile_data) return false;
+  
+  // Check key fields from profile_data structure
+  const profileData = profile.profile_data;
+  
+  // Check demographics
+  if (!profileData.demographics?.age || 
+      !profileData.demographics?.income?.gross || 
+      !profileData.demographics?.income?.net ||
+      !profileData.demographics?.housing ||
+      !profileData.demographics?.expenses) {
+    return false;
+  }
+  
+  // Check financial situation 
+  if (profileData.financial_situation?.emergency_fund === undefined ||
+      profileData.financial_situation?.emergency_fund === null ||
+      profileData.financial_situation?.emergency_fund === '') {
+    return false;
+  }
+  
+  // Check goals and timeline
+  if (!profileData.goals_and_timeline?.retirement_age ||
+      !profileData.goals_and_timeline?.target_retirement) {
+    return false;
+  }
+  
+  // Check risk profile
+  if (!profileData.risk_profile?.high_risk_preference ||
+      !profileData.risk_profile?.investment_knowledge) {
+    return false;
+  }
+  
+  return true;
+}
+
 // Fetcher function for financial health profile
 const fetchFinancialHealthProfile = async (userId: string | undefined): Promise<FinancialHealthProfile | null> => {
   if (!userId) return null;
@@ -105,7 +143,7 @@ export function useFinancialHealthProfile(userId: string | undefined) {
     isLoading,
     error,
     refetch,
-    hasProfile: !!profile,
+    hasProfile: isProfileComplete(profile || null),
   };
 }
 

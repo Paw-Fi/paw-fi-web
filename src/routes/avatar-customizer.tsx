@@ -159,17 +159,17 @@ const svgAssets: { [category: string]: { [assetName: string]: string } } = {
 
 // Category configuration with display names and icons
 const categoryConfig = {
-  face: { name: 'Face Shape', icon: '👤', color: 'from-pink-500 to-rose-600' },
-  ears: { name: 'Ears', icon: '👂', color: 'from-amber-500 to-orange-600' },
-  shirts: { name: 'Clothing', icon: '👕', color: 'from-blue-500 to-indigo-600' },
-  hair: { name: 'Hair Style', icon: '💇', color: 'from-purple-500 to-violet-600' },
-  brow: { name: 'Eyebrows', icon: '🤨', color: 'from-green-500 to-emerald-600' },
-  eyes: { name: 'Eyes', icon: '👁️', color: 'from-cyan-500 to-teal-600' },
-  nose: { name: 'Nose', icon: '👃', color: 'from-red-500 to-pink-600' },
-  mouth: { name: 'Mouth', icon: '👄', color: 'from-yellow-500 to-amber-600' },
-  blush: { name: 'Blush', icon: '😊', color: 'from-rose-500 to-pink-600' },
-  accessories: { name: 'Accessories', icon: '👓', color: 'from-indigo-500 to-purple-600' },
-  stars: { name: 'Decorations', icon: '⭐', color: 'from-yellow-500 to-orange-600' },
+  face: { name: 'Face Shape', color: 'from-pink-500 to-rose-600' },
+  ears: { name: 'Ears', color: 'from-amber-500 to-orange-600' },
+  shirts: { name: 'Clothing', color: 'from-blue-500 to-indigo-600' },
+  hair: { name: 'Hair Style', color: 'from-purple-500 to-violet-600' },
+  brow: { name: 'Eyebrows', color: 'from-green-500 to-emerald-600' },
+  eyes: { name: 'Eyes', color: 'from-cyan-500 to-teal-600' },
+  nose: { name: 'Nose', color: 'from-red-500 to-pink-600' },
+  mouth: { name: 'Mouth', color: 'from-yellow-500 to-amber-600' },
+  blush: { name: 'Blush', color: 'from-rose-500 to-pink-600' },
+  accessories: { name: 'Accessories', color: 'from-indigo-500 to-purple-600' },
+  stars: { name: 'Decorations', color: 'from-yellow-500 to-orange-600' },
 }
 
 const assetCategories = Object.keys(categoryConfig)
@@ -356,8 +356,37 @@ function AvatarCustomizer() {
       newSelection[category] = assets[randomIndex]
     })
     setSelectedElements(newSelection)
+
+    // Randomize colors with appropriate constraints
+    const newColors = {
+      hair: getRandomHairColor(),
+      face: getRandomSkinColor(),
+      eyes: getRandomEyeColor(),
+      mouth: getRandomMouthColor(),
+    }
+    setColors(newColors)
   }
 
+  // Helper functions for color randomization
+  const getRandomHairColor = () => {
+    const hairColors = ['#8B4513', '#654321', '#4A4A4A', '#2C1810', '#B8860B', '#800080', '#FF6347', '#32CD32', '#1E90FF']
+    return hairColors[Math.floor(Math.random() * hairColors.length)]
+  }
+
+  const getRandomSkinColor = () => {
+    const skinColors = ['#FDBCB4', '#F1C27D', '#E0AC69', '#C68642', '#8D5524', '#ECBCB4', '#DDB7AB', '#CB9E82']
+    return skinColors[Math.floor(Math.random() * skinColors.length)]
+  }
+
+  const getRandomEyeColor = () => {
+    const eyeColors = ['#4A4A4A', '#8B4513', '#006400', '#0000FF', '#800080', '#2F4F4F', '#B8860B']
+    return eyeColors[Math.floor(Math.random() * eyeColors.length)]
+  }
+
+  const getRandomMouthColor = () => {
+    const mouthColors = ['#FF6B6B', '#DC143C', '#CD5C5C', '#F08080', '#FF1493', '#C71585']
+    return mouthColors[Math.floor(Math.random() * mouthColors.length)]
+  }
 
   return (
     <>
@@ -543,7 +572,6 @@ function AvatarCustomizer() {
                             : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/10 hover:border-gray-300/50 dark:hover:border-white/20'
                         }`}
                       >
-                        <span className="text-base">{config.icon}</span>
                         <span className="hidden sm:inline">{config.name}</span>
                       </button>
                     )

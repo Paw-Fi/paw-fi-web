@@ -403,12 +403,15 @@ serve(async (req: Request): Promise<Response> => {
           }
           else
           {
-            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FOLLOWUP);
+            aiResponse = getRandomResponse(RANDOM_RESPONSES.EDUCATOR_FIRST);
           }
         }
       }
-    } else {
-      // User has profile, generate AI response using Gemini
+    }
+    
+    // Generate AI response if we have a profile (complete or partial) or if no blocking conditions
+    if (!userId || userProfile) {
+      // User has profile or is not authenticated, generate AI response using Gemini
       
       // Format conversation history for Gemini: support both {role, parts} and {role, content}
       
@@ -683,6 +686,7 @@ serve(async (req: Request): Promise<Response> => {
       }
       
       aiResponse = responseText;
+      
     }
 
     // Clean up the response - if we have multiple ```json markers from continuations, fix it
@@ -852,16 +856,14 @@ serve(async (req: Request): Promise<Response> => {
         unlocked: parsedJson.unlocked,
         lesson_count: parsedJson.lessons ? parsedJson.lessons.length : 0
       };
-      
-      // Convert the simplified JSON object to a properly formatted string
-      const simpleJsonString = JSON.stringify(simpleJsonObject, null, 2);
 
-      // Reconstruct the response with preamble, sanitized JSON, and epilogue
+      // Create an HTML course card element instead of JSON markdown
+      const courseCardHtml = `<course-card data-course='${JSON.stringify(simpleJsonObject)}'></course-card>`;
+      
+      // Reconstruct the response with preamble, course card HTML, and epilogue
       const fullMessageParts = [
         preamble,
-        `${markdownJsonPrefix}
-${simpleJsonString}
-${markdownSuffix}`,
+        courseCardHtml,
         epilogue,
       ].filter(Boolean);
       finalResponse = fullMessageParts.join("\n\n");

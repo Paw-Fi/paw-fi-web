@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GoalType } from "../goal-tracker/types";
 import { CourseCard } from "@/components/ui/course-card";
 import { MessageSection } from "@/utils/message-parser";
+import { ExtractedContent } from "@/utils/smart-content-extractor";
 
 interface MarkdownComponentsProps {
   onOpenQuizModal?: () => void;
@@ -20,6 +21,7 @@ interface MarkdownComponentsProps {
   closeChat?: () => void;
   openChat?: (aiId: 'advisor' | 'educator') => void;
   hasProfile?: boolean;
+  extractedContent?: ExtractedContent | null;
 }
 
 // Minimal version for use in contexts without hooks - removes interactive elements
@@ -474,7 +476,20 @@ export const createMarkdownComponents = ({
     
     "course-card": ({ node, ...props }: any) => {
       try {
-        const courseData = JSON.parse(props['data-course'] || '{}');
+        const dataString = props['data-course'] || '{}';
+        
+        // Try to decode HTML entities if present
+        const decodedString = dataString
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&apos;/g, "'")
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+        
+        const courseData = JSON.parse(decodedString);
+        console.log('Rendering course card:', courseData.title);
+        
         return (
           <div className="my-3">
             <CourseCard
@@ -487,8 +502,22 @@ export const createMarkdownComponents = ({
           </div>
         );
       } catch (error) {
-        console.error('Error rendering course card:', error);
-        return null;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Error rendering course card:', errorMessage);
+        
+        // Return a fallback component for debugging
+        return (
+          <div className="my-3 p-4 border border-red-300 bg-red-50 rounded-lg">
+            <h3 className="text-red-700 font-medium">Course Card Error</h3>
+            <p className="text-red-600 text-sm">Failed to parse course data: {errorMessage}</p>
+            <details className="mt-2">
+              <summary className="text-xs text-red-600 cursor-pointer">Debug Info</summary>
+              <pre className="text-xs text-red-500 mt-1 overflow-x-auto">
+                {JSON.stringify(props, null, 2)}
+              </pre>
+            </details>
+          </div>
+        );
       }
     },
 
@@ -646,6 +675,31 @@ export const createMarkdownComponents = ({
         console.error('Error rendering view details button:', error);
         return null;
       }
+    },
+
+    "tip-component": ({ node, ...props }: any) => {
+      const action = props['data-action'];
+      
+      const handleTipClick = () => {
+        if (action === 'QUESTIONNAIRE' && !hasProfile) {
+          onOpenQuizModal?.();
+        }
+      };
+
+      return (
+        <div className="mt-2 mb-2">
+          <div 
+            className="inline-flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+            onClick={handleTipClick}
+          >
+            <span className="text-amber-600 dark:text-amber-400">💡</span>
+            <span className="flex-1">{props.children}</span>
+            {action === 'QUESTIONNAIRE' && !hasProfile && (
+              <span className="text-xs text-amber-600 dark:text-amber-400 ml-1">Click here</span>
+            )}
+          </div>
+        </div>
+      );
     },
   };
 };

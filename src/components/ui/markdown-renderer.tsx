@@ -7,9 +7,40 @@ import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile"
 import { useNavigate } from "@tanstack/react-router";
 import { GoalType } from "../goal-tracker/types";
 import { parseMessageContent, MessageSection } from "@/utils/message-parser";
+import { smartExtractContent, ExtractedContent } from "@/utils/smart-content-extractor";
 import { DetailedContentModal } from "../chat/detailed-content-modal";
 import { Markdown } from "@/components/ui/markdown";
 import { createMarkdownComponents } from "@/components/ui/markdown-components";
+
+// Helper function to process section content - removes interactive elements for better UX
+const processSectionContent = (content: string): string => {
+  let processed = content;
+  
+  // Remove all interactive button syntax from detailed modal content
+  // The detailed modal should be for reading, not for taking actions
+  processed = processed.replace(/``UPDATE_PROFILE(?::[^`]+)?``/gi, '');
+  processed = processed.replace(/``BUTTON:[^`]+``/gi, '');
+  processed = processed.replace(/``CONFIRM:[^`]+``/gi, '');
+  processed = processed.replace(/``QUICK_SAVE:[^`]+``/gi, '');
+  processed = processed.replace(/``FINANCIAL_ACTION:[^`]+``/gi, '');
+  processed = processed.replace(/``GOAL_ACTION:[^`]+``/gi, '');
+  processed = processed.replace(/`GOAL_ACTION:[^`]+`/gi, '');
+  processed = processed.replace(/``UPDATE_DATA:[^`]+``/gi, '');
+  processed = processed.replace(/``RESPONSE:[^`]+``/gi, '');
+  processed = processed.replace(/``PRIORITY:[^`]+``/gi, '');
+  processed = processed.replace(/``HABIT:[^`]+``/gi, '');
+  processed = processed.replace(/``AMOUNT:[^`]+``/gi, '');
+  processed = processed.replace(/``RISK:[^`]+``/gi, '');
+  processed = processed.replace(/``TIMELINE:[^`]+``/gi, '');
+  processed = processed.replace(/``CONFIDENCE:[^`]+``/gi, '');
+  processed = processed.replace(/``COMMITMENT:[^`]+``/gi, '');
+  processed = processed.replace(/``QUESTIONNAIRE``/gi, '');
+  
+  // Clean up any extra whitespace left behind
+  processed = processed.replace(/\n\s*\n\s*\n/g, '\n\n');
+  
+  return processed;
+};
 
 interface MarkdownRendererProps {
   content: string;
@@ -36,138 +67,182 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const { hasProfile } = useFinancialHealthProfile(user?.id);
   const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
   const [modalSections, setModalSections] = React.useState<MessageSection[]>([]);
+  const [extractedContent, setExtractedContent] = React.useState<ExtractedContent | null>(null);
 
   const handleCourseClick = (courseId: string) => () => {
     closeChat();
     navigate({ to: `/dashboard/learning/${courseId}` });
   };
 
-  // Helper function to process section content - removes interactive elements for better UX
-  const processSectionContent = (content: string): string => {
-    let processed = content;
-    
-    // Remove all interactive button syntax from detailed modal content
-    // The detailed modal should be for reading, not for taking actions
-    processed = processed.replace(/``UPDATE_PROFILE(?::[^`]+)?``/gi, '');
-    processed = processed.replace(/``BUTTON:[^`]+``/gi, '');
-    processed = processed.replace(/``CONFIRM:[^`]+``/gi, '');
-    processed = processed.replace(/``QUICK_SAVE:[^`]+``/gi, '');
-    processed = processed.replace(/``FINANCIAL_ACTION:[^`]+``/gi, '');
-    processed = processed.replace(/``GOAL_ACTION:[^`]+``/gi, '');
-    processed = processed.replace(/`GOAL_ACTION:[^`]+`/gi, '');
-    processed = processed.replace(/``UPDATE_DATA:[^`]+``/gi, '');
-    processed = processed.replace(/``RESPONSE:[^`]+``/gi, '');
-    processed = processed.replace(/``PRIORITY:[^`]+``/gi, '');
-    processed = processed.replace(/``HABIT:[^`]+``/gi, '');
-    processed = processed.replace(/``AMOUNT:[^`]+``/gi, '');
-    processed = processed.replace(/``RISK:[^`]+``/gi, '');
-    processed = processed.replace(/``TIMELINE:[^`]+``/gi, '');
-    processed = processed.replace(/``CONFIDENCE:[^`]+``/gi, '');
-    processed = processed.replace(/``COMMITMENT:[^`]+``/gi, '');
-    processed = processed.replace(/``QUESTIONNAIRE``/gi, '');
-    
-    // Clean up any extra whitespace left behind
-    processed = processed.replace(/\n\s*\n\s*\n/g, '\n\n');
-    
-    return processed;
-  };
 
-  // Pre-process content to convert special formats to HTML
+  // Smart extraction function with comprehensive error handling
+  const performSmartExtraction = React.useCallback((rawContent: string) => {
+    if (!rawContent || typeof rawContent !== 'string') {
+      console.warn('Smart extraction: Invalid input content');
+      return null;
+    }
+
+    try {
+      const extracted = smartExtractContent(rawContent);
+      setExtractedContent(extracted);
+      
+      // Validate extraction result
+      if (!extracted || typeof extracted !== 'object') {
+        console.warn('Smart extraction: Invalid extraction result');
+        return null;
+      }
+
+      // Log extraction metrics for monitoring
+      if (extracted.details.length > 0) {
+        console.info(`Smart extraction successful: ${extracted.details.length} sections, ${(extracted.metadata.compressionRatio * 100).toFixed(1)}% compression in ${extracted.metadata.processingTime.toFixed(1)}ms`);
+      }
+      
+      return extracted;
+    } catch (error) {
+      console.error('Smart extraction completely failed:', error);
+      setExtractedContent(null);
+      return null;
+    }
+  }, []);
+
+  // Enhanced content processing with smart extraction
   const processedContent = useMemo(() => {
     let processedContent = content;
-console.log(content)
+    console.log('Processing content:', content.slice(0, 200) + '...');
+
     // Don't process user messages
     if (isUserMessage) {
       return processedContent.replace("{{username}}", user?.user_metadata?.full_name || "");
     }
 
-    // Handle course cards
-    const courseCardMatch = processedContent.includes('```json') && processedContent.includes('```');
-    if (courseCardMatch) {
-      const start = processedContent.indexOf('```json');
-      const jsonStart = start + 7;
-      const jsonEnd = processedContent.indexOf('```', jsonStart);
-      if (start !== -1 && jsonEnd !== -1) {
-        try {
-          const jsonString = processedContent.slice(jsonStart, jsonEnd).trim();
-          const json = JSON.parse(jsonString);
-          const intro = processedContent.slice(0, start).trim();
-          const after = processedContent.slice(jsonEnd + 3).trim();
+    // Check if content has course cards - backend now sends HTML format directly
+    const hasHtmlCourseCard = processedContent.includes('<course-card');
+    
+    if (hasHtmlCourseCard) {
+      console.log('HTML course card detected, skipping smart extraction to preserve course card rendering');
+      // Apply basic interactive element conversion but skip smart extraction
+      let courseCardContent = processedContent;
+      
+      // Only apply essential interactive element conversions (no extraction logic)
+      courseCardContent = courseCardContent.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type=\"$1\"></ai-button>');
+      courseCardContent = courseCardContent.replace(/``CONFIRM:([^`]+)``/gi, '<confirm-button data-type=\"$1\"></confirm-button>');
+      courseCardContent = courseCardContent.replace(/``QUICK_SAVE:([^`]+)``/gi, '<quick-save data-type=\"$1\"></quick-save>');
+      courseCardContent = courseCardContent.replace(/``FINANCIAL_ACTION:([^`]+)``/gi, '<financial-action data-type=\"$1\"></financial-action>');
+      courseCardContent = courseCardContent.replace(/``GOAL_ACTION:([^`]+)``/gi, '<goal-action data-type=\"$1\"></goal-action>');
+      courseCardContent = courseCardContent.replace(/`GOAL_ACTION:([^`]+)`/gi, '<goal-action data-type=\"$1\"></goal-action>');
+      courseCardContent = courseCardContent.replace(/``UPDATE_DATA:([^`]+)``/gi, '<update-data data-type=\"$1\"></update-data>');
+      courseCardContent = courseCardContent.replace(/``RESPONSE:([^`]+)``/gi, '<response-style data-type=\"$1\"></response-style>');
+      courseCardContent = courseCardContent.replace(/``PRIORITY:([^`]+)``/gi, '<priority-select data-type=\"$1\"></priority-select>');
+      courseCardContent = courseCardContent.replace(/``HABIT:([^`]+)``/gi, '<habit-track data-type=\"$1\"></habit-track>');
+      courseCardContent = courseCardContent.replace(/``AMOUNT:([^`]+)``/gi, '<amount-select data-type=\"$1\"></amount-select>');
+      courseCardContent = courseCardContent.replace(/``RISK:([^`]+)``/gi, '<risk-select data-type=\"$1\"></risk-select>');
+      courseCardContent = courseCardContent.replace(/``TIMELINE:([^`]+)``/gi, '<timeline-select data-type=\"$1\"></timeline-select>');
+      courseCardContent = courseCardContent.replace(/``CONFIDENCE:([^`]+)``/gi, '<confidence-track data-type=\"$1\"></confidence-track>');
+      courseCardContent = courseCardContent.replace(/``COMMITMENT:([^`]+)``/gi, '<commitment-level data-type=\"$1\"></commitment-level>');
+      courseCardContent = courseCardContent.replace(/``QUESTIONNAIRE``/gi, '<questionnaire-button></questionnaire-button>');
+      courseCardContent = courseCardContent.replace(/``UPDATE_PROFILE``/gi, '<update-profile-button></update-profile-button>');
+      courseCardContent = courseCardContent.replace(/``UPDATE_PROFILE:([^`]+)``/gi, '<update-profile-button data-params=\"$1\"></update-profile-button>');
+
+      // Convert goal templates
+      const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
+      goalTemplates.forEach(template => {
+        const regex = new RegExp('``' + template.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '``', 'g');
+        courseCardContent = courseCardContent.replace(regex, `<goal-template data-type=\"${template}\"></goal-template>`);
+      });
+
+      // Remove goal matches and thinking tags
+      courseCardContent = courseCardContent.replace(/``GOAL:[^`]+``/gi, '');
+      courseCardContent = courseCardContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+      
+      return courseCardContent.replace("{{username}}", user?.user_metadata?.full_name || "");
+    }
+
+    // Apply smart extraction if not disabled and no course cards present
+    let finalContent = processedContent;
+    
+    if (!disableMessageParsing) {
+      try {
+        // Use smart extraction with the original content (before button processing)
+        const extracted = performSmartExtraction(processedContent);
+        
+        if (extracted && extracted.shouldShowDetails && extracted.details.length > 0) {
+          console.log(`Smart extraction found ${extracted.details.length} sections with ${(extracted.metadata.compressionRatio * 100).toFixed(1)}% compression`);
           
-          processedContent = `${intro}
-<course-card data-course='${JSON.stringify(json)}'></course-card>
-${after}`;
-        } catch (error) {
-          console.error('Error parsing course JSON:', error);
+          // Use the smart-extracted summary as the main content
+          finalContent = extracted.summary;
+          
+          // Convert extracted details to MessageSection format and store for modal
+          const smartSections: MessageSection[] = extracted.details.map(detail => ({
+            title: detail.title,
+            content: processSectionContent(detail.content),
+            subsections: undefined,
+          }));
+          
+          setModalSections(smartSections);
+          
+          // Add the view details button with smart extraction data
+          const escapedSections = JSON.stringify(smartSections).replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+          finalContent += `
+<view-details-button data-sections="${escapedSections}" data-smart="true" data-compression="${(extracted.metadata.compressionRatio * 100).toFixed(1)}"></view-details-button>`;
+        } else {
+          // Fall back to legacy parsing if smart extraction didn't find content to extract
+          console.log('Smart extraction did not find extractable content, using legacy parsing');
+          const parsedMessage = parseMessageContent(processedContent, false); // Disable smart extraction in legacy parser
+          
+          if (parsedMessage.hasLongContent && parsedMessage.sections.length >= 2) {
+            const processedSections = parsedMessage.sections.map(section => ({
+              ...section,
+              content: processSectionContent(section.content),
+              subsections: section.subsections?.map(sub => ({
+                ...sub,
+                content: processSectionContent(sub.content)
+              }))
+            }));
+            
+            setModalSections(processedSections);
+            const escapedSections = JSON.stringify(processedSections).replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+            finalContent = `${processSectionContent(parsedMessage.shortContent)}
+<view-details-button data-sections="${escapedSections}" data-smart="false"></view-details-button>`;
+          }
         }
+      } catch (error) {
+        console.error('Content extraction failed:', error);
+        // Continue with original content processing
       }
     }
 
-    // Convert AI buttons to HTML elements
-    processedContent = processedContent.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type="$1"></ai-button>');
-    
-    // Convert interactive buttons to HTML elements
-    processedContent = processedContent.replace(/``CONFIRM:([^`]+)``/gi, '<confirm-button data-type="$1"></confirm-button>');
-    processedContent = processedContent.replace(/``QUICK_SAVE:([^`]+)``/gi, '<quick-save data-type="$1"></quick-save>');
-    processedContent = processedContent.replace(/``FINANCIAL_ACTION:([^`]+)``/gi, '<financial-action data-type="$1"></financial-action>');
-    processedContent = processedContent.replace(/``GOAL_ACTION:([^`]+)``/gi, '<goal-action data-type="$1"></goal-action>');
-    processedContent = processedContent.replace(/`GOAL_ACTION:([^`]+)`/gi, '<goal-action data-type="$1"></goal-action>');
-    processedContent = processedContent.replace(/``UPDATE_DATA:([^`]+)``/gi, '<update-data data-type="$1"></update-data>');
-    processedContent = processedContent.replace(/``RESPONSE:([^`]+)``/gi, '<response-style data-type="$1"></response-style>');
-    processedContent = processedContent.replace(/``PRIORITY:([^`]+)``/gi, '<priority-select data-type="$1"></priority-select>');
-    processedContent = processedContent.replace(/``HABIT:([^`]+)``/gi, '<habit-track data-type="$1"></habit-track>');
-    processedContent = processedContent.replace(/``AMOUNT:([^`]+)``/gi, '<amount-select data-type="$1"></amount-select>');
-    processedContent = processedContent.replace(/``RISK:([^`]+)``/gi, '<risk-select data-type="$1"></risk-select>');
-    processedContent = processedContent.replace(/``TIMELINE:([^`]+)``/gi, '<timeline-select data-type="$1"></timeline-select>');
-    processedContent = processedContent.replace(/``CONFIDENCE:([^`]+)``/gi, '<confidence-track data-type="$1"></confidence-track>');
-    processedContent = processedContent.replace(/``COMMITMENT:([^`]+)``/gi, '<commitment-level data-type="$1"></commitment-level>');
-
-    // Convert questionnaire trigger to HTML element
-    processedContent = processedContent.replace(/``QUESTIONNAIRE``/gi, '<questionnaire-button></questionnaire-button>');
-    
-    // Convert update profile trigger to HTML element
-    processedContent = processedContent.replace(/``UPDATE_PROFILE``/gi, '<update-profile-button></update-profile-button>');
-    
-    // Convert parameterized UPDATE_PROFILE buttons to HTML elements
-    processedContent = processedContent.replace(/``UPDATE_PROFILE:([^`]+)``/gi, '<update-profile-button data-params="$1"></update-profile-button>');
+    // Convert all interactive elements to HTML (apply to final content)
+    finalContent = finalContent.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type="$1"></ai-button>');
+    finalContent = finalContent.replace(/``CONFIRM:([^`]+)``/gi, '<confirm-button data-type="$1"></confirm-button>');
+    finalContent = finalContent.replace(/``QUICK_SAVE:([^`]+)``/gi, '<quick-save data-type="$1"></quick-save>');
+    finalContent = finalContent.replace(/``FINANCIAL_ACTION:([^`]+)``/gi, '<financial-action data-type="$1"></financial-action>');
+    finalContent = finalContent.replace(/``GOAL_ACTION:([^`]+)``/gi, '<goal-action data-type="$1"></goal-action>');
+    finalContent = finalContent.replace(/`GOAL_ACTION:([^`]+)`/gi, '<goal-action data-type="$1"></goal-action>');
+    finalContent = finalContent.replace(/``UPDATE_DATA:([^`]+)``/gi, '<update-data data-type="$1"></update-data>');
+    finalContent = finalContent.replace(/``RESPONSE:([^`]+)``/gi, '<response-style data-type="$1"></response-style>');
+    finalContent = finalContent.replace(/``PRIORITY:([^`]+)``/gi, '<priority-select data-type="$1"></priority-select>');
+    finalContent = finalContent.replace(/``HABIT:([^`]+)``/gi, '<habit-track data-type="$1"></habit-track>');
+    finalContent = finalContent.replace(/``AMOUNT:([^`]+)``/gi, '<amount-select data-type="$1"></amount-select>');
+    finalContent = finalContent.replace(/``RISK:([^`]+)``/gi, '<risk-select data-type="$1"></risk-select>');
+    finalContent = finalContent.replace(/``TIMELINE:([^`]+)``/gi, '<timeline-select data-type="$1"></timeline-select>');
+    finalContent = finalContent.replace(/``CONFIDENCE:([^`]+)``/gi, '<confidence-track data-type="$1"></confidence-track>');
+    finalContent = finalContent.replace(/``COMMITMENT:([^`]+)``/gi, '<commitment-level data-type="$1"></commitment-level>');
+    finalContent = finalContent.replace(/``QUESTIONNAIRE``/gi, '<questionnaire-button></questionnaire-button>');
+    finalContent = finalContent.replace(/``UPDATE_PROFILE``/gi, '<update-profile-button></update-profile-button>');
+    finalContent = finalContent.replace(/``UPDATE_PROFILE:([^`]+)``/gi, '<update-profile-button data-params="$1"></update-profile-button>');
 
     // Convert goal templates to HTML elements
     const goalTemplates: GoalType[] = ['retirement', 'home_buying', 'wealth', 'investment', 'debt_payoff', 'emergency_fund', 'passive_income', 'custom'];
     goalTemplates.forEach(template => {
       const regex = new RegExp('``' + template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '``', 'g');
-      processedContent = processedContent.replace(regex, `<goal-template data-type="${template}"></goal-template>`);
+      finalContent = finalContent.replace(regex, `<goal-template data-type="${template}"></goal-template>`);
     });
 
-    // Remove goal matches (keeping original logic)
-    processedContent = processedContent.replace(/``GOAL:[^`]+``/gi, '');
+    // Remove goal matches and thinking tags
+    finalContent = finalContent.replace(/``GOAL:[^`]+``/gi, '');
+    finalContent = finalContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
 
-    // Remove thinking tags and their content (for AI internal monologue)
-    processedContent = processedContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
-
-    // Handle long content parsing (only if not disabled)
-    if (!disableMessageParsing) {
-      // Parse sections from the original content to get structure
-      const parsedMessage = parseMessageContent(content);
-      // Only show details button if there are 2 or more sections
-      if (parsedMessage.hasLongContent && parsedMessage.sections.length >= 2) {
-        // Process each section's content with the same transformations
-        const processedSections = parsedMessage.sections.map(section => ({
-          ...section,
-          content: processSectionContent(section.content),
-          subsections: section.subsections?.map(sub => ({
-            ...sub,
-            content: processSectionContent(sub.content)
-          }))
-        }));
-        
-        // Properly escape JSON data for HTML attribute
-        const escapedSections = JSON.stringify(processedSections).replace(/'/g, '&apos;').replace(/"/g, '&quot;');
-        processedContent = `${processSectionContent(parsedMessage.shortContent)}
-<view-details-button data-sections="${escapedSections}"></view-details-button>`;
-      }
-    }
-
-    return processedContent.replace("{{username}}", user?.user_metadata?.full_name || "");
+    return finalContent.replace("{{username}}", user?.user_metadata?.full_name || "");
   }, [content, isUserMessage, disableMessageParsing, user?.user_metadata?.full_name]);
 
   // Create custom components using the new factory function
@@ -183,6 +258,7 @@ ${after}`;
     closeChat,
     openChat,
     hasProfile,
+    extractedContent, // Pass extracted content for debugging/analytics
   });
 
   return (
@@ -196,6 +272,7 @@ ${after}`;
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         sections={modalSections}
+        extractedContent={extractedContent} // Pass for enhanced modal features
       />
     </>
   );

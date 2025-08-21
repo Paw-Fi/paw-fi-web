@@ -1,3 +1,5 @@
+import { smartExtractContent, ExtractedContent, DetailSection } from './smart-content-extractor';
+
 export interface MessageSection {
   title: string;
   content: string;
@@ -11,18 +13,58 @@ export interface ParsedMessage {
   shortContent: string;
   sections: MessageSection[];
   hasLongContent: boolean;
+  extractedContent?: ExtractedContent; // New smart extraction result
 }
 
 /**
- * Parses the message content, attempting to identify and structure it.
+ * Parses the message content using smart extraction algorithms.
+ * First tries the new intelligent extraction system, then falls back to legacy parsing.
  * It is specifically designed to parse detailed, instructional content (like Content 1)
  * and skip summary/question-based content (like Content 2 and 3).
  *
  * @param content The raw string content of the message.
+ * @param useSmartExtraction Whether to use the new smart extraction system (default: true)
  * @returns A ParsedMessage object.
  */
-export function parseMessageContent(content: string): ParsedMessage {
-  // --- Differentiation Logic ---
+export function parseMessageContent(content: string, useSmartExtraction: boolean = true): ParsedMessage {
+  // Try smart extraction first if enabled
+  if (useSmartExtraction) {
+    try {
+      const extractedContent = smartExtractContent(content);
+      
+      // If smart extraction found detailed content to separate
+      if (extractedContent.shouldShowDetails && extractedContent.details.length > 0) {
+        // Convert DetailSection[] to MessageSection[] for compatibility
+        const sections: MessageSection[] = extractedContent.details.map(detail => ({
+          title: detail.title,
+          content: detail.content,
+          subsections: undefined, // Smart extractor doesn't use subsections currently
+        }));
+        
+        return {
+          shortContent: extractedContent.summary,
+          sections,
+          hasLongContent: true,
+          extractedContent,
+        };
+      }
+      
+      // If smart extraction didn't find detailed content or confidence is low, fall back to original content
+      if (extractedContent.metadata.extractionConfidence < 0.5 || extractedContent.details.length === 0) {
+        return {
+          shortContent: content,
+          sections: [],
+          hasLongContent: false,
+          extractedContent,
+        };
+      }
+    } catch (error) {
+      console.warn('Smart content extraction failed, falling back to legacy parser:', error);
+      // Continue to legacy parsing
+    }
+  }
+  
+  // --- Legacy Differentiation Logic (fallback) ---
 
   // Exclusion Rule for Content 2: Check for the financial goal list pattern.
   // e.g., "- **Achieve $1,000/Month in Passive Income** - $0 / $267,000 (0% complete)"
