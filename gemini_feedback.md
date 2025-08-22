@@ -1,78 +1,80 @@
-Excellent, I will review the code changes now.
+Excellent, I will review the provided code changes.
+
+### Code Review
+
+This is an outstanding set of changes. The refactoring in `src/utils/seo.ts` is a significant improvement that directly addresses previous feedback, making the code more modular, maintainable, and flexible. The accompanying `tsconfig.json` update is a clean and necessary addition, and the updated SEO copy is more impactful.
 
 ---
 
-### Code Review: `src/routes/avatar-customizer.tsx`
+### ✅ Suggestions (Consider Improving)
 
-Overall, this is a great refactoring that significantly improves the organization and maintainability of the color randomization logic. Centralizing colors into palettes and creating a single helper function is a big win.
+#### 1. **Excellent Refactoring and Configuration Management**
 
-Here is a breakdown of my review:
+The refactoring of the `seo` utility is a textbook example of good practice.
 
-### ✅ Praiseworthy
-- **Reduced Duplication:** Replacing the multiple `getRandom...Color` functions with a single, generic `getRandomColor` function is a fantastic change that simplifies the code and makes it easier to maintain.
-- **Centralized Configuration:** Moving color definitions into the `colorPalettes` object makes them much easier to find, modify, and expand upon.
+**Specific Improvements:**
+*   **Centralized Configuration:** Moving hardcoded values like the Twitter handle and OG image dimensions to a new `siteConfig` object (which I assume is in `src/config/site.ts`) is a fantastic improvement. This makes future updates much easier.
+*   **Increased Flexibility:** Allowing `imageType`, `imageWidth`, and `imageHeight` to be passed as parameters with sensible defaults from the config file makes the function much more robust and versatile.
+*   **Readability:** Grouping the meta tags by type (Standard, Twitter, Open Graph) and using the correct attributes (`name` vs. `property`) greatly enhances the code's clarity.
+*   **Backward Compatibility:** Thoughtfully including `generateMetaTags` as an alias for the new `seo` function ensures that this non-breaking change won't cause issues elsewhere in the codebase.
 
-### ⚠️ Warnings (Should Fix)
-These are potential bugs or inconsistencies that should be addressed.
-
-#### 1. Missing Display Name for Background Color
-The new `background` color option is missing a corresponding entry in `colorDisplayNames`. This will cause the UI to display the raw key "background" instead of a user-friendly label like "Background".
-
-**File:** `src/routes/avatar-customizer.tsx`
-**To Fix:** Add the `background` key to the `colorDisplayNames` object.
+**File:** `src/utils/seo.ts`
 ```typescript
-// Color display names for UI labels
-const colorDisplayNames = {
-  hair: 'Hair',
-  eyes: 'Eyes', 
-  mouth: 'Mouth',
-  background: 'Background', // Add this line
+// src/utils/seo.ts
+import { siteConfig } from '@/config/site';
+
+export interface SeoMetaParams {
+  title: string
+  description?: string
+  image?: string
+  keywords?: string
+  url?: string
+  imageType?: string
+  imageWidth?: string  
+  imageHeight?: string
+}
+
+export function seo({
+  //...
+  imageType = siteConfig.ogImage.type,
+  imageWidth = siteConfig.ogImage.width,
+  imageHeight = siteConfig.ogImage.height,
+}: SeoMetaParams) {
+  // ...
+}
+
+// Legacy function name for backward compatibility
+export function generateMetaTags(params: SeoMetaParams) {
+  return seo(params);
 }
 ```
 
-#### 2. Removed Category Icon
-The icon that was previously displayed next to the active category title (e.g., "Face", "Hair") has been removed. This might have been unintentional and makes the UI slightly less intuitive.
+#### 2. **Improved SEO & Marketing Copy**
 
-**File:** `src/routes/avatar-customizer.tsx`
-**To Fix:** Consider re-adding the icon span.
+The changes to the title and description on the homepage are more direct, benefit-driven, and likely more effective for search engine ranking and user conversion.
+
+*   **Old Title:** "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App"
+*   **New Title:** "Moneko – Save Money and Start Investing from Zero"
+
+The new title is more active and speaks directly to a user's goal.
+
+**File:** `src/routes/index.tsx`
 ```diff
---- a/src/routes/avatar-customizer.tsx
-+++ b/src/routes/avatar-customizer.tsx
-@@ -583,7 +583,7 @@
-               {/* Asset Gallery - Flex 1 with scrolling */}
-               <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-gray-200/50 dark:border-white/20 shadow-xl dark:shadow-2xl flex-1 flex flex-col min-h-0">
-                 <div className="flex items-center gap-3 mb-4 flex-shrink-0">
--                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
-+                  <span className="text-2xl">{categoryConfig[activeCategory as keyof typeof categoryConfig].icon}</span>
-+                   <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
-                     {categoryConfig[activeCategory as keyof typeof categoryConfig].name}
-                   </h3>
-                 </div>
-
+-      "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
++      "Moneko – Save Money and Start Investing from Zero";
+-      "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
++      "Struggling to save or invest? Moneko helps beginners build savings goals, grow money step by step, and start investing with confidence.";
 ```
 
-### 💡 Suggestions (Consider Improving)
-These are opportunities for further improvement.
+#### 3. **Clean Path Aliasing**
 
-#### 1. Externalize Constants
-The component file is growing with configuration objects (`initialAssets`, `colorDisplayNames`, `colorPalettes`). To improve organization and reusability, consider moving these constants to a dedicated file, such as `src/data/avatar-constants.ts`.
+The addition of the `@config` path alias in `tsconfig.json` is the correct supporting change for the new configuration file. It maintains the project's convention for clean, absolute-style imports.
 
-**Example (`src/data/avatar-constants.ts`):**
-```typescript
-export const initialAssets = {
-  face: ['Face1', 'Face2', 'Face3'],
-  hair: ['Hair1', 'Hair2', 'Hair3', 'Hair4', 'Hair5', 'Hair6', 'Hair7', 'Hair8', 'Hair9', 'Hair10'],
-  // ... more assets
-};
-
-export const colorDisplayNames = {
-  // ...
-};
-
-export const colorPalettes = {
-  // ...
-};
+**File:** `tsconfig.json`
+```diff
++      "@config/*": ["./src/config/*"],
 ```
 
-#### 2. Add Test Coverage
-The new `getRandomColor` function is pure and easily testable. Adding a simple unit test would ensure it correctly selects a color from the given palette and doesn't crash if an invalid type is passed (though TypeScript helps prevent this). This would improve the long-term stability of the feature.
+---
+
+There are no critical issues or warnings to report. These changes are high-quality and significantly improve the codebase. Well done.

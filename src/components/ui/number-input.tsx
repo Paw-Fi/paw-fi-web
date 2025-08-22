@@ -32,7 +32,7 @@ function NumberInput({
         placeholder={placeholder}
         min={min}
         max={max}
-        className="w-full p-4 border border-gray-200 rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent"
+        className="w-full p-4 border border-border rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
       />
     </div>
   );

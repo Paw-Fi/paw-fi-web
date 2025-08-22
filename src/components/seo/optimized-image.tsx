@@ -111,7 +111,7 @@ export function OptimizedImage({
       
       {/* Error state */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground">
           <span className="text-sm">Failed to load image</span>
         </div>
       )}

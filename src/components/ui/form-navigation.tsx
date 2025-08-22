@@ -41,9 +41,9 @@ export function FormNavigation({
   hasValidationErrors = false
 }: FormNavigationProps) {
   return (
-    <div className="flex items-center justify-between border-t border-gray-100 pt-6 mt-8">
+    <div className="flex items-center justify-between border-t border-border pt-6 mt-8">
       <button
-        className="flex items-center rounded-lg border border-gray-200 px-4 py-2.5 font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center rounded-lg border border-border px-4 py-2.5 font-medium text-muted-foreground transition-all hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={onBack}
         disabled={!canGoBack}
       >
@@ -57,7 +57,7 @@ export function FormNavigation({
           size="lg" 
           className={`px-8 py-3 transition-all duration-300 ${
             hasValidationErrors 
-              ? 'bg-red-500 hover:bg-red-600 border-red-500 shadow-red-200' 
+              ? 'bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 border-red-500 shadow-red-200 dark:shadow-red-900/30' 
               : ''
           }`}
           disabled={!isFormComplete || isSubmitting}
@@ -74,7 +74,7 @@ export function FormNavigation({
           className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${
             canGoNext 
               ? "bg-primary text-white hover:bg-secondary" 
-              : "cursor-not-allowed bg-gray-300 text-gray-500"
+              : "cursor-not-allowed bg-muted text-muted-foreground"
           }`}
           onClick={onNext}
           disabled={!canGoNext}

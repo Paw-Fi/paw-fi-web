@@ -2,13 +2,28 @@
 
 import { useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
+import * as React from "react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "./breadcrumb";
 
 // Pages that should not show breadcrumbs
 const NO_BREADCRUMB_PATHNAMES = ["/", "/intro", "/sign-in", "/sign-up"];
 
 // Segments that should be combined with the previous segment in the breadcrumb
 const COMBINED_PATHNAMES = ["lesson"];
+
+// Interface for breadcrumb items
+interface BreadcrumbItemData {
+  label: string;
+  href: string;
+  isCurrentPage?: boolean;
+}
 
 export function BreadCrumbsHeader() {
   const location = useLocation();
@@ -23,7 +38,7 @@ export function BreadCrumbsHeader() {
     if (!showBreadcrumb) return [];
 
     const pathSegments = location.pathname.split("/").filter(Boolean);
-    const items: BreadcrumbItem[] = [{ label: "Home", href: "/" }];
+    const items: BreadcrumbItemData[] = [{ label: "Home", href: "/" }];
 
     let currentPath = "";
 
@@ -143,9 +158,29 @@ export function BreadCrumbsHeader() {
 
     return items;
   }, [location.pathname, showBreadcrumb]);
+  
   if (!showBreadcrumb || breadcrumbItems.length === 0) return <></>;
 
-  return <Breadcrumb items={breadcrumbItems} className="text-sm " />;
+  return (
+    <Breadcrumb className="text-sm">
+      <BreadcrumbList>
+        {breadcrumbItems.map((item, index) => (
+          <React.Fragment key={`${item.href}-${index}`}>
+            <BreadcrumbItem>
+              {item.isCurrentPage || index === breadcrumbItems.length - 1 ? (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink href={item.href}>
+                  {item.label}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+            {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
+          </React.Fragment>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
 }
 
 export default BreadCrumbsHeader;

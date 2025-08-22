@@ -13,11 +13,12 @@ import {
   PricingTier,
   getPricingTiers,
 } from "@/data/pricing-plans";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faRocket } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Check, Rocket, Loader2 } from "lucide-react";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
-import { DISCORD_URL } from ".";
 import { FaqSection } from "@/components/ui/faq-section";
 import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-grid";
 import { SocialProofSection } from "@/components/pricing/social-proof-section";
@@ -237,7 +238,7 @@ function PricingPage() {
       const cancelUrl = `${origin}/payment-status?status=canceled`;
 
       // Call the create-checkout-session function
-      const { data, error } = await supabase.functions.invoke(
+      const { error } = await supabase.functions.invoke(
         "create-checkout-session",
         {
           body: {
@@ -320,135 +321,124 @@ function PricingPage() {
           className="mt-8 grid grid-cols-1 justify-center gap-6 md:grid-cols-2 lg:grid-cols-3"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
-          {pricingTiers.map((tier, index) => (
+          {pricingTiers.map((tier) => (
             <motion.div
               key={tier.title}
               variants={prefersReducedMotion ? undefined : cardVariants}
-              className={classNames(
-                `relative flex flex-col rounded-xl p-6 shadow-2xl md:p-8 ${tier.bgColor} ${tier.textColor} ${tier.borderColor ? `border-2 ${tier.borderColor}` : ""} group bg-opacity-70 backdrop-blur-xl dark:bg-opacity-70`,
-              )}
+              className="relative"
             >
               {tier.badgeText && (
-                <div
+                <Badge 
+                  variant={tier.badgeText === "Most Popular" ? "default" : "secondary"}
                   className={classNames(
-                    "absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-semibold text-white shadow-lg",
+                    "absolute -top-3 left-1/2 -translate-x-1/2 z-10 shadow-lg",
                     {
-                      "bg-gradient-to-r from-pink-500 to-purple-600":
+                      "bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0":
                         tier.badgeText === "Most Popular",
-                      "bg-gray-500": tier.badgeText != "Most Popular",
                     },
                   )}
                 >
                   {tier.badgeText}
-                </div>
+                </Badge>
               )}
-              <div className="flex flex-grow flex-col p-6 md:p-8">
-                <div className="mb-6 text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              
+              <Card className={classNames(
+                "h-full transition-all duration-300 group hover:shadow-xl",
+                {
+                  "border-primary shadow-lg scale-105": tier.highlight,
+                  "border-border": !tier.highlight,
+                }
+              )}>
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-2xl font-bold">
                     {tier.title}
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  </CardTitle>
+                  <CardDescription className="text-base">
                     {tier.subtitle}
-                  </p>
-                </div>
- 
-                <div className="mb-6 min-h-[90px] text-center relative">
-                  <div className=" flex items-center justify-center">
-                  <div className="flex-1"></div>
-                  <div className="flex items-center justify-center flex-1">
-                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                      {isAnnual && tier.priceYearly
-                        ? tier.priceYearly.replace("/year", "")
-                        : tier.priceMonthly}
-                    </span>
-                    <span className="text-base font-medium text-gray-500 dark:text-gray-400">
-                      /month
-                    </span>
+                  </CardDescription>
+                </CardHeader>
 
-                  
-                  </div>
-                   <div className="flex-1">
-                  {isAnnual && tier.annualTotal && (
-                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                   (${tier.annualTotal}/year)
-                 </span>
-                  )}
-                 </div>
-                 </div>
-                  
-                 
-                  {tier.priceYearly && tier.title != "Starter" && (
-                    <p
-                      className={`mt-1 text-xs font-semibold text-purple-600 transition-opacity duration-300 dark:text-purple-400 ${isAnnual ? "opacity-100" : "opacity-0"}`}
-                    >
-                      {isAnnual ? (
-                        tier.title === "Investor" ? "That's 2 months free!" : "That's 4 months free!"
-                      ) : (
-                        `Save ${tier.title === "Investor" ? "$50" : "$150"} vs monthly!`
-                      )}
-                    </p>
-                  )}
-                  {!tier.priceYearly && isAnnual && (
-                    <p
-                      className={`mt-1 min-h-[16px] text-xs text-gray-500 dark:text-gray-400`}
-                    >
-                      {/* Placeholder for consistent height when Free plan is shown with annual toggle */}
-                    </p>
-                  )}
-                </div>
-
-                <ul role="list" className="mb-8 flex-grow space-y-3">
-                  {tier.features.map((feature) => (
-                    <li key={feature.text} className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <FontAwesomeIcon
-                          icon={faCheck}
-                          className={`h-5 w-5 text-green-500 dark:text-green-400`}
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <p className="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                        {feature.text}
+                <CardContent className="pt-0">
+                  <div className="mb-6 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-4xl font-extrabold">
+                        {isAnnual && tier.priceYearly
+                          ? tier.priceYearly.replace("/year", "")
+                          : tier.priceMonthly}
+                      </span>
+                      <span className="text-base font-medium text-muted-foreground">
+                        /month
+                      </span>
+                    </div>
+                    
+                    {isAnnual && tier.annualTotal && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        (${tier.annualTotal}/year)
                       </p>
-                    </li>
-                  ))}
-                </ul>
+                    )}
+                    
+                    {tier.priceYearly && tier.title !== "Starter" && (
+                      <p className={`mt-2 text-xs font-semibold text-primary transition-opacity duration-300 ${isAnnual ? "opacity-100" : "opacity-0"}`}>
+                        {isAnnual ? (
+                          tier.title === "Investor" ? "That's 2 months free!" : "That's 4 months free!"
+                        ) : (
+                          `Save ${tier.title === "Investor" ? "$50" : "$150"} vs monthly!`
+                        )}
+                      </p>
+                    )}
+                  </div>
 
-                {tier.trialText && (
-                  <span
-                    className="mb-4 bg-gradient-to-r whitespace-pre-line from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-center text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
+                  <ul className="space-y-3 mb-6">
+                    {tier.features.map((feature) => (
+                      <li key={feature.text} className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">
+                          {feature.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {tier.trialText && (
+                    <div className="mb-4 text-center">
+                      <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400 whitespace-pre-line">
+                        {tier.trialText}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+
+                <CardFooter className="pt-0 flex-col gap-4">
+                  <Button
+                    className={classNames(
+                      "w-full transition-all duration-200",
+                      {
+                        "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 group-hover:scale-105": tier.highlight,
+                      }
+                    )}
+                    variant={tier.highlight ? "default" : "outline"}
+                    onClick={() => {
+                      if (tier.title.toLowerCase().includes("starter")) {
+                        navigate({ to: "/register" });
+                        return;
+                      }
+                      const planParam = tier.title.toLowerCase().includes("investor")
+                        ? "plus"
+                        : "premium";
+                      const isTrial = tier.title.toLowerCase().includes("investor") && tier.actionText === "Start Free Trial";
+                      handleSubscribe(planParam, isTrial);
+                    }}
                   >
-                    {tier.trialText}
-                  </span>
-                )}
+                    {tier.actionText}
+                  </Button>
 
-                <div
-                  onClick={() => {
-                    if (tier.title.toLowerCase().includes("starter")) {
-                      navigate({ to: "/signup", search: { redirect: "/pricing" } });
-                      return;
-                    }
-                    const planParam = tier.title.toLowerCase().includes("investor")
-                      ? "plus"
-                      : "premium";
-                    const isTrial = tier.title.toLowerCase().includes("investor") && tier.actionText === "Start Free Trial";
-                    handleSubscribe(planParam, isTrial);
-                  }}
-                  className={`mt-auto block w-full cursor-pointer rounded-lg px-6 py-3 text-center text-base font-medium shadow-md transition-transform duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                    tier.highlight
-                      ? "transform bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 focus-visible:ring-purple-500 group-hover:scale-105"
-                      : "border border-purple-500 bg-white/70 text-purple-600 hover:bg-purple-50 focus-visible:ring-purple-500 dark:border-purple-400 dark:bg-slate-800/70 dark:text-purple-400 dark:hover:bg-slate-700/70"
-                  } `}
-                >
-                  {tier.actionText}
-                </div>
-
-                {tier.audienceText && (
-                  <p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
-                    {tier.audienceText}
-                  </p>
-                )}
-              </div>
+                  {tier.audienceText && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      {tier.audienceText}
+                    </p>
+                  )}
+                </CardFooter>
+              </Card>
             </motion.div>
           ))}
         </motion.div>
@@ -460,29 +450,39 @@ function PricingPage() {
         <FaqSection faqData={faqData} />
 
         <motion.div
-          className="mt-16 rounded-2xl border border-white/20 bg-slate-100/50 p-8 text-center shadow-lg backdrop-blur-md md:mt-24 dark:border-slate-700/50 dark:bg-slate-800/50"
+          className="mt-16 md:mt-24"
           variants={prefersReducedMotion ? undefined : cardVariants}
         >
-          <h3 className="mb-3 text-xl font-semibold text-gray-900 dark:text-white">
-            Not Sure Which Plan is Right for You?
-          </h3>
-          <p className="mx-auto mb-5 max-w-lg text-gray-700 dark:text-gray-300">
-            Start with our Free plan to explore core features, or dive deeper
-            with a Plus trial. You can always upgrade as your financial needs
-            grow.
-          </p>
-          <a
-            href="mailto:hello@moneko.io"
-            className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-purple-600 transition-colors duration-200 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-          >
-            Contact Us for a Recommendation{" "}
-            <FontAwesomeIcon icon={faRocket} className="ml-2" />
-          </a>
+          <Card className="text-center bg-card/60 backdrop-blur-md shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl">
+                Not Sure Which Plan is Right for You?
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-base max-w-lg mx-auto mb-6">
+                Start with our Free plan to explore core features, or dive deeper
+                with a Plus trial. You can always upgrade as your financial needs
+                grow.
+              </CardDescription>
+              <Button variant="link" className="text-primary" asChild>
+                <a href="mailto:hello@moneko.io" className="inline-flex items-center gap-2">
+                  Contact Us for a Recommendation
+                  <Rocket className="h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
         </motion.div>
       </motion.div>
       {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-white"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <Card className="p-8 shadow-xl">
+            <CardContent className="flex flex-col items-center gap-4 p-0">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Processing...</p>
+            </CardContent>
+          </Card>
         </div>
       )}
     </AmbientHaloLayout>

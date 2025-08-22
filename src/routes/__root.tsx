@@ -18,12 +18,14 @@ import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
   default: mod.ToastContainer
 })))
+const ThemeSystemListener = lazy(() => import('../components/theme/theme-system-listener'))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ChatProvider } from '@/contexts/chat-context'
 import { ClientOnly } from '@/components/client-only'
 import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
+import { ThemeInitScript } from '@/components/theme/theme-init-script'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -109,6 +111,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>
+        {/* Ensure theme is set before CSS loads to avoid FOUC and to switch shadcn tokens */}
+        <ThemeInitScript />
         <PerformanceHints />
         <MonekoCriticalResources />
         <HeadContent />
@@ -117,12 +121,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
         <GoogleTagManager gtmId="G-KBNN5QXD4G" />
       
-      <body className="h-screen">       
+      <body className="h-screen">      
       <AuthProvider>
         <ChatProvider>
           {/* Use ClientOnly wrapper to prevent hydration mismatches */}
           <ClientOnly>
             <Suspense fallback={null}>
+              {/* Listen for system theme changes and sync .dark when no explicit user override */}
+              <ThemeSystemListener />
               <ToastContainer
                 position="top-right"
                 autoClose={5000}

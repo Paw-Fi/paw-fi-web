@@ -7,6 +7,7 @@ import { VitePluginRadar } from 'vite-plugin-radar';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import  compression  from 'vite-plugin-compression'
+import tailwindcss from '@tailwindcss/vite'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +32,7 @@ export default defineConfig({
     port: 3000,
   },
   plugins: [
+    tailwindcss(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),

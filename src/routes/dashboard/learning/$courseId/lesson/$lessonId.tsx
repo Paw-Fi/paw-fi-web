@@ -479,7 +479,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-md">
+            <div className="rounded-3xl bg-background p-8 shadow-md">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle

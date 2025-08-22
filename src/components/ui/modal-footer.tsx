@@ -25,7 +25,7 @@ export function ModalFooter({
   return (
     <div
       className={cn(
-        'flex flex-shrink-0 px-6 py-4 border-t border-gray-100',
+        'flex flex-shrink-0 px-6 py-4 border-t border-border',
         alignment,
         className
       )}

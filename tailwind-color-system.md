@@ -284,7 +284,7 @@ The markdown renderer (`/components/ui/markdown-renderer.tsx`) provides comprehe
 </div>
 
 // Radial gradient halos
-<div className="bg-gradient-radial from-halo-purple dark:from-dark-halo-purple via-halo-purple-mid dark:via-dark-halo-purple-mid to-transparent">
+<div className="bg-radial from-halo-purple dark:from-dark-halo-purple via-halo-purple-mid dark:via-dark-halo-purple-mid to-transparent">
   Radial gradient halo effect
 </div>
 

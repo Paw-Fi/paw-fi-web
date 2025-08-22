@@ -129,7 +129,7 @@ export function DashboardHeroSection({
 
               {/* Body Typography with better spacing */}
               <motion.p 
-                className="text-body text-gray-600 dark:text-gray-300 mb-6 md:mb-8 max-w-2xl leading-relaxed"
+                className="text-body text-muted-foreground mb-6 md:mb-8 max-w-2xl leading-relaxed"
                 style={{
                   fontSize: "1rem",
                   fontWeight: "400",
@@ -179,7 +179,7 @@ export function DashboardHeroSection({
                           onClick={action.onClick}
                           className={`group flex items-center gap-2 md:gap-3 px-4 md:px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
                             action.variant === 'secondary'
-                              ? 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200/50 dark:border-gray-600/50 text-gray-700 dark:text-gray-300 hover:border-blue-300/70 dark:hover:border-blue-400/70 hover:text-blue-700 dark:hover:text-blue-400'
+                              ? 'bg-background/80 backdrop-blur-sm border-2 border-border/50 text-foreground hover:border-primary/50 hover:text-primary'
                               : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/20 dark:shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-600/30 dark:hover:shadow-blue-500/40'
                           }`}
                         >

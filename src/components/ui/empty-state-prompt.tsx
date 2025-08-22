@@ -1,7 +1,8 @@
 "use client";
 
 import { useAIChat } from "@/contexts/ai-chat-context";
-import { Link } from "@tanstack/react-router";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface EmptyStatePromptProps {
   /** Type of content being generated */
@@ -53,32 +54,33 @@ export function EmptyStatePrompt({
 
   return (
     <div className="col-span-full">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 via-white to-blue-50 p-12 text-center shadow-xl border border-purple-100">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-card to-accent/5 p-12 text-center shadow-xl border-primary/20">
         {/* Decorative background elements */}
-        <div className="absolute top-0 left-0 w-32 h-32 bg-purple-200 rounded-full opacity-20 -translate-x-16 -translate-y-16"></div>
-        <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-200 rounded-full opacity-20 translate-x-12 translate-y-12"></div>
-        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-pink-200 rounded-full opacity-10"></div>
+        <div className="absolute top-0 left-0 w-32 h-32 bg-primary/20 rounded-full opacity-20 -translate-x-16 -translate-y-16"></div>
+        <div className="absolute bottom-0 right-0 w-24 h-24 bg-accent/20 rounded-full opacity-20 translate-x-12 translate-y-12"></div>
+        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-primary/10 rounded-full opacity-10"></div>
         
         <div className="relative z-10">
           {/* Icon */}
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg">
             {content.icon}
           </div>
 
           {/* Title */}
-          <h3 className="mb-4 text-2xl font-bold text-gray-800">
+          <h3 className="mb-4 text-2xl font-bold text-foreground">
             {finalTitle}
           </h3>
 
           {/* Description */}
-          <p className="mb-8 text-lg text-gray-600 max-w-md mx-auto leading-relaxed">
+          <p className="mb-8 text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
             {finalDescription}
           </p>
 
           {/* Action button */}
-          <div
+          <Button
             onClick={() => openChat("advisor")}
-            className="group cursor-pointer relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:ring-4 focus:ring-purple-300 focus:outline-none"
+            size="lg"
+            className="group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300"
           >
             <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-300 group-hover:opacity-10"></span>
             <svg
@@ -103,9 +105,9 @@ export function EmptyStatePrompt({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-          </div>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

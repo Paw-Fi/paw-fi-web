@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion';
-import { Tooltip } from 'react-tooltip';
 import { AI_ID, useAIChat } from '@/contexts/ai-chat-context';
 import { OptimizedImage } from '@/components/seo/optimized-image';
 import { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb,  faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faLightbulb, faTimes } from '@fortawesome/free-solid-svg-icons';
 import monekoLogo from '@/assets/images/logo/moneko.png';
 import finniLogo from '@/assets/images/logo/finni.png';
+import { Button } from '@/components/ui/button';
+import { Tooltip } from 'react-tooltip';
 
 interface ChatAgent {
   id: string;
@@ -91,7 +92,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <div className="h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
+        <div className="h-full rounded-2xl border border-border bg-background/70 shadow-sm">
           <div className="flex flex-col items-center py-6 space-y-4">
           
             {CHAT_AGENTS_DATA.map((agent, index) => {
@@ -104,24 +105,30 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.2 + (index * 0.1) }}
               >
-                <motion.button
+                <Button
                   id={`chat-agent-${agent.id}`}
-                  className={`flex size-10 items-center justify-center shadow-sm hover:shadow-md transition-all duration-200`}
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 shadow-sm hover:shadow-md transition-all duration-200"
                   onClick={() => openChat(agent.aiType)}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
                   data-tooltip-id={tooltipId}
+                  asChild
                 >
-                  <div className="relative flex items-center justify-center">
-                    {agent.icon && (
-                       <OptimizedImage 
-                       src={agent.icon} 
-                       alt={`${agent.label} Avatar`} 
-                       className="size-10"
-                     />
-                    )}                   
-                  </div>
-                </motion.button>
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="relative flex items-center justify-center">
+                      {agent.icon && (
+                         <OptimizedImage 
+                         src={agent.icon} 
+                         alt={`${agent.label} Avatar`} 
+                         className="size-10"
+                       />
+                      )}                   
+                    </div>
+                  </motion.div>
+                </Button>
 
                 {/* Tooltip */}
                 <Tooltip
@@ -134,8 +141,8 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   isOpen={openTooltips[tooltipId]}
                   clickable={true}
                   style={{
-                    backgroundColor: 'rgb(17 24 39)',
-                    color: 'rgb(243 244 246)',
+                    backgroundColor: 'hsl(var(--popover))',
+                    color: 'hsl(var(--popover-foreground))',
                     borderRadius: '0.75rem',
                     padding: '0.75rem 1rem',
                     fontSize: '0.875rem',
@@ -148,10 +155,10 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   render={({ content }) => (
                     <div className="flex items-start">
                         <div>
-                            <div className="font-semibold text-white mb-1">{agent.label}</div>
-                            <div className="text-gray-300 text-xs">{content || agent.description}</div>
+                            <div className="font-semibold text-popover-foreground mb-1">{agent.label}</div>
+                            <div className="text-muted-foreground text-xs">{content || agent.description}</div>
                         </div>
-                        <button onClick={() => hideGuidance(tooltipId)} className="ml-2 p-1 text-gray-400 hover:text-white">
+                        <button onClick={() => hideGuidance(tooltipId)} className="ml-2 p-1 text-muted-foreground hover:text-popover-foreground">
                             <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
                         </button>
                     </div>
@@ -162,23 +169,29 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
             }
               {/* Show Guide Button - Only visible when guide is hidden */}
               {isGuideHidden && showGuide && (
-              <motion.button
+              <Button
                 onClick={showGuide}
-                className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-sm hover:shadow-md transition-all duration-200"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
+                size="icon"
+                className="size-10 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-sm hover:shadow-md transition-all duration-200"
                 data-tooltip-id="show-guide-tooltip"
                 data-tooltip-content="Show setup guide to get started"
                 data-tooltip-place="left"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
+                asChild
               >
-                <FontAwesomeIcon
-                  className="h-6 w-6 text-white"
-                  icon={faLightbulb}
-                />
-              </motion.button>
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="flex items-center justify-center"
+                >
+                  <FontAwesomeIcon
+                    className="h-6 w-6 text-white"
+                    icon={faLightbulb}
+                  />
+                </motion.div>
+              </Button>
             )}
 
           </div>
@@ -190,8 +203,8 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
         <Tooltip
           id="show-guide-tooltip"
           style={{
-            backgroundColor: 'rgb(17 24 39)',
-            color: 'rgb(243 244 246)',
+            backgroundColor: 'hsl(var(--popover))',
+            color: 'hsl(var(--popover-foreground))',
             borderRadius: '0.75rem',
             padding: '0.75rem 1rem',
             fontSize: '0.875rem',
@@ -203,10 +216,10 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
           offset={8}
         >
           <div>
-            <div className="font-semibold text-white mb-1">
+            <div className="font-semibold text-popover-foreground mb-1">
               Setup Guide
             </div>
-            <div className="text-gray-300 text-xs">
+            <div className="text-muted-foreground text-xs">
               Show setup guide to get started
             </div>
           </div>

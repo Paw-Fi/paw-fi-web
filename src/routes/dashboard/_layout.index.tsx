@@ -796,7 +796,7 @@ function DashboardHome() {
                     <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI Assistant</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Moneko AI</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Your financial advisor</p>
                   </div>
                 </div>

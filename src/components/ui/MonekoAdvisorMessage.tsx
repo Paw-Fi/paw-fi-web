@@ -32,17 +32,17 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
   const getToneBadge = (tone: AdvisorTone) => {
     switch (tone) {
       case 'congratulatory':
-        return { text: '🎉 Excellent!', classes: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' };
+        return { text: '🎉 Excellent!', classes: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' };
       case 'encouraging':
-        return { text: '💪 Great Progress!', classes: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' };
+        return { text: '💪 Great Progress!', classes: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' };
       case 'motivational':
-        return { text: '🚀 Keep Going!', classes: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' };
+        return { text: '🚀 Keep Going!', classes: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' };
       case 'reassuring':
-        return { text: '🤝 I\'m Here!', classes: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' };
+        return { text: '🤝 I\'m Here!', classes: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' };
       case 'informative':
-        return { text: '💡 Good to Know!', classes: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' };
+        return { text: '💡 Good to Know!', classes: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' };
       default:
-        return { text: '✨ Moneko', classes: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' };
+        return { text: '✨ Moneko', classes: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' };
     }
   };
 

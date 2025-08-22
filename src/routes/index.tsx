@@ -7,25 +7,19 @@ import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
 import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
 
-import {
-  fadeInUp,
-  fadeInDown,
-  elasticScale,
-  staggerContainer,
-} from "@/lib/motion-variants";
 import catCoin from "@/assets/images/icon.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faPlus,
-  faX,
   faChevronDown,
+  faPlay,
+  faX,
 } from "@fortawesome/free-solid-svg-icons";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
-import AmbientHalo from "../components/ui/ambient-halo";
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 import { MotionGlobalConfig } from "framer-motion";
 
@@ -35,9 +29,9 @@ export const Route = createFileRoute("/")({
     // Use canonical helper for consistent URLs
     const pageUrl = getCanonicalUrl("/");
     const title =
-      "Moneko – Learn How to Save and Start Investing | Beginner-Friendly Finance App";
+      "Moneko – Save Money and Start Investing from Zero";
     const description =
-      "Moneko is a free, beginner-friendly app that helps you build good money habits through fun, interactive lessons in saving, budgeting, and investing";
+      "Struggling to save or invest? Moneko helps beginners build savings goals, grow money step by step, and start investing with confidence.";
     const keywords =
       "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
     const imageUrl = "https://moneko.io/og-img.png";
@@ -141,41 +135,47 @@ function BasicLessonCard({
   description: string;
   linkTo: string;
 }) {
-  // Assuming fadeInUp and elasticScale variants are defined elsewhere in the file or imported
   return (
-    <div>
-      <div className="flex h-full flex-col rounded-3xl border border-gray-200/30 bg-white/60 dark:border-gray-700/30 dark:bg-gray-800/60 p-8 shadow-2xl shadow-gray-900/20 dark:shadow-black/30 backdrop-blur-xl transition-all duration-300 ease-in-out">
-        <Link to={linkTo} className="group flex h-full flex-col">
-          <div className="flex-grow">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40 transition-transform duration-200">
-              <p className="text-3xl text-white" >{icon}</p>
-            </div>
-            <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
+    <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200 ease-out">
+      <Link to={linkTo} className="flex h-full flex-col">
+        <CardHeader className="flex-grow space-y-6 p-8">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <span className="text-2xl">{icon}</span>
+          </div>
+          <div className="space-y-3">
+            <CardTitle className="text-xl font-semibold text-card-foreground leading-tight">
               {title}
-            </h3>
-            <p className="mb-8 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            </CardTitle>
+            <CardDescription className="text-muted-foreground leading-relaxed">
               {description}
-            </p>
+            </CardDescription>
           </div>
-          <div className="mt-auto text-primary dark:text-dark-primary">
+        </CardHeader>
+        <CardFooter className="p-8 pt-0">
+          <div className="flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform duration-200">
             Start Lesson
-            <span className="ml-2 transition-transform duration-200 ease-in-out">
-              <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-            </span>
+            <FontAwesomeIcon 
+              icon={faArrowRight} 
+              className="ml-2 text-sm" 
+              aria-hidden="true" 
+            />
           </div>
-        </Link>
-      </div>
-    </div>
+        </CardFooter>
+      </Link>
+    </Card>
   );
 }
 
 import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
+import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
 
 import { HomeHeader } from "@/components/index/header";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 import { EarlyAccessSection } from "@/components/index/early-access-section";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import AmbientHalo from "@/components/ui/ambient-halo";
 
 
 
@@ -192,14 +192,14 @@ export default function HomePage() {
 
   const { isMobile } = useDeviceType();
 
+  // Skip complex animations on mobile for performance
   if (isMobile) {
     MotionGlobalConfig.skipAnimations = true;
   }
 
   return (
-    <div className="relative min-h-screen bg-background dark:bg-dark-background">
-      {/* Enhanced ambient halo background with scroll animations */}
-      <AmbientHalo />
+    <div className="relative min-h-screen bg-transparent">
+      <AmbientHalo/>
 
       {/* Hidden H1 for SEO */}
       <h1 className="sr-only">
@@ -208,58 +208,50 @@ export default function HomePage() {
       </h1>
 
       {/* Navigation */}
-      <nav className="sticky top-0 z-50">
+      <nav className="sticky top-0 z-50 bg-white/10 backdrop-blur-md border-b border-border">
         <HomeHeader />
       </nav>
 
-      <section className="relative min-h-screen pt-16 px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="mx-auto max-w-5xl">
-           {/* Heading */}
-          <div className="mb-8 sm:mb-12 text-center">
-           <motion.h1
-              className="mb-2 sm:mb-3 mt-12 sm:mt-16 md:mt-24 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground dark:text-dark-foreground"
+      {/* Hero Section */}
+      <section className="relative z-10 pt-32 pb-20 px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          {/* Heading */}
+          <div className="text-center mb-16">
+            <motion.h2
+              className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 tracking-tight"
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
               Your AI Personal Money Coach
-            </motion.h1>
-         
+            </motion.h2>
+            
             <motion.p
-              className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4 sm:px-0"
+              className="text-xl md:text-2xl text-muted-foreground mb-12 font-light"
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             >
-             Start with your goal. Moneko builds the plan.
+              Start with your goal. Moneko builds the plan.
             </motion.p>
           </div>
 
           {/* AI Search Input */}
-          <div className="mb-8 sm:mb-12">
+          <motion.div 
+            className="mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          >
             <AISearchInput 
               placeholder="Ask Moneko to create personalized financial journey for my..."
               suggestions={chatSuggestions}
             />
-          </div>
+          </motion.div>
         </div>
 
-        {/* Animated Scroll Arrow */}
-        <motion.div
-          className="absolute bottom-8 sm:bottom-12 md:bottom-16 left-1/2 transform -translate-x-1/2 z-10"
-          initial={{ opacity: 0, y: 0, x: "-50%" }}
-          animate={{ 
-            opacity: [0.5, 1, 0.5],
-            y: [0, 8, 0]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
+        {/* Scroll indicator */}
+        <div className="text-center">
           <motion.button
             onClick={() => {
               const nextSection = document.querySelector('section:nth-of-type(2)');
@@ -267,99 +259,180 @@ export default function HomePage() {
                 nextSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="flex flex-col items-center justify-center p-2 sm:p-4 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 cursor-pointer"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            className="inline-flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <span className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 hidden sm:block">Scroll to explore</span>
-            <FontAwesomeIcon 
-              icon={faChevronDown} 
-              className="text-lg sm:text-xl md:text-2xl"
-            />
+            <span className="text-sm font-medium">Scroll to explore</span>
+            <FontAwesomeIcon icon={faChevronDown} className="text-lg" />
           </motion.button>
-        </motion.div>
-</section>
-      <EarlyAccessSection/>
+        </div>
+      </section>
 
-      {/* Portfolio Builder Section - Exact Match to Mockup */}
-      <section className="relative overflow-hidden py-20 ">
-        {/* Content */}
-        <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12">
-
-          {/* Video Cards with Seamless Integration */}
-          <div className="mt-24 grid gap-8 md:grid-cols-2">
-            {/* AI Chat Animation Card */}
-            <motion.div
-              className="group relative overflow-hidden rounded-3xl"
+      {/* Video Demo Section */}
+      <section className="relative z-10 py-20 px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
+              transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              {/* Gradient overlay for seamless integration */}
+              See Moneko in Action
+            </motion.h2>
+            <motion.p
+              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              Watch how Moneko transforms your financial journey with AI-powered personalized learning and expert guidance.
+            </motion.p>
+          </div>
 
-              {/* Glowing border effect */}
-
-              {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/80">
-                <div className="relative flex aspect-square items-center justify-center p-2">
-                  <Lottie
-                    animationData={aiChatAnimation}
-                    loop={true}
-                    className="h-full w-full"
+          <Dialog>
+            <DialogTrigger asChild>
+              <motion.div 
+                className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="relative aspect-video w-full">
+                  <video
+                    className="h-full w-full object-cover"
+                    src="/Moneko-onboard%20.webm"
+                    muted
+                    autoPlay
+                    loop
+                    playsInline
                   />
+                  
+                  {/* Text overlay container */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent flex items-center">
+                    <div className="text-white p-8 md:p-12 max-w-2xl">
+                      <h3 className="text-2xl md:text-3xl font-bold mb-4">Experience Personalized Learning</h3>
+                      <p className="text-lg md:text-xl text-white/90 mb-6">See how our AI creates custom financial plans tailored to your goals and learning style.</p>
+                      <div className="inline-flex items-center gap-2 text-white/80 font-medium">
+                        <FontAwesomeIcon icon={faPlay} className="text-sm" />
+                        <span>Watch Demo</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Play button overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-lg">
+                      <FontAwesomeIcon icon={faPlay} className="ml-1 text-primary" />
+                    </div>
+                  </div>
                 </div>
-
-                {/* Caption overlay - now always visible and mobile-friendly */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
-                  style={{ transform: "translateY(0)" }}
-                >
-                  <h3 className="text-lg font-medium text-white">
-                    AI-Powered Chat Assistant
-                  </h3>
-                  <p className="text-sm text-purple-100">
-                    Get personalized financial guidance instantly
-                  </p>
-                </div>
+              </motion.div>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl w-[95vw] p-0 bg-black border-none">
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <video
+                  className="absolute inset-0 h-full w-full object-contain"
+                  src="/Moneko-onboard .webm"
+                  controls
+                  autoPlay
+                  playsInline
+                />
               </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </section>
+
+      <div className="relative z-10">
+        <EarlyAccessSection />
+      </div>
+
+      {/* Features Section */}
+      <section className="relative z-10 py-20 px-6 lg:px-8 bg-muted/30">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-16">
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              Smart Tools for Your Financial Journey
+            </motion.h2>
+            <motion.p
+              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              Discover powerful features designed to make financial learning engaging and effective.
+            </motion.p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 lg:w-2/3 mx-auto">
+            {/* AI Chat Feature */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200">
+                <CardContent className="p-0">
+                  <div className="aspect-square bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 flex items-center justify-center">
+                    <Lottie
+                      animationData={aiChatAnimation}
+                      loop={true}
+                      className="w-3/4 h-3/4"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                      AI-Powered Chat Assistant
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Get personalized financial guidance and instant answers to your money questions.
+                    </CardDescription>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
 
-            {/* Badge Unlock Animation Card */}
+         
+            {/* Achievement System */}
             <motion.div
-              className="group relative overflow-hidden rounded-3xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              {/* Gradient overlay for seamless integration */}
-
-              {/* Glowing border effect */}
-
-              {/* Card content with glassmorphism - MORE TRANSPARENT */}
-              <div className="relative z-0 overflow-hidden rounded-3xl bg-white/60 shadow-lg backdrop-blur-sm transition-all duration-500 group-hover:bg-white/50">
-                <div className="relative flex aspect-square items-center justify-center p-2">
-                  <Lottie
-                    animationData={badgeUnlockAnimation}
-                    loop={true}
-                    className="h-full w-full"
-                  />
-                </div>
-
-                {/* Caption overlay - now always visible and mobile-friendly */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-blue-600/80 to-transparent p-4 pt-12 sm:p-6"
-                  style={{ transform: "translateY(0)" }}
-                >
-                  <h3 className="text-lg font-medium text-white">
-                    Achievement Badges
-                  </h3>
-                  <p className="text-sm text-blue-100">
-                    Earn rewards as you build financial skills
-                  </p>
-                </div>
-              </div>
+              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200">
+                <CardContent className="p-0">
+                  <div className="aspect-square bg-gradient-to-br from-accent/20 to-secondary/20 dark:from-accent/10 dark:to-secondary/10 flex items-center justify-center">
+                    <Lottie
+                      animationData={badgeUnlockAnimation}
+                      loop={true}
+                      className="w-3/4 h-3/4"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                      Achievement System
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Earn badges and track your progress as you master new financial concepts.
+                    </CardDescription>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </div>
@@ -367,301 +440,276 @@ export default function HomePage() {
 
 
 
-      {/* Expert-Led Basic Lessons Section */}
-      <section className="relative overflow-hidden px-6 py-20 md:px-12 lg:px-24">
-        {/* Subtle gradient overlay */}
-
-        <div className="relative z-10 mx-auto max-w-7xl">
-          <motion.h2
-            className="mb-6 text-center text-3xl font-bold text-foreground dark:text-dark-foreground md:text-4xl"
-            variants={fadeInDown}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-          >
-            Dive Deeper with Expert-Led Lessons
-          </motion.h2>
-          <motion.p
-            className="mb-12 text-center text-lg text-gray-600 dark:text-gray-300 md:mx-auto md:max-w-2xl"
-            variants={fadeInUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-            custom={0.2}
-          >
-            Our foundational courses are crafted by a seasoned Financial
-            Instructor (CFA, CSC, MBA) with over 10 years of experience, making
-            complex topics clear and actionable, no matter your background.
-          </motion.p>
-          <motion.div
-            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-          >
-            {basicLessonsData.lessons.slice(0, 2).map((lesson) => (
-              <BasicLessonCard
+      {/* Expert-Led Lessons Section */}
+      <section className="relative z-10 py-20 px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-16">
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              Expert-Led Financial Courses
+            </motion.h2>
+            <motion.p
+              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              Our foundational courses are crafted by seasoned Financial Instructors (CFA, CSC, MBA) with over 10 years of experience, making complex topics clear and actionable.
+            </motion.p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
+              <motion.div
                 key={`preview-${lesson.lesson_id}`}
-                icon={lesson.icon}
-                title={lesson.title}
-                description={lesson.description}
-                linkTo={`/dashboard/learning/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
-              />
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <BasicLessonCard
+                  icon={lesson.icon}
+                  title={lesson.title}
+                  description={lesson.description}
+                  linkTo={`/dashboard/learning/${basicLessonsData.course_id}/lesson/${lesson.lesson_id}`}
+                />
+              </motion.div>
             ))}
+            
             {/* Explore More Card */}
             {basicLessonsData.lessons.length > 2 && (
-              <div>
-                <div className="h-full rounded-3xl border border-gray-200/30 bg-white/60 dark:border-gray-700/30 dark:bg-gray-800/60 p-8 shadow-2xl shadow-gray-900/20 dark:shadow-black/30 backdrop-blur-xl">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                viewport={{ once: true }}
+              >
+                <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200">
                   <Link
                     to={`dashboard/learning/${basicLessonsData.course_id}`}
-                    role="button"
-                    className="group flex h-full w-full flex-col items-center justify-center text-center"
+                    className="flex h-full w-full flex-col items-center justify-center p-8 text-center"
                   >
-                    <div className="flex flex-grow flex-col items-center justify-center">
-                      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 shadow-lg shadow-purple-500/40">
-                        <FontAwesomeIcon
-                          icon={faPlus}
-                          className="text-3xl text-white"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <h3 className="mb-3 text-xl font-bold text-foreground dark:text-dark-foreground transition-colors duration-200">
-                        Explore All Lessons
-                      </h3>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        View all {basicLessonsData.lessons.length} foundational
-                        courses.
-                      </p>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-muted-foreground mb-6">
+                      <FontAwesomeIcon icon={faPlus} className="text-xl" />
                     </div>
+                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                      Explore All Lessons
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      View all {basicLessonsData.lessons.length} foundational courses designed to build your financial expertise.
+                    </CardDescription>
                   </Link>
-                </div>
-              </div>
+                </Card>
+              </motion.div>
             )}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <FaqSection faqData={faqData} />
+      <div className="relative z-10 bg-muted/30">
+        <FaqSection faqData={faqData} />
+      </div>
 
 
       {/* Footer */}
-      <footer className="relative overflow-hidden bg-gray-900/70 dark:bg-gray-950/80 px-6 py-12 text-white backdrop-blur-md md:px-12 lg:px-24">
-        {/* Subtle gradient overlay */}
+      <footer className="relative z-10 border-t border-border bg-card px-6 py-16 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <img
+                  src={catCoin}
+                  alt="Moneko Logo"
+                  className="h-8 w-8"
+                  width="32"
+                  height="32"
+                  loading="lazy"
+                />
+                <span className="ml-2 text-xl font-bold text-card-foreground">
+                  Moneko
+                </span>
+              </div>
+              <p className="text-muted-foreground max-w-xs">
+                Empowering your financial journey with intelligent, personalized learning.
+              </p>
+            </div>
 
-        <motion.div
-          className="relative z-10 mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4"
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.1 }}
-        >
-          <motion.div variants={fadeInUp} custom={0.1}>
-            <motion.div
-              className="mb-4 flex items-center"
-              variants={fadeInUp}
-              custom={0.2}
-            >
-              <motion.img
-                src={catCoin}
-                alt="Moneko Logo"
-                className="h-8 w-8"
-                width="32"
-                height="32"
-                loading="lazy"
-                variants={elasticScale}
-                custom={0.3}
-              />
-              <motion.span
-                className="ml-2 text-xl font-bold"
-                variants={fadeInUp}
-                custom={0.4}
-              >
-                Moneko
-              </motion.span>
-            </motion.div>
-            <motion.p
-              className="text-gray-400"
-              variants={fadeInUp}
-              custom={0.5}
-            >
-              Empowering your financial journey with intelligent, personalized
-              learning.
-            </motion.p>
-          </motion.div>
+            {/* Quick Links */}
+            <div>
+              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+                Quick Links
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    to="/dashboard/learning"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    AI Learning
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to={`/dashboard/learning/${basicLessonsData.course_id}`}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Expert Courses
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/calculators"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Financial Calculators
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/dashboard"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Chat with AI
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/team" 
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Meet the Team
+                  </Link>
+                </li>
+              </ul>
+            </div>
 
-          <motion.div variants={fadeInUp} custom={0.2}>
-            <motion.h3
-              className="mb-4 text-lg font-bold"
-              variants={fadeInUp}
-              custom={0.3}
-            >
-              Quick Links
-            </motion.h3>
-            <motion.ul className="space-y-2" variants={staggerContainer}>
-              <motion.li variants={fadeInUp} custom={0.4}>
-                <Link
-                  to="/dashboard/learning"
-                  className="text-gray-400 hover:text-white"
-                >
-                  AI Learning
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.5}>
-                <Link
-                  to={`/dashboard/learning/${basicLessonsData.course_id}`}
-                  className="text-gray-400 hover:text-white"
-                >
-                  Expert Courses
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.6}>
-                <Link
-                  to="/calculators"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Financial Calculators
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.7}>
-                <Link
-                  to="/dashboard"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Chat with AI
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.7}>
-                <Link to="/team" className="text-gray-400 hover:text-white">
-                  Meet the team
-                </Link>
-              </motion.li>
-            </motion.ul>
-          </motion.div>
+            {/* Legal */}
+            <div>
+              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+                Legal
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    to="/privacy-policy"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/terms-of-service"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/cookie-policy"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Cookie Policy
+                  </Link>
+                </li>
+              </ul>
+            </div>
 
-          <motion.div variants={fadeInUp} custom={0.3}>
-            <motion.h3
-              className="mb-4 text-lg font-bold"
-              variants={fadeInUp}
-              custom={0.4}
-            >
-              Legal
-            </motion.h3>
-            <motion.ul className="space-y-2" variants={staggerContainer}>
-              <motion.li variants={fadeInUp} custom={0.5}>
-                <Link
-                  to="/privacy-policy"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Privacy Policy
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.6}>
-                <Link
-                  to="/terms-of-service"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Terms of Service
-                </Link>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.7}>
-                <Link
-                  to="/cookie-policy"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Cookie Policy
-                </Link>
-              </motion.li>
-            </motion.ul>
-          </motion.div>
+            {/* Connect */}
+            <div>
+              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+                Connect
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <a
+                    href="https://www.facebook.com/monekoai/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Facebook
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://www.instagram.com/moneko_ai/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Instagram
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://x.com/moneko_ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    X
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:hello@moneko.io"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Contact Us
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
 
-          <motion.div variants={fadeInUp} custom={0.4}>
-            <motion.h3
-              className="mb-4 text-lg font-bold"
-              variants={fadeInUp}
-              custom={0.5}
-            >
-              Connect
-            </motion.h3>
-            <motion.ul className="space-y-2" variants={staggerContainer}>
-              <motion.li variants={fadeInUp} custom={0.6}>
-                <a
-                  href="https://www.facebook.com/monekoai/"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Facebook
-                </a>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.6}>
-                <a
-                  href="https://www.instagram.com/moneko_ai/"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Instagram
-                </a>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.7}>
-                <a
-                  href="https://x.com/moneko_ai"
-                  className="text-gray-400 hover:text-white"
-                >
-                  X
-                </a>
-              </motion.li>
-              <motion.li variants={fadeInUp} custom={0.8}>
-                <a
-                  href="mailto:hello@moneko.io"
-                  className="text-gray-400 hover:text-white"
-                >
-                  Contact Us
-                </a>
-              </motion.li>
-            </motion.ul>
-          </motion.div>
-
-          <motion.div
-            className="col-span-full mx-auto mt-12 max-w-7xl border-t border-gray-800 pt-8 text-center text-gray-400"
-            variants={fadeInUp}
-            custom={0.9}
-          >
-            <motion.div
-              className="mb-4 flex justify-center space-x-4"
-              variants={staggerContainer}
-            >
-              <motion.a
-                href="https://www.facebook.com/monekoai/"
-                aria-label="Moneko on Facebook"
-                className="text-gray-400 hover:text-white"
-                variants={fadeInUp}
-                custom={1.0}
-              >
-                <FontAwesomeIcon icon={faFacebook} />
-              </motion.a>
-              <motion.a
-                href="https://x.com/moneko_ai"
-                aria-label="Moneko on X"
-                className="text-gray-400 hover:text-white"
-                variants={fadeInUp}
-                custom={1.1}
-              >
-                <FontAwesomeIcon icon={faX} />
-              </motion.a>
-              <motion.a
-                href="https://www.instagram.com/moneko_ai/"
-                aria-label="Moneko on Instagram"
-                className="text-gray-400 hover:text-white"
-                variants={fadeInUp}
-                custom={1.2}
-              >
-                <FontAwesomeIcon icon={faInstagram} />
-              </motion.a>
-            </motion.div>
-            <motion.p variants={fadeInUp} custom={1.3}>
+          {/* Bottom Section */}
+          <div className="mt-16 border-t border-border pt-8 flex flex-col md:flex-row md:items-center md:justify-between">
+            <p className="text-muted-foreground text-sm mb-4 md:mb-0">
               © 2025 Moneko. All rights reserved.
-            </motion.p>
-          </motion.div>
-        </motion.div>
+            </p>
+            
+            {/* Social Icons */}
+            <div className="flex space-x-6">
+              <a
+                href="https://www.facebook.com/monekoai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Moneko on Facebook"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                <FontAwesomeIcon icon={faFacebook} className="h-5 w-5" />
+              </a>
+              <a
+                href="https://x.com/moneko_ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Moneko on X"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                <FontAwesomeIcon icon={faX} className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/moneko_ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Moneko on Instagram"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                <FontAwesomeIcon icon={faInstagram} className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );

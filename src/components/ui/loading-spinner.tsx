@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -13,20 +13,26 @@ export function LoadingSpinner({ size = 'lg', className = '' }: LoadingSpinnerPr
   };
 
   return (
-    <div className={classNames("mb-8 animate-spin rounded-full border-b-4 border-t-4 border-primary",
-      sizeClasses[size],
-      className
-    )}></div>
-
+    <div 
+      className={cn(
+        "animate-spin rounded-full border-2 border-muted border-t-primary",
+        sizeClasses[size],
+        className
+      )}
+      role="status"
+      aria-label="Loading"
+    >
+      <span className="sr-only">Loading...</span>
+    </div>
   );
 }
 
 export function FullPageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <LoadingSpinner size="lg" className="mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="text-center space-y-4">
+        <LoadingSpinner size="lg" className="mx-auto" />
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     </div>
   );

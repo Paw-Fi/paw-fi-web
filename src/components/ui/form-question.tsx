@@ -36,8 +36,8 @@ export function FormQuestion({
   validation,
   optionsPerRow = 2
 }: FormQuestionProps) {
-  const inputClasses = `w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary dark:focus:border-primary ${
-    error ? 'border-red-500 dark:border-red-400 focus:ring-red-500/50 dark:focus:ring-red-400/50' : ''
+  const inputClasses = `w-full rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${
+    error ? 'border-destructive focus:ring-destructive/50' : ''
   }`;
 
   const renderInput = () => {
@@ -73,7 +73,7 @@ export function FormQuestion({
             {type === 'currency' && (
               <FontAwesomeIcon 
                 icon={faDollarSign} 
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" 
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
               />
             )}
             <input
@@ -88,7 +88,7 @@ export function FormQuestion({
             {type === 'percentage' && (
               <FontAwesomeIcon 
                 icon={faPercent} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
               />
             )}
           </div>
@@ -118,8 +118,8 @@ export function FormQuestion({
                 onClick={() => onChange(option.value)}
                 className={`rounded-md p-2 text-sm transition-colors ${
                   value === option.value 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
                 }`}
               >
                 {option.label}
@@ -150,8 +150,8 @@ export function FormQuestion({
                   }}
                   className={`rounded-md p-2 text-sm transition-colors flex items-center justify-center space-x-2 ${
                     isSelected 
-                      ? 'bg-primary text-white' 
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground hover:bg-muted/70'
                   }`}
                 >
                   <FontAwesomeIcon 
@@ -176,7 +176,7 @@ export function FormQuestion({
               rows={6}
               className={inputClasses}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Enter each debt on a separate line with details separated by commas
             </p>
           </div>
@@ -192,8 +192,8 @@ export function FormQuestion({
                 onClick={() => onChange(rating)}
                 className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
                   value === rating 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
                 }`}
               >
                 {rating}
@@ -211,9 +211,9 @@ export function FormQuestion({
               max={validation?.max || 100}
               value={value || (validation?.min || 0)}
               onChange={(e) => onChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
             />
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>{validation?.min || 0}</span>
               <span className="font-medium">{value || (validation?.min || 0)}</span>
               <span>{validation?.max || 100}</span>
@@ -232,12 +232,12 @@ export function FormQuestion({
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col"
     >
-      <label className="mb-1 text-sm font-medium text-gray-800 dark:text-gray-200">
+      <label className="mb-1 text-sm font-medium text-foreground">
         {question}
-        {validation?.required && <span className="text-red-500 dark:text-red-400 ml-1">*</span>}
+        {validation?.required && <span className="text-destructive ml-1">*</span>}
       </label>
       {description && (
-        <p className="mb-2 text-xs text-gray-600 dark:text-gray-400">{description}</p>
+        <p className="mb-2 text-xs text-muted-foreground">{description}</p>
       )}
       {renderInput()}
       <AnimatePresence>
@@ -246,7 +246,7 @@ export function FormQuestion({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-2 text-sm text-red-500 dark:text-red-400 flex items-center"
+            className="mt-2 text-sm text-destructive flex items-center"
           >
             <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
             {error}

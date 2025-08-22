@@ -682,7 +682,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
        onClose={() => setShowSignupPrompt(false)}
        disableOverlayClick={true}
        overlayClassName="bg-black/40"
-       contentClassName="relative flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900 rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
+       contentClassName="relative flex flex-col items-center justify-center p-8 bg-background rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
      >
        <div className="flex flex-col items-center w-full">
          <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">
@@ -691,7 +691,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
          <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
            {signupModalConfig.title}
          </h2>
-         <p className="text-gray-700 dark:text-gray-200 mb-3 text-center text-base font-medium">
+         <p className="text-muted-foreground mb-3 text-center text-base font-medium">
            {signupModalConfig.description}
          </p>
          <div className="w-full flex flex-col gap-2">

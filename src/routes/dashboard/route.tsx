@@ -52,6 +52,7 @@ import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSideb
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
+import { Button } from "@/components/ui/button";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -566,25 +567,32 @@ export function Dashboard() {
           </div>
           {/* <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground"> */}
         </Link>
-        <motion.button 
+        <Button
           onClick={toggleMobileMenu}
+          variant="ghost"
+          size="icon"
           className={classNames(
-            "rounded-lg p-2 shadow-sm transition-all duration-300",
+            "rounded-lg shadow-sm transition-all duration-300",
             mobileMenuOpen 
-              ? "bg-red-100/70 dark:bg-red-900/30 text-red-500 dark:text-red-400" 
-              : "bg-white/70 dark:bg-gray-800/70 text-gray-700 dark:text-gray-300"
+              ? "bg-red-50/70 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100/70 dark:hover:bg-red-900/50" 
+              : "bg-background/70 text-foreground hover:bg-muted/70"
           )}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          asChild
         >
-          <FontAwesomeIcon 
-            icon={mobileMenuOpen ? faTimes : faBars} 
-            className={classNames(
-              "h-6 w-6 transition-all duration-300",
-              mobileMenuOpen ? "text-red-500 dark:text-red-400" : "text-gray-700 dark:text-gray-300"
-            )} 
-          />
-        </motion.button>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center"
+          >
+            <FontAwesomeIcon 
+              icon={mobileMenuOpen ? faTimes : faBars} 
+              className={classNames(
+                "h-6 w-6 transition-all duration-300",
+                mobileMenuOpen ? "text-red-600 dark:text-red-400" : "text-foreground"
+              )} 
+            />
+          </motion.div>
+        </Button>
       </div>
 
       {/* Main Sidebar - Card-based Design */}
@@ -598,7 +606,7 @@ export function Dashboard() {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex h-full flex-col rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
+        <div className="flex h-full flex-col rounded-2xl border border-border bg-card/70 backdrop-blur-sm shadow-sm">
           <div className="flex-1 py-6">
             {/* Logo Section - Hidden on mobile (shown in top bar) */}
             <div className="mb-6 ml-4 hidden md:block">
@@ -606,7 +614,7 @@ export function Dashboard() {
                 <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
                   <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
                 </div>
-                <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground">
+                <span className="text-xl font-bold tracking-tight text-card-foreground">
                   Moneko
                 </span>
               </Link>
@@ -639,8 +647,8 @@ export function Dashboard() {
                     <motion.div
                       className={`flex w-full items-center justify-between px-4 py-3 transition-all duration-200 ${
                         isRouteActive(item.path)
-                          ? "border-l-4 border-primary dark:border-dark-primary text-primary dark:text-dark-primary"
-                          : "border-l-4 border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? "border-l-4 border-primary text-primary"
+                          : "border-l-4 border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                       }`}
                       whileTap={{ scale: 0.98 }}
                       transition={{
@@ -654,14 +662,14 @@ export function Dashboard() {
                           className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                             isRouteActive(item.path)
                               ? ""
-                              : "group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
+                              : "group-hover:bg-muted"
                           }`}
                         >
                           <FontAwesomeIcon
                             className={`size-5 ${
                               isRouteActive(item.path)
-                                ? "text-primary dark:text-dark-primary"
-                                : "text-gray-600 dark:text-gray-400"
+                                ? "text-primary"
+                                : "text-muted-foreground"
                             }`}
                             icon={item.icon}
                           />
@@ -681,19 +689,19 @@ export function Dashboard() {
           </div>
 
           {/* User Profile Section */}
-          <div className="border-t border-gray-100 dark:border-gray-700 p-4 relative">
+          <div className="border-t border-border p-4 relative">
             {isLoading||isSubscriptionLoading ? (
               <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
-                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600"></div>
+                <div className="h-10 w-10 rounded-full bg-muted"></div>
                 <div className="flex-1">
-                  <div className="mb-1 h-3 w-24 rounded bg-gray-200 dark:bg-gray-600"></div>
-                  <div className="h-2 w-32 rounded bg-gray-200 dark:bg-gray-600"></div>
+                  <div className="mb-1 h-3 w-24 rounded bg-muted"></div>
+                  <div className="h-2 w-32 rounded bg-muted"></div>
                 </div>
               </div>
             ) : user ? (
               <>
                 <motion.div 
-                  className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-all duration-200"
+                  className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden cursor-pointer hover:bg-muted/50 transition-all duration-200"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -704,10 +712,10 @@ export function Dashboard() {
                     showPremiumCrown={true}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
+                    <p className="text-sm font-medium text-card-foreground">
                       {user.user_metadata?.full_name || "User"}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                  
                 </motion.div>
@@ -716,7 +724,7 @@ export function Dashboard() {
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div
-                      className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                      className="absolute bottom-full left-4 right-4 mb-2 bg-popover rounded-xl shadow-lg border border-border overflow-hidden z-50"
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -732,16 +740,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
                           whileHover={{ x: 2 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              className="h-4 w-4 text-muted-foreground"
                               icon={faCog}
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-popover-foreground">
                             Settings
                           </span>
                         </motion.div>
@@ -757,16 +765,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
                           whileHover={{ x: 2 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              className="h-4 w-4 text-muted-foreground"
                               icon={faUser}
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-popover-foreground">
                             Profile
                           </span>
                         </motion.div>
@@ -782,16 +790,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
                           whileHover={{ x: 2 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              className="h-4 w-4 text-muted-foreground"
                               icon={faIdCard}
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-popover-foreground">
                             Membership
                           </span>
                         </motion.div>
@@ -802,27 +810,27 @@ export function Dashboard() {
                       
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
                           whileHover={{ x: 2 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                              className="h-4 w-4 text-muted-foreground"
                               icon={faHeadphones}
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-popover-foreground">
                             Support
                           </span>
                         </motion.div>
                       </a>
 
                       {/* Divider */}
-                      <div className="border-t border-gray-200 dark:border-gray-700" />
+                      <div className="border-t border-border" />
 
                       {/* Logout Option */}
                       <motion.div
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 cursor-pointer"
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50/50 dark:hover:bg-red-900/20 transition-colors duration-200 cursor-pointer"
                         onClick={() => {
                           setUserMenuOpen(false);
                           setMobileMenuOpen(false);
@@ -830,7 +838,7 @@ export function Dashboard() {
                         }}
                         whileHover={{ x: 2 }}
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/70 dark:bg-red-900/30">
                           <FontAwesomeIcon
                             className="h-4 w-4 text-red-600 dark:text-red-400"
                             icon={faSignOut}
@@ -847,17 +855,17 @@ export function Dashboard() {
             ) : (
               <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
-                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-muted/50"
                   whileHover={{ x: 3 }}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                     <FontAwesomeIcon
                       icon={faSignInAlt}
-                      className="h-5 w-5 text-primary dark:text-dark-primary"
+                      className="h-5 w-5 text-primary"
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">
+                    <p className="text-sm font-medium text-card-foreground">
                       Sign In
                     </p>
                    
@@ -884,16 +892,16 @@ export function Dashboard() {
               exit={{ x: -64, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
             >
-              <div className="h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 shadow-sm">
+              <div className="h-full rounded-2xl border border-border bg-card/70 backdrop-blur-sm shadow-sm">
                 <div className="p-6">
                   <div className="mb-6 flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                       <FontAwesomeIcon
-                        className="h-4 w-4 text-primary dark:text-dark-primary"
+                        className="h-4 w-4 text-primary"
                         icon={expandedMenu?.icon || faHome}
                       />
                     </div>
-                    <h3 className="text-sm font-bold capitalize text-foreground dark:text-dark-foreground">
+                    <h3 className="text-sm font-bold capitalize text-card-foreground">
                       {expandedMenu.label}
                     </h3>
                   </div>
@@ -910,8 +918,8 @@ export function Dashboard() {
                           <motion.div
                             className={`block w-full rounded-lg px-4 py-3 text-left text-sm transition-all duration-200 ${
                               isRouteActive(subItem.path)
-                                ? "border-l-3 border-primary dark:border-dark-primary bg-purple-50/50 dark:bg-purple-900/20 font-medium text-primary dark:text-dark-primary"
-                                : "border-l-3 border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                                ? "border-l-3 border-primary bg-primary/5 font-medium text-primary"
+                                : "border-l-3 border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                             }`}
                             transition={{
                               type: "spring",
@@ -937,29 +945,36 @@ export function Dashboard() {
               exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-md p-3">
+              <div className="rounded-xl border border-border bg-popover/90 backdrop-blur-md shadow-md p-3">
                 <div className="flex items-center justify-between mb-2 px-2">
                   <div className="flex items-center space-x-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
                       <FontAwesomeIcon
-                        className="h-3 w-3 text-primary dark:text-dark-primary"
+                        className="h-3 w-3 text-primary"
                         icon={expandedMenu?.icon || faHome}
                       />
                     </div>
-                    <h3 className="text-xs font-bold capitalize text-foreground dark:text-dark-foreground">
+                    <h3 className="text-xs font-bold capitalize text-popover-foreground">
                       {expandedMenu.label}
                     </h3>
                   </div>
                   
                   {/* Close submenu button on mobile */}
-                  <motion.button
+                  <Button
                     onClick={() => setExpandedMenu(null)}
-                    className="rounded-full bg-gray-100/70 dark:bg-gray-700/70 p-1 text-gray-500 dark:text-gray-400"
-                    whileHover={{ scale: 1.1, backgroundColor: "#f3f4f6" }}
-                    whileTap={{ scale: 0.95 }}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-muted/70 text-muted-foreground hover:bg-muted"
+                    asChild
                   >
-                    <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                  </motion.button>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex items-center justify-center"
+                    >
+                      <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                    </motion.div>
+                  </Button>
                 </div>
                 
                 <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
@@ -981,8 +996,8 @@ export function Dashboard() {
                             className={classNames(
                               "whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200",
                               isRouteActive(subItem.path) 
-                                ? "bg-gradient-to-r from-primary/10 dark:from-dark-primary/10 to-purple-400/10 dark:to-purple-600/10 border-b-2 border-primary dark:border-dark-primary font-medium text-primary dark:text-dark-primary" 
-                                : "border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50/70 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                                ? "bg-gradient-to-r from-primary/10 to-primary/5 border-b-2 border-primary font-medium text-primary" 
+                                : "border-b-2 border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                             )}
                             whileHover={{ y: -2 }}
                             transition={{
@@ -1021,7 +1036,7 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="h-full flex-1 overflow-auto rounded-xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-md"
+          className="h-full flex-1 overflow-auto rounded-xl border border-border bg-card/80 backdrop-blur-md shadow-md"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}

@@ -36,10 +36,10 @@ export function PieChart({ labels, data, title }: PieChartProps) {
         backgroundColor: [
           getChartColor('primary') || (isDark ? '#8B70FF' : '#7458FF'),
           getChartColor('success') || (isDark ? '#1FE3B8' : '#16CDA2'),
-          '#FFCD29', // warning - keeping as fallback since we don't have chart-specific warning
-          '#FF7A7A', // danger - using dark-danger variant
-          '#60A5FA', // info - blue variant
-          '#A855F7', // purple variant
+          getChartColor('warning') || (isDark ? '#FFD04A' : '#FFC219'),
+          getChartColor('danger') || (isDark ? '#FF7A7A' : '#FF6060'),
+          getChartColor('accent-indigo') || (isDark ? '#818CF8' : '#6366F1'),
+          getChartColor('accent-pink') || (isDark ? '#F472B6' : '#EC4899')
         ].slice(0, data.length), // Only use as many colors as we have data points
         borderWidth: 0,
       },

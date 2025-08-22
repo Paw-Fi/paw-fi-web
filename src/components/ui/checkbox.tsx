@@ -1,70 +1,30 @@
-import * as React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
+import { CheckIcon } from "lucide-react"
 
-// Extend HTMLInputElement props but override some to be more specific
-type CheckboxProps = {
-  label?: string;
-  containerClassName?: string;
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  value?: string | number | readonly string[] | undefined;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'checked' | 'value'>;
+import { cn } from "@/lib/utils"
 
-const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ 
-    className, 
-    containerClassName, 
-    label, 
-    checked, 
-    onCheckedChange, 
-    onChange, 
-    ...props 
-  }, ref) => {
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (onCheckedChange) {
-        onCheckedChange(e.target.checked);
-      }
-      if (onChange) {
-        onChange(e);
-      }
-    };
+function Checkbox({
+  className,
+  ...props
+}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  return (
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="flex items-center justify-center text-current transition-none"
+      >
+        <CheckIcon className="size-3.5" />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
+  )
+}
 
-    return (
-      <label className={cn('inline-flex items-center space-x-2 cursor-pointer', containerClassName)}>
-        <div className="relative">
-          <input
-            type="checkbox"
-            ref={ref}
-            checked={checked}
-            onChange={handleChange}
-            className={cn(
-              'peer h-4 w-4 appearance-none rounded border border-gray-300',
-              'focus:ring-2 focus:ring-offset-2 focus:ring-primary/50',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-              'checked:bg-primary checked:border-primary',
-              'transition-colors duration-200',
-              className
-            )}
-            {...props}
-          />
-          <FontAwesomeIcon
-            icon={faCheck}
-            className={cn(
-              'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-              'h-3 w-3 text-white pointer-events-none',
-              'opacity-0 peer-checked:opacity-100 transition-opacity duration-200'
-            )}
-          />
-        </div>
-        {label && <span className="text-sm text-gray-700">{label}</span>}
-      </label>
-    );
-  }
-);
-
-Checkbox.displayName = 'Checkbox';
-
-export { Checkbox };
+export { Checkbox }

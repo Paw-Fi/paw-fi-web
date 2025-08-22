@@ -17,13 +17,13 @@ export function SkeletonWidget({ column_span = 1, isExpanded = false }: Skeleton
       `}
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-6 h-6 rounded-full bg-gray-200 mr-3"></div>
-            <div className="h-5 bg-gray-200 rounded w-32"></div>
+            <div className="w-6 h-6 rounded-full bg-muted mr-3"></div>
+            <div className="h-5 bg-muted rounded w-32"></div>
           </div>
-          <div className="w-8 h-4 bg-gray-200 rounded"></div>
+          <div className="w-8 h-4 bg-muted rounded"></div>
         </div>
       </div>
       
@@ -31,18 +31,18 @@ export function SkeletonWidget({ column_span = 1, isExpanded = false }: Skeleton
       <div className="p-4">
         {isExpanded ? (
           <>
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-32 bg-gray-200 rounded mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
+            <div className="h-32 bg-muted rounded mb-4"></div>
+            <div className="h-4 bg-muted rounded w-2/3 mb-4"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+            <div className="h-32 bg-muted rounded"></div>
           </>
         ) : (
           <>
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
+            <div className="h-24 bg-muted rounded"></div>
           </>
         )}
       </div>

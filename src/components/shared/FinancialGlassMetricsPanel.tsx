@@ -44,7 +44,7 @@ export function FinancialGlassMetricsPanel({
 
   return (
     <motion.div 
-      className={`rounded-2xl ${compact ? 'p-4' : 'p-6'} border border-white/20 dark:border-gray-700/50 shadow-xl backdrop-blur-xl ${className}`}
+      className={`rounded-2xl ${compact ? 'p-4' : 'p-6'} border border-border/50 shadow-xl backdrop-blur-xl ${className}`}
       variants={glassVariants}
       style={{
         background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(59, 130, 246, 0.03) 100%)",
@@ -56,7 +56,7 @@ export function FinancialGlassMetricsPanel({
         <div className={`text-center ${compact ? 'mb-4' : 'mb-6'}`}>
           {title && (
             <motion.h2 
-              className="text-title font-bold text-gray-900 dark:text-white mb-2"
+              className="text-title font-bold text-foreground mb-2"
               style={{
                 fontVariationSettings: "'wght' 600"
               }}
@@ -65,7 +65,7 @@ export function FinancialGlassMetricsPanel({
             </motion.h2>
           )}
           {subtitle && (
-            <p className="text-label text-gray-600 dark:text-gray-400">
+            <p className="text-label text-muted-foreground">
               {subtitle}
             </p>
           )}
@@ -109,14 +109,14 @@ export function FinancialGlassMetricsPanel({
                   : metric.value
                 }
               </motion.span>
-              <span className={`${compact ? 'text-xs' : 'text-label'} text-gray-700 dark:text-gray-300 ${compact ? 'whitespace-nowrap' : ''} font-medium`}>
+              <span className={`${compact ? 'text-xs' : 'text-label'} text-foreground ${compact ? 'whitespace-nowrap' : ''} font-medium`}>
                 {metric.label}
               </span>
             </div>
             
             {/* Divider for compact mode (except last item) */}
             {compact && index < metrics.length - 1 && (
-              <div className="w-px h-8 bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
+              <div className="w-px h-8 bg-border flex-shrink-0" />
             )}
           </div>
         ))}

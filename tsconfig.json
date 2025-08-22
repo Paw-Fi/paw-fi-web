@@ -34,6 +34,7 @@
       "@types/*": ["./src/types/*"],
       "@assets/*": ["./src/assets/*"],
       "@styles/*": ["./src/styles/*"],
+      "@config/*": ["./src/config/*"],
     },
     "noEmit": true
   }

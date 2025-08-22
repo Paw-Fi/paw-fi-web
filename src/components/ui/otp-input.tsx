@@ -155,9 +155,9 @@ export function OtpInput({
           ref={(el) => {
             inputRefs.current[index] = el;
           }}
-          type="text"
+          type="tel"
           inputMode="numeric"
-          pattern="\d*"
+          pattern="[0-9]*"
           maxLength={1}
           value={digit}
           onChange={(e) => handleChange(index, e.target.value)}
@@ -174,7 +174,7 @@ export function OtpInput({
             // Active/filled state styling
             digit
               ? "border-primary bg-primary/5 text-primary"
-              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800",
+              : "border-border bg-background",
             // Focus state
             activeIndex === index && !disabled
               ? "ring-2 ring-primary border-primary"
@@ -184,6 +184,12 @@ export function OtpInput({
           )}
           aria-label={`Digit ${index + 1} of ${length}`}
           autoComplete="one-time-code"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          enterKeyHint="done"
+          data-lpignore="true"
+          data-1p-ignore="true"
         />
       ))}
     </div>

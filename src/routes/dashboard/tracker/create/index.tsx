@@ -75,7 +75,6 @@ function CreateGoalPage() {
   }
 
   const handleGoalTypeSelect = (goalType: GoalType) => {
-    /* eslint-disable */console.log(...oo_oo(`4180365050_78_4_78_75_4`,'Starting authenticated goal creation for user:', user?.id));
     setState({ currentStep: 'questionnaire', selectedGoalType: goalType });
   };
 

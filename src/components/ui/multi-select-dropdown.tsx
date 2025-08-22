@@ -66,10 +66,10 @@ export function MultiSelectDropdown({
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       {label && (
-        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
+        <label className="mb-2 block text-sm font-medium text-foreground text-start">
           {label}
           {helperText && (
-            <span className="text-sm text-slate-700 dark:text-slate-300"> {helperText}</span>
+            <span className="text-sm text-muted-foreground"> {helperText}</span>
           )}
         </label>
       )}
@@ -78,25 +78,25 @@ export function MultiSelectDropdown({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full rounded-lg border border-slate-300 bg-white/70 p-3 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-800/70 flex items-center justify-between ${
+        className={`w-full rounded-lg border border-border bg-background/70 p-3 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-primary dark:bg-background/70 flex items-center justify-between ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         }`}
       >
-        <span className="text-slate-700 dark:text-slate-300">
+        <span className="text-foreground">
           {getDisplayText()}
         </span>
         <FontAwesomeIcon 
           icon={isOpen ? faChevronUp : faChevronDown} 
-          className="text-slate-500"
+          className="text-muted-foreground"
         />
       </button>
       
       {isOpen && !disabled && (
-        <div className="absolute z-40 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-40 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {options.map((option) => (
             <label
               key={option.id}
-              className={`flex items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors duration-150 ${
+              className={`flex items-center p-3 hover:bg-accent cursor-pointer transition-colors duration-150 ${
                 isOptionDisabled(option.id) && !selectedValues.includes(option.id)
                   ? 'opacity-50 cursor-not-allowed'
                   : ''
@@ -107,12 +107,12 @@ export function MultiSelectDropdown({
                 checked={selectedValues.includes(option.id)}
                 onChange={() => onChange(option.id)}
                 disabled={isOptionDisabled(option.id)}
-                className="mr-3 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded accent-primary"
+                className="mr-3 h-4 w-4 text-primary focus:ring-primary border-border rounded accent-primary"
                 style={{
-                  accentColor: selectedValues.includes(option.id) ? 'var(--color-primary, #7c3aed)' : undefined
+                  accentColor: selectedValues.includes(option.id) ? 'hsl(var(--primary))' : undefined
                 }}
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">
+              <span className="text-sm text-foreground">
                 {option.label}
               </span>
             </label>

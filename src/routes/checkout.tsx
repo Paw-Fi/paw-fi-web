@@ -9,8 +9,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { faCheckCircle, faXmarkCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 
 // Define the search params type for this route
@@ -252,8 +253,8 @@ function CheckoutPage() {
     switch (paymentStatus) {
       case "success":
         return (
-          <Alert variant="success" className="mb-6">
-            <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500" />
+          <Alert className="mb-6 border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-50">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <AlertTitle>Payment Successful!</AlertTitle>
             <AlertDescription>
               <p>Thank you for your subscription. Your account has been upgraded to the {plan} plan.</p>
@@ -270,7 +271,7 @@ function CheckoutPage() {
       case 'failed':
         return (
           <Alert variant="destructive" className="mb-6">
-            <FontAwesomeIcon icon={faXmarkCircle} className="h-5 w-5 text-red-500" />
+            <XCircle className="h-5 w-5" />
             <AlertTitle>Payment Failed</AlertTitle>
             <AlertDescription>
               <p>We couldn't process your payment. {error && `Error: ${error}`}</p>
@@ -298,7 +299,7 @@ function CheckoutPage() {
       case 'canceled':
         return (
           <Alert className="mb-6">
-            <FontAwesomeIcon icon={faXmarkCircle} className="h-5 w-5 text-red-500" />
+            <XCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <AlertTitle>Payment Canceled</AlertTitle>
             <AlertDescription>
               <p>You've canceled the payment process.</p>
@@ -325,69 +326,80 @@ function CheckoutPage() {
           transition={{ duration: 0.5 }}
           className="mx-auto max-w-2xl"
         >
-          <div className="mb-8 text-center">
-            <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">
-              Complete Your Purchase
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {trial === "true" 
-                ? `You're starting a 30-day free trial of the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-                : `You're subscribing to the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-              }
-            </p>
-            {trial === "true" && (
-              <div className="mt-4 inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                🎉 30-day free trial - no credit card required
+          <Card className="border-0 bg-card/60 shadow-2xl backdrop-blur-xl">
+            <CardHeader className="text-center space-y-4">
+              <CardTitle className="text-3xl font-bold">
+                Complete Your Purchase
+              </CardTitle>
+              <CardDescription className="text-lg">
+                {trial === "true" 
+                  ? `You're starting a 30-day free trial of the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
+                  : `You're subscribing to the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
+                }
+              </CardDescription>
+              
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {trial === "true" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                    🎉 30-day free trial - no credit card required
+                  </Badge>
+                )}
+                {promo && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                    ✓ Promo code "{promo}" applied
+                  </Badge>
+                )}
               </div>
-            )}
-            {promo && (
-              <div className="mt-4 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                ✓ Promo code "{promo}" applied
-              </div>
-            )}
-          </div>
+            </CardHeader>
 
-          <div className="rounded-xl border border-white/30 bg-slate-50/60 p-8 shadow-2xl backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/60">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-purple-600"></div>
-                <p className="mt-4 text-gray-600 dark:text-gray-400">
-                  Loading payment form...
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
-                <p className="text-red-600 dark:text-red-400">{error}</p>
-                <button
-                  onClick={() => navigate({ to: "/pricing" })}
-                  className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                >
-                  Return to Pricing
-                </button>
-              </div>
-            )}
-
-            {renderPaymentStatus()}
-
-            {!isLoading && !error && (
-              <>
-                <div id="express-checkout-element" className="mb-6">
-                  {/* Stripe Express Checkout Element will be mounted here */}
+            <CardContent className="space-y-6">
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-muted-foreground">
+                    Loading payment form...
+                  </p>
                 </div>
-                
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={() => navigate({ to: "/pricing" })}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                  >
-                    Cancel and return to pricing
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              )}
+
+              {error && (
+                <Alert variant="destructive">
+                  <XCircle className="h-5 w-5" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    <p>{error}</p>
+                    <Button
+                      onClick={() => navigate({ to: "/pricing" })}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      Return to Pricing
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {renderPaymentStatus()}
+
+              {!isLoading && !error && (
+                <>
+                  <div id="express-checkout-element" className="min-h-[200px]">
+                    {/* Stripe Express Checkout Element will be mounted here */}
+                  </div>
+                  
+                  <div className="text-center">
+                    <Button
+                      onClick={() => navigate({ to: "/pricing" })}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Cancel and return to pricing
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </AmbientHaloLayout>

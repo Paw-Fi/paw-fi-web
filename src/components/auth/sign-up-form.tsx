@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/lib/supabase';
-import { OtpInput } from '@/components/ui/otp-input';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 interface SignUpFormProps {
   redirectUrl?: string;
@@ -156,25 +156,33 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
               <label className="block text-sm font-medium mb-4 text-gray-700 dark:text-gray-300 text-center">
                 Enter verification code
               </label>
-              <OtpInput
-                length={6}
-                value={otpCode}
-                onChange={setOtpCode}
-                onComplete={(code) => {
-                  // Auto-submit when all 6 digits are entered
-                  if (code.length === 6) {
-                    setOtpCode(code);
-                    // Trigger form submission after a brief delay to ensure state is updated
+              <div className="flex justify-center mb-3">
+                <InputOTP
+                  autoFocus
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(val) => setOtpCode(val.replace(/\D/g, '').slice(0, 6))}
+                  onComplete={(val) => {
+                    setOtpCode(val);
                     setTimeout(() => {
-                      const form = document.getElementById('otp-form') as HTMLFormElement;
+                      const form = document.getElementById('otp-form') as HTMLFormElement | null;
                       form?.requestSubmit();
-                    }, 100);
-                  }
-                }}
-                disabled={isVerifying}
-                autoSubmit={false}
-                className="mb-3"
-              />
+                    }, 0);
+                  }}
+                  pasteTransformer={(p) => p.replace(/\D/g, '').slice(0, 6)}
+                  autoComplete="one-time-code"
+                  disabled={isVerifying}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                 Enter the 6-digit code from your email or paste it directly
               </p>

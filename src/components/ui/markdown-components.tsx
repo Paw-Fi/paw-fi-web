@@ -28,17 +28,17 @@ interface MarkdownComponentsProps {
 export const createMinimalMarkdownComponents = () => {
   return {
     a: ({ node, ...props }: any) => (
-      <a {...props} target="_blank" className="text-primary dark:text-dark-primary font-bold no-underline" />
+      <a {...props} target="_blank" className="text-primary font-bold no-underline" />
     ),
     
     // Standard code block handling
     code: ({ node, inline, children, ...props }: any) => {
       if (inline) {
-        return <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>{children}</code>;
+        return <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>{children}</code>;
       }
       
       return (
-        <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg overflow-x-auto">
+        <pre className="bg-muted p-3 rounded-lg overflow-x-auto">
           <code {...props}>{children}</code>
         </pre>
       );
@@ -61,7 +61,7 @@ export const createMarkdownComponents = ({
 
   return {
     a: ({ node, ...props }: any) => (
-      <a {...props} target="_blank" className="text-primary dark:text-dark-primary font-bold no-underline" />
+      <a {...props} target="_blank" className="text-primary font-bold no-underline" />
     ),
     
     // Interactive Button Components
@@ -71,7 +71,7 @@ export const createMarkdownComponents = ({
       
       return (
         <div className="mt-3 flex gap-2 flex-wrap">
-          <p className="text-sm font-medium mb-2 w-full text-foreground dark:text-dark-foreground">{label}</p>
+          <p className="text-sm font-medium mb-2 w-full text-foreground">{label}</p>
           {buttonOptions.map((option: string) => (
             <Button
               key={option}
@@ -81,8 +81,8 @@ export const createMarkdownComponents = ({
               }}
               className={`px-4 py-2 rounded-lg ${
                 option.includes('yes') || option.includes('agree') || option.includes('proceed')
-                  ? 'bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white'
-                  : 'bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-700 text-white'
+                  ? 'bg-success hover:bg-success/90 text-white'
+                  : 'bg-muted-foreground hover:bg-muted-foreground/90 text-white'
               }`}
             >
               {option.replace(/_/g, ' ').charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' ')}
@@ -98,7 +98,7 @@ export const createMarkdownComponents = ({
       
       return (
         <div className="mt-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{label}</p>
+          <p className="text-sm text-muted-foreground mb-2">{label}</p>
           <div className="flex gap-2 flex-wrap">
             {amountOptions.map((amount: string) => (
               <Button
@@ -109,7 +109,7 @@ export const createMarkdownComponents = ({
                     : `I saved $${amount} today`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-800 dark:text-green-400 rounded-lg border border-green-300 dark:border-green-700"
+                className="px-3 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-700"
               >
                 {amount === 'other' || amount === 'custom' ? 'Custom Amount' : `$${amount}`}
               </Button>
@@ -130,7 +130,7 @@ export const createMarkdownComponents = ({
       
       return (
         <div className="mt-3">
-          <p className="text-sm font-medium mb-3 text-foreground dark:text-dark-foreground">{label}</p>
+          <p className="text-sm font-medium mb-3 text-foreground">{label}</p>
           <div className="grid grid-cols-2 gap-2">
             {actionOptions.map((action: string) => (
               <Button
@@ -139,7 +139,7 @@ export const createMarkdownComponents = ({
                   const message = `I want to focus on ${action.replace(/_/g, ' ')}`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700"
+                className="flex items-center gap-2 px-3 py-3 bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200/50 dark:border-blue-700/50"
               >
                 <span>{actionIcons[action] || '🎯'}</span>
                 <span className="text-sm">{action.replace(/_/g, ' ').toUpperCase()}</span>
@@ -163,7 +163,7 @@ export const createMarkdownComponents = ({
       
       return (
         <div className="mt-3">
-          <p className="text-sm font-medium mb-3 text-foreground dark:text-dark-foreground">{label}</p>
+          <p className="text-sm font-medium mb-3 text-foreground">{label}</p>
           <div className="flex gap-2 flex-wrap">
             {actionOptions.map((action: string) => (
              <Button
@@ -182,7 +182,7 @@ export const createMarkdownComponents = ({
                onSendMessage?.(message);
              }}
            >
-             <span className="text-purple-400 dark:text-purple-300 hover:text-cyan-400 dark:hover:text-cyan-300 transition-colors duration-300">
+             <span className="text-purple-600 dark:text-purple-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors duration-300">
                {goalActionIcons[action] || '⚡'}
              </span>
              <span className="capitalize">
@@ -215,7 +215,7 @@ export const createMarkdownComponents = ({
                   const message = `I need to update my ${dataType.replace(/_/g, ' ')} information`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200"
+                className="flex items-center gap-2 px-3 py-2 bg-amber-50/50 hover:bg-amber-100/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-200/50 dark:border-amber-700/50"
               >
                 <span>{dataIcons[dataType] || '📝'}</span>
                 <span className="text-sm capitalize">{dataType.replace(/_/g, ' ')}</span>
@@ -243,7 +243,7 @@ export const createMarkdownComponents = ({
                     : `I choose $${amount}`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-green-50 hover:bg-green-100 text-green-800 rounded-lg border border-green-200"
+                className="px-3 py-2 bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200/50 dark:border-green-700/50"
               >
                 {amount === 'custom' ? 'Custom' : `$${amount}`}
               </Button>
@@ -258,12 +258,12 @@ export const createMarkdownComponents = ({
       const priorityOptions = priorities?.split('|') || [];
       
       const priorityColors: Record<string, string> = {
-        high: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
-        critical: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
-        medium: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
-        important: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
-        low: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
-        nice_to_have: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200'
+        high: 'bg-red-50/50 hover:bg-red-100/70 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200/50 dark:border-red-700/50',
+        critical: 'bg-red-50/50 hover:bg-red-100/70 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200/50 dark:border-red-700/50',
+        medium: 'bg-yellow-50/50 hover:bg-yellow-100/70 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200/50 dark:border-yellow-700/50',
+        important: 'bg-yellow-50/50 hover:bg-yellow-100/70 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200/50 dark:border-yellow-700/50',
+        low: 'bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-700/50',
+        nice_to_have: 'bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-700/50'
       };
       
       return (
@@ -277,7 +277,7 @@ export const createMarkdownComponents = ({
                   const message = `This is ${priority.replace(/_/g, ' ')} priority for me`;
                   onSendMessage?.(message);
                 }}
-                className={`px-3 py-2 rounded-lg border ${priorityColors[priority] || 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'}`}
+                className={`px-3 py-2 rounded-lg border ${priorityColors[priority] || 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'}`}
               >
                 {priority.replace(/_/g, ' ').charAt(0).toUpperCase() + priority.slice(1).replace(/_/g, ' ')}
               </Button>
@@ -307,7 +307,7 @@ export const createMarkdownComponents = ({
                   const message = `Please explain this with ${style.replace(/_/g, ' ')} style`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 rounded-lg border border-cyan-200"
+                className="flex items-center gap-2 px-3 py-2 bg-cyan-50/50 hover:bg-cyan-100/70 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-lg border border-cyan-200/50 dark:border-cyan-700/50"
               >
                 <span>{styleIcons[style] || '💬'}</span>
                 <span className="text-sm capitalize">{style.replace(/_/g, ' ')}</span>
@@ -338,7 +338,7 @@ export const createMarkdownComponents = ({
                   const message = `I ${habit} my financial habit`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg border border-teal-200"
+                className="flex items-center gap-2 px-3 py-2 bg-teal-50/50 hover:bg-teal-100/70 dark:bg-teal-900/20 dark:hover:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200/50 dark:border-teal-700/50"
               >
                 <span>{habitIcons[habit] || '📝'}</span>
                 <span className="text-sm capitalize">{habit}</span>
@@ -354,12 +354,12 @@ export const createMarkdownComponents = ({
       const riskOptions = risks?.split('|') || [];
       
       const riskColors: Record<string, string> = {
-        conservative: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
-        low_risk: 'bg-green-50 hover:bg-green-100 text-green-800 border-green-200',
-        moderate: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
-        balanced: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-yellow-200',
-        aggressive: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200',
-        growth_focused: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200'
+        conservative: 'bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-700/50',
+        low_risk: 'bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-700/50',
+        moderate: 'bg-yellow-50/50 hover:bg-yellow-100/70 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200/50 dark:border-yellow-700/50',
+        balanced: 'bg-yellow-50/50 hover:bg-yellow-100/70 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200/50 dark:border-yellow-700/50',
+        aggressive: 'bg-red-50/50 hover:bg-red-100/70 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200/50 dark:border-red-700/50',
+        growth_focused: 'bg-red-50/50 hover:bg-red-100/70 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200/50 dark:border-red-700/50'
       };
       
       return (
@@ -373,7 +373,7 @@ export const createMarkdownComponents = ({
                   const message = `My risk tolerance is ${risk.replace(/_/g, ' ')}`;
                   onSendMessage?.(message);
                 }}
-                className={`px-3 py-2 rounded-lg border ${riskColors[risk] || 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'}`}
+                className={`px-3 py-2 rounded-lg border ${riskColors[risk] || 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'}`}
               >
                 {risk.replace(/_/g, ' ').charAt(0).toUpperCase() + risk.slice(1).replace(/_/g, ' ')}
               </Button>
@@ -398,7 +398,7 @@ export const createMarkdownComponents = ({
                   const message = `I want this goal completed in ${timeline.replace(/_/g, ' ')}`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-orange-50 hover:bg-orange-100 text-orange-800 rounded-lg border border-orange-200"
+                className="px-3 py-2 bg-orange-50/50 hover:bg-orange-100/70 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg border border-orange-200/50 dark:border-orange-700/50"
               >
                 {timeline.replace(/_/g, ' ').charAt(0).toUpperCase() + timeline.slice(1).replace(/_/g, ' ')}
               </Button>
@@ -432,7 +432,7 @@ export const createMarkdownComponents = ({
                   const message = `My confidence level is ${displayLevel}`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-violet-50 hover:bg-violet-100 text-violet-800 rounded-lg border border-violet-200"
+                className="px-3 py-2 bg-violet-50/50 hover:bg-violet-100/70 dark:bg-violet-900/20 dark:hover:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-lg border border-violet-200/50 dark:border-violet-700/50"
               >
                 {confidenceLabels[level] || level}
               </Button>
@@ -463,7 +463,7 @@ export const createMarkdownComponents = ({
                   const message = `I am ${level.replace(/_/g, ' ')} to this plan`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-800 rounded-lg border border-pink-200"
+                className="flex items-center gap-2 px-3 py-2 bg-pink-50/50 hover:bg-pink-100/70 dark:bg-pink-900/20 dark:hover:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-lg border border-pink-200/50 dark:border-pink-700/50"
               >
                 <span>{commitmentIcons[level] || '💪'}</span>
                 <span className="text-sm capitalize">{level.replace(/_/g, ' ')}</span>
@@ -599,7 +599,7 @@ export const createMarkdownComponents = ({
       
       return (
         <div className="mt-3">
-          <p className="text-sm font-medium mb-3 text-foreground dark:text-dark-foreground">{label || 'Update Financial Information'}</p>
+          <p className="text-sm font-medium mb-3 text-foreground">{label || 'Update Financial Information'}</p>
           <div className="flex gap-2 flex-wrap">
             {categoryList.map((category: string) => (
               <Button
@@ -608,7 +608,7 @@ export const createMarkdownComponents = ({
                   navigate?.({ to: '/dashboard/user-settings/profile' });
                   closeChat?.();
                 }}
-                className="flex items-center gap-2 px-3 py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700"
+                className="flex items-center gap-2 px-3 py-3 bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200/50 dark:border-blue-700/50"
               >
                 <span>{categoryIcons[category] || '📊'}</span>
                 <span className="text-sm capitalize">{category.replace(/_/g, ' ')}</span>

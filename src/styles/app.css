@@ -1,6 +1,286 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Map Tailwind's dark: variant to the .dark class toggled by ThemeInitScript */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Moneko color variables (light theme) */
+:root {
+  /* shadcn/ui color system with guaranteed visibility against halo background */
+  --radius: 0.625rem;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 5%; /* Almost black for maximum contrast */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 5%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 5%;
+  --primary: 254 100% 67%; /* #7458FF converted to HSL */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 0 0% 5%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 0 0% 20%; /* Very dark gray for visibility on light halo */
+  --accent: 210 40% 96%;
+  --accent-foreground: 0 0% 5%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 253 91% 67%;
+  --radius: 0.5rem;
+
+  /* Moneko brand colors */
+  --moneko-background: #F9FAFB;
+  --moneko-foreground: #1F2937;
+  --icon: #AA76FF;
+  --moneko-secondary: #836DFF;
+  --moneko-primary: #7458FF;
+  --success: #16CDA2;
+  --success-light: #F1FFF8;
+  --warning: #FFC219;
+  --warning-light: #FFF4D5;
+  --danger: #FF6060;
+  --danger-light: #FFE8E8;
+  --overlay: rgba(0, 0, 0, 0.8);
+
+  /* Ambient Halo Colors */
+  --halo-bg: #f0f0ff;
+  --halo-purple: rgba(207, 195, 245, 0.9);
+  --halo-purple-mid: rgba(195, 180, 235, 0.85);
+  --halo-purple-outer: rgba(215, 205, 250, 0.6);
+
+  --halo-pink: rgba(243, 221, 247, 0.85);
+  --halo-pink-mid: rgba(235, 210, 240, 0.8);
+  --halo-pink-outer: rgba(245, 225, 250, 0.6);
+
+  --halo-blue: rgba(162, 212, 244, 0.85);
+  --halo-blue-mid: rgba(150, 200, 235, 0.8);
+  --halo-blue-outer: rgba(170, 220, 250, 0.65);
+
+  --halo-light-blue: rgba(215, 236, 250, 0.8);
+  --halo-light-blue-mid: rgba(205, 225, 245, 0.75);
+  --halo-light-blue-outer: rgba(220, 240, 252, 0.55);
+
+  /* Accent colors */
+  --accent-pink: #EC4899;
+  --accent-indigo: #6366F1;
+
+  /* Component-specific colors */
+  --card-bg: #FFFFFF;
+  --card-foreground-color: #1F2937;
+  --input-bg: #FFFFFF;
+  --input-disabled: #F3F4F6;
+  --muted-foreground-color: #6B7280;
+  --subtle-border: #E5E7EB;
+  --subtle-background: #F9FAFB;
+
+  /* Table-specific colors */
+  --table-header: #F3F4F6;
+  --table-row-odd: #FFFFFF;
+  --table-row-even: #F9FAFB;
+
+  /* Chart-specific colors */
+  --chart-primary: #7458FF;
+  --chart-primary-transparent: rgba(116, 88, 255, 0.2);
+  --chart-success: #10B981;
+  --chart-success-transparent: rgba(16, 185, 129, 0.2);
+  --chart-danger: #EF4444;
+  --chart-danger-transparent: rgba(239, 68, 68, 0.2);
+
+  /* Markdown renderer colors */
+  --markdown-button: #F3F4F6;
+  --markdown-button-text: #1F2937;
+  --markdown-button-border: #D1D5DB;
+}
+
+/* Dark theme overrides */
+.dark {
+  /* shadcn/ui dark theme with guaranteed visibility */
+  --background: 220 18% 8%;
+  --foreground: 0 0% 98%;
+  --card: 220 13% 15%;
+  --card-foreground: 0 0% 98%;
+  --popover: 220 13% 15%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 254 100% 70%; /* #8B70FF converted to HSL */
+  --primary-foreground: 220 18% 8%;
+  --secondary: 217 33% 18%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 217 33% 18%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 18%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 217 33% 18%;
+  --input: 217 33% 18%;
+  --ring: 254 100% 71%;
+
+  /* Moneko dark colors */
+  --moneko-background: #0A0E1A;
+  --moneko-foreground: #F1F5F9;
+  --icon: #B388FF;
+  --moneko-secondary: #9B82FF;
+  --moneko-primary: #8B70FF;
+  --success: #1FE3B8;
+  --success-light: #0A2920;
+  --warning: #FFD04A;
+  --warning-light: #2B1F00;
+  --danger: #FF7A7A;
+  --danger-light: #2B0A0A;
+  --overlay: rgba(0, 0, 0, 0.9);
+
+  /* Dark halo colors */
+  --halo-bg: #0A0E1A;
+  --dark-halo-purple: rgba(139, 112, 255, 0.6);
+  --dark-halo-purple-mid: rgba(124, 95, 240, 0.55);
+  --dark-halo-purple-outer: rgba(155, 130, 255, 0.4);
+
+  --dark-halo-pink: rgba(243, 221, 247, 0.5);
+  --dark-halo-pink-mid: rgba(235, 210, 240, 0.45);
+  --dark-halo-pink-outer: rgba(245, 225, 250, 0.35);
+
+  --dark-halo-blue: rgba(96, 165, 250, 0.6);
+  --dark-halo-blue-mid: rgba(76, 145, 230, 0.55);
+  --dark-halo-blue-outer: rgba(116, 185, 255, 0.45);
+
+  --dark-halo-light-blue: rgba(125, 186, 220, 0.5);
+  --dark-halo-light-blue-mid: rgba(105, 166, 200, 0.45);
+  --dark-halo-light-blue-outer: rgba(145, 206, 240, 0.35);
+
+  /* Dark accent colors */
+  --accent-pink: #F472B6;
+  --accent-indigo: #818CF8;
+
+  /* Dark component-specific colors */
+  --card-bg: #111827;
+  --card-foreground-color: #F1F5F9;
+  --input-bg: #1F2937;
+  --input-disabled: #374151;
+  --muted-foreground-color: #9CA3AF;
+  --subtle-border: #374151;
+  --subtle-background: #1F2937;
+
+  /* Dark table colors */
+  --table-header: #374151;
+  --table-row-odd: #1F2937;
+  --table-row-even: #212b3b;
+
+  /* Dark chart colors */
+  --chart-primary: #8B70FF;
+  --chart-primary-transparent: rgba(139, 112, 255, 0.2);
+  --chart-success: #1FE3B8;
+  --chart-success-transparent: rgba(31, 227, 184, 0.2);
+  --chart-danger: #FF7A7A;
+  --chart-danger-transparent: rgba(255, 122, 122, 0.2);
+
+  /* Dark markdown colors */
+  --markdown-button: #374151;
+  --markdown-button-text: #F1F5F9;
+  --markdown-button-border: #4B5563;
+}
+
+/* Expose variables to Tailwind as theme tokens */
+@theme {
+  /* shadcn/ui colors using standard HSL format */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  /* Moneko brand colors */
+  --color-moneko-background: var(--moneko-background);
+  --color-moneko-foreground: var(--moneko-foreground);
+  --color-icon: var(--icon);
+  --color-moneko-secondary: var(--moneko-secondary);
+  --color-moneko-primary: var(--moneko-primary);
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-danger: var(--danger);
+  --color-danger-light: var(--danger-light);
+  --color-overlay: var(--overlay);
+
+  /* Halo colors */
+  --color-halo-bg: var(--halo-bg);
+  --color-halo-purple: var(--halo-purple);
+  --color-halo-purple-mid: var(--halo-purple-mid);
+  --color-halo-purple-outer: var(--halo-purple-outer);
+  --color-halo-pink: var(--halo-pink);
+  --color-halo-pink-mid: var(--halo-pink-mid);
+  --color-halo-pink-outer: var(--halo-pink-outer);
+  --color-halo-blue: var(--halo-blue);
+  --color-halo-blue-mid: var(--halo-blue-mid);
+  --color-halo-blue-outer: var(--halo-blue-outer);
+  --color-halo-light-blue: var(--halo-light-blue);
+  --color-halo-light-blue-mid: var(--halo-light-blue-mid);
+  --color-halo-light-blue-outer: var(--halo-light-blue-outer);
+
+  /* Accent colors */
+  --color-accent-pink: var(--accent-pink);
+  --color-accent-indigo: var(--accent-indigo);
+
+  /* Component colors */
+  --color-card-bg: var(--card-bg);
+  --color-card-foreground-color: var(--card-foreground-color);
+  --color-input-bg: var(--input-bg);
+  --color-input-disabled: var(--input-disabled);
+  --color-muted-foreground-color: var(--muted-foreground-color);
+  --color-subtle-border: var(--subtle-border);
+  --color-subtle-background: var(--subtle-background);
+
+  /* Table colors */
+  --color-table-header: var(--table-header);
+  --color-table-row-odd: var(--table-row-odd);
+  --color-table-row-even: var(--table-row-even);
+
+  /* Chart colors */
+  --color-chart-primary: var(--chart-primary);
+  --color-chart-primary-transparent: var(--chart-primary-transparent);
+  --color-chart-success: var(--chart-success);
+  --color-chart-success-transparent: var(--chart-success-transparent);
+  --color-chart-danger: var(--chart-danger);
+  --color-chart-danger-transparent: var(--chart-danger-transparent);
+
+  /* Markdown colors */
+  --color-markdown-button: var(--markdown-button);
+  --color-markdown-button-text: var(--markdown-button-text);
+  --color-markdown-button-border: var(--markdown-button-border);
+
+  /* Dark halo colors (separate tokens) */
+  --color-dark-halo-bg: var(--dark-halo-bg);
+  --color-dark-halo-purple: var(--dark-halo-purple);
+  --color-dark-halo-purple-mid: var(--dark-halo-purple-mid);
+  --color-dark-halo-purple-outer: var(--dark-halo-purple-outer);
+  --color-dark-halo-pink: var(--dark-halo-pink);
+  --color-dark-halo-pink-mid: var(--dark-halo-pink-mid);
+  --color-dark-halo-pink-outer: var(--dark-halo-pink-outer);
+  --color-dark-halo-blue: var(--dark-halo-blue);
+  --color-dark-halo-blue-mid: var(--dark-halo-blue-mid);
+  --color-dark-halo-blue-outer: var(--dark-halo-blue-outer);
+  --color-dark-halo-light-blue: var(--dark-halo-light-blue);
+  --color-dark-halo-light-blue-mid: var(--dark-halo-light-blue-mid);
+  --color-dark-halo-light-blue-outer: var(--dark-halo-light-blue-outer);
+
+  /* Accordion animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
 
 @layer base {
   html {
@@ -8,15 +288,34 @@
   }
 
   * {
-    @apply border-gray-200 dark:border-gray-800;
+    @apply border-border;
   }
 
   html,
   body {
-    @apply text-gray-900 bg-gray-50 dark:bg-gray-950 dark:text-gray-200;
+    @apply text-foreground bg-background;
   }
 
   .using-mouse * {
     outline: none !important;
+  }
+
+  /* Accordion animations */
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
   }
 }

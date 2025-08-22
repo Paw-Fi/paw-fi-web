@@ -22,6 +22,7 @@ import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,

@@ -292,7 +292,7 @@ export function UnifiedLearningPage() {
       `}</style>
 
       <motion.div 
-        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/20"
+        className="min-h-screen bg-gradient-to-br from-background via-background/80 to-primary/5"
         variants={pageVariants}
         initial="initial"
         animate="animate"
@@ -323,7 +323,7 @@ export function UnifiedLearningPage() {
             component: (
               <Link
                 to={`/dashboard/learning/${aiCourses[0].course_id}`}
-                className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:border-purple-300 dark:hover:border-purple-400 hover:text-purple-700 dark:hover:text-purple-400 transition-all duration-300"
+                className="group flex items-center gap-2 px-6 py-3 bg-background border-2 border-border text-foreground rounded-xl font-medium hover:border-primary/50 hover:text-primary transition-all duration-300"
               >
                 <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
                 <span>Resume Learning</span>
@@ -374,7 +374,7 @@ export function UnifiedLearningPage() {
       >
         <div className="max-w-7xl mx-auto">
           <motion.div 
-            className="rounded-2xl p-2 shadow-xl border border-white/20 dark:border-gray-700/50 backdrop-blur-xl"
+            className="rounded-2xl p-2 shadow-xl border border-border/50 backdrop-blur-xl"
             variants={glassVariants}
             style={{
               background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(124, 58, 237, 0.03) 100%)",
@@ -394,7 +394,7 @@ export function UnifiedLearningPage() {
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden
                     ${activeTab === tab.id 
                       ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-[1.02]' 
-                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-700/50 hover:backdrop-blur-sm hover:scale-[1.01]'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-background/50 hover:backdrop-blur-sm hover:scale-[1.01]'
                     }
                   `}
                 >
@@ -430,8 +430,8 @@ export function UnifiedLearningPage() {
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-indigo-100 dark:to-indigo-900/30 rounded-full flex items-center justify-center">
                 <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-3">No courses yet</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">Start your learning journey by creating your first AI-powered course!</p>
+              <h3 className="text-2xl font-bold text-foreground mb-3">No courses yet</h3>
+              <p className="text-muted-foreground mb-6">Start your learning journey by creating your first AI-powered course!</p>
               <button
                 onClick={() => openChat('educator')}
                 className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
@@ -458,10 +458,10 @@ export function UnifiedLearningPage() {
                       className="block h-full"
                     >
                       <div className={`
-                        h-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border group
+                        h-full bg-background/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border group
                         ${course.type === 'essential' 
-                          ? 'border-emerald-200/50 dark:border-emerald-700/50 hover:border-emerald-400/70 dark:hover:border-emerald-500/70 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10' 
-                          : 'border-purple-200/50 dark:border-purple-700/50 hover:border-purple-400/70 dark:hover:border-purple-500/70 hover:bg-purple-50/30 dark:hover:bg-purple-900/10'
+                          ? 'border-green-200/50 hover:border-green-400/70 hover:bg-green-50/30 dark:hover:bg-green-950/20' 
+                          : 'border-purple-200/50 hover:border-purple-400/70 hover:bg-purple-50/30 dark:hover:bg-purple-950/20'
                         }
                       `}>
                         {/* Course Header */}
@@ -496,7 +496,7 @@ export function UnifiedLearningPage() {
                                 )}
                               </div>
                               <motion.h3 
-                              className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-200"
+                              className="text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-foreground/80 transition-colors duration-200"
                                 style={{
                                   fontVariationSettings: "'wght' 600",
                                   fontSize: "clamp(1.25rem, 2vw, 1.5rem)", // Design system text-title
@@ -508,7 +508,7 @@ export function UnifiedLearningPage() {
                             </div>
                           </div>
                           
-                          <p className="text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed" style={{
+                          <p className="text-muted-foreground line-clamp-3 leading-relaxed" style={{
                             fontSize: "1rem", // Design system text-body
                             fontWeight: "400",
                             lineHeight: "1.6"
@@ -531,13 +531,13 @@ export function UnifiedLearningPage() {
                             
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                   <span>Progress</span>
                                   <span>
                                     {completedCount}/{totalCount} lessons completed
                                   </span>
                                 </div>
-                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                                   <motion.div 
                                     className={`h-full rounded-full ${
                                       course.type === 'essential' 
@@ -566,16 +566,16 @@ export function UnifiedLearningPage() {
                           {/* Course Meta */}
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Difficulty</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.difficulty}</p>
+                              <p className="text-xs text-muted-foreground">Difficulty</p>
+                              <p className="text-sm font-semibold text-foreground">{course.difficulty}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.duration}</p>
+                              <p className="text-xs text-muted-foreground">Duration</p>
+                              <p className="text-sm font-semibold text-foreground">{course.duration}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Students</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{course.students}</p>
+                              <p className="text-xs text-muted-foreground">Students</p>
+                              <p className="text-sm font-semibold text-foreground">{course.students}</p>
                             </div>
                           </div>
 
@@ -615,17 +615,17 @@ export function UnifiedLearningPage() {
                     onClick={() => openChat('educator')}
                     className="cursor-pointer"
                   >
-                    <div className="h-full bg-gradient-to-br from-gray-50 dark:from-gray-800 to-gray-100 dark:to-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 flex items-center justify-center p-8">
+                    <div className="h-full bg-gradient-to-br from-muted/30 to-muted/50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-border hover:border-purple-400 flex items-center justify-center p-8">
                       <div className="text-center">
                         <motion.div 
-                          className="w-20 h-20 mx-auto mb-4 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-lg"
+                          className="w-20 h-20 mx-auto mb-4 bg-background rounded-full flex items-center justify-center shadow-lg"
                           whileHover={{ rotate: 180 }}
                           transition={{ duration: 0.5 }}
                         >
                           <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                         </motion.div>
-                        <h3 className="text-lg font-bold text-foreground dark:text-dark-foreground mb-2">Create New Course</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Let AI design a course tailored to your goals</p>
+                        <h3 className="text-lg font-bold text-foreground mb-2">Create New Course</h3>
+                        <p className="text-sm text-muted-foreground">Let AI design a course tailored to your goals</p>
                       </div>
                     </div>
                   </motion.div>

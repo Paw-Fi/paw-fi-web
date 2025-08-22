@@ -1,16 +1,20 @@
-// Tip Card Component
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Tip Card Component using shadcn Card
 export function TipCard({ emoji, title, content }: { emoji: string; title: string; content: string }) {
   return (
-    <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-sm">{emoji}</span>
-        <h4 className="font-medium text-xs text-gray-900 dark:text-white">
+    <Card className="bg-muted/50 border-none shadow-sm">
+      <CardHeader className="p-3 pb-1">
+        <CardTitle className="flex items-center gap-2 text-xs font-medium text-foreground">
+          <span className="text-sm">{emoji}</span>
           {title}
-        </h4>
-      </div>
-      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-        {content}
-      </p>
-    </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {content}
+        </p>
+      </CardContent>
+    </Card>
   );
 }

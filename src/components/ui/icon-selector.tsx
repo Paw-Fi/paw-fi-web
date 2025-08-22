@@ -71,7 +71,7 @@ export function IconSelector({
         type="button"
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full justify-between px-1 py-1 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        className="w-full justify-between px-1 py-1 border-border hover:bg-muted transition-colors"
       >
         <div className="flex items-center">
           {selectedValue && iconMap[selectedValue] ? (
@@ -87,8 +87,8 @@ export function IconSelector({
       </Button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+        <div className="absolute z-50 mt-1 w-full rounded-md bg-background shadow-lg border border-border">
+          <div className="p-2 border-b border-border">
               <Input
                 prefix={<FontAwesomeIcon icon={faSearch} className=""/>}
                 type="text"
@@ -114,18 +114,18 @@ export function IconSelector({
                   className={`p-2 rounded-md flex items-center justify-center transition-colors ${
                     selectedValue === iconName
                       ? 'bg-primary/10 text-primary'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      : 'text-foreground hover:bg-muted'
                   }`}
                   title={iconName}
                 >
                   <FontAwesomeIcon 
                     icon={iconMap[iconName]} 
-                    className={classNames('h-4 w-4', selectedValue === iconName ? 'text-primary' : 'text-gray-700 dark:text-gray-300')}
+                    className={classNames('h-4 w-4', selectedValue === iconName ? 'text-primary' : 'text-foreground')}
                   />
                 </button>
               ))}
               {filteredIcons.length === 0 && (
-                <div className="col-span-6 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                <div className="col-span-6 py-4 text-center text-muted-foreground text-sm">
                   No icons found
                 </div>
               )}

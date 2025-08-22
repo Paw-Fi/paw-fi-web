@@ -5,6 +5,8 @@ import { useAvatar } from '@/hooks/use-avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
 import { motion } from 'framer-motion';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 interface UserAvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -48,6 +50,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   const { user } = useAuth();
   const { avatarUrl, isAvatarLoading } = useAvatar();
   const { isActive } = useSubscription(user?.id);
+  const [imgError, setImgError] = React.useState(false);
 
   if (!user) {
     return null;
@@ -58,43 +61,45 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
                       'U';
 
   const avatarContent = (
-    <div className={`relative flex-shrink-0 ${className}`}>
+    <div className={cn("relative flex-shrink-0", className)}>
       {/* Premium Border Container */}
-      <div className={`relative rounded-full p-0.5 ${
-        isActive && showPremiumBorder
-          ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-lg shadow-amber-500/30' 
-          : ''
-      }`}>
-        {/* Avatar Container */}
-        <div className={`flex items-center justify-center overflow-hidden rounded-full ${sizeClasses[size]} ${
-          isActive && showPremiumBorder ? 'shadow-md' : 'shadow-sm'
-        }`}>
+      <div className={cn(
+        "relative rounded-full p-0.5",
+        isActive && showPremiumBorder && "bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-lg shadow-amber-500/30 dark:shadow-amber-400/20"
+      )}>
+        {/* Avatar Container using shadcn Avatar */}
+        <Avatar className={cn(
+          sizeClasses[size],
+          isActive && showPremiumBorder ? 'shadow-md dark:shadow-lg' : 'shadow-sm dark:shadow-md',
+          "ring-2 ring-background dark:ring-background"
+        )}>
           {isAvatarLoading ? (
             // Loading skeleton
-            <div className="bg-gray-200 dark:bg-gray-600 animate-pulse w-full h-full rounded-full" />
-          ) : avatarUrl && avatarUrl !== 'SKIPPED' ? (
-            // User's uploaded avatar
-            <img 
-              src={avatarUrl} 
-              alt={user.user_metadata?.full_name || 'User Avatar'} 
-              className="w-full h-full object-cover"
-              onError={() => setAvatarUrl(null)} // Fallback to initials if image fails to load
-            />
+            <div className="bg-muted animate-pulse w-full h-full rounded-full" />
           ) : (
-            // Fallback to initials
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-500 text-white font-semibold w-full h-full flex items-center justify-center">
-              {userInitials}
-            </div>
+            <>
+              <AvatarImage 
+                src={avatarUrl && avatarUrl !== 'SKIPPED' && !imgError ? avatarUrl : undefined}
+                alt={user.user_metadata?.full_name || 'User Avatar'}
+                onError={() => setImgError(true)}
+              />
+              <AvatarFallback className="bg-gradient-to-br from-moneko-primary to-moneko-secondary text-white font-semibold dark:from-moneko-primary dark:to-moneko-secondary">
+                {userInitials}
+              </AvatarFallback>
+            </>
           )}
-        </div>
+        </Avatar>
       </div>
       
       {/* Premium Crown Icon */}
       {isActive && showPremiumCrown && (
-        <div className={`absolute flex items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-md ${crownSizeClasses[size]}`}>
+        <div className={cn(
+          "absolute flex items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-md dark:shadow-amber-400/30 ring-2 ring-background dark:ring-background",
+          crownSizeClasses[size]
+        )}>
           <FontAwesomeIcon 
             icon={faCrown} 
-            className={`text-amber-900 ${crownIconSizeClasses[size]}`} 
+            className={cn("text-amber-600 dark:text-amber-400", crownIconSizeClasses[size])} 
           />
         </div>
       )}

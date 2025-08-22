@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import { type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
-import classNames from "classnames";
-import { createPortal } from "react-dom";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
-  overlayClassName?: string;
   contentClassName?: string;
-  disableOverlayClick?: boolean;
   width?: "standard" | "wide" | "xwide";
   fullHeight?: boolean;
   title?: string;
@@ -24,139 +22,50 @@ export function Modal({
   isOpen,
   onClose,
   children,
-  disableOverlayClick = false,
-  overlayClassName = "bg-black/50 backdrop-blur-sm",
   contentClassName = "",
   fullHeight = false,
   title = "",
   description = "",
   footer,
-  width="standard"
+  width = "standard"
 }: ModalProps) {
-  // Lock body scroll when modal is open
-  useLockBodyScroll(isOpen);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  // Animation variants
-  const overlayVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.15,
-        ease: [0.16, 1, 0.3, 1],
-      },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        duration: 0.1,
-        ease: [0.4, 0, 1, 1],
-      },
-    },
-  };
-
-  const contentVariants: Variants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.98,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        staggerChildren: 0.07,
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: 20,
-      scale: 0.98,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-      },
-    },
+  const widthClasses = {
+    standard: "sm:max-w-lg",
+    wide: "sm:max-w-2xl", 
+    xwide: "sm:max-w-4xl"
   };
 
   return (
-   createPortal( <AnimatePresence>
-    {isOpen && (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className={classNames("fixed inset-0 z-[10000] flex items-center justify-center p-4",
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent 
+        className={cn(
+          "max-w-[90vw]",
+          widthClasses[width],
+          fullHeight && "h-[90vh] max-h-[90vh]",
+          contentClassName
         )}
       >
-        {/* Backdrop */}
-        <motion.div
-          className={classNames(
-            "fixed inset-0 z-50 flex-1 flex-col",
-            overlayClassName,
-          )}
-          onClick={!disableOverlayClick ? onClose : undefined}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={overlayVariants}
-          aria-hidden="true"
-        />
-
-        {/* Modal content */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={contentVariants}
-          onClick={(e) => e.stopPropagation()}
-          role="document"
-          className={classNames(
-            "relative z-50 flex  flex-col items-center justify-center overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-6 py-4 shadow-2xl ",
-            fullHeight ? "h-[90vh]" : "max-h-[90vh]",
-            contentClassName,
-            {
-              "w-[90vw] lg:w-[70rem]": width === "xwide",
-              "w-[90vw] lg:w-[50rem]": width === "wide",
-              "w-[90vw] lg:w-[40rem]": width === "standard",
-            }
-          )}
-        >
-        {title||description &&  <div className="flex w-full justify-start pb-2 border-b border-gray-300/50 dark:border-gray-600/50 mb-2">
-            {title && <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>}
-            {description && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
-            )}
-          </div>}
-
-          <div className="flex-1 overflow-scroll w-full">{children}</div>
-         {footer&& <div className="flex w-full justify-end border-t border-gray-300/50 pt-4 dark:border-slate-700/50">
+        {(title || description) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && <DialogDescription>{description}</DialogDescription>}
+          </DialogHeader>
+        )}
+        
+        <div className={cn(
+          "overflow-auto",
+          fullHeight && "flex-1"
+        )}>
+          {children}
+        </div>
+        
+        {footer && (
+          <DialogFooter>
             {footer()}
-          </div>}
-        </motion.div>
-      </div>
-    )}
-  </AnimatePresence>, document.body)
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

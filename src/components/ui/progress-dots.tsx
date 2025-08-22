@@ -13,7 +13,7 @@ function ProgressDots({ currentStep }: ProgressDotsProps) {
         <div
           key={index}
           className={`h-2 w-2 rounded-full transition-colors duration-200 ${
-            index === currentStep % 3 ? 'bg-purple-primary' : 'bg-gray-300'
+            index === currentStep % 3 ? 'bg-primary' : 'bg-muted-foreground/30'
           }`}
           aria-label={index === currentStep % 3 ? 'Current step' : `Step ${index + 1}`}
         />

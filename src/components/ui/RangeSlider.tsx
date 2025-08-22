@@ -1,4 +1,7 @@
 import React from 'react';
+import { Slider } from './slider';
+import { Input } from './input';
+import { Label } from './label';
 
 interface RangeSliderProps {
   label: string;
@@ -29,12 +32,15 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
   isValueEditable = false,
   type = 'number',
 }) => {
+  // Constants
+  const MILLISECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
+  
   // Handle date type differently
   if (type === 'date') {
     // For date type, value should be a date string, min/max should be date strings
     const dateValue = typeof value === 'string' ? value : new Date().toISOString().split('T')[0];
     const minDate = typeof min === 'string' ? min : new Date().toISOString().split('T')[0];
-    const maxDate = typeof max === 'string' ? max : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const maxDate = typeof max === 'string' ? max : new Date(Date.now() + 365 * MILLISECONDS_IN_A_DAY).toISOString().split('T')[0];
     
     // Convert dates to numbers for slider calculation
     const dateToNumber = (dateStr: string) => new Date(dateStr).getTime();
@@ -45,11 +51,6 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
     const numericMax = dateToNumber(maxDate);
     const numericStep = typeof step === 'string' ? parseFloat(step) : (step ?? 1);
     
-    // Calculate progress for date slider
-    const progress = numericMax > numericMin 
-      ? ((numericValue - numericMin) / (numericMax - numericMin)) * 100
-      : 0;
-    
     // Format display value for dates
     const displayValue = formatValue 
       ? formatValue(dateValue)
@@ -57,29 +58,27 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
 
     return (
       <div className={`space-y-2 ${className}`}>
-        <h3 className="text-lg font-medium">{label}</h3>
+        <Label className="text-lg font-medium">{label}</Label>
         <div className="flex items-center space-x-4">
-          <input 
-            type="range" 
-            min={numericMin} 
-            max={numericMax} 
-            step={numericStep * 24 * 60 * 60 * 1000} // Convert days to milliseconds
-            value={numericValue} 
-            onChange={(e) => {
-              const newDateValue = numberToDate(parseInt(e.target.value, 10));
+          <Slider
+            value={[numericValue]}
+            onValueChange={(values) => {
+              const newDateValue = numberToDate(values[0]);
               onChange(newDateValue);
-            }} 
-            className="flex-grow custom-slider"
-            style={{ '--slider-progress': `${progress}%` } as React.CSSProperties}
+            }}
+            min={numericMin}
+            max={numericMax}
+            step={numericStep * MILLISECONDS_IN_A_DAY} // Convert days to milliseconds
+            className="flex-grow"
           />
           {showValue && isValueEditable ? (
-            <input 
+            <Input 
               type="date" 
               value={dateValue} 
               min={minDate}
               max={maxDate}
               onChange={(e) => onChange(e.target.value)} 
-              className="w-32 font-medium px-2 py-1 border rounded"
+              className="w-32"
             />
           ) : (
             <span className="w-32 font-medium">{displayValue}</span>
@@ -96,11 +95,6 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
   const numericMax = typeof max === 'string' ? parseFloat(max) : (max ?? 100);
   const numericStep = typeof step === 'string' ? parseFloat(step) : (step ?? 1);
   
-  // Calculate progress safely
-  const progress = numericMax > numericMin 
-    ? ((numericValue - numericMin) / (numericMax - numericMin)) * 100
-    : 0;
-  
   // Format display value safely
   const safeValue = value ?? 0;
   const displayValue = formatValue 
@@ -111,31 +105,27 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <h3 className="text-lg font-medium">{label}</h3>
+      <Label className="text-lg font-medium">{label}</Label>
       <div className="flex items-center space-x-4">
-        <input 
-          type="range" 
-          min={min} 
-          max={max} 
-          step={step} 
-          value={value} 
-          onChange={(e) => {
-            const newValue = e.target.type === 'range' 
-              ? (step.toString().includes('.') 
-                ? parseFloat(e.target.value) 
-                : parseInt(e.target.value, 10))
-              : e.target.value;
+        <Slider
+          value={[numericValue]}
+          onValueChange={(values) => {
+            const newValue = step.toString().includes('.') 
+              ? parseFloat(values[0].toString())
+              : parseInt(values[0].toString(), 10);
             onChange(newValue);
-          }} 
-          className="flex-grow custom-slider"
-          style={{ '--slider-progress': `${progress}%` } as React.CSSProperties}
+          }}
+          min={numericMin}
+          max={numericMax}
+          step={numericStep}
+          className="flex-grow"
         />
         {showValue && isValueEditable ? (
-          <input 
+          <Input 
             type={type} 
             value={value} 
             onChange={(e) => onChange(e.target.value)} 
-            className="w-24 font-medium px-2 py-1 border rounded" 
+            className="w-24"
           />
         ) : (
           <span className="w-24 font-medium">{displayValue}</span>

@@ -8,17 +8,15 @@ interface ProtectedRouteSubscriptionProps {
 }
 
 export function ProtectedRouteSubscription({ children }: ProtectedRouteSubscriptionProps) {
-  const { user,isLoading } = useAuth();
-  return<>
-  {
-    isLoading?
-    <SkeletonDashboard/>
-    :
-    
-    !user?
-    <Navigate to="/onboarding" search={{ q: "" }} />
-    :children
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <SkeletonDashboard />;
   }
-  </>
-
+  
+  if (!user) {
+    return <Navigate to="/onboarding" search={{ q: "" }} />;
+  }
+  
+  return <>{children}</>;
 }

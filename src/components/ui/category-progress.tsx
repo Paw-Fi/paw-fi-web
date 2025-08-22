@@ -25,16 +25,16 @@ export function CategoryProgress({
     <div className="my-4">
       {/* Progress header */}
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <span className="text-sm font-medium text-muted-foreground">
           Step {activeCategoryIndex + 1} of {categories.length}
         </span>
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <span className="text-sm font-medium text-muted-foreground">
           {activeInfo?.title}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+      <div className="h-2 overflow-hidden rounded-full bg-muted mb-4">
         <motion.div
           className="h-full rounded-full bg-primary"
           initial={{ width: 0 }}
@@ -46,10 +46,10 @@ export function CategoryProgress({
       {/* Category description */}
       {activeInfo && (
         <div className="mb-6 text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             {activeInfo.title}
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {activeInfo.description}
           </p>
         </div>

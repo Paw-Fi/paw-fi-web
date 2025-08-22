@@ -8,88 +8,81 @@ import { DISCORD_URL } from "@/routes";
 import classNames from "classnames";
 import { useAuth } from "@/contexts/auth-context";
 import { useNavigate } from "@tanstack/react-router";
-import { Avatar } from "../ui/avatar";
+import { UserAvatar } from "../ui/user-avatar";
+import { ModeToggle } from "@/components/theme/mode-toggle";
+import { MonekoIcon } from "../shared/moneko-icon";
 
-export const HomeHeader=()=>{
+export const HomeHeader = () => {
+    const location = useLocation()
+    const { user } = useAuth()
+    const navigate = useNavigate()
 
-    const location=useLocation()
-    const {user}=useAuth()
-    const navigate=useNavigate()
-
-    const routes=[
-        {to:"/dashboard/essentials",label:"Learning"},
-        {to:"/blogs",label:"Blogs"},
-        {to:"/pricing",label:"Pricing"},
-        {to:"/calculators",label:"Calculators"},
-
+    const routes = [
+        { to: "/dashboard/essentials", label: "Learning" },
+        { to: "/blogs", label: "Blogs" },
+        { to: "/pricing", label: "Pricing" },
+        { to: "/calculators", label: "Calculators" },
     ]
 
-    return   <div className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8">
-      <Link to="/" className="flex items-center gap-2">
-        <OptimizedImage
-          src={catCoin}
-          alt="Moneko Logo"
-          className="size-14 -translate-y-1"               
-        />
-        <span className="text-xl font-semibold text-foreground dark:text-dark-foreground">
-          Moneko
-        </span>
-      </Link>
-      <div className="hidden items-center gap-x-6 md:flex">
-        {
-            routes.map((route,index)=>{
-                return(
+    return (
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+            {/* Logo */}
+          <MonekoIcon/>
+
+            {/* Navigation */}
+            <nav className="hidden items-center space-x-8 md:flex">
+                {routes.map((route, index) => (
                     <Link
-                    key={index}
-                    to={route.to}
-                    className={classNames("text-sm transition-colors hover:text-primary dark:hover:text-dark-primary",
-                        {
-                            "text-primary dark:text-dark-primary font-bold":location.pathname===route.to,
-                            "text-gray-700 dark:text-gray-300 font-medium ":location.pathname!==route.to
-                        }
-                    )}
+                        key={index}
+                        to={route.to}
+                        className={classNames(
+                            "text-sm font-medium transition-colors duration-200",
+                            {
+                                "text-primary": location.pathname === route.to,
+                                "text-muted-foreground hover:text-foreground": location.pathname !== route.to
+                            }
+                        )}
                     >
                         {route.label}
                     </Link>
-                )
-            })
-        }
-        <a
-          href={DISCORD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:text-primary dark:hover:text-dark-primary"
-        >
-          Community
-        </a>
-      </div>
-    <div className="flex items-center gap-x-5">     
-        {user ? (
-          <div className="flex items-center gap-3">
-            <Avatar 
-              size="sm"
-              name={user.user_metadata?.full_name || user.email}
-              onClick={() => navigate({ to: "/dashboard" })}
-              className="cursor-pointer"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate({ to: "/dashboard" })}
-              className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
-            >
-              Dashboard
-            </Button>
-          </div>
-        ) : (
-          <Button
-            className="font-medium text-primary dark:text-dark-primary hover:text-secondary dark:hover:text-dark-secondary"
-            onClick={() => navigate({ to: "/onboarding" })}
-          >
-            Get Started <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-          </Button>
-        )}
-  </div>
-  </div>
-  
-};
+                ))}
+                <a
+                    href={DISCORD_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+                >
+                    Community
+                </a>
+            </nav>
+
+            {/* Actions */}
+            <div className="flex items-center gap-4">
+                {user ? (
+                    <div className="flex items-center gap-3">
+                        <UserAvatar
+                            size="sm"
+                            onClick={() => navigate({ to: "/dashboard" })}
+                            className="cursor-pointer"
+                        />
+                        <Button
+                            onClick={() => navigate({ to: "/dashboard" })}
+                            className="font-medium"
+                        >
+                            Dashboard
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
+                        className="font-medium px-6 py-2 inline-flex items-center gap-2"
+                        size="lg"
+                    >
+                        Get Started
+                        <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
+                    </Button>
+                )}
+            </div>
+        </div>
+    )
+}
