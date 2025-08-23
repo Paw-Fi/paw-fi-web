@@ -12,6 +12,15 @@ export interface SeoMetaParams {
   imageHeight?: string
 }
 
+// Interface for custom meta tag attributes
+interface MetaTag {
+  name?: string
+  property?: string
+  content?: string
+  title?: string
+  [key: string]: any
+}
+
 export function seo({
   title,
   description,
@@ -21,42 +30,75 @@ export function seo({
   imageType = siteConfig.ogImage.type,
   imageWidth = siteConfig.ogImage.width,
   imageHeight = siteConfig.ogImage.height,
-}: SeoMetaParams) {
-  const metaTags = [
+}: SeoMetaParams): MetaTag[] {
+  const metaTags: MetaTag[] = [
     // Title is handled separately
-    {title},
+    { title },
     
-    // Standard meta tags (use 'name' attribute)
+    // Standard meta tags 
     { name: 'description', content: description },
     { name: 'keywords', content: keywords },
     
-    // Twitter Card meta tags (use 'name' attribute)
+    // Twitter Card meta tags (always use 'name')
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:site', content: siteConfig.twitterHandle },
     { name: 'twitter:creator', content: siteConfig.twitterHandle },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     
-    // Open Graph meta tags (use 'property' attribute) 
-    { property: 'og:type', content: 'website' },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: description },
-    { property: 'og:url', content: url },
-    { property: 'og:site_name', content: siteConfig.name },
+    // Open Graph meta tags - using name for TanStack Start compatibility
+    // TanStack Start should handle the property conversion internally
+    { name: 'og:type', content: 'website' },
+    { name: 'og:title', content: title },
+    { name: 'og:description', content: description },
+    { name: 'og:url', content: url },
+    { name: 'og:site_name', content: siteConfig.name },
 
     ...(image
       ? [
           // Twitter image
           { name: 'twitter:image', content: image },
           // Open Graph image with metadata
-          { property: 'og:image', content: image },
-          { property: 'og:image:width', content: imageWidth },
-          { property: 'og:image:height', content: imageHeight },
-          { property: 'og:image:type', content: imageType },
+          { name: 'og:image', content: image },
+          { name: 'og:image:width', content: imageWidth },
+          { name: 'og:image:height', content: imageHeight },
+          { name: 'og:image:type', content: imageType },
         ]
       : []),
   ]
-  return metaTags 
+  
+  return metaTags
+}
+
+// Alternative function for manual property attribute handling if needed
+export function generateOpenGraphTags({
+  title,
+  description,
+  image,
+  url,
+  imageType = siteConfig.ogImage.type,
+  imageWidth = siteConfig.ogImage.width,
+  imageHeight = siteConfig.ogImage.height,
+}: SeoMetaParams): MetaTag[] {
+  const ogTags: MetaTag[] = [
+    // Open Graph with proper property attributes
+    { property: 'og:type', content: 'website' },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:url', content: url },
+    { property: 'og:site_name', content: siteConfig.name },
+  ]
+  
+  if (image) {
+    ogTags.push(
+      { property: 'og:image', content: image },
+      { property: 'og:image:width', content: imageWidth },
+      { property: 'og:image:height', content: imageHeight },
+      { property: 'og:image:type', content: imageType }
+    )
+  }
+  
+  return ogTags
 }
 
 // Legacy function name for backward compatibility
