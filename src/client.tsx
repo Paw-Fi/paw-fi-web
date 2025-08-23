@@ -4,14 +4,17 @@ import { StartClient } from '@tanstack/react-start'
 import { createRouter } from './router'
 import { ReduxProvider } from './providers/ReduxProvider'
 import { AIChatProvider } from './contexts/ai-chat-context'
+import { HelmetProvider } from 'react-helmet-async'
 
 const router = createRouter()
 
 hydrateRoot(
   document, 
-  <ReduxProvider>
-    <AIChatProvider>
-      <StartClient router={router} />
-    </AIChatProvider>
-  </ReduxProvider>
+  <HelmetProvider>
+    <ReduxProvider>
+      <AIChatProvider>
+        <StartClient router={router} />
+      </AIChatProvider>
+    </ReduxProvider>
+  </HelmetProvider>
 )

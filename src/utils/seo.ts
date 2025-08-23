@@ -46,23 +46,22 @@ export function seo({
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     
-    // Open Graph meta tags - using name for TanStack Start compatibility
-    // TanStack Start should handle the property conversion internally
-    { name: 'og:type', content: 'website' },
-    { name: 'og:title', content: title },
-    { name: 'og:description', content: description },
-    { name: 'og:url', content: url },
-    { name: 'og:site_name', content: siteConfig.name },
+    // Open Graph meta tags - using proper 'property' attributes
+    { property: 'og:type', content: 'website' },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:url', content: url },
+    { property: 'og:site_name', content: siteConfig.name },
 
     ...(image
       ? [
           // Twitter image
           { name: 'twitter:image', content: image },
-          // Open Graph image with metadata
-          { name: 'og:image', content: image },
-          { name: 'og:image:width', content: imageWidth },
-          { name: 'og:image:height', content: imageHeight },
-          { name: 'og:image:type', content: imageType },
+          // Open Graph image with metadata using proper 'property' attributes
+          { property: 'og:image', content: image },
+          { property: 'og:image:width', content: imageWidth },
+          { property: 'og:image:height', content: imageHeight },
+          { property: 'og:image:type', content: imageType },
         ]
       : []),
   ]

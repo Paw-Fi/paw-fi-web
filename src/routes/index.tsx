@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
 import { motion } from "framer-motion";
@@ -22,6 +23,7 @@ import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 import { MotionGlobalConfig } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -197,8 +199,45 @@ export default function HomePage() {
     MotionGlobalConfig.skipAnimations = true;
   }
 
+  // SEO metadata
+  const pageUrl = getCanonicalUrl("/");
+  const title = "Moneko – Save Money and Start Investing from Zero";
+  const description = "Struggling to save or invest? Moneko helps beginners build savings goals, grow money step by step, and start investing with confidence.";
+  const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
+  const imageUrl = "https://moneko.io/og-img.png";
+
   return (
     <div className="relative min-h-screen bg-transparent">
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="keywords" content={keywords} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={imageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="628" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:site_name" content="Moneko" />
+
+        {/* Twitter / X */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={pageUrl} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={imageUrl} />
+        <meta name="twitter:site" content="@moneko_ai" />
+        <meta name="twitter:creator" content="@moneko_ai" />
+
+        {/* Canonical Link */}
+        <link rel="canonical" href={pageUrl} />
+      </Helmet>
+
       <AmbientHalo/>
 
       {/* Hidden H1 for SEO */}
