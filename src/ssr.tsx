@@ -4,7 +4,7 @@ import {
   defaultStreamHandler,
 } from '@tanstack/react-start/server'
 import { getRouterManifest } from '@tanstack/react-start/router-manifest'
-import { HelmetProvider } from 'react-helmet-async'
+import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { createElement } from 'react'
 
 import { createRouter } from './router'

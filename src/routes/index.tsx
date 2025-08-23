@@ -23,7 +23,7 @@ import basicLessonsData from "@/data/basic-lessons.json";
 import faqData from "@/data/home/home-faq.json";
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 import { MotionGlobalConfig } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "@dr.pogodin/react-helmet";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
