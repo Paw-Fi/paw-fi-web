@@ -185,12 +185,7 @@ export function DashboardHeroSection({
                         >
                           <FontAwesomeIcon icon={action.icon} className="h-4 md:h-5 w-4 md:w-5" />
                           <span className="text-sm md:text-base">{action.label}</span>
-                          {action.variant !== 'secondary' && (
-                            <FontAwesomeIcon 
-                              icon={action.icon} 
-                              className="h-3 md:h-4 w-3 md:w-4 group-hover:translate-x-1 md:group-hover:translate-x-2 transition-transform" 
-                            />
-                          )}
+                         
                         </button>
                       )}
                     </motion.div>
