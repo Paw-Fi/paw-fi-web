@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCreditCard,
-  faPlus,
-  faTrash,
-  faCheckCircle,
-  faSpinner,
-  faExclamationCircle,
-  faExternalLinkAlt,
-} from "@fortawesome/free-solid-svg-icons";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useManagePaymentMethod } from "@/hooks/use-payment-method";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { CreditCard, Plus, Trash2, ExternalLink, Loader2, AlertCircle, CheckCircle2, Shield } from "lucide-react";
 
 interface PaymentMethodManagerProps {
   paymentMethod: any;
@@ -102,141 +98,207 @@ export function PaymentMethodManager({
     }
   };
 
+  const getCardIcon = (brand: string) => {
+    // For now, using a generic credit card icon
+    // Could expand this to show specific brand icons
+    return <CreditCard className="h-5 w-5 text-muted-foreground" />;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Current Payment Method */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">
-            Payment Methods
-          </h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <Shield className="mr-3 h-5 w-5 text-muted-foreground" />
+                Payment Methods
+              </CardTitle>
+              
+              <Button
+                onClick={handleOpenPortal}
+                variant="outline"
+                size="sm"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Billing Portal
+              </Button>
+            </div>
+          </CardHeader>
           
-          <button
-            onClick={handleOpenPortal}
-            className="inline-flex items-center rounded-md border border-transparent bg-primary px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
-            <FontAwesomeIcon icon={faExternalLinkAlt} className="mr-2 h-4 w-4" />
-            Stripe Billing Portal
-          </button>
-        </div>
+          <CardContent className="space-y-6">
 
-        <div className="mt-4">
-          {isLoadingMethods ? (
-            <div className="flex items-center justify-center py-4">
-              <FontAwesomeIcon
-                icon={faSpinner}
-                className="mr-2 h-5 w-5 animate-spin text-primary"
-              />
-              <span className="text-sm text-gray-500">Loading payment methods...</span>
-            </div>
-          ) : methodsError ? (
-            <div className="flex items-center justify-center py-4 text-sm text-red-500">
-              <FontAwesomeIcon
-                icon={faExclamationCircle}
-                className="mr-2 h-5 w-5"
-              />
-              {methodsError}
-            </div>
-          ) : paymentMethods && paymentMethods.length > 0 ? (
-            <div className="space-y-4">
-              {paymentMethods.map((method: any) => (
-                <div
-                  key={method.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4"
+            {isLoadingMethods ? (
+              <div className="flex items-center justify-center py-8">
+                <motion.div 
+                  className="text-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                 >
-                  <div className="flex items-center">
-                    <div className="flex h-10 w-16 items-center justify-center rounded-md border border-gray-200 bg-white">
-                      <FontAwesomeIcon
-                        icon={faCreditCard}
-                        className="h-5 w-5 text-gray-400"
-                      />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-900">
-                        {method.brand?.toUpperCase()} •••• {method.last4}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Expires {method.exp_month}/{method.exp_year}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">                  
-                    <button
-                      onClick={() => detachPaymentMethod(method.id)}
-                      disabled={isMutating}
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-gray-50"
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">Loading payment methods...</p>
+                </motion.div>
+              </div>
+            ) : methodsError ? (
+              <div className="flex items-center justify-center py-8">
+                <motion.div 
+                  className="text-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <AlertCircle className="mx-auto h-6 w-6 text-red-500 dark:text-red-400" />
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{methodsError}</p>
+                </motion.div>
+              </div>
+            ) : paymentMethods && paymentMethods.length > 0 ? (
+              <div className="space-y-4">
+                <AnimatePresence>
+                  {paymentMethods.map((method: any, index: number) => (
+                    <motion.div
+                      key={method.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -100 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center justify-between rounded-xl border bg-gradient-to-r from-background/50 to-card/80 p-4 transition-all hover:shadow-sm"
                     >
-                      <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-4 text-sm text-gray-500">
-              No payment methods found
-            </div>
-          )}
-        </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border bg-card shadow-sm">
+                          {getCardIcon(method.brand)}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-foreground">
+                              {method.brand?.toUpperCase()} •••• {method.last4}
+                            </p>
+                            <Badge variant="secondary" className="text-xs">
+                              Default
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Expires {method.exp_month.toString().padStart(2, '0')}/{method.exp_year}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={() => detachPaymentMethod(method.id)}
+                        disabled={isMutating}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/20 dark:hover:text-red-300"
+                      >
+                        {isMutating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <CreditCard className="h-12 w-12 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-muted-foreground">No payment methods</p>
+                <p className="text-sm text-muted-foreground/70">Add a card to manage your subscription</p>
+              </div>
+            )}
 
-        {/* Add New Card */}
-        {!isAddingCard ? (
-          <div className="mt-4">
-            <button
-              onClick={handleAddCard}
-              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
-              Add Payment Method
-            </button>
-          </div>
-        ) : (
-          <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <h4 className="mb-4 text-sm font-medium text-gray-900">
-              Add New Payment Method
-            </h4>
-            <form id="payment-form" className="space-y-4">
-              <div className="rounded-md border border-gray-300 bg-white p-3">
-                <div id="card-element" className="h-10"></div>
-              </div>
-              {error && (
-                <div className="text-sm text-red-600">{error}</div>
+            <Separator />
+
+            {/* Add New Card Section */}
+            <AnimatePresence>
+              {!isAddingCard ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                >
+                  <Button
+                    onClick={handleAddCard}
+                    variant="outline"
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Payment Method
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="rounded-xl border bg-muted/50 p-6"
+                >
+                  <div className="mb-4 flex items-center space-x-2">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    <h4 className="font-medium text-foreground">
+                      Add New Payment Method
+                    </h4>
+                  </div>
+                  
+                  <form id="payment-form" className="space-y-4">
+                    <div className="rounded-lg border bg-card p-4 shadow-sm">
+                      <div id="card-element" className="h-6"></div>
+                    </div>
+                    
+                    {error && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center space-x-2 text-sm text-red-600 dark:text-red-400"
+                      >
+                        <AlertCircle className="h-4 w-4" />
+                        <span>{error}</span>
+                      </motion.div>
+                    )}
+                    
+                    <div className="flex space-x-3">
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="flex-1"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Save Card
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsAddingCard(false);
+                          setError(null);
+                          if (cardElement) {
+                            cardElement.destroy();
+                          }
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </motion.div>
               )}
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <FontAwesomeIcon
-                        icon={faSpinner}
-                        className="mr-2 h-4 w-4 animate-spin"
-                      />
-                      Processing...
-                    </>
-                  ) : (
-                    "Save Card"
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingCard(false);
-                    if (cardElement) {
-                      cardElement.destroy();
-                    }
-                  }}
-                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }

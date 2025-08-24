@@ -1036,7 +1036,7 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <motion.main
-          className="h-full flex-1 overflow-auto rounded-xl border border-border bg-card/80 backdrop-blur-md shadow-md"
+          className="h-full p-4 flex-1 overflow-auto rounded-xl border border-border bg-card/80 backdrop-blur-md shadow-md"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}

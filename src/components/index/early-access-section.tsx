@@ -125,7 +125,7 @@ export const EarlyAccessSection = () => {
 
           {/* Paragraph */}
           <motion.p
-            className="mx-auto max-w-2xl text-xl text-gray-600 dark:text-gray-400"
+            className="mx-auto max-w-2xl text-xl text-muted-foreground"
             variants={itemVariants}
           >
             Be among the first{" "}
@@ -211,7 +211,7 @@ export const EarlyAccessSection = () => {
           animate="visible"
         >
           <motion.p
-            className="mb-4 text-gray-600 dark:text-gray-400"
+            className="mb-4 text-muted-foreground"
             variants={itemVariants}
           >
             Join our vibrant community

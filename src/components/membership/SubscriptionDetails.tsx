@@ -1,14 +1,9 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCheckCircle,
-  faTimesCircle,
-  faCalendarAlt,
-  faInfoCircle,
-  faCreditCard,
-  faReceipt,
-  faClock,
-} from "@fortawesome/free-solid-svg-icons";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield } from "lucide-react";
 
 interface SubscriptionDetailsProps {
   subscription: {
@@ -35,150 +30,211 @@ export function SubscriptionDetails({
   subscription,
   features,
 }: SubscriptionDetailsProps) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active": return "text-green-600 dark:text-green-400";
+      case "trialing": return "text-blue-600 dark:text-blue-400";
+      case "canceled":
+      case "none": return "text-muted-foreground";
+      default: return "text-amber-600 dark:text-amber-400";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active": return <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />;
+      case "trialing": return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+      case "canceled":
+      case "none": return <XCircle className="h-4 w-4 text-muted-foreground" />;
+      default: return <AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-medium text-gray-900">
-          Subscription Details
-        </h3>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <h4 className="text-sm font-medium text-gray-500">Plan</h4>
-            <p className="mt-1 text-sm font-medium capitalize text-gray-900">
-              {subscription?.plan || "Free"}
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium text-gray-500">Status</h4>
-            <p className="mt-1 flex items-center text-sm font-medium text-gray-900">
-              <span
-                className={`mr-2 inline-flex h-2 w-2 rounded-full ${
-                  subscription?.status === "active"
-                    ? "bg-green-500"
-                    : subscription?.status === "trialing"
-                    ? "bg-blue-500"
-                    : subscription?.status === "canceled" || subscription?.status === "none"
-                    ? "bg-gray-400"
-                    : "bg-yellow-500"
-                }`}
-              ></span>
-              <span className="capitalize">{subscription?.status || "None"}</span>
-            </p>
-          </div>
-
-          {subscription?.status !== "none" && subscription?.status && (
-            <>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">
-                  Current Period Ends
-                </h4>
-                <p className="mt-1 flex items-center text-sm text-gray-900">
-                  <FontAwesomeIcon
-                    icon={faCalendarAlt}
-                    className="mr-1.5 h-4 w-4 text-gray-400"
-                  />
-                  {subscription?.current_period_end
-                    ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    : "N/A"}
-                </p>
+      {/* Subscription Information */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <CreditCard className="mr-3 h-5 w-5 text-muted-foreground" />
+              Subscription Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Current Plan */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Current Plan</p>
+                <div className="flex items-center space-x-2">
+                  <Crown className="h-4 w-4 text-primary" />
+                  <span className="text-lg font-semibold capitalize text-foreground">
+                    {subscription?.plan || "Free"}
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">
-                  Auto-Renew
-                </h4>
-                <p className="mt-1 flex items-center text-sm text-gray-900">
-                  {subscription?.cancel_at_period_end ? (
-                    <>
-                      <FontAwesomeIcon
-                        icon={faTimesCircle}
-                        className="mr-1.5 h-4 w-4 text-red-500"
-                      />
-                      No - Will expire at end of period
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon
-                        icon={faCheckCircle}
-                        className="mr-1.5 h-4 w-4 text-green-500"
-                      />
-                      Yes - Will renew automatically
-                    </>
+              {/* Status */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(subscription?.status || "none")}
+                  <span className={`font-medium capitalize ${getStatusColor(subscription?.status || "none")}`}>
+                    {subscription?.status || "None"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Auto Renewal */}
+              {subscription?.status !== "none" && subscription?.status && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Auto-Renew</p>
+                  <div className="flex items-center space-x-2">
+                    {subscription?.cancel_at_period_end ? (
+                      <>
+                        <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                        <span className="text-sm text-red-600 dark:text-red-400">Disabled</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
+                        <span className="text-sm text-green-600 dark:text-green-400">Enabled</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {subscription?.status !== "none" && subscription?.status && (
+              <>
+                <Separator className="my-6" />
+                
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {/* Current Period End */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Current Period Ends</p>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-foreground">
+                        {subscription?.current_period_end
+                          ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Next Payment */}
+                  {subscription?.days_until_next_payment !== null && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Next Payment</p>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-foreground">
+                          {subscription.days_until_next_payment === 0
+                            ? "Today"
+                            : subscription.days_until_next_payment === 1
+                            ? "Tomorrow"
+                            : `In ${subscription.days_until_next_payment} days`}
+                        </span>
+                      </div>
+                    </div>
                   )}
-                </p>
-              </div>
-              
-              {subscription?.days_until_next_payment !== null && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Next Payment
-                  </h4>
-                  <p className="mt-1 flex items-center text-sm text-gray-900">
-                    <FontAwesomeIcon
-                      icon={faClock}
-                      className="mr-1.5 h-4 w-4 text-gray-400"
-                    />
-                    {subscription.days_until_next_payment === 0
-                      ? "Today"
-                      : subscription.days_until_next_payment === 1
-                      ? "Tomorrow"
-                      : `In ${subscription.days_until_next_payment} days`}
-                  </p>
+                  
+                  {/* Next Payment Date */}
+                  {subscription?.next_payment_date && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Next Payment Date</p>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-foreground">
+                          {new Date(subscription.next_payment_date).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Subscription Created */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Subscription Created</p>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-foreground">
+                        {subscription?.created_at
+                          ? new Date(subscription.created_at).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
-              
-              {subscription?.next_payment_date && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Next Payment Date
-                  </h4>
-                  <p className="mt-1 flex items-center text-sm text-gray-900">
-                    <FontAwesomeIcon
-                      icon={faCalendarAlt}
-                      className="mr-1.5 h-4 w-4 text-gray-400"
-                    />
-                    {new Date(subscription.next_payment_date).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-              )}
-         
-              
-         
-              
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">
-                  Created
-                </h4>
-                <p className="mt-1 flex items-center text-sm text-gray-900">
-                  <FontAwesomeIcon
-                    icon={faCalendarAlt}
-                    className="mr-1.5 h-4 w-4 text-gray-400"
-                  />
-                  {subscription?.created_at
-                    ? new Date(subscription.created_at).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    : "N/A"}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
-  
+      {/* Features */}
+      {features && features.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <Shield className="mr-3 h-5 w-5 text-muted-foreground" />
+                Plan Features
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {features.map((feature, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.05 }}
+                    className="flex items-center space-x-3 rounded-lg bg-muted/30 p-3"
+                  >
+                    {feature.included ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className={`text-sm ${
+                      feature.included ? "text-foreground" : "text-muted-foreground"
+                    }`}>
+                      {feature.feature}
+                      {feature.limit_value !== null && feature.included && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          (up to {feature.limit_value})
+                        </span>
+                      )}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

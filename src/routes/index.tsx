@@ -178,6 +178,7 @@ import { AISearchInput } from "@/components/ui/ai-search-input";
 import { EarlyAccessSection } from "@/components/index/early-access-section";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import AmbientHalo from "@/components/ui/ambient-halo";
+import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
 
 
 
@@ -193,6 +194,7 @@ export default function HomePage() {
   ];
 
   const { isMobile } = useDeviceType();
+  disableAnimationsOnMobile()
 
   // Skip complex animations on mobile for performance
   if (isMobile) {

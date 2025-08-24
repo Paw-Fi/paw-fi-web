@@ -1,11 +1,10 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faFileInvoice,
-  faExternalLinkAlt,
-  faDownload,
-  faInfoCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FileText, ExternalLink, Download, Receipt, AlertCircle, History } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -39,136 +38,151 @@ export function InvoiceHistory({ invoices }: InvoiceHistoryProps) {
     });
   };
 
-  // Get status badge color
-  const getStatusBadgeColor = (status: string) => {
+  // Get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-100 text-green-800";
+        return "default";
       case "open":
-        return "bg-blue-100 text-blue-800";
+        return "secondary";
       case "uncollectible":
-        return "bg-red-100 text-red-800";
+        return "destructive";
       case "void":
-        return "bg-gray-100 text-gray-800";
+        return "outline";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "outline";
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "paid": return "text-green-600";
+      case "open": return "text-blue-600";
+      case "uncollectible": return "text-red-600";
+      case "void": return "text-slate-500";
+      default: return "text-slate-600";
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-medium text-gray-900">Billing History</h3>
-
-        {invoices && invoices.length > 0 ? (
-          <div className="mt-4 overflow-hidden rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                  >
-                    Date
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                  >
-                    Amount
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                  >
-                    Status
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {invoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="flex items-center">
-                        <FontAwesomeIcon
-                          icon={faFileInvoice}
-                          className="mr-3 h-5 w-5 text-gray-400"
-                        />
-                        <span className="text-sm text-gray-900">
-                          {formatDate(invoice.created)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatCurrency(invoice.amount_paid, invoice.currency)}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(
-                          invoice.status
-                        )}`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <History className="mr-3 h-5 w-5 text-muted-foreground" />
+              Billing History
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent>
+            {invoices && invoices.length > 0 ? (
+              <div className="overflow-hidden rounded-lg border border-slate-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/20">
+                      <TableHead className="font-medium text-muted-foreground">Date</TableHead>
+                      <TableHead className="font-medium text-muted-foreground">Amount</TableHead>
+                      <TableHead className="font-medium text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-right font-medium text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice, index) => (
+                      <motion.tr
+                        key={invoice.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 + index * 0.05 }}
+                        className="transition-colors hover:bg-muted/20"
                       >
-                        {invoice.status.charAt(0).toUpperCase() +
-                          invoice.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-3">
-                        {invoice.hosted_invoice_url && (
-                          <a
-                            href={invoice.hosted_invoice_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:text-primary-dark"
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
+                              <Receipt className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <span className="font-medium text-foreground">
+                              {formatDate(invoice.created)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-foreground">
+                            {formatCurrency(invoice.amount_paid, invoice.currency)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={getStatusBadgeVariant(invoice.status)}
+                            className="capitalize"
                           >
-                            <FontAwesomeIcon
-                              icon={faExternalLinkAlt}
-                              className="h-4 w-4"
-                            />
-                            <span className="sr-only">View Invoice</span>
-                          </a>
-                        )}
-                        {invoice.pdf && (
-                          <a
-                            href={invoice.pdf}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:text-primary-dark"
-                          >
-                            <FontAwesomeIcon
-                              icon={faDownload}
-                              className="h-4 w-4"
-                            />
-                            <span className="sr-only">Download PDF</span>
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="mt-4 flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 py-8">
-            <div className="text-center">
-              <FontAwesomeIcon
-                icon={faInfoCircle}
-                className="mb-2 h-6 w-6 text-gray-400"
-              />
-              <p className="text-sm text-gray-500">No invoices found</p>
-            </div>
-          </div>
-        )}
-      </div>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            {invoice.hosted_invoice_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                              >
+                                <a
+                                  href={invoice.hosted_invoice_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  <span className="sr-only">View Invoice</span>
+                                </a>
+                              </Button>
+                            )}
+                            {invoice.pdf && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                              >
+                                <a
+                                  href={invoice.pdf}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  <span className="sr-only">Download PDF</span>
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="rounded-full bg-muted/50 p-4">
+                  <FileText className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  No billing history
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Your invoices and payment history will appear here.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
