@@ -70,7 +70,7 @@ export const createMarkdownComponents = ({
       const buttonOptions = options?.split('|') || [];
       
       return (
-        <div className="mt-3 flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3 flex gap-2 sm:gap-3 flex-wrap">
           <p className="text-sm font-medium mb-2 w-full text-foreground">{label}</p>
           {buttonOptions.map((option: string) => (
             <Button
@@ -79,7 +79,7 @@ export const createMarkdownComponents = ({
                 const message = option.charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' ');
                 onSendMessage?.(message);
               }}
-              className={`px-4 py-2 rounded-lg ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm touch-manipulation active:scale-95 ${
                 option.includes('yes') || option.includes('agree') || option.includes('proceed')
                   ? 'bg-success hover:bg-success/90 text-white'
                   : 'bg-muted-foreground hover:bg-muted-foreground/90 text-white'
@@ -97,9 +97,9 @@ export const createMarkdownComponents = ({
       const amountOptions = amounts?.split('|') || [];
       
       return (
-        <div className="mt-3">
+        <div className="mt-2 sm:mt-3">
           <p className="text-sm text-muted-foreground mb-2">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {amountOptions.map((amount: string) => (
               <Button
                 key={amount}
@@ -109,7 +109,7 @@ export const createMarkdownComponents = ({
                     : `I saved $${amount} today`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-700"
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-700 text-sm touch-manipulation active:scale-95"
               >
                 {amount === 'other' || amount === 'custom' ? 'Custom Amount' : `$${amount}`}
               </Button>
@@ -129,9 +129,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3 text-foreground">{label}</p>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3 text-foreground">{label}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {actionOptions.map((action: string) => (
               <Button
                 key={action}
@@ -139,10 +139,10 @@ export const createMarkdownComponents = ({
                   const message = `I want to focus on ${action.replace(/_/g, ' ')}`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-3 bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200/50 dark:border-blue-700/50"
+                className="flex items-center justify-center gap-2 px-2.5 sm:px-3 py-2.5 sm:py-3 bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200/50 dark:border-blue-700/50 touch-manipulation active:scale-95"
               >
-                <span>{actionIcons[action] || '🎯'}</span>
-                <span className="text-sm">{action.replace(/_/g, ' ').toUpperCase()}</span>
+                <span className="text-sm sm:text-base">{actionIcons[action] || '🎯'}</span>
+                <span className="text-xs sm:text-sm font-medium">{action.replace(/_/g, ' ').toUpperCase()}</span>
               </Button>
             ))}
           </div>
@@ -162,9 +162,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3 text-foreground">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3 text-foreground">{label}</p>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {actionOptions.map((action: string) => (
              <Button
              key={action}
@@ -181,11 +181,12 @@ export const createMarkdownComponents = ({
                const message = actionMessages[action] || `I want to ${action.replace(/_/g, ' ')} for my goal`;
                onSendMessage?.(message);
              }}
+             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg touch-manipulation active:scale-95"
            >
-             <span className="text-purple-600 dark:text-purple-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors duration-300">
+             <span className="text-purple-600 dark:text-purple-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors duration-300 text-sm sm:text-base">
                {goalActionIcons[action] || '⚡'}
              </span>
-             <span className="capitalize">
+             <span className="capitalize text-xs sm:text-sm">
                {action.replace(/_/g, ' ')}
              </span>
            </Button>
@@ -205,9 +206,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3">{label}</p>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {dataOptions.map((dataType: string) => (
               <Button
                 key={dataType}
@@ -215,10 +216,10 @@ export const createMarkdownComponents = ({
                   const message = `I need to update my ${dataType.replace(/_/g, ' ')} information`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-50/50 hover:bg-amber-100/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-200/50 dark:border-amber-700/50"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-amber-50/50 hover:bg-amber-100/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-200/50 dark:border-amber-700/50 touch-manipulation active:scale-95"
               >
-                <span>{dataIcons[dataType] || '📝'}</span>
-                <span className="text-sm capitalize">{dataType.replace(/_/g, ' ')}</span>
+                <span className="text-sm sm:text-base">{dataIcons[dataType] || '📝'}</span>
+                <span className="text-xs sm:text-sm capitalize">{dataType.replace(/_/g, ' ')}</span>
               </Button>
             ))}
           </div>
@@ -231,9 +232,9 @@ export const createMarkdownComponents = ({
       const amountOptions = amounts?.split('|') || [];
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3">{label}</p>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3">{label}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {amountOptions.map((amount: string) => (
               <Button
                 key={amount}
@@ -243,7 +244,7 @@ export const createMarkdownComponents = ({
                     : `I choose $${amount}`;
                   onSendMessage?.(message);
                 }}
-                className="px-3 py-2 bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200/50 dark:border-green-700/50"
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-50/50 hover:bg-green-100/70 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200/50 dark:border-green-700/50 text-sm touch-manipulation active:scale-95"
               >
                 {amount === 'custom' ? 'Custom' : `$${amount}`}
               </Button>
@@ -267,9 +268,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3">{label}</p>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {priorityOptions.map((priority: string) => (
               <Button
                 key={priority}
@@ -277,7 +278,7 @@ export const createMarkdownComponents = ({
                   const message = `This is ${priority.replace(/_/g, ' ')} priority for me`;
                   onSendMessage?.(message);
                 }}
-                className={`px-3 py-2 rounded-lg border ${priorityColors[priority] || 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'}`}
+                className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm touch-manipulation active:scale-95 ${priorityColors[priority] || 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'}`}
               >
                 {priority.replace(/_/g, ' ').charAt(0).toUpperCase() + priority.slice(1).replace(/_/g, ' ')}
               </Button>
@@ -297,9 +298,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3">{label}</p>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {styleOptions.map((style: string) => (
               <Button
                 key={style}
@@ -307,10 +308,10 @@ export const createMarkdownComponents = ({
                   const message = `Please explain this with ${style.replace(/_/g, ' ')} style`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-cyan-50/50 hover:bg-cyan-100/70 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-lg border border-cyan-200/50 dark:border-cyan-700/50"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-cyan-50/50 hover:bg-cyan-100/70 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-lg border border-cyan-200/50 dark:border-cyan-700/50 touch-manipulation active:scale-95"
               >
-                <span>{styleIcons[style] || '💬'}</span>
-                <span className="text-sm capitalize">{style.replace(/_/g, ' ')}</span>
+                <span className="text-sm sm:text-base">{styleIcons[style] || '💬'}</span>
+                <span className="text-xs sm:text-sm capitalize">{style.replace(/_/g, ' ')}</span>
               </Button>
             ))}
           </div>
@@ -328,9 +329,9 @@ export const createMarkdownComponents = ({
       };
       
       return (
-        <div className="mt-3">
-          <p className="text-sm font-medium mb-3">{label}</p>
-          <div className="flex gap-2 flex-wrap">
+        <div className="mt-2 sm:mt-3">
+          <p className="text-sm font-medium mb-2 sm:mb-3">{label}</p>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {habitOptions.map((habit: string) => (
               <Button
                 key={habit}
@@ -338,10 +339,10 @@ export const createMarkdownComponents = ({
                   const message = `I ${habit} my financial habit`;
                   onSendMessage?.(message);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-teal-50/50 hover:bg-teal-100/70 dark:bg-teal-900/20 dark:hover:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200/50 dark:border-teal-700/50"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-teal-50/50 hover:bg-teal-100/70 dark:bg-teal-900/20 dark:hover:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200/50 dark:border-teal-700/50 touch-manipulation active:scale-95"
               >
-                <span>{habitIcons[habit] || '📝'}</span>
-                <span className="text-sm capitalize">{habit}</span>
+                <span className="text-sm sm:text-base">{habitIcons[habit] || '📝'}</span>
+                <span className="text-xs sm:text-sm capitalize">{habit}</span>
               </Button>
             ))}
           </div>

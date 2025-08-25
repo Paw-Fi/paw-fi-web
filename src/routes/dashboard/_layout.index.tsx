@@ -1,68 +1,69 @@
 "use client";
 
+import React from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { motion, Variants } from "framer-motion";
 import {
-  faArrowRight,
-  faBookOpen,
-  faBolt,
-  faBullseye,
-  faCalculator,
-  faCalendarAlt,
-  faChartLine,
-  faCheckCircle,
-  faChevronRight,
-  faComments,
-  faCreditCard,
-  faDollarSign,
-  faEdit,
-  faExclamationTriangle,
-  faFire,
-  faGift,
-  faGraduationCap,
-  faHome,
-  faLightbulb,
-  faLock,
-  faMoneyBillWave,
-  faPercent,
-  faPiggyBank,
-  faPlus,
-  faShieldAlt,
-  faTimes,
-  faTrophy,
-  faUnlock,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+  TrendingUp,
+  BookOpen,
+  Calculator,
+  MessageCircle,
+  Target,
+  Award,
+  Flame,
+  DollarSign,
+  GraduationCap,
+  PiggyBank,
+  Shield,
+  Home,
+  Calendar,
+  ChevronRight,
+  Plus,
+  ArrowRight,
+  Gift,
+  Trophy,
+  User,
+  Lightbulb,
+  X,
+  CheckCircle,
+  CreditCard
+} from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery } from "@tanstack/react-query";
 import { type Conversation } from "@/services/conversation-service";
 import basicCourse from "@/data/basic-lessons.json";
 import { getCurrentLevelInfo, LEVEL_REWARDS, LEVEL_REQUIREMENTS } from "@/components/rewards/rewards-level";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Timeline } from "@/components/timeline/Timeline";
 import { useAIChat } from "@/contexts/ai-chat-context";
 import monekoAvatar from "@/assets/images/logo/moneko.png";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/modal";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
 });
 
-// Modern 2025 animation variants with spring physics
+// Modern 2025 animation variants with ultra-smooth spring physics
 const containerVariants: Variants = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      damping: 20,
+      damping: 30,
       stiffness: 100,
-      staggerChildren: 0.08,
-      delayChildren: 0.15,
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
     },
   },
 };
@@ -70,20 +71,18 @@ const containerVariants: Variants = {
 const itemVariants: Variants = {
   hidden: { 
     opacity: 0, 
-    y: 40, 
-    scale: 0.95,
-    rotateX: 10,
+    y: 20,
+    scale: 0.98,
   },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    rotateX: 0,
     transition: {
       type: "spring",
-      damping: 25,
+      damping: 30,
       stiffness: 120,
-      mass: 1,
+      mass: 0.8,
     },
   },
 };
@@ -91,18 +90,16 @@ const itemVariants: Variants = {
 const cardHoverVariants: Variants = {
   rest: { 
     y: 0,
-    rotateX: 0,
-    rotateY: 0,
+    scale: 1,
   },
   hover: { 
-    y: -4,
-    rotateX: 1,
-    rotateY: 1,
+    y: -2,
+    scale: 1.01,
     transition: {
       type: "spring",
-      damping: 20,
-      stiffness: 300,
-      mass: 0.8,
+      damping: 25,
+      stiffness: 400,
+      mass: 0.5,
     },
   },
 };
@@ -404,54 +401,54 @@ function DashboardHome() {
 
   const {openChat} = useAIChat();
 
-  // Real calculator usage data (from available calculators)
+  // Modern calculator data with Lucide icons
   const availableCalculators = [
     {
       title: "Compound Interest",
       description: "Calculate investment growth with compound returns",
-      icon: faChartLine,
+      icon: TrendingUp,
       path: "/calculators/compound-calculator",
-      color: "from-purple-500 to-pink-500",
+      color: "bg-primary",
       category: "Investment",
     },
     {
       title: "Mortgage Calculator",
       description: "Estimate monthly payments and total interest",
-      icon: faHome,
+      icon: Home,
       path: "/calculators/mortgage-calculator", 
-      color: "from-blue-500 to-cyan-500",
+      color: "bg-secondary",
       category: "Housing",
     },
     {
       title: "Savings Goals",
       description: "Plan and track your financial objectives",
-      icon: faPiggyBank,
+      icon: PiggyBank,
       path: "/calculators/saving-goals-calculator",
-      color: "from-green-500 to-emerald-500",
+      color: "bg-accent",
       category: "Savings",
     },
     {
       title: "Investment Growth",
       description: "Project portfolio returns over time",
-      icon: faPercent,
+      icon: Target,
       path: "/calculators/investment-calculator",
-      color: "from-orange-500 to-red-500",
+      color: "bg-muted",
       category: "Investment",
     },
     {
       title: "Auto Loan",
       description: "Calculate car loan payments and costs",
-      icon: faMoneyBillWave,
+      icon: DollarSign,
       path: "/calculators/auto-loan-calculator",
-      color: "from-red-500 to-pink-500",
+      color: "bg-primary/90",
       category: "Debt",
     },
     {
       title: "Retirement Planner",
       description: "Plan for your golden years",
-      icon: faCreditCard,
+      icon: CreditCard,
       path: "/calculators/retirement-calculator",
-      color: "from-indigo-500 to-purple-500",
+      color: "bg-secondary/90",
       category: "Retirement",
     },
   ];
@@ -466,8 +463,11 @@ function DashboardHome() {
 
   if (!user) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+        <div className="flex items-center space-x-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          <span className="text-sm text-muted-foreground">Loading your dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -476,638 +476,672 @@ function DashboardHome() {
   return (
     <>
       <motion.div
-        className="max-w-7xl mx-auto py-6 text-foreground dark:text-dark-foreground"
+        className="min-h-screen bg-background"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Welcome Header */}
-        <motion.div variants={itemVariants} className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-purple-400 to-pink-400 p-1">
-                <img 
-                  src={monekoAvatar} 
-                  alt="Moneko Avatar" 
-                  className="w-full h-full rounded-full object-cover"
-                />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {getGreeting()}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Ready to master your finances today?
-                </p>
-              </div>
-            </div>
-            
-            {/* Level and Streak Info */}
-            <div className="flex items-center space-x-4">
-              {currentLevelReward && (
-                <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <div className={`p-2 rounded-lg bg-gradient-to-br ${currentLevelReward.color}`}>
-                    <FontAwesomeIcon icon={currentLevelReward.icon} className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Level {levelInfo.level}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">{currentLevelReward.title}</div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-500">
-                  <FontAwesomeIcon icon={faFire} className="h-4 w-4 text-white" />
-                </div>
+        <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
+          {/* Welcome Header - Apple-inspired */}
+          <motion.div variants={itemVariants} className="mb-12">
+            <div className="flex flex-col space-y-6 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-6">
+                <Avatar className="h-20 w-20 ring-2 ring-border shadow-sm">
+                  <AvatarImage src={monekoAvatar} alt="Moneko Avatar" />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
+                    M
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white">{currentStreak}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">day streak</div>
+                  <h1 className="text-4xl font-semibold text-foreground tracking-tight">
+                    {getGreeting()}
+                  </h1>
+                  <p className="text-lg text-muted-foreground mt-1">
+                    Ready to master your finances today?
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* XP Progress Bar */}
-        <motion.div variants={itemVariants} className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Progress to Next Level</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
-                </p>
-              </div>
-              {!levelInfo.isMaxLevel && (
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {levelInfo.xpNeededForNext.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">XP to level {levelInfo.level + 1}</div>
-                </div>
-              )}
-            </div>
-            
-            <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
-                style={{ width: `${levelInfo.progressPercentage}%` }}
-                initial={{ width: 0 }}
-                animate={{ width: `${levelInfo.progressPercentage}%` }}
-                transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
-              />
-            </div>
-            
-            {nextLevelReward && (
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                  <FontAwesomeIcon icon={faGift} className="h-4 w-4" />
-                  <span>Next reward: {nextLevelReward.reward}</span>
-                </div>
-                <button
-                  onClick={() => setShowRewardsModal(true)}
-                  className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-semibold"
-                >
-                  View All Rewards
-                </button>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column - 2 spans */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Financial Overview Card */}
-            <motion.div variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                      <FontAwesomeIcon icon={faDollarSign} className="h-6 w-6" />
+              
+              {/* Level and Streak Info - Redesigned */}
+              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-3">
+                {currentLevelReward && (
+                  <Card className="shadow-sm">
+                    <CardContent className="flex items-center space-x-3 p-4 sm:p-5">
+                      <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+                        {React.createElement(currentLevelReward.icon, { className: "h-4 w-4" })}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-foreground">Level {levelInfo.level}</div>
+                        <div className="text-xs text-muted-foreground">{currentLevelReward.title}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                <Card className="shadow-sm">
+                  <CardContent className="flex items-center space-x-3 p-4 sm:p-5">
+                    <div className="p-2 rounded-lg bg-orange-500/90 text-white">
+                      <Flame className="h-4 w-4" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Financial Overview</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Your financial snapshot</p>
+                      <div className="text-sm font-semibold text-foreground">{currentStreak}</div>
+                      <div className="text-xs text-muted-foreground">day streak</div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* XP Progress Bar - Clean Design */}
+          <motion.div variants={itemVariants} className="mb-12">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4 px-5 sm:px-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-semibold flex items-center space-x-2">
+                      <Trophy className="h-5 w-5 text-primary" />
+                      <span>Progress to Next Level</span>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
+                    </CardDescription>
                   </div>
-                  <Link
-                    to="/dashboard/user-settings/profile"
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold"
-                  >
-                    Update Profile
-                  </Link>
+                  {!levelInfo.isMaxLevel && (
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-primary">
+                        {levelInfo.xpNeededForNext.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">XP to level {levelInfo.level + 1}</div>
+                    </div>
+                  )}
                 </div>
-
-                {financialProfileInsights.hasProfile ? (
-                  <div className="space-y-6">
-                    {/* Key Metrics Grid */}
-                    {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {financialProfileInsights.keyMetrics.monthlyIncome && (
-                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
-                            <FontAwesomeIcon icon={faDollarSign} className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                              ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
-                            </div>
-                            <div className="text-sm text-green-700 dark:text-green-300">Monthly Income</div>
-                          </div>
-                        )}
-
-                        {financialProfileInsights.keyMetrics.monthlySavings && (
-                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
-                            <FontAwesomeIcon icon={faPiggyBank} className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                              ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
-                            </div>
-                            <div className="text-sm text-blue-700 dark:text-blue-300">Monthly Savings</div>
-                          </div>
-                        )}
-
-                        {financialProfileInsights.keyMetrics.emergencyFund && (
-                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-pink-50 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
-                            <FontAwesomeIcon icon={faShieldAlt} className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                              ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
-                            </div>
-                            <div className="text-sm text-purple-700 dark:text-purple-300">Emergency Fund</div>
-                          </div>
-                        )}
-
-                        {financialProfileInsights.keyMetrics.yearsToRetirement && (
-                          <div className="text-center p-4 rounded-xl bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-yellow-50 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700">
-                            <FontAwesomeIcon icon={faCalendarAlt} className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
-                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                              {financialProfileInsights.keyMetrics.yearsToRetirement}
-                            </div>
-                            <div className="text-sm text-orange-700 dark:text-orange-300">Years to Retire</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Profile Completion */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">Profile Completion</h4>
-                        <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                          {financialProfileInsights.completionPercentage}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${financialProfileInsights.completionPercentage}%` }}
-                        />
-                      </div>
+              </CardHeader>
+              <CardContent className="px-5 sm:px-6">
+                <div className="mb-6">
+                  <Progress value={levelInfo.progressPercentage} className="h-3" />
+                </div>
+                
+                {nextLevelReward && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Gift className="h-4 w-4" />
+                      <span>Next reward: {nextLevelReward.reward}</span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faUser} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Create Your Financial Profile</h4>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">Get personalized recommendations based on your financial goals</p>
-                    <Link
-                      to="/dashboard/user-settings/profile"
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowRewardsModal(true)}
                     >
-                      <FontAwesomeIcon icon={faPlus} className="mr-2 h-4 w-4" />
-                      Create Profile
-                    </Link>
+                      View All Rewards
+                    </Button>
                   </div>
                 )}
-              </div>
-            </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {/* Learning Progress Card */}
-            <motion.div variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-                      <FontAwesomeIcon icon={faGraduationCap} className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Learning Progress</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Your educational journey</p>
-                    </div>
-                  </div>
-                  <Link
-                    to="/dashboard/learning"
-                    className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold"
-                  >
-                    View All Courses
-                  </Link>
-                </div>
-
-                {learningInsights.hasCourses ? (
-                  <div className="space-y-6">
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
-                          {learningInsights.completedLessons}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                          {learningInsights.earnedXP}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">XP Earned</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                          {Math.round(learningInsights.progress)}%
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Progress</div>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                      <motion.div 
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${learningInsights.progress}%` }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                      />
-                    </div>
-
-                    {/* Next Lesson */}
-                    {learningInsights.nextLesson && (
-                      <div className="bg-gradient-to-r from-emerald-50 dark:from-emerald-900/20 to-teal-50 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-1">Continue Learning</h4>
-                            <p className="text-emerald-700 dark:text-emerald-300 font-medium mb-1">{learningInsights.nextLesson.title}</p>
-                            <p className="text-sm text-emerald-600 dark:text-emerald-400">{learningInsights.currentCourse?.title}</p>
+          {/* Main Dashboard Grid - Enhanced Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            
+            {/* Left Column - 2 spans */}
+            <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+              
+              {/* Financial Overview Card - Clean Design */}
+              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
+                <motion.div variants={cardHoverVariants}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 rounded-lg bg-primary text-primary-foreground">
+                            <DollarSign className="h-6 w-6" />
                           </div>
-                          <Link
-                            to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}
-                            className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                          >
-                            Continue
+                          <div>
+                            <CardTitle className="text-xl font-semibold">Financial Overview</CardTitle>
+                            <CardDescription>Your financial snapshot</CardDescription>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/dashboard/user-settings/profile">
+                            Update Profile
                           </Link>
-                        </div>
+                        </Button>
                       </div>
-                    )}
+                    </CardHeader>
 
-                    {/* Recent Activity */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Activity</h4>
-                      <Timeline/>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-100 dark:from-emerald-900/30 to-teal-100 dark:to-teal-900/30 rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faBookOpen} className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Start Learning</h4>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Begin your financial education journey</p>
-                    <Link
-                      to="/dashboard/learning"
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg"
-                    >
-                      <FontAwesomeIcon icon={faGraduationCap} className="mr-2 h-4 w-4" />
-                      Explore Courses
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+                    <CardContent>
+                      {financialProfileInsights.hasProfile ? (
+                        <div className="space-y-8">
+                          {/* Key Metrics Grid - Clean Design */}
+                          {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {financialProfileInsights.keyMetrics.monthlyIncome && (
+                                <Card>
+                                  <CardContent className="p-6 text-center">
+                                    <DollarSign className="h-8 w-8 text-primary mx-auto mb-3" />
+                                    <div className="text-2xl font-bold text-foreground mb-1">
+                                      ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground font-medium">Monthly Income</div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {financialProfileInsights.keyMetrics.monthlySavings && (
+                                <Card>
+                                  <CardContent className="p-6 text-center">
+                                    <PiggyBank className="h-8 w-8 text-secondary mx-auto mb-3" />
+                                    <div className="text-2xl font-bold text-foreground mb-1">
+                                      ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground font-medium">Monthly Savings</div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {financialProfileInsights.keyMetrics.emergencyFund && (
+                                <Card>
+                                  <CardContent className="p-6 text-center">
+                                    <Shield className="h-8 w-8 text-accent mx-auto mb-3" />
+                                    <div className="text-2xl font-bold text-foreground mb-1">
+                                      ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground font-medium">Emergency Fund</div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {financialProfileInsights.keyMetrics.yearsToRetirement && (
+                                <Card>
+                                  <CardContent className="p-6 text-center">
+                                    <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                                    <div className="text-2xl font-bold text-foreground mb-1">
+                                      {financialProfileInsights.keyMetrics.yearsToRetirement}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground font-medium">Years to Retire</div>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Profile Completion - Clean */}
+                          <Card>
+                            <CardContent className="p-6">
+                              <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-lg font-semibold">Profile Completion</h4>
+                                <Badge variant="secondary">
+                                  {financialProfileInsights.completionPercentage}%
+                                </Badge>
+                              </div>
+                              <Progress value={financialProfileInsights.completionPercentage} className="h-2" />
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
+                            <User className="h-10 w-10 text-muted-foreground" />
+                          </div>
+                          <h4 className="text-2xl font-semibold mb-3">Create Your Financial Profile</h4>
+                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                            Get personalized recommendations based on your financial goals and current situation
+                          </p>
+                          <Button size="lg" asChild>
+                            <Link to="/dashboard/user-settings/profile">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create Profile
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
+
+              {/* Learning Progress Card - Clean */}
+              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
+                <motion.div variants={cardHoverVariants}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
+                            <GraduationCap className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl font-semibold">Learning Progress</CardTitle>
+                            <CardDescription>Your educational journey</CardDescription>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/dashboard/learning">
+                            View All Courses
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent>
+                      {learningInsights.hasCourses ? (
+                        <div className="space-y-8">
+                          {/* Stats Grid - Clean */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                            <div className="text-center">
+                              <div className="text-3xl font-bold text-primary mb-2">
+                                {learningInsights.completedLessons}
+                              </div>
+                              <div className="text-sm text-muted-foreground font-medium">Completed</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-3xl font-bold text-secondary mb-2">
+                                {learningInsights.earnedXP}
+                              </div>
+                              <div className="text-sm text-muted-foreground font-medium">XP Earned</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-3xl font-bold text-accent-foreground mb-2">
+                                {Math.round(learningInsights.progress)}%
+                              </div>
+                              <div className="text-sm text-muted-foreground font-medium">Progress</div>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar - Clean */}
+                          <div className="mb-6">
+                            <Progress value={learningInsights.progress} className="h-3" />
+                          </div>
+
+                          {/* Next Lesson - Clean */}
+                          {learningInsights.nextLesson && (
+                            <Card>
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="text-lg font-semibold mb-2">Continue Learning</h4>
+                                    <p className="font-medium mb-1">{learningInsights.nextLesson.title}</p>
+                                    <p className="text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
+                                  </div>
+                                  <Button size="sm" asChild>
+                                    <Link to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}>
+                                      Continue
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {/* Recent Activity */}
+                          <Card>
+                            <CardContent className="p-6">
+                              <h4 className="text-lg font-semibold mb-4">Recent Activity</h4>
+                              <Timeline/>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
+                            <BookOpen className="h-10 w-10 text-muted-foreground" />
+                          </div>
+                          <h4 className="text-2xl font-semibold mb-3">Start Learning</h4>
+                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                            Begin your financial education journey with our comprehensive courses
+                          </p>
+                          <Button size="lg" asChild>
+                            <Link to="/dashboard/learning">
+                              <GraduationCap className="mr-2 h-4 w-4" />
+                              Explore Courses
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
           </div>
 
-          {/* Right Column - 1 span */}
-          <div className="space-y-6">
-            
-            {/* AI Assistant Card */}
-            <motion.div variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 text-white">
-                    <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Moneko AI</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Your financial advisor</p>
-                  </div>
-                </div>
-
-                {conversationInsights.hasConversations ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
-                        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                          {conversationInsights.totalConversations}
+            {/* Right Column - 1 span */}
+            <div className="space-y-6 sm:space-y-8">
+              
+              {/* AI Assistant Card - Clean */}
+              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
+                <motion.div variants={cardHoverVariants}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 rounded-lg bg-accent text-accent-foreground">
+                          <MessageCircle className="h-6 w-6" />
                         </div>
-                        <div className="text-xs text-purple-700 dark:text-purple-300">Chats</div>
-                      </div>
-                      <div className="text-center p-3 bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-700 rounded-lg">
-                        <div className="text-xl font-bold text-pink-600 dark:text-pink-400">
-                          {conversationInsights.totalMessages}
+                        <div>
+                          <CardTitle className="text-lg font-semibold">Moneko AI</CardTitle>
+                          <CardDescription>Your personal financial advisor</CardDescription>
                         </div>
-                        <div className="text-xs text-pink-700 dark:text-pink-300">Messages</div>
                       </div>
-                    </div>
+                    </CardHeader>
 
-                    <button
-                      onClick={() => openChat('advisor')}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
-                    >
-                      Continue Chat
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Get help with:</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <FontAwesomeIcon icon={faBullseye} className="h-3 w-3 mr-2 text-purple-500" />
-                        Investment strategies
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <FontAwesomeIcon icon={faDollarSign} className="h-3 w-3 mr-2 text-purple-500" />
-                        Budget planning
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <FontAwesomeIcon icon={faShieldAlt} className="h-3 w-3 mr-2 text-purple-500" />
-                        Financial goals
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => openChat('advisor')}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
-                    >
-                      Start Chat
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+                    <CardContent>
+                      {conversationInsights.hasConversations ? (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Card>
+                              <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-foreground mb-1">
+                                  {conversationInsights.totalConversations}
+                                </div>
+                                <div className="text-xs text-muted-foreground font-medium">Chats</div>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-foreground mb-1">
+                                  {conversationInsights.totalMessages}
+                                </div>
+                                <div className="text-xs text-muted-foreground font-medium">Messages</div>
+                              </CardContent>
+                            </Card>
+                          </div>
 
-            {/* Quick Tools Card */}
-            <motion.div variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                      <FontAwesomeIcon icon={faCalculator} className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Quick Tools</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Financial calculators</p>
-                    </div>
-                  </div>
-                  <Link
-                    to="/calculators"
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold"
-                  >
-                    View All
-                  </Link>
-                </div>
-
-                <div className="space-y-3">
-                  {availableCalculators.slice(0, 4).map((calculator) => (
-                    <Link
-                      key={calculator.title}
-                      to={calculator.path}
-                      className="flex items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600"
-                    >
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${calculator.color} text-white mr-3`}>
-                        <FontAwesomeIcon icon={calculator.icon} className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {calculator.title}
+                          <Button 
+                            size="lg" 
+                            onClick={() => openChat('advisor')}
+                            className="w-full"
+                          >
+                            Continue Chat
+                          </Button>
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">{calculator.category}</div>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground font-medium mb-3">Get personalized help with:</p>
+                            <div className="space-y-3">
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Target className="h-4 w-4 mr-3 text-accent" />
+                                Investment strategies
+                              </div>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <DollarSign className="h-4 w-4 mr-3 text-accent" />
+                                Budget planning
+                              </div>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Shield className="h-4 w-4 mr-3 text-accent" />
+                                Financial goals
+                              </div>
+                            </div>
+                          </div>
+                          <Button 
+                            size="lg" 
+                            onClick={() => openChat('advisor')}
+                            className="w-full"
+                          >
+                            Start Chat
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
+
+              {/* Quick Tools Card - Clean */}
+              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
+                <motion.div variants={cardHoverVariants}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
+                            <Calculator className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg font-semibold">Quick Tools</CardTitle>
+                            <CardDescription>Financial calculators</CardDescription>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/calculators">
+                            View All
+                          </Link>
+                        </Button>
                       </div>
-                      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-400" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+                    </CardHeader>
 
-            {/* Essential Lessons Card */}
-            <motion.div variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-                    <FontAwesomeIcon icon={faLightbulb} className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Essential Lessons</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Foundation knowledge</p>
-                  </div>
-                </div>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {availableCalculators.slice(0, 4).map((calculator) => {
+                          const IconComponent = calculator.icon;
+                          return (
+                            <motion.div key={calculator.title} whileHover={{ x: 2 }} transition={{ duration: 0.2 }}>
+                              <Link to={calculator.path}>
+                                <Card className="hover:bg-muted/50 transition-colors">
+                                  <CardContent className="flex items-center p-4">
+                                    <div className="p-2 rounded-lg bg-primary text-primary-foreground mr-4">
+                                      <IconComponent className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="text-sm font-semibold mb-1">
+                                        {calculator.title}
+                                      </div>
+                                      <Badge variant="secondary" className="text-xs">{calculator.category}</Badge>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </CardContent>
+                                </Card>
+                              </Link>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
 
-                <div className="bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-cyan-50 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
-                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">Your 2025 Guide to Investing</h4>
-                  <p className="text-blue-700 dark:text-blue-300 text-xs mb-3">Master investment fundamentals with 20+ comprehensive lessons</p>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-blue-600 dark:text-blue-400">
-                      <FontAwesomeIcon icon={faBookOpen} className="mr-1" />
-                      20+ lessons available
-                    </div>
-                    <Link
-                      to="/dashboard/essentials"
-                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                    >
-                      Start Learning
-                      <FontAwesomeIcon icon={faArrowRight} className="ml-1 h-3 w-3" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+              {/* Essential Lessons Card - Clean */}
+              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
+                <motion.div variants={cardHoverVariants}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 rounded-lg bg-muted text-muted-foreground">
+                          <Lightbulb className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-semibold">Essential Lessons</CardTitle>
+                          <CardDescription>Foundation knowledge</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent>
+                      <Card>
+                        <CardContent className="p-6">
+                          <h4 className="text-lg font-semibold mb-2">Your 2025 Guide to Investing</h4>
+                          <p className="text-muted-foreground text-sm mb-6">Master investment fundamentals with 20+ comprehensive lessons</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <BookOpen className="mr-2 h-4 w-4" />
+                              20+ lessons available
+                            </div>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to="/dashboard/essentials">
+                                Start Learning
+                                <ArrowRight className="ml-1 h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Rewards Modal */}
-      {showRewardsModal && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowRewardsModal(false)}
-          />
-          
-          {/* Modal */}
-          <motion.div
-            className="fixed inset-4 md:inset-8 lg:inset-16 xl:inset-24 z-50 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ type: "spring", duration: 0.5 }}
+        {/* Modern Rewards Modal */}
+        {showRewardsModal && (
+          <Modal
+            isOpen={showRewardsModal}
+            onClose={() => setShowRewardsModal(false)}
+            width="xwide"
+            contentClassName="p-0"
           >
-            <div className="relative w-full max-w-4xl max-h-full bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
+            <Card className="w-full max-w-4xl max-h-full shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-amber-500 dark:from-amber-400 to-orange-600 dark:to-orange-500 p-6 text-white">
+              <CardHeader className="bg-primary text-primary-foreground p-8">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-white/20 dark:bg-white/10">
-                      <FontAwesomeIcon icon={faTrophy} className="h-6 w-6" />
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-primary-foreground/20">
+                      <Trophy className="h-6 w-6" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Rewards Roadmap</h2>
-                      <p className="text-amber-100 dark:text-amber-200">
+                      <CardTitle className="text-3xl font-bold mb-1">Rewards Roadmap</CardTitle>
+                      <CardDescription className="text-primary-foreground/70">
                         {LEVEL_REWARDS.filter(r => levelInfo.level >= r.level).length} / {LEVEL_REWARDS.length} rewards unlocked
-                      </p>
+                      </CardDescription>
                     </div>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowRewardsModal(false)}
-                    className="p-2 rounded-xl bg-white/20 dark:bg-white/10 hover:bg-white/30 dark:hover:bg-white/20 transition-colors"
+                    className="text-primary-foreground hover:bg-primary-foreground/20"
                   >
-                    <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-                  </button>
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
-              </div>
+              </CardHeader>
               
               {/* Scrollable Content */}
-              <div className="max-h-96 overflow-y-auto p-6 bg-white dark:bg-gray-900">
-                <div className="relative">
-                  {/* Progress line */}
-                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-200 dark:from-amber-300 via-orange-300 dark:via-orange-400 to-amber-200 dark:to-amber-300"></div>
-                  
-                  <div className="space-y-4">
-                    {LEVEL_REWARDS.map((reward, index) => {
-                      const isUnlocked = levelInfo.level >= reward.level;
-                      const isNext = !isUnlocked && reward.level === levelInfo.level + 1;
-                      const xpRequired = LEVEL_REQUIREMENTS[reward.level - 1] || 0;
-                      
-                      return (
-                        <motion.div
-                          key={reward.level}
-                          className={`relative flex items-start gap-4 p-4 rounded-xl transition-all duration-200 ${
-                            isUnlocked 
-                              ? 'bg-gradient-to-r from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700' 
-                              : isNext
-                              ? 'bg-gradient-to-r from-amber-50 dark:from-amber-900/20 to-yellow-50 dark:to-yellow-900/20 border-2 border-amber-300 dark:border-amber-600 ring-2 ring-amber-200 dark:ring-amber-600'
-                              : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 opacity-75'
-                          }`}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                        >
-                          {/* Level indicator */}
-                          <div className={`relative flex-shrink-0 p-3 rounded-xl shadow-lg ${
-                            isUnlocked 
-                              ? `bg-gradient-to-br ${reward.color}` 
-                              : isNext
-                              ? 'bg-gradient-to-br from-amber-400 to-orange-500'
-                              : 'bg-gradient-to-br from-gray-300 to-gray-400'
-                          }`}>
-                            <FontAwesomeIcon 
-                              icon={isUnlocked ? faUnlock : reward.icon} 
-                              className="h-4 w-4 text-white" 
-                            />
-                            {!isUnlocked && (
-                              <div className="absolute -top-1 -right-1 p-1 bg-gray-600 dark:bg-gray-500 rounded-full">
-                                <FontAwesomeIcon icon={faLock} className="h-2 w-2 text-white" />
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-lg font-bold ${
-                                  isUnlocked ? 'text-green-900 dark:text-green-200' : isNext ? 'text-amber-900 dark:text-amber-200' : 'text-gray-700 dark:text-gray-300'
-                                }`}>
-                                  Level {reward.level}
-                                </span>
-                                {isNext && (
-                                  <span className="px-2 py-1 bg-amber-200 text-amber-800 text-xs font-bold rounded-full">
-                                    NEXT
-                                  </span>
-                                )}
-                                {isUnlocked && (
-                                  <span className="px-2 py-1 bg-green-200 text-green-800 text-xs font-bold rounded-full">
-                                    ✓ UNLOCKED
-                                  </span>
-                                )}
-                              </div>
-                              <div className={`text-sm font-medium ${
-                                isUnlocked ? 'text-green-600 dark:text-green-400' : isNext ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'
-                              }`}>
-                                {xpRequired.toLocaleString()} XP
-                              </div>
-                            </div>
-                            
-                            <h4 className={`font-bold mb-1 ${
-                              isUnlocked ? 'text-green-900 dark:text-green-200' : isNext ? 'text-amber-900 dark:text-amber-200' : 'text-gray-700 dark:text-gray-300'
-                            }`}>
-                              {reward.title}
-                            </h4>
-                            <p className={`text-sm mb-3 ${
-                              isUnlocked ? 'text-green-700 dark:text-green-300' : isNext ? 'text-amber-700 dark:text-amber-300' : 'text-gray-600 dark:text-gray-400'
-                            }`}>
-                              {reward.description}
-                            </p>
-                            
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className={`p-1.5 rounded-lg ${
-                                isUnlocked ? 'bg-green-200 dark:bg-green-800' : isNext ? 'bg-amber-200 dark:bg-amber-800' : 'bg-gray-200 dark:bg-gray-700'
-                              }`}>
-                                <FontAwesomeIcon 
-                                  icon={faGift} 
-                                  className={`h-3 w-3 ${
-                                    isUnlocked ? 'text-green-600 dark:text-green-300' : isNext ? 'text-amber-600 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'
-                                  }`} 
-                                />
-                              </div>
-                              <span className={`text-sm font-semibold ${
-                                isUnlocked ? 'text-green-800 dark:text-green-200' : isNext ? 'text-amber-800 dark:text-amber-200' : 'text-gray-600 dark:text-gray-400'
-                              }`}>
-                                🎁 {reward.reward}
-                              </span>
-                            </div>
-                            
-                            {isNext && (
-                              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
-                                <div className="text-xs text-amber-800 dark:text-amber-200 font-medium mb-2">
-                                  {levelInfo.xpNeededForNext.toLocaleString()} XP needed to unlock
+              <div className="max-h-96 overflow-y-auto">
+                <CardContent className="p-8">
+                  <div className="relative">
+                    {/* Progress line */}
+                    <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border"></div>
+                    
+                    <div className="space-y-6">
+                      {LEVEL_REWARDS.map((reward, index) => {
+                        const isUnlocked = levelInfo.level >= reward.level;
+                        const isNext = !isUnlocked && reward.level === levelInfo.level + 1;
+                        const xpRequired = LEVEL_REQUIREMENTS[reward.level - 1] || 0;
+                        
+                        return (
+                          <motion.div
+                            key={reward.level}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                          >
+                            <Card className={cn(
+                              "transition-all duration-300",
+                              isUnlocked 
+                                ? "bg-primary/5 border-primary/20" 
+                                : isNext
+                                ? "bg-muted/50 border-border"
+                                : "bg-muted opacity-60"
+                            )}>
+                              <CardContent className="flex items-start gap-6 p-6">
+                                {/* Level indicator */}
+                                <div className="relative flex-shrink-0">
+                                  <div className={cn(
+                                    "p-4 rounded-xl shadow-sm",
+                                    isUnlocked 
+                                      ? "bg-primary text-primary-foreground" 
+                                      : isNext
+                                      ? "bg-muted text-muted-foreground"
+                                      : "bg-muted-foreground text-muted"
+                                  )}>
+                                    {isUnlocked ? (
+                                      <CheckCircle className="h-6 w-6 text-white" />
+                                    ) : (
+                                      React.createElement(reward.icon, { className: "h-6 w-6 text-white" })
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="h-2 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-amber-400 dark:from-amber-300 to-orange-500 dark:to-orange-400 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min((currentXP / xpRequired) * 100, 100)}%` }}
-                                  ></div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <h3 className={cn(
+                                        "text-2xl font-bold",
+                                        isUnlocked ? "text-primary" 
+                                        : isNext ? "text-muted-foreground" 
+                                        : "text-muted-foreground"
+                                      )}>
+                                        Level {reward.level}
+                                      </h3>
+                                      {isNext && (
+                                        <Badge variant="secondary">
+                                          NEXT
+                                        </Badge>
+                                      )}
+                                      {isUnlocked && (
+                                        <Badge variant="secondary">
+                                          ✓ UNLOCKED
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                      {xpRequired.toLocaleString()} XP
+                                    </div>
+                                  </div>
+                                  
+                                  <h4 className="text-lg font-semibold mb-2">
+                                    {reward.title}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mb-4">
+                                    {reward.description}
+                                  </p>
+                                  
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-muted">
+                                      <Gift className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      🎁 {reward.reward}
+                                    </span>
+                                  </div>
+                                  
+                                  {isNext && (
+                                    <Card>
+                                      <CardContent className="p-4">
+                                        <div className="text-sm font-medium mb-3">
+                                          {levelInfo.xpNeededForNext.toLocaleString()} XP needed to unlock
+                                        </div>
+                                        <Progress 
+                                          value={Math.min((currentXP / xpRequired) * 100, 100)} 
+                                          className="h-2"
+                                        />
+                                      </CardContent>
+                                    </Card>
+                                  )}
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                </CardContent>
               </div>
               
               {/* Footer */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              <div className="p-6 bg-muted/30 border-t">
+                <div className="text-center text-muted-foreground">
                   Keep learning and growing to unlock amazing rewards! 🚀
                 </div>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
+            </Card>
+          </Modal>
+        )}
     </>
   );
 }

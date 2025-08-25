@@ -352,15 +352,15 @@ function Profile() {
             </button>
           </div>
         ) : (
-          <div className="flex px-4 py-6">
-            <main className="mx-auto flex w-full flex-col gap-6">
+          <div className="flex px-4 sm:px-6 py-6">
+            <main className="mx-auto flex w-full flex-col gap-4 sm:gap-6">
               {/* Header with user info and controls */}
               {status === "loading" ? (
                 <></>
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200" >
+                    <h1 className="text-xl lg:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200" >
                       Portfolio
                     </h1>
                   
@@ -370,10 +370,10 @@ function Profile() {
                         onClick={() =>
                           setIsViewDropdownOpen(!isViewDropdownOpen)
                         }
-                        className="flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        className="flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-1.5 text-sm lg:text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 touch-manipulation min-h-[44px]"
                         disabled={isEditMode}
                       >
-                        <span className="mr-2">
+                        <span className="mr-2 text-sm lg:text-sm">
                           {currentViewId && views.length > 0
                             ? views.find((v) => v.id === currentViewId)?.name ||
                               "Select View"
@@ -383,12 +383,12 @@ function Profile() {
                         </span>
                         <FontAwesomeIcon
                           icon={faChevronDown}
-                          className="h-3 w-3"
+                          className="h-3 w-3 sm:h-4 sm:w-4"
                         />
                       </button>
 
                       {isViewDropdownOpen && (
-                        <div className="absolute left-0 z-10 mt-1 w-56 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <div className="absolute left-0 z-10 mt-1 w-56 sm:w-64 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                           <div className="py-1">
                             {views.length > 0 ? (
                               <>
@@ -396,7 +396,7 @@ function Profile() {
                                   <button
                                     key={view.id}
                                     onClick={() => handleSwitchView(view.id)}
-                                    className={`block w-full px-4 py-2 text-left text-sm ${view.id === currentViewId ? "bg-gray-100 text-gray-900" : "text-gray-700 hover:bg-gray-50"}`}
+                                    className={`block w-full px-4 py-2 text-left text-sm lg:text-sm min-h-[44px] touch-manipulation ${view.id === currentViewId ? "bg-gray-100 text-gray-900" : "text-gray-700 hover:bg-gray-50"}`}
                                   >
                                     {view.name}
                                   </button>
@@ -404,7 +404,7 @@ function Profile() {
                                 <div className="my-1 border-t border-gray-200"></div>
                               </>
                             ) : (
-                              <div className="px-4 py-2 text-sm italic text-gray-500">
+                              <div className="px-4 py-2 text-sm lg:text-sm italic text-gray-500">
                                 No portfolio views yet
                               </div>
                             )}
@@ -413,7 +413,7 @@ function Profile() {
                                 setIsViewDropdownOpen(false);
                                 setIsTemplateModalOpen(true);
                               }}
-                              className="block w-full px-4 py-2 text-left text-sm font-medium text-primary hover:bg-gray-50"
+                              className="block w-full px-4 py-2 text-left text-sm lg:text-sm font-medium text-primary hover:bg-gray-50 min-h-[44px] touch-manipulation"
                             >
                               <FontAwesomeIcon icon={faPlus} className="mr-2" />
                               Create New View
@@ -427,7 +427,7 @@ function Profile() {
                   {/* User controls */}
                   <div className="flex items-center space-x-2">
                     {saveSuccess && (
-                      <span className="mr-2 rounded-full bg-green-50 px-3 py-1 text-sm text-green-600">
+                      <span className="mr-2 rounded-full bg-green-50 px-3 py-1 text-sm lg:text-sm text-green-600">
                         Portfolio saved!
                       </span>
                     )}
@@ -435,31 +435,31 @@ function Profile() {
                     {isEditMode ? (
                       <>
                         {hasUnsavedChanges && (
-                          <span className="mr-2 rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-600">
+                          <span className="mr-2 rounded-full bg-amber-50 px-3 py-1 text-sm lg:text-sm text-amber-600">
                             Unsaved changes
                           </span>
                         )}
                         <button
                           onClick={handleCancelClick}
-                          className="flex items-center justify-center rounded-md px-3 py-1.5 text-gray-700 hover:bg-gray-100"
+                          className="flex items-center justify-center rounded-md px-4 py-2 sm:px-3 sm:py-1.5 text-sm lg:text-sm text-gray-700 hover:bg-gray-100 touch-manipulation min-h-[44px]"
                           title="Cancel editing"
                         >
                           <FontAwesomeIcon
                             icon={faTimes}
                             className="mr-1 h-4 w-4"
                           />
-                          <span>Cancel</span>
+                          <span className="text-sm lg:text-sm">Cancel</span>
                         </button>
                         <button
                           onClick={saveDashboard}
                           disabled={isSaving}
-                          className="hover:bg-primary-dark flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-white transition-colors"
+                          className="hover:bg-primary-dark flex items-center justify-center rounded-md bg-primary px-4 py-2 sm:px-3 sm:py-1.5 text-sm lg:text-sm text-white transition-colors touch-manipulation min-h-[44px]"
                           title="Save portfolio"
                         >
                           {isSaving ? (
                             <>
                               <div className="mr-1 h-4 w-4 animate-spin rounded-full border-b-2 border-t-2 border-white" />
-                              <span>Saving...</span>
+                              <span className="text-sm lg:text-sm">Saving...</span>
                             </>
                           ) : (
                             <>
@@ -467,7 +467,7 @@ function Profile() {
                                 icon={faCheck}
                                 className="mr-1 h-4 w-4"
                               />
-                              <span>Save</span>
+                              <span className="text-sm lg:text-sm">Save</span>
                             </>
                           )}
                         </button>
@@ -476,14 +476,14 @@ function Profile() {
                       <div className="flex items-center space-x-2">
                          <button
                       onClick={() => setShowFinetuneSection(!showFinetuneSection)}
-                      className="flex items-center justify-center text-sm font-medium text-gray-700"
+                      className="flex items-center justify-center text-sm lg:text-sm font-medium text-gray-700 min-h-[44px] min-w-[44px] touch-manipulation"
                       title="Finetune your financial data"
                     >
                       <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
                     </button>
                         <button
                           onClick={toggleEditMode}
-                          className="flex items-center justify-center rounded-full p-2 hover:bg-gray-100"
+                          className="flex items-center justify-center rounded-full p-3 sm:p-2 hover:bg-gray-100 touch-manipulation min-h-[44px] min-w-[44px]"
                           title="Edit portfolio"
                         >
                           <FontAwesomeIcon
@@ -516,13 +516,13 @@ function Profile() {
                   );
                 } else if (status === ("failed" as DashboardStatus)) {
                   return (
-                    <div className="mt-4 rounded-lg bg-red-50 p-6 text-center">
-                      <p className="mb-2 text-red-600">
+                    <div className="mt-4 rounded-lg bg-red-50 p-4 sm:p-6 text-center">
+                      <p className="mb-2 text-sm lg:text-sm text-red-600">
                         {error || "Failed to load portfolio"}
                       </p>
                       <button
                         onClick={loadDashboard}
-                        className="rounded-md bg-red-100 px-4 py-2 text-red-700 transition-colors hover:bg-red-200"
+                        className="rounded-md bg-red-100 px-4 py-2 text-sm lg:text-sm text-red-700 transition-colors hover:bg-red-200 min-h-[44px] touch-manipulation"
                       >
                         Retry
                       </button>
@@ -571,7 +571,7 @@ function Profile() {
           ? "Create Your First Portfolio"
           : "Create New Portfolio View"}
         footer={() => (
-          <div className=" flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               type="button"
               onClick={handleCreateView}
@@ -614,7 +614,7 @@ function Profile() {
                   {templatesStatus === "loading" && templates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8">
                       <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
-                      <p className="text-gray-600">Loading templates...</p>
+                      <p className="text-sm lg:text-sm text-gray-600">Loading templates...</p>
                     </div>
                   ) : templatesStatus === "failed" ? (
                     <div className="flex flex-col items-center justify-center py-8">
@@ -624,13 +624,13 @@ function Profile() {
                           className="h-6 w-6"
                         />
                       </div>
-                      <p className="mb-4 text-center text-red-500">
+                      <p className="mb-4 text-center text-sm lg:text-sm text-red-500">
                         {templatesError || "Failed to load templates"}
                       </p>
                       <div className="flex space-x-4">
                         <button
                           onClick={handleRetryTemplates}
-                          className="flex items-center rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+                          className="flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm lg:text-sm text-gray-700 hover:bg-gray-300 min-h-[44px] touch-manipulation"
                         >
                           <FontAwesomeIcon
                             icon={faRefresh}
@@ -685,9 +685,9 @@ function Profile() {
                                   className="h-5 w-5"
                                 />
                               </div>
-                              <h4 className="font-medium">{template.name}</h4>
+                              <h4 className="text-base lg:text-sm xl:text-base font-medium">{template.name}</h4>
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm lg:text-xs xl:text-sm text-gray-600">
                               {template.description}
                             </p>
                           </div>
@@ -715,9 +715,9 @@ function Profile() {
                                 className="h-5 w-5"
                               />
                             </div>
-                            <h4 className="font-medium">Empty Portfolio</h4>
+                            <h4 className="text-base lg:text-sm xl:text-base font-medium">Empty Portfolio</h4>
                           </div>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm lg:text-xs xl:text-sm text-gray-600">
                             Start with a blank portfolio and add widgets later
                           </p>
                         </div>
@@ -726,14 +726,14 @@ function Profile() {
                       <div className="mb-4">
                         <label
                           htmlFor="viewName"
-                          className="mb-1 block text-sm font-medium text-gray-700"
+                          className="mb-1 block text-sm lg:text-sm font-medium text-gray-700"
                         >
                           Portfolio Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           id="viewName"
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm lg:text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px] touch-manipulation"
                           value={newViewName}
                           onChange={(e) => setNewViewName(e.target.value)}
                           placeholder="My Financial Portfolio"

@@ -557,22 +557,24 @@ export function Dashboard() {
     <ProtectedRouteSubscription>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
-      <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20 p-2 sm:p-4 font-sans">
-        <div className="flex flex-col md:flex-row h-full gap-3 overflow-hidden">
-      {/* Mobile Menu Toggle Button - Only visible on mobile */}
-      <div className="flex items-center justify-between md:hidden mb-3">
-        <Link to="/" className="flex items-center space-x-3">
-          <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
-            <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
+      <div className="lg:h-screen lg:overflow-hidden lg:bg-gradient-to-br from-background dark:from-dark-background to-purple-300/30 dark:to-purple-800/20 p-4 sm:p-5 md:p-6 lg:p-4 font-sans mobile-text-optimize">
+        <div className="flex flex-col md:flex-row h-full gap-3 sm:gap-4 md:gap-3 overflow-hidden">
+      {/* Mobile Header - Optimized for touch and readability */}
+      <div className="flex items-center justify-between md:hidden mb-3 sm:mb-4 px-4 py-2">
+        <Link to="/" className="flex items-center space-x-2 sm:space-x-3 py-2 px-2 rounded-lg hover:bg-muted/30 transition-colors touch-manipulation">
+          <div className="bg-icon flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl shadow-sm">
+            <OptimizedImage src={logo} alt="Moneko Logo" className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          {/* <span className="text-xl font-bold tracking-tight text-foreground dark:text-dark-foreground"> */}
+          <span className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+            Moneko
+          </span>
         </Link>
         <Button
           onClick={toggleMobileMenu}
           variant="ghost"
           size="icon"
           className={classNames(
-            "rounded-lg shadow-sm transition-all duration-300",
+            "h-11 w-11 rounded-lg shadow-sm transition-all duration-300 touch-manipulation",
             mobileMenuOpen 
               ? "bg-red-50/70 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100/70 dark:hover:bg-red-900/50" 
               : "bg-background/70 text-foreground hover:bg-muted/70"
@@ -587,7 +589,7 @@ export function Dashboard() {
             <FontAwesomeIcon 
               icon={mobileMenuOpen ? faTimes : faBars} 
               className={classNames(
-                "h-6 w-6 transition-all duration-300",
+                "h-5 w-5 transition-all duration-300",
                 mobileMenuOpen ? "text-red-600 dark:text-red-400" : "text-foreground"
               )} 
             />
@@ -600,17 +602,17 @@ export function Dashboard() {
         className={classNames(
           "flex-shrink-0 transition-all duration-300 ease-in-out",
           mobileMenuOpen ? "block" : "hidden md:block",
-          "w-full md:w-64 md:max-h-full md:overflow-y-auto"
+          "w-full md:w-48 lg:w-52 xl:w-64 md:max-h-full md:overflow-y-auto"
         )}
         initial={{ x: -64, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex h-full flex-col rounded-2xl border border-border bg-card/70 backdrop-blur-sm shadow-sm">
-          <div className="flex-1 py-6">
+        <div className="flex h-full flex-col rounded-xl md:rounded-2xl border border-border bg-card/70 backdrop-blur-sm shadow-sm">
+          <div className="flex-1 py-3 sm:py-4 md:py-6">
             {/* Logo Section - Hidden on mobile (shown in top bar) */}
-            <div className="mb-6 ml-4 hidden md:block">
-              <Link to="/" className="flex items-center space-x-3 mb-4">
+            <div className="mb-4 md:mb-6 ml-3 md:ml-4 hidden md:block">
+              <Link to="/" className="flex items-center space-x-3 mb-4 py-2 px-2 rounded-lg hover:bg-muted/30 transition-colors">
                 <div className="bg-icon flex h-10 w-10 items-center justify-center rounded-xl shadow-sm">
                   <OptimizedImage src={logo} alt="Moneko Logo" className="h-6 w-6" />
                 </div>
@@ -618,12 +620,10 @@ export function Dashboard() {
                   Moneko
                 </span>
               </Link>
-              
-           
             </div>
 
-            {/* Navigation Menu */}
-            <nav className="flex-1 space-y-2 px-4 h-full">
+            {/* Navigation Menu - Mobile optimized spacing and touch targets */}
+            <nav className="flex-1 space-y-2 sm:space-y-2.5 md:space-y-2 px-4 sm:px-5 md:px-4 h-full mobile-scroll">
               {menuItems.map((item) => (
                 <div key={item.id}>
                   <Link 
@@ -645,10 +645,10 @@ export function Dashboard() {
                     }}
                   >
                     <motion.div
-                      className={`flex w-full items-center justify-between px-4 py-3 transition-all duration-200 ${
+                      className={`dashboard-nav-item flex w-full items-center justify-between px-4 sm:px-5 py-4 sm:py-4 md:py-3 rounded-lg transition-all duration-200 touch-manipulation ${
                         isRouteActive(item.path)
-                          ? "border-l-4 border-primary text-primary"
-                          : "border-l-4 border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                          ? "bg-primary/10 border-l-4 border-primary text-primary shadow-sm"
+                          : "border-l-4 border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground active:bg-muted/90"
                       }`}
                       whileTap={{ scale: 0.98 }}
                       transition={{
@@ -657,16 +657,16 @@ export function Dashboard() {
                         damping: 25,
                       }}
                     >
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2.5 sm:space-x-3">
                         <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                          className={`flex h-8 w-8 sm:h-9 sm:w-9 md:h-8 md:w-8 items-center justify-center rounded-lg transition-colors ${
                             isRouteActive(item.path)
-                              ? ""
+                              ? "bg-primary/15"
                               : "group-hover:bg-muted"
                           }`}
                         >
                           <FontAwesomeIcon
-                            className={`size-5 ${
+                            className={`h-4 w-4 sm:h-5 sm:w-5 md:h-4 md:w-4 ${
                               isRouteActive(item.path)
                                 ? "text-primary"
                                 : "text-muted-foreground"
@@ -674,7 +674,7 @@ export function Dashboard() {
                             icon={item.icon}
                           />
                         </div>
-                        <span className="text-md font-medium">
+                        <span className="text-sm sm:text-base md:text-sm font-medium leading-tight">
                           {item.label}
                         </span>
                       </div>
@@ -688,22 +688,22 @@ export function Dashboard() {
             </nav>
           </div>
 
-          {/* User Profile Section */}
-          <div className="border-t border-border p-4 relative">
+          {/* User Profile Section - Mobile optimized */}
+          <div className="border-t border-border p-4 sm:p-5 md:p-4 relative">
             {isLoading||isSubscriptionLoading ? (
-              <div className="flex animate-pulse items-center space-x-3 rounded-lg px-4 py-3">
-                <div className="h-10 w-10 rounded-full bg-muted"></div>
-                <div className="flex-1">
-                  <div className="mb-1 h-3 w-24 rounded bg-muted"></div>
-                  <div className="h-2 w-32 rounded bg-muted"></div>
+              <div className="flex animate-pulse items-center space-x-2.5 sm:space-x-3 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-muted"></div>
+                <div className="flex-1 min-w-0">
+                  <div className="mb-1 h-3 w-20 sm:w-24 rounded bg-muted"></div>
+                  <div className="h-2 w-28 sm:w-32 rounded bg-muted"></div>
                 </div>
               </div>
             ) : user ? (
               <>
                 <motion.div 
-                  className="flex items-center space-x-3 rounded-lg py-3 w-full overflow-x-hidden cursor-pointer hover:bg-muted/50 transition-all duration-200"
+                  className="dashboard-user-menu flex items-center space-x-2.5 sm:space-x-3 rounded-lg px-2 py-2.5 sm:py-3 w-full overflow-x-hidden cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-all duration-200 touch-manipulation"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <UserAvatar 
@@ -712,12 +712,17 @@ export function Dashboard() {
                     showPremiumCrown={true}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground">
+                    <p className="text-sm sm:text-sm font-medium text-card-foreground truncate">
                       {user.user_metadata?.full_name || "User"}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
-                 
+                  <div className="flex-shrink-0">
+                    <FontAwesomeIcon 
+                      icon={userMenuOpen ? faTimes : faBars}
+                      className="h-3.5 w-3.5 text-muted-foreground"
+                    />
+                  </div>
                 </motion.div>
 
                 {/* User Menu Popup */}
@@ -740,16 +745,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
-                          whileHover={{ x: 2 }}
+                          className="flex items-center space-x-2.5 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-muted/50 active:bg-muted/70 transition-colors duration-200 touch-manipulation"
+                          whileHover={{ x: 1 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-muted-foreground"
+                              className="h-4 w-4 sm:h-4 sm:w-4 text-muted-foreground"
                               icon={faCog}
                             />
                           </div>
-                          <span className="text-sm font-medium text-popover-foreground">
+                          <span className="text-sm sm:text-sm font-medium text-popover-foreground">
                             Settings
                           </span>
                         </motion.div>
@@ -765,16 +770,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
-                          whileHover={{ x: 2 }}
+                          className="flex items-center space-x-2.5 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-muted/50 active:bg-muted/70 transition-colors duration-200 touch-manipulation"
+                          whileHover={{ x: 1 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-muted-foreground"
+                              className="h-4 w-4 sm:h-4 sm:w-4 text-muted-foreground"
                               icon={faUser}
                             />
                           </div>
-                          <span className="text-sm font-medium text-popover-foreground">
+                          <span className="text-sm sm:text-sm font-medium text-popover-foreground">
                             Profile
                           </span>
                         </motion.div>
@@ -790,16 +795,16 @@ export function Dashboard() {
                         }}
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
-                          whileHover={{ x: 2 }}
+                          className="flex items-center space-x-2.5 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-muted/50 active:bg-muted/70 transition-colors duration-200 touch-manipulation"
+                          whileHover={{ x: 1 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-muted-foreground"
+                              className="h-4 w-4 sm:h-4 sm:w-4 text-muted-foreground"
                               icon={faIdCard}
                             />
                           </div>
-                          <span className="text-sm font-medium text-popover-foreground">
+                          <span className="text-sm sm:text-sm font-medium text-popover-foreground">
                             Membership
                           </span>
                         </motion.div>
@@ -807,19 +812,18 @@ export function Dashboard() {
                       <a 
                         href="mailto:hello@moneko.io"
                         className="block"
-                      
                       >
                         <motion.div
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-200"
-                          whileHover={{ x: 2 }}
+                          className="flex items-center space-x-2.5 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-muted/50 active:bg-muted/70 transition-colors duration-200 touch-manipulation"
+                          whileHover={{ x: 1 }}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-muted">
                             <FontAwesomeIcon
-                              className="h-4 w-4 text-muted-foreground"
+                              className="h-4 w-4 sm:h-4 sm:w-4 text-muted-foreground"
                               icon={faHeadphones}
                             />
                           </div>
-                          <span className="text-sm font-medium text-popover-foreground">
+                          <span className="text-sm sm:text-sm font-medium text-popover-foreground">
                             Support
                           </span>
                         </motion.div>
@@ -830,21 +834,21 @@ export function Dashboard() {
 
                       {/* Logout Option */}
                       <motion.div
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50/50 dark:hover:bg-red-900/20 transition-colors duration-200 cursor-pointer"
+                        className="flex items-center space-x-2.5 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-red-50/50 dark:hover:bg-red-900/20 active:bg-red-50/70 dark:active:bg-red-900/30 transition-colors duration-200 cursor-pointer touch-manipulation"
                         onClick={() => {
                           setUserMenuOpen(false);
                           setMobileMenuOpen(false);
                           handleSignOut();
                         }}
-                        whileHover={{ x: 2 }}
+                        whileHover={{ x: 1 }}
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/70 dark:bg-red-900/30">
+                        <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-red-100/70 dark:bg-red-900/30">
                           <FontAwesomeIcon
-                            className="h-4 w-4 text-red-600 dark:text-red-400"
+                            className="h-4 w-4 sm:h-4 sm:w-4 text-red-600 dark:text-red-400"
                             icon={faSignOut}
                           />
                         </div>
-                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                        <span className="text-sm sm:text-sm font-medium text-red-600 dark:text-red-400">
                           Logout
                         </span>
                       </motion.div>
@@ -855,20 +859,19 @@ export function Dashboard() {
             ) : (
               <Link to="/login" search={{redirect: "/dashboard"}} className="group">
                 <motion.div
-                  className="flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 hover:bg-muted/50"
-                  whileHover={{ x: 3 }}
+                  className="flex items-center space-x-2.5 sm:space-x-3 rounded-lg px-3 sm:px-4 py-3 sm:py-3.5 transition-all duration-200 hover:bg-muted/50 active:bg-muted/70 touch-manipulation"
+                  whileHover={{ x: 2 }}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10">
                     <FontAwesomeIcon
                       icon={faSignInAlt}
-                      className="h-5 w-5 text-primary"
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-primary"
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-card-foreground">
+                    <p className="text-sm sm:text-sm font-medium text-card-foreground">
                       Sign In
                     </p>
-                   
                   </div>
                 </motion.div>
               </Link>
@@ -1019,12 +1022,12 @@ export function Dashboard() {
         )}
       </AnimatePresence>
    
-      {/* Main Content Area */}
+      {/* Main Content Area - Mobile optimized spacing and layout */}
      <div className={classNames(
-       "flex min-w-0 flex-1 flex-col gap-2 md:gap-4 overflow-auto",
-       expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-20 lg:pt-0" : ""
+       "flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 overflow-auto",
+       expandedMenu?.submenu && expandedMenu?.submenu.length > 0 ? "pt-16 sm:pt-18 md:pt-20 lg:pt-0" : ""
      )}>
-        {/* Header - Always visible regardless of submenu state */}
+        {/* Header - Responsive spacing */}
         <motion.div
           className="transition-all duration-300"
           initial={{ y: -20, opacity: 0 }}
@@ -1034,15 +1037,14 @@ export function Dashboard() {
           <BreadCrumbsHeader />
         </motion.div>
 
-        {/* Dashboard Content */}
+        {/* Dashboard Content - Mobile optimized padding and layout */}
         <motion.main
-          className="h-full p-4 flex-1 overflow-auto rounded-xl border border-border bg-card/80 backdrop-blur-md shadow-md"
+          className="h-full p-0 sm:p-0 xl:p-4 flex-1 overflow-auto rounded-lg sm:rounded-xl lg:border border-border lg:bg-card/80 lg:backdrop-blur-md lg:shadow-md mobile-scroll"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >                         
                 <Outlet />             
-           
         </motion.main>
           </div>
 
@@ -1055,28 +1057,28 @@ export function Dashboard() {
           />
         </div>
       </div>
-      {/* AI Chat Drawer */}
+      {/* AI Chat Drawer - Mobile optimized full screen experience */}
       <AnimatePresence>
         {aiChatOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - More prominent on mobile */}
             <motion.div
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/30 sm:bg-black/20 backdrop-blur-sm z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => closeChat()}
             />
             
-            {/* Drawer */}
+            {/* Drawer - Mobile-first responsive sizing */}
             <motion.div
-              className="fixed right-0 top-0 h-full w-screen lg:w-[50rem] z-50 flex flex-col overflow-hidden"
+              className="fixed right-0 top-0 h-full w-full sm:w-screen md:w-[90vw] lg:w-[50rem] z-50 flex flex-col overflow-hidden"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              {/* Chat Interface Content - Full Height with proper styling */}
+              {/* Chat Interface Content - Optimized for mobile touch interaction */}
               <div className="h-full w-full">
                 {selectedAI === 'advisor' && (
                   <FinancialAdvisorChatInterface />

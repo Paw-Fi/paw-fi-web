@@ -7,6 +7,7 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
+import { useSubscription } from "@/hooks/use-subscription";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const { plan = "plus", billing = "yearly", promo, status, session_id, trial } = useSearch({ strict: false });
   const { user } = useAuth();
+  const { isActive: hasActiveSub } = useSubscription(user?.id);
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +85,14 @@ function CheckoutPage() {
       }
     };
   }, []);
+
+  // If user already has an active subscription and we're not handling a status callback, redirect them
+  useEffect(() => {
+    if (user && hasActiveSub && !status) {
+      toast.info("You already have an active subscription.");
+      navigate({ to: "/dashboard" });
+    }
+  }, [user, hasActiveSub, status, navigate]);
 
   // Handle payment status verification when returning from Stripe checkout
   useEffect(() => {

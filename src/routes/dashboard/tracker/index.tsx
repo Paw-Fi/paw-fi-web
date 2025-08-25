@@ -204,7 +204,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   
         {/* Clean Header inspired by the design */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
             <div className="flex items-center justify-between" data-tour="page-header">
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -231,7 +231,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         </div>
   
         {/* Main Content */}
-        <div id="main-content" className="max-w-6xl mx-auto px-6 py-8 space-y-8" tabIndex={-1}>
+        <div id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8" tabIndex={-1}>
           {hasGoals ? (
             <>
               <div data-tour="spotlight-section">
@@ -280,7 +280,7 @@ const SpotlightSection = memo(function SpotlightSection({
       transition={{ duration: 0.4 }}
     >
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Spotlight</h2>
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {spotlightGoals.map((goal, index) => (
           <SpotlightCard 
             key={goal.id}
@@ -395,7 +395,7 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
   
   return (
     <motion.section 
-      className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
@@ -403,7 +403,7 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
       {statItems.map((stat) => (
         <motion.div 
           key={stat.label} 
-          className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-gray-100 dark:border-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300"
+          className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 text-center border border-gray-100 dark:border-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300"
           whileHover={{ y: -2 }}
         >
           <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center mx-auto mb-4`}>
@@ -444,8 +444,8 @@ const CommandCenter = memo(function CommandCenter({
       transition={{ duration: 0.4, delay: 0.2 }}
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h2>
+      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Goals</h2>
       </div>
       
       {/* Goals List */}
@@ -492,32 +492,32 @@ const GoalCard = memo(function GoalCard({
   return (
     <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
       <motion.div 
-        className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
+        className="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
         whileHover={{ x: 4 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Icon */}
-          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0">
             <FontAwesomeIcon 
               icon={getGoalIcon(goal)} 
-              className="w-6 h-6 text-gray-600 dark:text-gray-300" 
+              className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-300" 
             />
           </div>
           
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {goal.title}
               </h3>
-              <span className="text-lg font-bold text-gray-900 dark:text-white ml-4">
+              <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white ml-2 sm:ml-4">
                 {Math.round(progress)}%
               </span>
             </div>
             
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 sm:h-3 overflow-hidden">
               <motion.div 
                 className={`h-full rounded-full ${getProgressColor(progress)}`}
                 initial={{ width: 0 }}

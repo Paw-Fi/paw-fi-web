@@ -138,27 +138,27 @@ function BasicLessonCard({
   linkTo: string;
 }) {
   return (
-    <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200 ease-out">
+    <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200 ease-out touch-manipulation active:scale-[0.98]">
       <Link to={linkTo} className="flex h-full flex-col">
-        <CardHeader className="flex-grow space-y-6 p-8">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <span className="text-2xl">{icon}</span>
+        <CardHeader className="flex-grow space-y-4 sm:space-y-6 p-4 sm:p-6 md:p-8">
+          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg sm:rounded-xl bg-primary text-primary-foreground">
+            <span className="text-lg sm:text-xl md:text-2xl">{icon}</span>
           </div>
-          <div className="space-y-3">
-            <CardTitle className="text-xl font-semibold text-card-foreground leading-tight">
+          <div className="space-y-2 sm:space-y-3">
+            <CardTitle className="text-base sm:text-lg md:text-xl font-semibold text-card-foreground leading-tight">
               {title}
             </CardTitle>
-            <CardDescription className="text-muted-foreground leading-relaxed">
+            <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
               {description}
             </CardDescription>
           </div>
         </CardHeader>
-        <CardFooter className="p-8 pt-0">
-          <div className="flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform duration-200">
+        <CardFooter className="p-4 sm:p-6 md:p-8 pt-0">
+          <div className="flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform duration-200 text-sm sm:text-base">
             Start Lesson
             <FontAwesomeIcon 
               icon={faArrowRight} 
-              className="ml-2 text-sm" 
+              className="ml-1.5 sm:ml-2 text-xs sm:text-sm" 
               aria-hidden="true" 
             />
           </div>
@@ -254,12 +254,12 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-32 pb-20 px-6 lg:px-8">
+      <section className="relative z-10 pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           {/* Heading */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <motion.h2
-              className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 tracking-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground mb-4 sm:mb-6 tracking-tight leading-tight"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
@@ -268,7 +268,7 @@ export default function HomePage() {
             </motion.h2>
             
             <motion.p
-              className="text-xl md:text-2xl text-muted-foreground mb-12 font-light"
+              className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground mb-8 sm:mb-10 md:mb-12 font-light leading-relaxed max-w-3xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
@@ -279,7 +279,7 @@ export default function HomePage() {
 
           {/* AI Search Input */}
           <motion.div 
-            className="mb-16"
+            className="mb-8 sm:mb-12 md:mb-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
@@ -300,22 +300,22 @@ export default function HomePage() {
                 nextSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="inline-flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+            className="inline-flex flex-col items-center gap-1.5 sm:gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200 touch-manipulation active:scale-95"
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <span className="text-sm font-medium">Scroll to explore</span>
-            <FontAwesomeIcon icon={faChevronDown} className="text-lg" />
+            <span className="text-xs sm:text-sm font-medium">Scroll to explore</span>
+            <FontAwesomeIcon icon={faChevronDown} className="text-base sm:text-lg" />
           </motion.button>
         </div>
       </section>
 
       {/* Video Demo Section */}
-      <section className="relative z-10 py-20 px-6 lg:px-8">
+      <section className="relative z-10 py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 sm:mb-10 md:mb-12">
             <motion.h2
-              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6 leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -324,7 +324,7 @@ export default function HomePage() {
               See Moneko in Action
             </motion.h2>
             <motion.p
-              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -337,7 +337,7 @@ export default function HomePage() {
           <Dialog>
             <DialogTrigger asChild>
               <motion.div 
-                className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border"
+                className="group relative cursor-pointer overflow-hidden rounded-xl sm:rounded-2xl border border-border touch-manipulation"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
@@ -356,20 +356,20 @@ export default function HomePage() {
                   
                   {/* Text overlay container */}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent flex items-center">
-                    <div className="text-white p-8 md:p-12 max-w-2xl">
-                      <h3 className="text-2xl md:text-3xl font-bold mb-4">Experience Personalized Learning</h3>
-                      <p className="text-lg md:text-xl text-white/90 mb-6">See how our AI creates custom financial plans tailored to your goals and learning style.</p>
-                      <div className="inline-flex items-center gap-2 text-white/80 font-medium">
-                        <FontAwesomeIcon icon={faPlay} className="text-sm" />
+                    <div className="text-white p-4 sm:p-6 md:p-8 lg:p-12 max-w-2xl">
+                      <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 leading-tight">Experience Personalized Learning</h3>
+                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 mb-4 sm:mb-6 leading-relaxed">See how our AI creates custom financial plans tailored to your goals and learning style.</p>
+                      <div className="inline-flex items-center gap-1.5 sm:gap-2 text-white/80 font-medium text-sm sm:text-base">
+                        <FontAwesomeIcon icon={faPlay} className="text-xs sm:text-sm" />
                         <span>Watch Demo</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Play button overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-lg">
-                      <FontAwesomeIcon icon={faPlay} className="ml-1 text-primary" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-all duration-300">
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 items-center justify-center rounded-full bg-background shadow-lg">
+                      <FontAwesomeIcon icon={faPlay} className="ml-0.5 sm:ml-1 text-primary text-sm sm:text-base md:text-lg" />
                     </div>
                   </div>
                 </div>
@@ -395,11 +395,11 @@ export default function HomePage() {
       </div>
 
       {/* Features Section */}
-      <section className="relative z-10 py-20 px-6 lg:px-8 bg-muted/30">
+      <section className="relative z-10 py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
         <div className="mx-auto max-w-7xl">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <motion.h2
-              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6 leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -408,7 +408,7 @@ export default function HomePage() {
               Smart Tools for Your Financial Journey
             </motion.h2>
             <motion.p
-              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -418,7 +418,7 @@ export default function HomePage() {
             </motion.p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 lg:w-2/3 mx-auto">
+          <div className="grid gap-4 sm:gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:w-2/3 mx-auto">
             {/* AI Chat Feature */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -426,7 +426,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200">
+              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200 touch-manipulation active:scale-[0.98]">
                 <CardContent className="p-0">
                   <div className="aspect-square bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 flex items-center justify-center">
                     <Lottie
@@ -435,11 +435,11 @@ export default function HomePage() {
                       className="w-3/4 h-3/4"
                     />
                   </div>
-                  <div className="p-6">
-                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                  <div className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
                       AI-Powered Chat Assistant
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground">
+                    <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       Get personalized financial guidance and instant answers to your money questions.
                     </CardDescription>
                   </div>
@@ -455,7 +455,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200">
+              <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200 touch-manipulation active:scale-[0.98]">
                 <CardContent className="p-0">
                   <div className="aspect-square bg-gradient-to-br from-accent/20 to-secondary/20 dark:from-accent/10 dark:to-secondary/10 flex items-center justify-center">
                     <Lottie
@@ -464,11 +464,11 @@ export default function HomePage() {
                       className="w-3/4 h-3/4"
                     />
                   </div>
-                  <div className="p-6">
-                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                  <div className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
                       Achievement System
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground">
+                    <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       Earn badges and track your progress as you master new financial concepts.
                     </CardDescription>
                   </div>
@@ -482,11 +482,11 @@ export default function HomePage() {
 
 
       {/* Expert-Led Lessons Section */}
-      <section className="relative z-10 py-20 px-6 lg:px-8">
+      <section className="relative z-10 py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <motion.h2
-              className="text-4xl md:text-5xl font-bold text-foreground mb-6"
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6 leading-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -495,7 +495,7 @@ export default function HomePage() {
               Expert-Led Financial Courses
             </motion.h2>
             <motion.p
-              className="text-xl text-muted-foreground max-w-3xl mx-auto"
+              className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -505,7 +505,7 @@ export default function HomePage() {
             </motion.p>
           </div>
           
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {basicLessonsData.lessons.slice(0, 2).map((lesson, index) => (
               <motion.div
                 key={`preview-${lesson.lesson_id}`}
@@ -531,18 +531,18 @@ export default function HomePage() {
                 transition={{ duration: 0.6, delay: 0.2 }}
                 viewport={{ once: true }}
               >
-                <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200">
+                <Card className="group h-full border-border bg-card hover:bg-accent/50 transition-all duration-200 touch-manipulation active:scale-[0.98]">
                   <Link
                     to={`dashboard/learning/${basicLessonsData.course_id}`}
-                    className="flex h-full w-full flex-col items-center justify-center p-8 text-center"
+                    className="flex h-full w-full flex-col items-center justify-center p-4 sm:p-6 md:p-8 text-center"
                   >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-muted-foreground mb-6">
-                      <FontAwesomeIcon icon={faPlus} className="text-xl" />
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg sm:rounded-xl bg-muted text-muted-foreground mb-4 sm:mb-6">
+                      <FontAwesomeIcon icon={faPlus} className="text-lg sm:text-xl" />
                     </div>
-                    <CardTitle className="text-xl font-semibold text-card-foreground mb-3">
+                    <CardTitle className="text-base sm:text-lg md:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
                       Explore All Lessons
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground">
+                    <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       View all {basicLessonsData.lessons.length} foundational courses designed to build your financial expertise.
                     </CardDescription>
                   </Link>
@@ -560,39 +560,39 @@ export default function HomePage() {
 
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border bg-card px-6 py-16 lg:px-8">
+      <footer className="relative z-10 border-t border-border bg-card px-4 sm:px-6 py-12 sm:py-14 md:py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-8 sm:gap-10 md:gap-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center">
                 <img
                   src={catCoin}
                   alt="Moneko Logo"
-                  className="h-8 w-8"
+                  className="h-6 w-6 sm:h-8 sm:w-8"
                   width="32"
                   height="32"
                   loading="lazy"
                 />
-                <span className="ml-2 text-xl font-bold text-card-foreground">
+                <span className="ml-2 text-lg sm:text-xl font-bold text-card-foreground">
                   Moneko
                 </span>
               </div>
-              <p className="text-muted-foreground max-w-xs">
+              <p className="text-sm sm:text-base text-muted-foreground max-w-xs leading-relaxed">
                 Empowering your financial journey with intelligent, personalized learning.
               </p>
             </div>
 
             {/* Quick Links */}
             <div>
-              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              <h3 className="mb-4 sm:mb-6 text-xs sm:text-sm font-semibold text-card-foreground uppercase tracking-wider">
                 Quick Links
               </h3>
-              <ul className="space-y-3">
+              <ul className="space-y-2 sm:space-y-3">
                 <li>
                   <Link
                     to="/dashboard/learning"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     AI Learning
                   </Link>
@@ -600,7 +600,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     to={`/dashboard/learning/${basicLessonsData.course_id}`}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Expert Courses
                   </Link>
@@ -608,7 +608,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     to="/calculators"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Financial Calculators
                   </Link>
@@ -616,7 +616,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     to="/dashboard"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Chat with AI
                   </Link>
@@ -624,7 +624,7 @@ export default function HomePage() {
                 <li>
                   <Link 
                     to="/team" 
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Meet the Team
                   </Link>
@@ -634,14 +634,14 @@ export default function HomePage() {
 
             {/* Legal */}
             <div>
-              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              <h3 className="mb-4 sm:mb-6 text-xs sm:text-sm font-semibold text-card-foreground uppercase tracking-wider">
                 Legal
               </h3>
-              <ul className="space-y-3">
+              <ul className="space-y-2 sm:space-y-3">
                 <li>
                   <Link
                     to="/privacy-policy"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Privacy Policy
                   </Link>
@@ -649,7 +649,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     to="/terms-of-service"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Terms of Service
                   </Link>
@@ -657,7 +657,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     to="/cookie-policy"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Cookie Policy
                   </Link>
@@ -667,16 +667,16 @@ export default function HomePage() {
 
             {/* Connect */}
             <div>
-              <h3 className="mb-6 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              <h3 className="mb-4 sm:mb-6 text-xs sm:text-sm font-semibold text-card-foreground uppercase tracking-wider">
                 Connect
               </h3>
-              <ul className="space-y-3">
+              <ul className="space-y-2 sm:space-y-3">
                 <li>
                   <a
                     href="https://www.facebook.com/monekoai/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Facebook
                   </a>
@@ -686,7 +686,7 @@ export default function HomePage() {
                     href="https://www.instagram.com/moneko_ai/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Instagram
                   </a>
@@ -696,7 +696,7 @@ export default function HomePage() {
                     href="https://x.com/moneko_ai"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     X
                   </a>
@@ -704,7 +704,7 @@ export default function HomePage() {
                 <li>
                   <a
                     href="mailto:hello@moneko.io"
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
                     Contact Us
                   </a>
@@ -714,39 +714,39 @@ export default function HomePage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="mt-16 border-t border-border pt-8 flex flex-col md:flex-row md:items-center md:justify-between">
-            <p className="text-muted-foreground text-sm mb-4 md:mb-0">
+          <div className="mt-12 sm:mt-14 md:mt-16 border-t border-border pt-6 sm:pt-8 flex flex-col md:flex-row md:items-center md:justify-between">
+            <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 md:mb-0">
               © 2025 Moneko. All rights reserved.
             </p>
             
             {/* Social Icons */}
-            <div className="flex space-x-6">
+            <div className="flex space-x-4 sm:space-x-6">
               <a
                 href="https://www.facebook.com/monekoai/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Moneko on Facebook"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
               >
-                <FontAwesomeIcon icon={faFacebook} className="h-5 w-5" />
+                <FontAwesomeIcon icon={faFacebook} className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
               <a
                 href="https://x.com/moneko_ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Moneko on X"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
               >
-                <FontAwesomeIcon icon={faX} className="h-5 w-5" />
+                <FontAwesomeIcon icon={faX} className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
               <a
                 href="https://www.instagram.com/moneko_ai/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Moneko on Instagram"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
               >
-                <FontAwesomeIcon icon={faInstagram} className="h-5 w-5" />
+                <FontAwesomeIcon icon={faInstagram} className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
             </div>
           </div>

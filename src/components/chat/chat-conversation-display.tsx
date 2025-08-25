@@ -97,9 +97,10 @@ interface ChatConversationDisplayProps {
   };
 }
 
-export const iconContainer = (size: string = "size-8", iconSrc?: string) => {
+export const iconContainer = (size: string = "size-6 sm:size-8", iconSrc?: string, responsive: boolean = true) => {
+  const containerSize = responsive ? "h-8 w-8 sm:h-10 sm:w-10" : "h-10 w-10";
   return (
-    <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500">
+    <div className={`relative flex items-center justify-center ${containerSize} rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex-shrink-0`}>
       <OptimizedImage src={iconSrc || logo} alt="AI Assistant" className={size} />
     </div>
   );
@@ -167,19 +168,19 @@ const LoadingMessage = React.memo<{
       transition={{ duration: 0.2 }}
       className="flex justify-start"
     >
-      <div className="flex items-center gap-3 sm:gap-4 max-w-[70%] sm:max-w-[65%]">
-        <OptimizedImage src={agentIcon} alt={agentName || "AI Assistant"} className="size-10" />
-        <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 max-w-[75%] sm:max-w-[70%] md:max-w-[65%]">
+        <OptimizedImage src={agentIcon} alt={agentName || "AI Assistant"} className="size-8 sm:size-10 flex-shrink-0" />
+        <div className="bg-white/90 dark:bg-slate-700/90 rounded-2xl rounded-bl-md p-3 sm:p-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
             {enableLoadingDuration && loadingDuration >= MAX_TIME_TO_SHOW_LOADING ? (
-              <div className="text-slate-600 dark:text-slate-300 text-sm animate-pulse">
+              <div className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm animate-pulse">
                 {loadingMessage}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400"></div>
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400"></div>
               </div>
             )}
           </div>
@@ -457,8 +458,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 
   return (
     <>
-      {/* Optional background wrapper */}
-      <div className={backgroundGradient || "h-full flex flex-col"}>
+      {/* Optional background wrapper - Flex container for maximum height utilization */}
+      <div className={backgroundGradient || "h-full min-h-0 flex flex-col overflow-hidden"}>
         {/* Optional floating close button */}
         {chatConfig.showFloatingCloseButton && (
           <div className="absolute top-1.5 right-4 z-50">
@@ -488,8 +489,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
           </div>
         )}
 
-        {/* Chat Container */}
-        <div className={`flex w-full flex-1 flex-col px-4 overflow-hidden h-full ${className}`}>    
+        {/* Chat Container - Optimized for maximum height utilization */}
+        <div className={`flex w-full flex-1 flex-col px-4 min-h-0 overflow-hidden ${className}`}>    
 
           {/* Error Messages */}
           {connectionError && (
@@ -500,39 +501,39 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
             </div>
           )}
 
-      {/* Messages Area */}
+      {/* Messages Area - Maximum height utilization with proper scrolling */}
       <div 
         id="messages" 
-        className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth ${messagesClassName}`}
+        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth ${messagesClassName}`}
         ref={chatContainerRef}
       >
-        {/* Backend Processing Skeleton */}
+        {/* Backend Processing Skeleton - Mobile responsive */}
         {isBackendProcessing && (
-          <div className="space-y-6 p-4 sm:p-6">
+          <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
-                  className={`flex animate-pulse items-end gap-3 sm:gap-4 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+                  className={`flex animate-pulse items-end gap-2 sm:gap-3 md:gap-4 ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
                 >
                   {i % 2 !== 0 && (
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
                   )}
                   <div
-                    className={`w-3/5 rounded-2xl p-4 ${
+                    className={`w-4/5 sm:w-3/5 rounded-2xl p-3 sm:p-4 ${
                       i % 2 === 0 
                         ? "rounded-br-none bg-gradient-to-br from-purple-400/50 to-indigo-500/50" 
                         : "rounded-bl-none bg-slate-200/80 dark:bg-slate-700/80"
                     }`}
                   >
                     <div
-                      className={`mb-2 h-4 rounded ${
+                      className={`mb-1.5 sm:mb-2 h-3 sm:h-4 rounded ${
                         i % 2 === 0 
                           ? "bg-purple-300/50 dark:bg-purple-600/50" 
                           : "bg-slate-300/50 dark:bg-slate-600/50"
                       } w-3/4`}
                     ></div>
                     <div
-                      className={`h-4 rounded ${
+                      className={`h-3 sm:h-4 rounded ${
                         i % 2 === 0 
                           ? "bg-purple-300/50 dark:bg-purple-600/50" 
                           : "bg-slate-300/50 dark:bg-slate-600/50"
@@ -540,26 +541,26 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                     ></div>
                   </div>
                   {i % 2 === 0 && (
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/80"></div>
                   )}
                 </div>
               ))}
             </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty State - Mobile optimized */}
         {!isBackendProcessing && messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+            <div className="flex flex-col items-center justify-center py-8 sm:py-12 md:py-16 text-center px-4">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                className="mb-6 relative"
+                className="mb-4 sm:mb-6 relative"
               >
-                <div className="relative p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-100/80 to-indigo-100/80 dark:from-purple-900/30 dark:to-indigo-900/30 backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50">
+                <div className="relative p-3 sm:p-4 md:p-6 rounded-2xl bg-gradient-to-br from-purple-100/80 to-indigo-100/80 dark:from-purple-900/30 dark:to-indigo-900/30 backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 sm:h-16 sm:w-16 text-purple-600 dark:text-purple-400"
+                    className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 text-purple-600 dark:text-purple-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -571,7 +572,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                       d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                     />
                   </svg>
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs font-bold">AI</span>
                   </div>
                 </div>
@@ -581,10 +582,10 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-                className="space-y-3"
+                className="space-y-2 sm:space-y-3"
               >
-                <h3 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200">{welcomeMessage}</h3>
-                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">{welcomeSubtitle}</p>
+                <h3 className="text-base sm:text-lg md:text-xl font-semibold text-slate-800 dark:text-slate-200">{welcomeMessage}</h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-sm sm:max-w-md mx-auto leading-relaxed">{welcomeSubtitle}</p>
               </motion.div>
               
               {/* Clear conversation button - only show if there are messages */}
@@ -648,8 +649,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
         {/* Optional footer */}
         {chatConfig.showFooter && footerContent && (
           <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-            <div className="px-6 pt-2 pb-1 text-center">
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+            <div className="px-3 sm:px-6 pt-1.5 sm:pt-2 pb-1 text-center">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs text-slate-600 dark:text-slate-400">
                 {footerContent}
               </div>
               <span className="text-xs text-center text-slate-400 dark:text-slate-400">AI can make mistakes, consider double checking important information.</span>

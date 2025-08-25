@@ -235,8 +235,8 @@ export function DraggableDashboard({
   const activeWidget = currentWidgets.find?.(widget => widget.id === activeId);
 
   if(!isEditMode&&currentWidgets.length===0){
-    return  <div className="mt-4 rounded-lg bg-gray-50 p-6 text-center">
-    <p className="text-gray-600">
+    return  <div className="mt-4 rounded-lg bg-gray-50 p-4 sm:p-6 text-center">
+    <p className="text-sm lg:text-sm text-gray-600">
       No dashboard data available
     </p>
   </div>
@@ -251,7 +251,7 @@ export function DraggableDashboard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" style={{ gridTemplateRows: '12rem 1fr 1fr 1fr' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
          { <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
             {currentWidgets.map((widget) => (
              (
@@ -296,7 +296,7 @@ export function DraggableDashboard({
         <DragOverlay dropAnimation={null}>
           {activeId && activeWidget && draggedNodeRect ? (
             <div 
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'md:col-span-2' : 'md:col-span-1'} ${`md:row-span-${activeWidget.row_span || 1}`}`}
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'} ${`row-span-${activeWidget.row_span || 1}`}`}
               style={{
                 width: draggedNodeRect.width,
                 height: draggedNodeRect.height,

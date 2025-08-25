@@ -74,15 +74,15 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
             showPremiumCrown={true}
           />
         ) : (
-          <div className="flex items-center justify-center h-10 w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
+          <div className="flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">
             <FontAwesomeIcon
               icon={faUser}
-              className="size-4 text-slate-500 dark:text-slate-300"
+              className="size-3 sm:size-4 text-slate-500 dark:text-slate-300"
             />
           </div>
         )
       ) : (
-        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName || "Agent"} className="size-10" /> : iconContainer("size-6")
+        agentIcon ? <OptimizedImage src={agentIcon} alt={agentName || "Agent"} className="size-8 sm:size-10 flex-shrink-0" /> : iconContainer("size-5 sm:size-6", undefined, true)
       )
      }
     </div>
@@ -90,17 +90,17 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 
   const MessageBubble = ({ children }: { children: React.ReactNode }) => (
     <div
-      className={`relative max-w-[75%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+      className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[70%] lg:max-w-[65%] xl:max-w-[60%] rounded-2xl px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
         isUser
           ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-br-md ml-auto"
           : "bg-white/90 dark:bg-slate-700/90 text-slate-800 dark:text-slate-100 rounded-bl-md border border-slate-200/50 dark:border-slate-600/50 backdrop-blur-sm"
       }`}>
       {children}
-      <div className={`mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
+      <div className={`mt-1.5 sm:mt-2 text-xs ${isUser ? "text-right text-purple-200/80" : "text-left text-slate-400 dark:text-slate-500"}`}>
         {(formatTimeProp || defaultFormatTime)(message.timestamp)}
         {message.metadata?.isStreaming && !isUser && (
-          <span className="ml-2 inline-flex items-center">
-            <div className="animate-pulse w-2 h-2 bg-emerald-400 rounded-full"></div>
+          <span className="ml-1.5 sm:ml-2 inline-flex items-center">
+            <div className="animate-pulse w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-400 rounded-full"></div>
           </span>
         )}
       </div>
@@ -122,7 +122,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   ), [message.content, isUser, onOpenQuizModal, onGoalTemplateClick, onSendMessage, disableMsgParse]);
 
   return (
-    <div className={`flex items-end gap-3 sm:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-2 sm:gap-3 md:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <Avatar />}
       <MessageBubble>{renderMessageContent}</MessageBubble>
       {isUser && <Avatar />}

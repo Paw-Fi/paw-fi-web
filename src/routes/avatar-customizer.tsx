@@ -207,7 +207,8 @@ const colorPalettes = {
 function AvatarCustomizer() {
   const { user,isLoading } = useAuth()
   const navigate = useNavigate()
-  const { saveAvatar, skipAvatarForNow, customization, isCustomizationLoading, isUploading, uploadProgress } = useAvatar()
+  const { saveAvatar, skipAvatarForNow, customization, isCustomizationLoading, isUploading, uploadProgress, hasAvatar } = useAvatar()
+  const isEditing = hasAvatar === true
   const [selectedElements, setSelectedElements] = useState({
     face: 'Face1',
     ears: 'Ear1',
@@ -315,7 +316,7 @@ function AvatarCustomizer() {
     
     if (result.success) {
       setSaveSuccess(true)
-      toast.success('Avatar saved successfully! Redirecting to dashboard...', {
+      toast.success('Avatar saved successfully!', {
         position: 'top-right',
         autoClose: 2000,
         hideProgressBar: false,
@@ -326,7 +327,7 @@ function AvatarCustomizer() {
       // Navigate to dashboard after successful save
       setTimeout(() => {
         navigate({ to: '/dashboard' })
-      }, 2000)
+      }, 500)
     } else {
       toast.error(result.error || 'Failed to save avatar. Please try again.', {
         position: 'top-right',
@@ -337,6 +338,10 @@ function AvatarCustomizer() {
         draggable: true,
       })
     }
+  }
+
+  const handleCancelEditing = () => {
+    navigate({ to: '/dashboard' })
   }
 
   const handleSkipAvatar = async () => {
@@ -392,7 +397,7 @@ function AvatarCustomizer() {
   return (
     <>
       <style>{`
-        /* Ensure SVGs are properly centered and scaled */
+        /* Avatar-specific SVG styling */
         .avatar-preview svg,
         .asset-preview svg {
           display: block;
@@ -411,18 +416,18 @@ function AvatarCustomizer() {
         }
       `}</style>
       
-      {/* Main Container - Full Height */}
-      <div className="h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 flex flex-col">
+      {/* Main Container - Responsive height with better dark mode */}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-purple-950 flex flex-col">
         
-        {/* Header - Fixed Height */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-purple-600/10 to-pink-600/10 dark:from-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-white/10">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzkyQUMiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIxIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 dark:opacity-50"></div>
-          <div className="relative max-w-7xl mx-auto px-6 py-6">
+        {/* Header - Responsive Height */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-purple-600/10 to-pink-600/10 dark:from-purple-600/30 dark:to-pink-600/30 backdrop-blur-sm border-b border-gray-200/50 dark:border-white/20">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzkyQUMiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIxIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 dark:opacity-40"></div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
             <div className="text-center">
-              <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 dark:from-purple-400 dark:via-pink-400 dark:to-cyan-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 dark:from-purple-300 dark:via-pink-300 dark:to-cyan-300 bg-clip-text text-transparent mb-1 sm:mb-2">
                 Avatar Studio
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-200 max-w-2xl mx-auto px-2">
                 Create your unique digital identity with our modern avatar customizer
               </p>
             </div>
@@ -430,21 +435,21 @@ function AvatarCustomizer() {
         </div>
 
         {/* Content Area - Flex 1 to fill remaining space */}
-        <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 h-full">
             
-            {/* Avatar Preview - Fixed width on desktop */}
+            {/* Avatar Preview - Mobile-first responsive */}
             <div className="lg:col-span-1 order-2 lg:order-1 flex flex-col">
-              <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-gray-200/50 dark:border-white/20 shadow-xl dark:shadow-2xl flex-1 flex flex-col">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">Preview</h3>
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200/60 dark:border-slate-600/60 shadow-xl dark:shadow-2xl dark:shadow-black/20 flex-1 flex flex-col">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-slate-100 mb-3 sm:mb-4 text-center">Preview</h3>
                 
-                {/* Avatar Display - Flex 1 to take available space */}
-                <div className="flex-1 flex items-center justify-center mb-6">
-                  <div className="relative w-full aspect-square max-w-sm">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl blur-xl"></div>
+                {/* Avatar Display - Responsive sizing */}
+                <div className="flex-1 flex items-center justify-center mb-4 sm:mb-6">
+                  <div className="relative w-full aspect-square max-w-xs sm:max-w-sm">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-pink-500/30 dark:from-purple-400/20 dark:to-pink-400/20 rounded-2xl blur-xl"></div>
                     <div 
                       ref={avatarRef} 
-                      className="avatar-preview relative w-full h-full rounded-2xl overflow-hidden border-2 border-gray-300/50 dark:border-white/20"
+                      className="avatar-preview relative w-full h-full rounded-2xl overflow-hidden border-2 border-gray-300/60 dark:border-slate-600/60"
                       style={{ backgroundColor: colors.background }}
                     >
                       {assetCategories.map((category) => {
@@ -472,33 +477,33 @@ function AvatarCustomizer() {
                   </div>
                 </div>
 
-                {/* Color Controls */}
-                <div className="space-y-4 mb-4">
-                  <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Colors</h4>
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Color Controls - Mobile optimized */}
+                <div className="space-y-3 sm:space-y-4 mb-4">
+                  <h4 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-slate-100">Colors</h4>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {Object.entries(colors).map(([part, color]) => (
-                      <div key={part} className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600 dark:text-gray-300 min-w-12">{colorDisplayNames[part as keyof typeof colorDisplayNames]}</label>
+                      <div key={part} className="flex items-center gap-2 sm:gap-3">
+                        <label className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 min-w-8 sm:min-w-12 flex-shrink-0">{colorDisplayNames[part as keyof typeof colorDisplayNames]}</label>
                         <div className="relative">
                           <input
                             type="color"
                             value={color}
                             onChange={(e) => handleColorChange(part, e.target.value)}
-                            className="w-8 h-8 rounded-lg border-2 border-gray-300 dark:border-white/20 cursor-pointer bg-transparent"
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border-2 border-gray-300 dark:border-slate-500 cursor-pointer bg-transparent touch-manipulation"
                           />
-                          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 -z-10 blur-sm"></div>
+                          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-400/20 dark:to-pink-400/20 -z-10 blur-sm"></div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="space-y-2">
+                {/* Action Buttons - Touch optimized */}
+                <div className="space-y-2 sm:space-y-3">
                   <button
                     onClick={randomizeAvatar}
                     disabled={isUploading}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-500 dark:hover:to-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 active:from-purple-700 active:to-pink-700 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-500 dark:hover:to-pink-500 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-sm sm:text-base"
                   >
                     🎲 Randomize
                   </button>
@@ -506,10 +511,10 @@ function AvatarCustomizer() {
                   <button
                     onClick={handleSaveAvatar}
                     disabled={isUploading}
-                    className={`w-full font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`w-full font-semibold py-3 sm:py-2.5 px-4 rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-sm sm:text-base ${
                       saveSuccess 
                         ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-500/25' 
-                        : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 dark:from-cyan-600 dark:to-blue-600 dark:hover:from-cyan-500 dark:hover:to-blue-500 text-white hover:shadow-cyan-500/25'
+                        : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 active:from-cyan-700 active:to-blue-700 dark:from-cyan-600 dark:to-blue-600 dark:hover:from-cyan-500 dark:hover:to-blue-500 text-white hover:shadow-cyan-500/25'
                     }`}
                   >
                     {isUploading ? (
@@ -528,18 +533,18 @@ function AvatarCustomizer() {
                   </button>
                   
                   <button
-                    onClick={handleSkipAvatar}
+                    onClick={isEditing ? handleCancelEditing : handleSkipAvatar}
                     disabled={isUploading}
-                    className="w-full bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gray-500 hover:bg-gray-600 active:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500 dark:active:bg-slate-700 text-white font-medium py-3 sm:py-2 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-sm sm:text-base"
                   >
-                    Skip for now
+                    {isEditing ? 'Cancel editing' : 'Skip for now'}
                   </button>
                   
                   {/* Progress Bar */}
                   {isUploading && uploadProgress > 0 && (
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
                       <div 
-                        className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
@@ -547,49 +552,53 @@ function AvatarCustomizer() {
                   
                   
                   {/* Skip Info */}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    You can always create your avatar later from your profile settings
-                  </p>
+                  {!isEditing && (
+                    <p className="text-xs text-gray-500 dark:text-slate-400 text-center leading-relaxed">
+                      You can always create your avatar later from your profile settings
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Customization Panel - Flex to fill remaining space */}
+            {/* Customization Panel - Mobile optimized */}
             <div className="lg:col-span-2 order-1 lg:order-2 flex flex-col min-h-0">
-              {/* Category Tabs */}
-              <div className="mb-4 flex-shrink-0">
-                <div className="flex flex-wrap gap-2 p-2 bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10">
-                  {assetCategories.map((category) => {
-                    const config = categoryConfig[category as keyof typeof categoryConfig]
-                    const isActive = activeCategory === category
-                    return (
-                      <button
-                        key={category}
-                        onClick={() => setActiveCategory(category)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all duration-300 text-sm border-2 ${
-                          isActive
-                            ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 shadow-lg shadow-indigo-500/20'
-                            : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/10 hover:border-gray-300/50 dark:hover:border-white/20'
-                        }`}
-                      >
-                        <span className="hidden sm:inline">{config.name}</span>
-                      </button>
-                    )
-                  })}
+              {/* Category Tabs - Horizontal scroll on mobile */}
+              <div className="mb-3 sm:mb-4 flex-shrink-0">
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-2 p-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-slate-600/60 min-w-max">
+                    {assetCategories.map((category) => {
+                      const config = categoryConfig[category as keyof typeof categoryConfig]
+                      const isActive = activeCategory === category
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => setActiveCategory(category)}
+                          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-medium transition-all duration-200 text-xs sm:text-sm border-2 whitespace-nowrap touch-manipulation ${
+                            isActive
+                              ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50/90 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 shadow-lg shadow-indigo-500/20'
+                              : 'border-transparent text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-gray-100/80 dark:hover:bg-slate-700/50 hover:border-gray-300/50 dark:hover:border-slate-500/50 active:bg-gray-200/80 dark:active:bg-slate-600/50'
+                          }`}
+                        >
+                          <span>{config.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Asset Gallery - Flex 1 with scrolling */}
-              <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-gray-200/50 dark:border-white/20 shadow-xl dark:shadow-2xl flex-1 flex flex-col min-h-0">
-                <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+              {/* Asset Gallery - Optimized scrolling */}
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200/60 dark:border-slate-600/60 shadow-xl dark:shadow-2xl dark:shadow-black/20 flex-1 flex flex-col min-h-0">
+                <div className="flex items-center gap-3 mb-3 sm:mb-4 flex-shrink-0">
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-slate-100">
                     {categoryConfig[activeCategory as keyof typeof categoryConfig].name}
                   </h3>
                 </div>
 
-                {/* Scrollable Gallery Area */}
-                <div className="flex-1 overflow-auto">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {/* Scrollable Gallery Area - Improved mobile scroll */}
+                <div className="flex-1 overflow-auto overscroll-contain">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 pb-2">
                     {initialAssets[activeCategory].map((asset) => {
                       const isSelected = selectedElements[activeCategory as keyof typeof selectedElements] === asset
                       const previewContent = assetPreviews[activeCategory]?.[asset]
@@ -598,30 +607,30 @@ function AvatarCustomizer() {
                         <button
                           key={asset}
                           onClick={() => handleElementChange(activeCategory, asset)}
-                          className={`relative aspect-square p-3 rounded-2xl transition-all duration-300 border-2 ${
+                          className={`relative aspect-square p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-all duration-200 border-2 touch-manipulation ${
                             isSelected
-                              ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/10 shadow-lg shadow-indigo-500/20'
-                              : 'border-gray-200/60 dark:border-white/10 bg-gray-100/40 dark:bg-white/5 hover:border-gray-300/80 dark:hover:border-white/20 hover:bg-gray-200/60 dark:hover:bg-white/8'
+                              ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50/90 dark:bg-indigo-500/20 shadow-lg shadow-indigo-500/20 scale-95'
+                              : 'border-gray-200/60 dark:border-slate-600/60 bg-gray-100/60 dark:bg-slate-700/40 hover:border-gray-300/80 dark:hover:border-slate-500/80 hover:bg-gray-200/70 dark:hover:bg-slate-600/50 active:bg-gray-300/80 dark:active:bg-slate-500/60 active:scale-95'
                           }`}
                         >
-                          {/* Preview Image */}
+                          {/* Preview Image - Better mobile scaling */}
                           <div className="asset-preview w-full h-full overflow-hidden">
                             {previewContent ? (
                               <div
                                 className={`w-full h-full flex items-center justify-center ${
-                                  activeCategory === 'accessories' || activeCategory === 'stars' ? 'scale-75' : 
-                                  activeCategory === 'hair' ? 'scale-90' :
-                                  activeCategory === 'shirts' ? 'scale-85' :
-                                  'scale-80'
+                                  activeCategory === 'accessories' || activeCategory === 'stars' ? 'scale-75 sm:scale-75' : 
+                                  activeCategory === 'hair' ? 'scale-90 sm:scale-90' :
+                                  activeCategory === 'shirts' ? 'scale-85 sm:scale-85' :
+                                  'scale-80 sm:scale-80'
                                 }`}
                                 dangerouslySetInnerHTML={{ __html: previewContent }}
                                 style={{
                                   transformOrigin: 'center',
-                                  filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2))'
+                                  filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15))'
                                 }}
                               />
                             ) : (
-                              <div className="animate-pulse bg-gray-200/80 dark:bg-white/10 rounded-lg w-full h-full"></div>
+                              <div className="animate-pulse bg-gray-200/80 dark:bg-slate-600/60 rounded-lg w-full h-full"></div>
                             )}
                           </div>
                           

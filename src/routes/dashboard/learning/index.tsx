@@ -3,30 +3,10 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useUserCourses } from "@/services/course-service";
 import { useCompletedLessons } from "@/hooks/useCompletedLessons";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useState, useMemo } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faGraduationCap, 
-  faRobot, 
-  faComments, 
-  faChevronDown, 
-  faBrain,
-  faBookOpen,
-  faWandSparkles,
-  faLightbulb,
-  faRocket,
-  faTrophy,
-  faFire,
-  faChartLine,
-  faCirclePlay,
-  faArrowRight,
-  faBolt,
-  faPlus,
-  faGem,
-  faStar
-} from '@fortawesome/free-solid-svg-icons';
+// Using Font Awesome exclusively for icons
 import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
@@ -36,6 +16,9 @@ import { useGamification } from "@/hooks/use-gamification";
 import { FinancialGlassMetricsPanel } from "@/components/shared/FinancialGlassMetricsPanel";
 import { DashboardHeroSection } from "@/components/shared/DashboardHeroSection";
 import { useAIChat } from "@/contexts/ai-chat-context";
+import { faLightbulb, faRocket, faBolt, faBookOpen, faRobot, faGraduationCap, faPlus, faGem, faCirclePlay, faComments, faWandMagicSparkles, faFire, faStar, faTrophy } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React from "react";
 
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
@@ -65,6 +48,7 @@ export const Route = createFileRoute("/dashboard/learning/")({
 
 export function UnifiedLearningPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'personalized' | 'essentials'>('all');
   const {openChat} = useAIChat();
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
@@ -231,7 +215,7 @@ export function UnifiedLearningPage() {
   return (
     <>
       {/* Design System CSS Injection */}
-      <style jsx global>{`
+      <style>{`
         /* Financial Glass Material System */
         .financial-glass {
           background: rgba(255, 255, 255, 0.08);
@@ -242,35 +226,35 @@ export function UnifiedLearningPage() {
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
-        /* Expressive Typography Classes */
+        /* Responsive Typography Classes */
         .text-display {
-          font-size: clamp(2.5rem, 5vw, 4rem);
+          font-size: clamp(1.75rem, 3.5vw, 3.5rem);
           font-weight: 700;
           line-height: 1.1;
           letter-spacing: -0.02em;
         }
         
         .text-headline {
-          font-size: clamp(1.875rem, 3vw, 2.5rem);
+          font-size: clamp(1.5rem, 2.5vw, 2.25rem);
           font-weight: 600;
           line-height: 1.2;
           letter-spacing: -0.01em;
         }
         
         .text-title {
-          font-size: clamp(1.25rem, 2vw, 1.5rem);
+          font-size: clamp(1.125rem, 1.5vw, 1.375rem);
           font-weight: 600;
           line-height: 1.3;
         }
         
         .text-body {
-          font-size: 1rem;
+          font-size: clamp(0.875rem, 1.2vw, 1rem);
           font-weight: 400;
           line-height: 1.6;
         }
         
         .text-label {
-          font-size: 0.875rem;
+          font-size: clamp(0.75rem, 1vw, 0.875rem);
           font-weight: 500;
           line-height: 1.4;
           letter-spacing: 0.01em;
@@ -297,69 +281,62 @@ export function UnifiedLearningPage() {
         initial="initial"
         animate="animate"
       >
-      {/* Modern Hero Section with Stats */}
+      {/* Learning Hub Hero Section */}
       <DashboardHeroSection
-        title={`Welcome back, ${user?.user_metadata?.full_name || 'Learner'}`}
-        titleGradient="from-violet-600 dark:from-violet-400 via-purple-600 dark:via-purple-400 to-indigo-600 dark:to-indigo-400"
-        emoji="👋"
-        emojiAnimation={{ rotate: [0, 20, 0], duration: 1, repeatDelay: 3 }}
-        description="Continue your journey to financial mastery with AI-powered and expert-crafted courses."
-        backgroundGradient="from-violet-600/5 dark:from-violet-400/10 via-purple-600/5 dark:via-purple-400/10 to-indigo-600/5 dark:to-indigo-400/10"
-        decorativeGradients={{
-          topRight: "bg-purple-400/10 dark:bg-purple-400/20",
-          bottomLeft: "bg-indigo-400/10 dark:bg-indigo-400/20"
-        }}
+        title="Master Your Financial Future"
+        emoji=""
+        emojiAnimation={{ rotate: [0, 10, -10, 0], duration: 2, repeatDelay: 5 }}
+        description="Build wealth through expert-led essentials and personalized AI courses. From budgeting basics to advanced investing strategies."
         actions={[
           {
-            label: "Create AI Course",
-            icon: faWandSparkles,
-            onClick: () => openChat('educator'),
-            variant: 'primary'
+            label: "Start Learning Path",
+            icon: faGraduationCap,
+            onClick: () => {
+              const nextCourse = learningStats.completedLessons === 0 
+                ? `/dashboard/learning/${basicCourse.course_id}`
+                : aiCourses.length > 0 
+                  ? `/dashboard/learning/${aiCourses[0].course_id}`
+                  : `/dashboard/essentials`;
+              navigate({ to: nextCourse });
+            },
+            variant: 'primary' as const,
           },
-          ...(aiCourses.length > 0 ? [{
-            label: "Resume Learning",
-            icon: faCirclePlay,
+          {
+            label: "Create AI Course",
+            icon: faWandMagicSparkles,
+            onClick: () => openChat('educator'),
             variant: 'secondary' as const,
-            component: (
-              <Link
-                to={`/dashboard/learning/${aiCourses[0].course_id}`}
-                className="group flex items-center gap-2 px-6 py-3 bg-background border-2 border-border text-foreground rounded-xl font-medium hover:border-primary/50 hover:text-primary transition-all duration-300"
-              >
-                <FontAwesomeIcon icon={faCirclePlay} className="h-5 w-5" />
-                <span>Resume Learning</span>
-              </Link>
-            )
-          }] : [])
+          }
         ]}
         metrics={[
           {
             icon: faFire,
             value: learningStats.streak,
-            label: "Day Streak",
+            label: "Learning Streak",
             gradientColors: "from-orange-600 to-red-600",
             iconColors: "from-orange-400 to-red-500",
             delay: 0.5
           },
           {
-            icon: faTrophy,
-            value: learningStats.totalXP.toLocaleString(),
-            label: "Total XP",
-            gradientColors: "from-blue-600 to-indigo-600",
-            iconColors: "from-blue-400 to-indigo-500",
+            icon: faBookOpen,
+            value: learningStats.completedLessons,
+            label: "Lessons Complete",
+            gradientColors: "from-green-600 to-emerald-600",
+            iconColors: "from-green-400 to-emerald-500",
             delay: 0.6
           },
           {
-            icon: faBookOpen,
-            value: learningStats.totalCourses,
-            label: "Courses",
-            gradientColors: "from-green-600 to-emerald-600",
-            iconColors: "from-green-400 to-emerald-500",
+            icon: faStar,
+            value: `${Math.round((learningStats.completedLessons / Math.max(learningStats.totalCourses * 5, 1)) * 100)}%`,
+            label: "Progress",
+            gradientColors: "from-blue-600 to-indigo-600",
+            iconColors: "from-blue-400 to-indigo-500",
             delay: 0.7
           },
           {
-            icon: faChartLine,
-            value: learningStats.completedLessons,
-            label: "Lessons Done",
+            icon: faTrophy,
+            value: learningStats.earnedXP.toLocaleString(),
+            label: "Skills XP",
             gradientColors: "from-purple-600 to-pink-600",
             iconColors: "from-purple-400 to-pink-500",
             delay: 0.8
@@ -369,19 +346,19 @@ export function UnifiedLearningPage() {
 
       {/* Modern Tab Navigation */}
       <motion.div 
-        className="px-4 mb-8"
+        className="px-4 sm:px-6 mb-6 sm:mb-8"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
           <motion.div 
-            className="rounded-2xl p-2 shadow-xl border border-border/50 backdrop-blur-xl"
+            className="rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-xl border border-border/50 backdrop-blur-xl"
             variants={glassVariants}
             style={{
               background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(124, 58, 237, 0.03) 100%)",
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
             }}
           >
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               {[
                 { id: 'all', label: 'All Courses', icon: faBookOpen },
                 { id: 'personalized', label: 'AI Personalized', icon: faRobot },
@@ -391,7 +368,7 @@ export function UnifiedLearningPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`
-                    flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden
+                    flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all duration-200 relative overflow-hidden touch-manipulation
                     ${activeTab === tab.id 
                       ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-[1.02]' 
                       : 'text-foreground/70 hover:text-foreground hover:bg-background/50 hover:backdrop-blur-sm hover:scale-[1.01]'
@@ -409,7 +386,7 @@ export function UnifiedLearningPage() {
 
       {/* Course Grid */}
       <motion.section 
-        className="px-4 mb-12"
+        className="px-4 sm:px-6 mb-8 sm:mb-12"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
@@ -430,7 +407,7 @@ export function UnifiedLearningPage() {
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-indigo-100 dark:to-indigo-900/30 rounded-full flex items-center justify-center">
                 <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground mb-3">No courses yet</h3>
+              <h3 className="text-xl lg:text-lg xl:text-xl font-bold text-foreground mb-3">No courses yet</h3>
               <p className="text-muted-foreground mb-6">Start your learning journey by creating your first AI-powered course!</p>
               <button
                 onClick={() => openChat('educator')}
@@ -440,7 +417,7 @@ export function UnifiedLearningPage() {
               </button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <AnimatePresence mode="popLayout">
                 {filteredCourses.map((course, index) => (
                   <motion.div
@@ -496,10 +473,9 @@ export function UnifiedLearningPage() {
                                 )}
                               </div>
                               <motion.h3 
-                              className="text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-foreground/80 transition-colors duration-200"
+                              className="text-lg lg:text-base xl:text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-foreground/80 transition-colors duration-200"
                                 style={{
                                   fontVariationSettings: "'wght' 600",
-                                  fontSize: "clamp(1.25rem, 2vw, 1.5rem)", // Design system text-title
                                   lineHeight: "1.3"
                                 }}
                               >
@@ -508,8 +484,7 @@ export function UnifiedLearningPage() {
                             </div>
                           </div>
                           
-                          <p className="text-muted-foreground line-clamp-3 leading-relaxed" style={{
-                            fontSize: "1rem", // Design system text-body
+                          <p className="text-base lg:text-sm xl:text-base text-muted-foreground line-clamp-3 leading-relaxed" style={{
                             fontWeight: "400",
                             lineHeight: "1.6"
                           }}>
@@ -566,16 +541,16 @@ export function UnifiedLearningPage() {
                           {/* Course Meta */}
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="text-xs text-muted-foreground">Difficulty</p>
-                              <p className="text-sm font-semibold text-foreground">{course.difficulty}</p>
+                              <p className="text-xs lg:text-xs text-muted-foreground">Difficulty</p>
+                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.difficulty}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground">Duration</p>
-                              <p className="text-sm font-semibold text-foreground">{course.duration}</p>
+                              <p className="text-xs lg:text-xs text-muted-foreground">Duration</p>
+                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.duration}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground">Students</p>
-                              <p className="text-sm font-semibold text-foreground">{course.students}</p>
+                              <p className="text-xs lg:text-xs text-muted-foreground">Students</p>
+                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.students}</p>
                             </div>
                           </div>
 
@@ -587,7 +562,7 @@ export function UnifiedLearningPage() {
                               : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50'
                             }
                           `}>
-                            {course.type === 'personalized' && course.lessons.some(l => l.unlocked) ? (
+                            {course.type === 'personalized' && course.lessons.some((l: any) => l.unlocked) ? (
                               <>
                                 <FontAwesomeIcon icon={faCirclePlay} className="h-4 w-4" />
                                 Continue Learning
@@ -624,8 +599,8 @@ export function UnifiedLearningPage() {
                         >
                           <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                         </motion.div>
-                        <h3 className="text-lg font-bold text-foreground mb-2">Create New Course</h3>
-                        <p className="text-sm text-muted-foreground">Let AI design a course tailored to your goals</p>
+                        <h3 className="text-base lg:text-sm xl:text-base font-bold text-foreground mb-2">Create New Course</h3>
+                        <p className="text-xs lg:text-xs xl:text-sm text-muted-foreground">Let AI design a course tailored to your goals</p>
                       </div>
                     </div>
                   </motion.div>
@@ -639,14 +614,14 @@ export function UnifiedLearningPage() {
       {/* AI Coach Floating Button (Mobile) */}
       <motion.button
         onClick={() => openChat('educator')}
-        className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center text-white z-40"
+        className="lg:hidden fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center text-white z-40 touch-manipulation"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.5 }}
       >
-        <FontAwesomeIcon icon={faComments} className="h-6 w-6" />
+        <FontAwesomeIcon icon={faComments} className="h-5 w-5 sm:h-6 sm:w-6" />
       </motion.button>
     
       </motion.div>

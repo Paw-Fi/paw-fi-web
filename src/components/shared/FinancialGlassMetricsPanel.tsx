@@ -56,7 +56,7 @@ export function FinancialGlassMetricsPanel({
         <div className={`text-center ${compact ? 'mb-4' : 'mb-6'}`}>
           {title && (
             <motion.h2 
-              className="text-title font-bold text-foreground mb-2"
+              className="text-lg lg:text-base xl:text-lg font-bold text-foreground mb-2"
               style={{
                 fontVariationSettings: "'wght' 600"
               }}
@@ -65,7 +65,7 @@ export function FinancialGlassMetricsPanel({
             </motion.h2>
           )}
           {subtitle && (
-            <p className="text-label text-muted-foreground">
+            <p className="text-sm lg:text-xs xl:text-sm text-muted-foreground">
               {subtitle}
             </p>
           )}
@@ -88,10 +88,9 @@ export function FinancialGlassMetricsPanel({
             <div className={compact ? 'flex flex-col' : ''}>
               {/* Kinetic Typography for metrics */}
               <motion.span 
-                className={`${compact ? 'text-xl' : 'text-2xl'} font-bold bg-gradient-to-r ${metric.gradientColors} bg-clip-text text-transparent ${compact ? '' : 'block'}`}
+                className={`${compact ? 'text-lg lg:text-base xl:text-lg' : 'text-xl lg:text-lg xl:text-xl'} font-bold bg-gradient-to-r ${metric.gradientColors} bg-clip-text text-transparent ${compact ? '' : 'block'}`}
                 style={{
-                  fontVariationSettings: "'wght' 700",
-                  fontSize: compact ? undefined : "1.25rem"
+                  fontVariationSettings: "'wght' 700"
                 }}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ 
@@ -109,7 +108,7 @@ export function FinancialGlassMetricsPanel({
                   : metric.value
                 }
               </motion.span>
-              <span className={`${compact ? 'text-xs' : 'text-label'} text-foreground ${compact ? 'whitespace-nowrap' : ''} font-medium`}>
+              <span className={`${compact ? 'text-xs lg:text-xs' : 'text-sm lg:text-xs xl:text-sm'} text-foreground ${compact ? 'whitespace-nowrap' : ''} font-medium`}>
                 {metric.label}
               </span>
             </div>

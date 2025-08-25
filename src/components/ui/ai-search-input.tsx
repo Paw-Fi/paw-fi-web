@@ -145,7 +145,7 @@ export function AISearchInput({
           y: 0,
           opacity: 1,
         }}
-        className={`relative mx-auto flex w-full items-center rounded-2xl border transition-all duration-500 ${
+        className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl border transition-all duration-500 ${
           isAnimating 
             ? "bg-muted border-primary/20" 
             : "bg-background border-border shadow-sm hover:shadow-md hover:border-border/60"
@@ -162,7 +162,7 @@ export function AISearchInput({
             onChange={(e) => setChatQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full border-none bg-transparent px-6 py-4 text-foreground placeholder:text-muted-foreground text-base focus:outline-none focus:ring-0"
+            className="w-full border-none bg-transparent px-4 sm:px-6 py-3 sm:py-4 text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-0 touch-manipulation"
             aria-label="Ask a financial question"
             ref={inputRef}
             disabled={isTransitioning}
@@ -171,12 +171,12 @@ export function AISearchInput({
           {/* Loading indicator during transition */}
           {isAnimating && (
             <motion.div
-              className="pointer-events-none absolute inset-0 flex items-center px-6"
+              className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6"
               animate={placeholderControls}
               initial={{ opacity: 0 }}
             >
               <div className="flex items-center text-primary">
-                <span className="mr-2 font-medium">Creating your plan</span>
+                <span className="mr-1.5 sm:mr-2 font-medium text-sm sm:text-base">Creating your plan</span>
                 <motion.div
                   animate={{
                     rotate: 360,
@@ -189,7 +189,7 @@ export function AISearchInput({
                 >
                   <FontAwesomeIcon
                     icon={faLightbulb}
-                    className="h-4 w-4"
+                    className="h-3 w-3 sm:h-4 sm:w-4"
                   />
                 </motion.div>
               </div>
@@ -199,15 +199,15 @@ export function AISearchInput({
 
         {/* Private indicator */}
         <motion.div
-          className="z-10 mr-3 flex-shrink-0"
+          className="z-10 mr-2 sm:mr-3 flex-shrink-0"
           animate={iconControls}
         >
-          <div className="flex items-center px-3 py-1 bg-muted rounded-lg">
+          <div className="flex items-center px-2 sm:px-3 py-1 bg-muted rounded-md sm:rounded-lg">
             <FontAwesomeIcon
               icon={faLock}
-              className="h-3 w-3 mr-2 text-muted-foreground"
+              className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-2 text-muted-foreground"
             />
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
               Private
             </span>
           </div>
@@ -223,13 +223,13 @@ export function AISearchInput({
               } as React.KeyboardEvent);
             }
           }}
-          className="mr-2 h-10 w-10 flex-shrink-0 rounded-xl"
+          className="mr-1.5 sm:mr-2 h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 rounded-lg sm:rounded-xl touch-manipulation active:scale-95"
           aria-label="Send message"
           ref={sendButtonRef}
           asChild
         >
           <motion.button animate={iconControls}>
-            <FontAwesomeIcon icon={faPaperPlane} className="h-4 w-4" />
+            <FontAwesomeIcon icon={faPaperPlane} className="h-3 w-3 sm:h-4 sm:w-4" />
           </motion.button>
         </Button>
       </motion.div>
@@ -237,28 +237,28 @@ export function AISearchInput({
       {/* Suggestion chips */}
       {showSuggestionPills && showSuggestions && (
         <motion.div
-          className="mx-auto mt-6 max-w-3xl"
+          className="mx-auto mt-4 sm:mt-6 max-w-3xl"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
         >
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
             <FontAwesomeIcon
               icon={faLightbulb}
-              className="text-warning h-4 w-4"
+              className="text-warning h-3 w-3 sm:h-4 sm:w-4"
             />
-            <span className="text-sm font-medium text-muted-foreground">
+            <span className="text-xs sm:text-sm font-medium text-muted-foreground">
               Popular questions to get started
             </span>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {suggestions.map((suggestion, index) => (
               <Button
                 key={`suggestion-${index}`}
                 variant="outline"
                 size="sm"
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="rounded-full text-sm hover:border-primary/30 hover:bg-primary/5 transition-colors duration-200"
+                className="rounded-full text-xs sm:text-sm hover:border-primary/30 hover:bg-primary/5 transition-colors duration-200 touch-manipulation active:scale-95"
                 disabled={isTransitioning}
                 asChild
               >

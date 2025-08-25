@@ -60,7 +60,7 @@ export function EditableWidget({
       ref={setNodeRef}
       style={style}
       data-id={id}
-      className={`bg-white dark:bg-gray-800 shadow-md rounded-xl row-span-${widget.row_span || 1} ${widget.column_span === 2 ? "col-span-2" : "col-span-1"} group relative px-4 py-3 ${
+      className={`bg-white dark:bg-gray-800 shadow-md rounded-xl row-span-${widget.row_span || 1} ${widget.column_span === 2 ? "col-span-1 md:col-span-2" : "col-span-1"} group relative p-3 sm:px-4 sm:py-3 ${
         isEditMode
           ? "border-primary-500/70 dark:border-primary-400/70 rounded-xl border-2 border-dashed shadow-md "
           : ""
@@ -73,7 +73,7 @@ export function EditableWidget({
           widget={widget}
           controls={
             isEditMode ? (
-              <div className="ml-1 flex items-center gap-2.5">
+              <div className="ml-1 flex items-center gap-2 sm:gap-2.5 flex-wrap">
                 {/* Edit widget button */}
                 {/* <button
                   onClick={() => onEditWidget(id)}
@@ -87,30 +87,36 @@ export function EditableWidget({
                 </button> */}
 
                 {/* Remove widget button */}
-                <FontAwesomeIcon
-                      type="button"
-                      icon={faTrash}
-                      onClick={() => onRemoveWidget(id)}
-                      className="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 cursor-pointer"
-                    
-                    />  
+                <button
+                  onClick={() => onRemoveWidget(id)}
+                  className="min-h-[44px] min-w-[44px] p-2 sm:p-1 flex items-center justify-center touch-manipulation"
+                  aria-label="Remove widget"
+                  title="Remove widget"
+                >
+                  <FontAwesomeIcon
+                    icon={faTrash}
+                    className="h-4 w-4 sm:h-3 sm:w-3 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  />
+                </button>  
 
                 {/* Row height control button */}
                 <button
                   onClick={() => onTogglerow_span(id)}
+                  className="min-h-[44px] min-w-[44px] p-2 sm:p-1 flex items-center justify-center gap-1 touch-manipulation"
                   aria-label={`Change row height (currently ${widget.row_span || 1} row${(widget.row_span || 1) > 1 ? 's' : ''})`}
                   title={`Change row height (currently ${widget.row_span || 1} row${(widget.row_span || 1) > 1 ? 's' : ''})`}
                 >
                   <FontAwesomeIcon
                     icon={(widget.row_span || 1) > 1 ? faCompress : faExpand}
-                    className="h-3 w-3 text-gray-600 dark:text-gray-300"
+                    className="h-4 w-4 sm:h-3 sm:w-3 text-gray-600 dark:text-gray-300"
                   />
-                  <span className="ml-1 text-xs text-gray-600 dark:text-gray-300">{widget.row_span || 1}</span>
+                  <span className="text-xs lg:text-xs text-gray-600 dark:text-gray-300">{widget.row_span || 1}</span>
                 </button>
 
                 {/* Toggle column span button */}
                 <button
                   onClick={() => onTogglecolumn_span(id)}
+                  className="min-h-[44px] min-w-[44px] p-2 sm:p-1 flex items-center justify-center touch-manipulation"
                   aria-label={
                     widget.column_span === 2
                       ? "Set to 1 column width"
@@ -124,19 +130,20 @@ export function EditableWidget({
                 >
                   <FontAwesomeIcon
                     icon={widget.column_span === 2 ? faCompressAlt : faExpandAlt}
-                    className="h-3 w-3 text-gray-600 dark:text-gray-300"
+                    className="h-4 w-4 sm:h-3 sm:w-3 text-gray-600 dark:text-gray-300"
                   />
                 </button>
 
                 <div
                   {...attributes}
                   {...listeners}
+                  className="min-h-[44px] min-w-[44px] p-2 sm:p-1 flex items-center justify-center touch-manipulation cursor-grab active:cursor-grabbing"
                   aria-label="Drag to reorder"
                   title="Drag to reorder"
                 >
                   <FontAwesomeIcon
                     icon={faGripVertical}
-                    className="h-3 w-3 text-gray-600 dark:text-gray-300"
+                    className="h-4 w-4 sm:h-3 sm:w-3 text-gray-600 dark:text-gray-300"
                   />
                 </div>
               </div>

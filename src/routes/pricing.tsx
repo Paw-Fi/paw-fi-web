@@ -22,6 +22,8 @@ import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";
 import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-grid";
 import { SocialProofSection } from "@/components/pricing/social-proof-section";
+import { useAuth } from "@/contexts/auth-context";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -162,6 +164,8 @@ function PricingPage() {
   const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const { subscription, isActive: hasActiveSub, isLoading: isSubLoading } = useSubscription(user?.id);
 
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
@@ -211,6 +215,18 @@ function PricingPage() {
 
   const handleSubscribe = async (plan: string, isTrial: boolean = false) => {
     try {
+      // If user already has an active subscription, don't create another checkout session
+      if (hasActiveSub) {
+        const currentPlan = (subscription?.plan || "").toLowerCase();
+        if (currentPlan === plan) {
+          toast.info("You're already subscribed to this plan.");
+        } else {
+          toast.info("You already have an active subscription.");
+        }
+        navigate({ to: "/dashboard" });
+        return;
+      }
+
       if (plan === "premium") {
        window.location.href = "mailto:hello@moneko.io?subject=Waitlist%20Request&body=Please%20add%20me%20to%20the%20waitlist!"
         return;
@@ -379,10 +395,8 @@ function PricingPage() {
                     
                     {tier.priceYearly && tier.title !== "Starter" && (
                       <p className={`mt-2 text-xs font-semibold text-primary transition-opacity duration-300 ${isAnnual ? "opacity-100" : "opacity-0"}`}>
-                        {isAnnual ? (
-                          tier.title === "Investor" ? "That's 2 months free!" : "That's 4 months free!"
-                        ) : (
-                          `Save ${tier.title === "Investor" ? "$50" : "$150"} vs monthly!`
+                        {isAnnual&&tier.title==="Plus" &&(
+                          "That's 4 months free!"
                         )}
                       </p>
                     )}
@@ -418,14 +432,18 @@ function PricingPage() {
                     )}
                     variant={tier.highlight ? "default" : "outline"}
                     onClick={() => {
-                      if (tier.title.toLowerCase().includes("starter")) {
-                        navigate({ to: "/register" });
+                      const lowerTitle = tier.title.toLowerCase();
+                      // Free plan -> registration
+                      if (lowerTitle === "free") {
+                        navigate({ to: "/register", search: { redirect: "/pricing" } });
                         return;
                       }
-                      const planParam = tier.title.toLowerCase().includes("investor")
-                        ? "plus"
-                        : "premium";
-                      const isTrial = tier.title.toLowerCase().includes("investor") && tier.actionText === "Start Free Trial";
+
+                      // Map plan id based on tier title
+                      const planParam = lowerTitle === "plus" ? "plus" : "premium";
+                      const isTrial = lowerTitle === "plus" && tier.actionText.toLowerCase().includes("free trial");
+
+                      // Proceed to checkout flow with proper params
                       handleSubscribe(planParam, isTrial);
                     }}
                   >

@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   faListCheck,
   faPlus,
@@ -414,7 +415,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
               }
               setShowCreateForm(!showCreateForm)
             }}
-            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
+            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors min-h-[32px] touch-manipulation"
           >
             <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} className="w-3 h-3" />
             {showCreateForm ? 'Cancel' : 'Add'}
@@ -560,99 +561,109 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
             <p className="text-gray-400 dark:text-gray-500 text-xs">Add your first milestone to get started</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {orderedMilestones.map((milestone) => {
               const isExpanded = expandedMilestones.has(milestone.id);
               return (
                 <div
                   key={milestone.id}
-                  className={`border rounded-lg p-3 transition-colors ${
+                  className={`border rounded-lg p-3 transition-colors overflow-hidden ${
                     milestone.status === 'completed'
                       ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
                       : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => toggleMilestoneComplete(milestone)}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                        milestone.status === 'completed'
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
-                      }`}
-                    >
-                      {milestone.status === 'completed' && (
-                        <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
-                      )}
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon 
-                        icon={getMilestoneIcon(milestone.milestone_type)} 
-                        className="w-3 h-3 text-purple-600 dark:text-purple-400" 
-                      />
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(milestone.priority)}`}>
-                        {milestone.priority}
-                      </span>
+                  {/* Mobile Layout - Stack vertically */}
+                  <div className="space-y-3">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={milestone.status === 'completed'}
+                          onCheckedChange={() => toggleMilestoneComplete(milestone)}
+                          className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                        />
+                        
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon 
+                            icon={getMilestoneIcon(milestone.milestone_type)} 
+                            className="w-3 h-3 text-purple-600 dark:text-purple-400" 
+                          />
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(milestone.priority)}`}>
+                            {milestone.priority}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startInlineEdit(milestone)}
+                          className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors touch-manipulation"
+                          title="Edit milestone"
+                        >
+                          <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => toggleExpanded(milestone.id)}
+                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                          title={isExpanded ? "Collapse" : "Expand"}
+                        >
+                          <FontAwesomeIcon 
+                            icon={isExpanded ? faChevronUp : faChevronDown} 
+                            className="w-4 h-4" 
+                          />
+                        </button>
+                        <button
+                          onClick={() => deleteMilestone(milestone.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors touch-manipulation"
+                          title="Delete milestone"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="flex-1">
-                      <h4 className={`font-medium text-sm ${
+                    
+                    {/* Title Row */}
+                    <div>
+                      <h4 className={`font-medium text-base leading-tight break-words ${
                         milestone.status === 'completed' 
                           ? 'line-through text-gray-500 dark:text-gray-400' 
                           : 'text-gray-900 dark:text-white'
                       }`}>
                         {milestone.title}
                       </h4>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <span>Due {new Date(milestone.due_date).toLocaleDateString()}</span>
-                        {milestone.target_amount && (
-                          <span>${milestone.target_amount.toLocaleString()}</span>
-                        )}
-                        {milestone.milestone_type === 'habit' && milestone.frequency && (
-                          <span className="flex items-center gap-1">
-                            <FontAwesomeIcon icon={faRepeat} className="w-3 h-3" />
-                            {milestone.frequency}
-                          </span>
-                        )}
-                        {milestone.progress_percentage > 0 && milestone.status !== 'completed' && (
-                          <span className="text-blue-600 dark:text-blue-400 font-medium">
-                            {milestone.progress_percentage.toFixed(0)}% done
-                          </span>
-                        )}
-                        {milestone.is_ai_generated && (
-                          <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                            <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
-                            AI
-                          </span>
-                        )}
-                      </div>
                     </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => startInlineEdit(milestone)}
-                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                        title="Edit milestone"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => toggleExpanded(milestone.id)}
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      >
-                        <FontAwesomeIcon 
-                          icon={isExpanded ? faChevronUp : faChevronDown} 
-                          className="w-3 h-3" 
-                        />
-                      </button>
-                      <button
-                        onClick={() => deleteMilestone(milestone.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                        title="Delete milestone"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                      </button>
+                    
+                    {/* Details Row */}
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded flex items-center gap-1">
+                        <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
+                        Due {new Date(milestone.due_date).toLocaleDateString()}
+                      </span>
+                      {milestone.target_amount && (
+                        <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded flex items-center gap-1">
+                          <FontAwesomeIcon icon={faDollarSign} className="w-3 h-3" />
+                          ${milestone.target_amount.toLocaleString()}
+                        </span>
+                      )}
+                      {milestone.milestone_type === 'habit' && milestone.frequency && (
+                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded flex items-center gap-1">
+                          <FontAwesomeIcon icon={faRepeat} className="w-3 h-3" />
+                          {milestone.frequency}
+                        </span>
+                      )}
+                      {milestone.progress_percentage > 0 && milestone.status !== 'completed' && (
+                        <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded font-medium">
+                          {milestone.progress_percentage.toFixed(0)}% done
+                        </span>
+                      )}
+                      {milestone.is_ai_generated && (
+                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded flex items-center gap-1">
+                          <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
+                          AI
+                        </span>
+                      )}
                     </div>
                   </div>
 

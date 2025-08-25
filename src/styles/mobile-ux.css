@@ -1,0 +1,132 @@
+/* ===========================================
+   MOBILE UX ENHANCEMENTS
+   Global mobile optimizations and touch improvements
+   =========================================== */
+
+/* Smooth scrolling and hide scrollbars for mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Improved touch scrolling */
+.overscroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better dark mode transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Improved focus states for accessibility */
+button:focus-visible {
+  outline: 2px solid rgb(99 102 241);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  button:focus-visible {
+    outline-color: rgb(129 140 248);
+  }
+}
+
+/* Better touch targets for mobile devices */
+@media (max-width: 640px) {
+  .touch-manipulation {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Touch manipulation improvements */
+* {
+  touch-action: manipulation;
+}
+
+/* Prevent text selection on UI elements */
+button, .touch-manipulation {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Better tap highlighting */
+* {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* Improve form element styling on mobile */
+input, textarea, select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Improve modal and dialog positioning */
+  .modal, .dialog {
+    max-height: 90vh;
+    margin: 5vh auto;
+  }
+  
+  /* Better spacing for mobile */
+  .mobile-spacing {
+    padding: 0.75rem;
+  }
+  
+  /* Dashboard-specific mobile optimizations */
+  .dashboard-nav-item {
+    min-height: 52px; /* Optimal touch target for navigation */
+  }
+  
+  .dashboard-user-menu {
+    min-height: 56px; /* Larger touch area for user actions */
+  }
+  
+  /* Reduce animation complexity for better mobile performance */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+  
+  /* Improve text readability on small screens */
+  body, .mobile-text-optimize {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Optimize mobile scrolling performance */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-nav-item {
+    min-height: 50px; /* Slightly smaller for tablets */
+  }
+  
+  .dashboard-user-menu {
+    min-height: 54px;
+  }
+}

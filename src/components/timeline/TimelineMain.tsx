@@ -61,7 +61,7 @@ export function TimelineMain({
     ];
 
     return (
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+      <main className="flex-1 p-1 md:p-10 overflow-y-auto">
         <div className="relative">
           {allSelectedDateActivities.length > 0 ? (
             <TimelineSection
@@ -97,7 +97,7 @@ export function TimelineMain({
   }
 
   return (
-    <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+    <main className="flex-1 p-1 md:p-10 overflow-y-auto">
 
       <div className="relative">
         {/* Today's Activity Section - Always show */}
