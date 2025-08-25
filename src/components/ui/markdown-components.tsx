@@ -476,8 +476,11 @@ export const createMarkdownComponents = ({
     },
     
     "course-card": ({ node, ...props }: any) => {
+      console.log('🎯 COURSE-CARD: Component called! Props:', props);
+      console.log('🎯 COURSE-CARD: Node:', node);
       try {
         const dataString = props['data-course'] || '{}';
+        console.log('Raw data-course:', dataString);
         
         // Try to decode HTML entities if present
         const decodedString = dataString
@@ -488,7 +491,9 @@ export const createMarkdownComponents = ({
           .replace(/&gt;/g, '>')
           .replace(/&amp;/g, '&');
         
+        console.log('Decoded data-course:', decodedString);
         const courseData = JSON.parse(decodedString);
+        console.log('Parsed course data:', courseData);
         console.log('Rendering course card:', courseData.title);
         
         return (

@@ -11,6 +11,46 @@ import { smartExtractContent, ExtractedContent } from "@/utils/smart-content-ext
 import { DetailedContentModal } from "../chat/detailed-content-modal";
 import { Markdown } from "@/components/ui/markdown";
 import { createMarkdownComponents } from "@/components/ui/markdown-components";
+import { CourseCard } from "@/components/ui/course-card";
+
+// Temporary fix: Extract course card data using robust JSON extraction
+const extractCourseCardData = (content: string) => {
+  // Find the start of the JSON object by looking for the course data pattern
+  const jsonStart = content.indexOf('{"id":"lesson-car-goal-1"');
+  if (jsonStart === -1) {
+    return null;
+  }
+  
+  // Use bracket counting to find the end of the JSON object
+  let braceCount = 0;
+  let jsonEnd = -1;
+  
+  for (let i = jsonStart; i < content.length; i++) {
+    const char = content[i];
+    if (char === '{') {
+      braceCount++;
+    } else if (char === '}') {
+      braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1; // Include the closing brace
+        break;
+      }
+    }
+  }
+  
+  if (jsonEnd === -1) {
+    return null;
+  }
+  
+  const jsonString = content.substring(jsonStart, jsonEnd);
+  
+  try {
+    const courseData = JSON.parse(jsonString);
+    return courseData;
+  } catch (error) {
+    return null;
+  }
+};
 
 // Helper function to process section content - removes interactive elements for better UX
 const processSectionContent = (content: string): string => {
@@ -69,6 +109,20 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const [modalSections, setModalSections] = React.useState<MessageSection[]>([]);
   const [extractedContent, setExtractedContent] = React.useState<ExtractedContent | null>(null);
 
+  // Temporary fix: Extract course card data
+  const courseCardData = extractCourseCardData(content);
+  
+  // Remove course card more robustly
+  let contentWithoutCourseCard = content;
+  const startIndex = content.indexOf("<course-card");
+  if (startIndex !== -1) {
+    const endIndex = content.indexOf(">", startIndex);
+    if (endIndex !== -1) {
+      contentWithoutCourseCard = content.substring(0, startIndex) + content.substring(endIndex + 1);
+    }
+  }
+  contentWithoutCourseCard = contentWithoutCourseCard.trim();
+
   const handleCourseClick = (courseId: string) => () => {
     closeChat();
     navigate({ to: `/dashboard/learning/${courseId}` });
@@ -76,7 +130,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
 
   // Smart extraction function with comprehensive error handling
-  const performSmartExtraction = React.useCallback((rawContent: string) => {
+  const performSmartExtraction = (rawContent: string) => {
     if (!rawContent || typeof rawContent !== 'string') {
       console.warn('Smart extraction: Invalid input content');
       return null;
@@ -103,25 +157,24 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       setExtractedContent(null);
       return null;
     }
-  }, []);
+  };
 
-  // Enhanced content processing with smart extraction
-  const processedContent = useMemo(() => {
-    let processedContent = content;
-    console.log('Processing content:', content.slice(0, 200) + '...');
-
+  // Enhanced content processing with smart extraction  
+  const processedContent = React.useMemo(() => {
     // Don't process user messages
     if (isUserMessage) {
-      return processedContent.replace("{{username}}", user?.user_metadata?.full_name || "");
+      return content.replace("{{username}}", user?.user_metadata?.full_name || "");
     }
 
     // Check if content has course cards - backend now sends HTML format directly
-    const hasHtmlCourseCard = processedContent.includes('<course-card');
+    const hasHtmlCourseCard = content.includes('<course-card');
+    
+    // Declare finalContent here to be used throughout the function
+    let finalContent = content;
     
     if (hasHtmlCourseCard) {
-      console.log('HTML course card detected, skipping smart extraction to preserve course card rendering');
       // Apply basic interactive element conversion but skip smart extraction
-      let courseCardContent = processedContent;
+      let courseCardContent = content;
       
       // Only apply essential interactive element conversions (no extraction logic)
       courseCardContent = courseCardContent.replace(/``BUTTON:([^`]+)``/gi, '<ai-button data-type=\"$1\"></ai-button>');
@@ -154,19 +207,18 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       courseCardContent = courseCardContent.replace(/``GOAL:[^`]+``/gi, '');
       courseCardContent = courseCardContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
       
-      return courseCardContent.replace("{{username}}", user?.user_metadata?.full_name || "");
+      // Return the processed course card content directly
+      finalContent = courseCardContent.replace("{{username}}", user?.user_metadata?.full_name || "");
+      return finalContent;
     }
-
-    // Apply smart extraction if not disabled and no course cards present
-    let finalContent = processedContent;
     
+    // Apply smart extraction if not disabled and no course cards present
     if (!disableMessageParsing) {
       try {
         // Use smart extraction with the original content (before button processing)
-        const extracted = performSmartExtraction(processedContent);
+        const extracted = performSmartExtraction(content);
         
         if (extracted && extracted.shouldShowDetails && extracted.details.length > 0) {
-          console.log(`Smart extraction found ${extracted.details.length} sections with ${(extracted.metadata.compressionRatio * 100).toFixed(1)}% compression`);
           
           // Use the smart-extracted summary as the main content
           finalContent = extracted.summary;
@@ -186,8 +238,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 <view-details-button data-sections="${escapedSections}" data-smart="true" data-compression="${(extracted.metadata.compressionRatio * 100).toFixed(1)}"></view-details-button>`;
         } else {
           // Fall back to legacy parsing if smart extraction didn't find content to extract
-          console.log('Smart extraction did not find extractable content, using legacy parsing');
-          const parsedMessage = parseMessageContent(processedContent, false); // Disable smart extraction in legacy parser
+          const parsedMessage = parseMessageContent(content, false); // Disable smart extraction in legacy parser
           
           if (parsedMessage.hasLongContent && parsedMessage.sections.length >= 2) {
             const processedSections = parsedMessage.sections.map(section => ({
@@ -206,7 +257,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           }
         }
       } catch (error) {
-        console.error('Content extraction failed:', error);
         // Continue with original content processing
       }
     }
@@ -264,10 +314,25 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   return (
     <>
       <Markdown
-        content={processedContent}
+        content={courseCardData ? contentWithoutCourseCard : processedContent}
         components={customComponents}
         className={`prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0 prose-slate dark:prose-invert ${className}`}
       />
+      
+      {/* Temporary fix: Render course card directly if found */}
+      {courseCardData && (
+        <div className="my-3">
+          <CourseCard
+            title={courseCardData.title || ""}
+            icon={courseCardData.icon || "📚"}
+            description={courseCardData.description || ""}
+            lessonCount={courseCardData.lesson_count || courseCardData.lessonCount || 1}
+            onClick={handleCourseClick(courseCardData.id)}
+          />
+          
+        </div>
+      )}
+      
       <DetailedContentModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}

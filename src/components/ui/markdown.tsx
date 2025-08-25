@@ -16,11 +16,26 @@ export const Markdown: React.FC<MarkdownProps> = ({
   components = {},
   className = "",
 }) => {
+  console.log('📄 Markdown: Received content:', content.slice(0, 200));
+  console.log('📄 Markdown: Available components:', Object.keys(components));
+  console.log('📄 Markdown: Has course-card component?', components.hasOwnProperty('course-card'));
+  
   return (
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        rehypePlugins={[
+          [rehypeRaw, { 
+            passThrough: [
+              'course-card', 'ai-button', 'confirm-button', 'quick-save', 
+              'financial-action', 'goal-action', 'update-data', 'amount-select', 
+              'priority-select', 'response-style', 'habit-track', 'risk-select', 
+              'timeline-select', 'confidence-track', 'commitment-level', 
+              'questionnaire-button', 'update-profile-button', 'goal-template', 
+              'view-details-button', 'tip-component'
+            ] 
+          }]
+        ]}
         components={components}
       >
         {content}

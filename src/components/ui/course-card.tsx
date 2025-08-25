@@ -28,20 +28,14 @@ export function CourseCard({ title, description, icon, lessonCount, className, o
     >
       <CardHeader className={isEmbedded ? "p-4" : "p-6"}>
         <div className="flex items-start gap-4">
-          {icon && (
-            <OptimizedImage 
-              src={icon} 
-              alt="Course Icon" 
-              className="w-12 h-12 flex-shrink-0 rounded-lg" 
-            />
-          )}
+         
           <div className="flex-grow min-w-0">
             <div className="flex items-start justify-between gap-2">
               <CardTitle className={cn(
                 "font-semibold",
                 isEmbedded ? "text-base" : "text-lg"
               )}>
-                {title}
+               {icon} {title}
               </CardTitle>
               {!isEmbedded && (
                 <Badge variant="secondary" className="bg-primary/10 text-primary shrink-0">
