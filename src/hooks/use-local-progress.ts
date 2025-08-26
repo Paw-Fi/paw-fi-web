@@ -26,6 +26,45 @@ export interface LocalProgressStats {
   isCompleted: boolean;
 }
 
+/**
+ * Determines if a financial profile is complete by checking for non-empty values.
+ *
+ * @param {object} profileAnswers - An object of the user's profile answers.
+ * @param {number} [requiredPercentage=60.0] - The minimum percentage to be considered complete.
+ * @returns {{isComplete: boolean, completenessPercentage: number}} An object containing the
+ * completion status and the calculated percentage.
+ */
+export function checkProfileCompleteness(profileAnswers, requiredPercentage = 60.0) {
+  // Return false if the input is not a valid object
+  if (!profileAnswers || typeof profileAnswers !== 'object' || Array.isArray(profileAnswers)) {
+    return { isComplete: false, completenessPercentage: 0.0 };
+  }
+
+  const totalFields = Object.keys(profileAnswers).length;
+  if (totalFields === 0) {
+    return { isComplete: false, completenessPercentage: 0.0 };
+  }
+
+  // Count fields that are null, undefined, or an empty string ""
+  let incompleteFieldsCount = 0;
+  for (const value of Object.values(profileAnswers)) {
+    if (value === null || value === undefined || value === "") {
+      incompleteFieldsCount++;
+    }
+  }
+
+  const completedFieldsCount = totalFields - incompleteFieldsCount;
+  const completenessPercentage = (completedFieldsCount / totalFields) * 100;
+
+  // Check if the calculated percentage meets the required threshold
+  const isComplete = completenessPercentage >= requiredPercentage;
+
+  return {
+    isComplete: isComplete,
+    completenessPercentage: parseFloat(completenessPercentage.toFixed(2))
+  };
+}
+
 export const useLocalProgress = () => {
   const { user } = useAuth();
   const location = useLocation();
@@ -69,7 +108,9 @@ export const useLocalProgress = () => {
 
   // Check if user has completed their financial profile
   const hasCompletedProfile = () => {
-    return hasProfile && !!financialProfile;
+    if(!financialProfile) return false;
+    const result = checkProfileCompleteness(financialProfile);
+    return result.isComplete;
   };
 
   // Check if user has real chat history with conversations

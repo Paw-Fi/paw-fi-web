@@ -12,6 +12,7 @@ import { DetailedContentModal } from "../chat/detailed-content-modal";
 import { Markdown } from "@/components/ui/markdown";
 import { createMarkdownComponents } from "@/components/ui/markdown-components";
 import { CourseCard } from "@/components/ui/course-card";
+import { checkProfileCompleteness } from "@/hooks/use-local-progress";
 
 // Temporary fix: Extract course card data using robust JSON extraction
 const extractCourseCardData = (content: string) => {
@@ -104,7 +105,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { closeChat, openChat } = useAIChat();
-  const { hasProfile } = useFinancialHealthProfile(user?.id);
+  const { profile } = useFinancialHealthProfile(user?.id);
   const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
   const [modalSections, setModalSections] = React.useState<MessageSection[]>([]);
   const [extractedContent, setExtractedContent] = React.useState<ExtractedContent | null>(null);
@@ -307,7 +308,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     navigate,
     closeChat,
     openChat,
-    hasProfile,
+    hasProfile:checkProfileCompleteness(profile).isComplete,
     extractedContent, // Pass extracted content for debugging/analytics
   });
 

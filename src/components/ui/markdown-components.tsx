@@ -82,7 +82,7 @@ export const createMarkdownComponents = ({
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm touch-manipulation active:scale-95 ${
                 option.includes('yes') || option.includes('agree') || option.includes('proceed')
                   ? 'bg-success hover:bg-success/90 text-white'
-                  : 'bg-muted-foreground hover:bg-muted-foreground/90 text-white'
+                  : 'bg-primary hover:bg-primary/90 text-white'
               }`}
             >
               {option.replace(/_/g, ' ').charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' ')}
