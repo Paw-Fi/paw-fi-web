@@ -11,6 +11,7 @@ import { processGoalTrackingRequest, getGeminiFunctionDeclarations } from "./goa
 
 // Configuration constants
 const AI_MODEL = "gemini-2.5-flash-lite";
+const AI_MODEL_COMPREHENSIVE = "gemini-2.5-pro";
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_OUTPUT_TOKENS = 8000;
 const MAX_JSON_COMPLETION_ATTEMPTS = 5;
@@ -627,8 +628,8 @@ serve(async (req: Request): Promise<Response> => {
         systemInstruction = `${systemInstruction}\n\nMost recent activities of this user: ${userActivities}`;
       }
       
-      // Append goal context to Financial Advisor's system instruction
-      if (chatModel === AI_ROLES.FINANCIAL_ADVISOR && goalContext) {
+      // Append goal context to system instruction
+      if (goalContext) {
         const goalContextText = formatGoalContextForAI(goalContext);
         systemInstruction = `${systemInstruction}\n\n${goalContextText}`;
       }
@@ -724,13 +725,18 @@ serve(async (req: Request): Promise<Response> => {
     const looksLikeRawJson =
       trimmedCleanedResponse.startsWith("{") &&
       trimmedCleanedResponse.endsWith("}");
+    
+    // For financial_educator model, also check if there's JSON embedded in text
+    const hasEmbeddedJson = chatModel === AI_ROLES.FINANCIAL_EDUCATOR && 
+      trimmedCleanedResponse.includes("{") && 
+      trimmedCleanedResponse.includes("}");
 
     // If it doesn't look like JSON at all, treat it as simple text response
     let finalResponse = cleanedResponse;
     let extractedCourse = null;
     let course_id = null;
     
-    if (!hasJsonMarkdown && !looksLikeRawJson) {
+    if (!hasJsonMarkdown && !looksLikeRawJson && !hasEmbeddedJson) {
       // Simple text response (like profile prompts)
       finalResponse = cleanedResponse;
     } else {
@@ -762,6 +768,17 @@ serve(async (req: Request): Promise<Response> => {
     } else if (looksLikeRawJson) {
       // It's raw JSON without markdown fences
       stringToParseForJson = trimmedCleanedResponse;
+    } else if (hasEmbeddedJson) {
+      // For financial_educator, extract JSON embedded in text response
+      const firstBraceIndex = cleanedResponse.indexOf("{");
+      const lastBraceIndex = cleanedResponse.lastIndexOf("}");
+      
+      if (firstBraceIndex !== -1 && lastBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
+        stringToParseForJson = cleanedResponse.substring(firstBraceIndex, lastBraceIndex + 1);
+      } else {
+        // Fallback to original response if we can't extract properly
+        stringToParseForJson = cleanedResponse;
+      }
     }
 
     stringToParseForJson = stringToParseForJson.trim();

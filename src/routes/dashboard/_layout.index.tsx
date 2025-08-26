@@ -47,6 +47,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
+import { GuidanceTestPanel } from "@/components/dashboard/GuidanceTestPanel";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -108,6 +109,8 @@ function DashboardHome() {
   const { user } = useAuth();
   // Rewards modal state
   const [showRewardsModal, setShowRewardsModal] = useState(false);
+  // Test panel state - set to true for testing the new floating bubble system
+  const [showTestPanel, setShowTestPanel] = useState(false);
   
   // UNIFIED DATA HOOK - eliminates code duplication across dashboard
   const {
@@ -482,6 +485,13 @@ function DashboardHome() {
         animate="visible"
       >
         <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
+          {/* Test Panel - TEMPORARY FOR TESTING */}
+          {showTestPanel && (
+            <motion.div variants={itemVariants} className="mb-8">
+              <GuidanceTestPanel onClose={() => setShowTestPanel(false)} />
+            </motion.div>
+          )}
+
           {/* Welcome Header - Apple-inspired */}
           <motion.div variants={itemVariants} className="mb-12">
             <div className="flex flex-col space-y-6 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">

@@ -42,14 +42,14 @@ export interface UserGuidanceState {
   };
 }
 
-// Guidance scenarios for different dashboard areas
+// Comprehensive guidance scenarios covering the entire user journey
 const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
-  // === ONBOARDING FLOW ===
+  // === ONBOARDING & ORIENTATION ===
   {
-    id: 'first_dashboard_visit_finni_intro',
+    id: 'first_dashboard_visit_welcome',
     route: '/dashboard/',
     agentId: 'educator',
-    message: 'Welcome to your financial dashboard! I\'m Finni, your financial educator. Chat with me to get personalized financial lessons tailored just for you! 📚✨',
+    message: 'Welcome to Moneko! 👋 I\'m Finni, your financial educator. This is your financial command center - let me show you around and help you start your journey!',
     priority: 'high',
     conditions: [
       { type: 'first_visit', value: true }
@@ -58,65 +58,119 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   },
 
   {
-    id: 'first_goal_created',
-    route: '/dashboard/advisor/{goalId}',
+    id: 'dashboard_navigation_help',
+    route: '/dashboard/',
     agentId: 'advisor',
-    message: 'Congratulations on creating your first goal! Ask me anything about optimizing your savings strategy or investment options.',
+    message: 'New here? I recommend starting with either Goal Tracker to set your first financial target, or Learning to build your foundation. What interests you most?',
     priority: 'high',
     conditions: [
-      { type: 'first_visit', value: true },
-      { type: 'route_pattern', value: 'from_onboarding' }
+      { type: 'user_action', value: 'dashboard_idle_15s' },
+      { type: 'route_pattern', value: 'no_major_sections_visited' }
     ],
-    maxShowCount: 1
-  },
-
-  // === GOAL advisor SCENARIOS ===
-  {
-    id: 'advisor_main_first_visit',
-    route: '/dashboard/advisor/',
-    agentId: 'advisor',
-    message: 'Welcome to your Goal Advisor! Click here to get help setting up your first financial goal.',
-    priority: 'high',
-    conditions: [
-      { type: 'first_visit', value: true }
-    ],
-    maxShowCount: 1
+    cooldownHours: 24,
+    maxShowCount: 2
   },
 
   {
-    id: 'advisor_no_goals_return',
-    route: '/dashboard/advisor/',
-    agentId: 'advisor',
-    message: 'Ready to start your financial journey? I can help you create a personalized savings goal!',
+    id: 'progress_encouragement',
+    route: '/dashboard/',
+    agentId: 'educator',
+    message: 'You\'re making great progress! 🌟 I can see you\'ve been exploring different sections. Ready to dive deeper into any particular area?',
     priority: 'medium',
     conditions: [
-      { type: 'return_visit', value: true },
-      { type: 'goal_status', value: 'no_goals' },
-      { type: 'time_since_last', value: 24, operator: 'gte' } // 24+ hours
+      { type: 'user_action', value: 'multiple_sections_visited' },
+      { type: 'return_visit', value: true }
     ],
     cooldownHours: 72,
     maxShowCount: 3
   },
 
+  // === GOAL TRACKER SCENARIOS ===
   {
-    id: 'goal_needs_attention',
-    route: '/dashboard/advisor/{goalId}',
+    id: 'tracker_first_visit',
+    route: '/dashboard/tracker/',
     agentId: 'advisor',
-    message: 'I notice you might be falling behind on this goal. Let me help you create an action plan to get back on track!',
+    message: 'Welcome to Goal Tracker! 🎯 This is where you turn your financial dreams into actionable plans. Ready to create your first goal?',
+    priority: 'high',
+    conditions: [
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'tracker_no_goals_guidance',
+    route: '/dashboard/tracker/',
+    agentId: 'advisor',
+    message: 'I see you don\'t have any goals yet. No worries! Let\'s start with something achievable - maybe an emergency fund or a vacation savings goal?',
+    priority: 'high',
+    conditions: [
+      { type: 'goal_status', value: 'no_goals' },
+      { type: 'return_visit', value: true }
+    ],
+    cooldownHours: 48,
+    maxShowCount: 3
+  },
+
+  {
+    id: 'goal_creation_first_visit',
+    route: '/dashboard/tracker/create/',
+    agentId: 'advisor',
+    message: 'Excellent! You\'re creating your first goal. 🎉 Take your time here - a well-defined goal is the foundation of financial success. Need any tips?',
+    priority: 'high',
+    conditions: [
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'first_goal_created_celebration',
+    route: '/dashboard/tracker/{goalId}',
+    agentId: 'advisor',
+    message: 'Congratulations on creating your first goal! 🎊 This is a huge step. I\'m here to help you optimize your strategy and stay on track.',
+    priority: 'high',
+    conditions: [
+      { type: 'user_action', value: 'first_goal_created' },
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'goal_progress_check',
+    route: '/dashboard/tracker/{goalId}',
+    agentId: 'advisor',
+    message: 'How\'s your progress going? 📈 Remember, small consistent contributions often beat large irregular ones. Want to review your strategy?',
+    priority: 'medium',
+    conditions: [
+      { type: 'return_visit', value: true },
+      { type: 'time_since_last', value: 168, operator: 'gte' }, // 1+ week
+      { type: 'page_time', value: 3000 } // 3+ seconds on goal page
+    ],
+    cooldownHours: 336, // 2 weeks
+    maxShowCount: 5
+  },
+
+  {
+    id: 'goal_behind_schedule',
+    route: '/dashboard/tracker/{goalId}',
+    agentId: 'advisor',
+    message: 'I noticed you might be falling behind on this goal. That\'s totally normal! 💪 Let\'s discuss some strategies to get back on track.',
     priority: 'high',
     conditions: [
       { type: 'goal_status', value: 'behind_schedule' },
-      { type: 'page_time', value: 5000 } // 5 seconds on page
+      { type: 'page_time', value: 5000 }
     ],
-    cooldownHours: 168, // 1 week
-    maxShowCount: 2
+    cooldownHours: 336, // 2 weeks
+    maxShowCount: 3
   },
 
   {
     id: 'goal_milestone_celebration',
-    route: '/dashboard/advisor/{goalId}',
+    route: '/dashboard/tracker/{goalId}',
     agentId: 'advisor',
-    message: '🎉 Awesome progress! You\'re doing great. Want tips on how to accelerate your savings even more?',
+    message: '🎉 Amazing! You\'ve hit a major milestone. This kind of progress shows real financial discipline. Ready to set an even bigger goal?',
     priority: 'medium',
     conditions: [
       { type: 'goal_status', value: 'milestone_reached' }
@@ -125,12 +179,26 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
     maxShowCount: 5
   },
 
+  {
+    id: 'multiple_goals_encouragement',
+    route: '/dashboard/tracker/',
+    agentId: 'advisor',
+    message: 'I love seeing multiple goals! 🌟 You\'re building a comprehensive financial plan. Want help prioritizing or balancing them?',
+    priority: 'medium',
+    conditions: [
+      { type: 'goal_status', value: 'multiple_goals' },
+      { type: 'return_visit', value: true }
+    ],
+    cooldownHours: 168,
+    maxShowCount: 3
+  },
+
   // === LEARNING SCENARIOS ===
   {
     id: 'learning_first_visit',
     route: '/dashboard/learning/',
     agentId: 'educator',
-    message: 'Welcome to Moneko Learning! Start with our essentials to build a solid foundation in personal finance.',
+    message: 'Welcome to your Learning Hub! 📚 Knowledge is your best investment. I recommend starting with our essentials if you\'re new to finance.',
     priority: 'high',
     conditions: [
       { type: 'first_visit', value: true }
@@ -139,38 +207,88 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   },
 
   {
-    id: 'learning_beginner_prompt',
-    route: '/dashboard/',
+    id: 'learning_vs_essentials_guidance',
+    route: '/dashboard/learning/',
     agentId: 'educator',
-    message: 'New to finance? Check out our learning section to master the basics before investing!',
+    message: 'Wondering about the difference? Essentials covers fundamental concepts, while Learning offers deeper, specialized topics. Which matches your experience level?',
     priority: 'medium',
     conditions: [
-      { type: 'user_action', value: 'dashboard_idle_30s' },
-      { type: 'route_pattern', value: 'no_learning_visited' }
+      { type: 'return_visit', value: true },
+      { type: 'page_time', value: 10000 }, // 10+ seconds looking
+      { type: 'route_pattern', value: 'no_courses_started' }
     ],
-    cooldownHours: 48,
+    cooldownHours: 72,
     maxShowCount: 2
   },
 
   {
-    id: 'course_completion_next',
-    route: '/dashboard/learning/{courseId}',
+    id: 'course_selection_help',
+    route: '/dashboard/learning/{courseId}/',
     agentId: 'educator',
-    message: 'Excellent work completing that lesson! Ready for your next learning adventure? I can help you discover more courses that build on what you just learned.',
+    message: 'Great choice! 👍 This course will really expand your financial knowledge. Take your time with each lesson - understanding is more important than speed.',
     priority: 'medium',
     conditions: [
-      { type: 'user_action', value: 'course_completed' }
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'first_lesson_encouragement',
+    route: '/dashboard/learning/{courseId}/lesson/{lessonId}',
+    agentId: 'educator',
+    message: 'Your first lesson! 🚀 Every expert was once a beginner. Take notes and don\'t hesitate to chat with me if you have questions.',
+    priority: 'high',
+    conditions: [
+      { type: 'user_action', value: 'first_lesson_started' },
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'lesson_completion_next_step',
+    route: '/dashboard/learning/{courseId}/lesson/{lessonId}',
+    agentId: 'educator',
+    message: 'Well done! 🎯 You completed another lesson. Consistency is key in learning. Ready for the next one, or want to apply what you learned first?',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'lesson_completed' }
     ],
     cooldownHours: 1,
     maxShowCount: 10
   },
 
-  // === CHAT SCENARIOS ===
   {
-    id: 'chat_first_time',
-    route: '/dashboard/',
-    agentId: 'advisor',
-    message: 'Hi there! I\'m your AI Financial Advisor. Ask me about investments, budgeting, or any money questions you have!',
+    id: 'course_halfway_motivation',
+    route: '/dashboard/learning/{courseId}/',
+    agentId: 'educator',
+    message: 'You\'re halfway through this course! 📖 The concepts are building on each other beautifully. How are you feeling about the material so far?',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'course_halfway_complete' }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'course_completion_celebration',
+    route: '/dashboard/learning/{courseId}/',
+    agentId: 'educator',
+    message: 'Course completed! 🏆 You should feel proud - you\'ve gained valuable financial knowledge. Ready to apply it or explore another course?',
+    priority: 'high',
+    conditions: [
+      { type: 'user_action', value: 'course_completed' }
+    ],
+    maxShowCount: 1
+  },
+
+  // === ESSENTIALS SCENARIOS ===
+  {
+    id: 'essentials_first_visit',
+    route: '/dashboard/essentials/',
+    agentId: 'educator',
+    message: 'Perfect choice for building your foundation! 🏗️ Essentials covers everything you need to make smart financial decisions. Let\'s start your journey!',
     priority: 'high',
     conditions: [
       { type: 'first_visit', value: true }
@@ -179,17 +297,42 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   },
 
   {
-    id: 'chat_encouragement',
-    route: '/dashboard/',
-    agentId: 'advisor',
-    message: 'Got financial questions? Don\'t hesitate to chat with me - I\'m here to help with personalized advice!',
-    priority: 'low',
+    id: 'essentials_course_selection',
+    route: '/dashboard/essentials/{courseId}/',
+    agentId: 'educator',
+    message: 'This essentials course is perfectly structured for beginners! 📈 Each lesson builds on the previous one, so take them in order for the best experience.',
+    priority: 'medium',
     conditions: [
-      { type: 'route_pattern', value: 'no_chat_used' },
-      { type: 'time_since_last', value: 72, operator: 'gte' } // 3+ days since last dashboard visit
+      { type: 'first_visit', value: true }
     ],
-    cooldownHours: 168, // Weekly
-    maxShowCount: 2
+    maxShowCount: 1
+  },
+
+  {
+    id: 'essentials_lesson_support',
+    route: '/dashboard/essentials/{courseId}/lesson/{lessonId}',
+    agentId: 'educator',
+    message: 'This fundamental concept will serve you well! 💡 Make sure you understand it fully before moving on - it\'s the building block for everything else.',
+    priority: 'medium',
+    conditions: [
+      { type: 'page_time', value: 120000 }, // 2+ minutes on lesson
+      { type: 'user_action', value: 'struggling_with_concept' }
+    ],
+    cooldownHours: 24,
+    maxShowCount: 3
+  },
+
+  {
+    id: 'essentials_to_goals_bridge',
+    route: '/dashboard/essentials/{courseId}/',
+    agentId: 'educator',
+    message: 'Ready to put this knowledge into action? 🎯 Now might be a great time to create your first financial goal and apply what you\'ve learned!',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'essentials_progress_50_percent' },
+      { type: 'goal_status', value: 'no_goals' }
+    ],
+    maxShowCount: 1
   },
 
   // === PORTFOLIO SCENARIOS ===
@@ -197,7 +340,7 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
     id: 'portfolio_first_visit',
     route: '/dashboard/portfolio/',
     agentId: 'advisor',
-    message: 'Track your investments here! Connect your accounts or manually add positions to see your complete financial picture.',
+    message: 'Welcome to your Portfolio Hub! 📊 This is where successful investors track their holdings. Ready to take your finances to the next level?',
     priority: 'high',
     conditions: [
       { type: 'first_visit', value: true }
@@ -206,25 +349,56 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
   },
 
   {
-    id: 'portfolio_performance_review',
+    id: 'portfolio_setup_guidance',
     route: '/dashboard/portfolio/',
     agentId: 'advisor',
-    message: 'Want a portfolio review? I can analyze your asset allocation and suggest improvements for better diversification.',
+    message: 'Setting up your portfolio tracking might seem complex, but it\'s incredibly valuable! 💰 Start with your biggest holdings and build from there.',
     priority: 'medium',
     conditions: [
       { type: 'return_visit', value: true },
-      { type: 'time_since_last', value: 168, operator: 'gte' } // 1+ week
+      { type: 'user_action', value: 'portfolio_empty' },
+      { type: 'page_time', value: 15000 } // 15+ seconds looking
+    ],
+    cooldownHours: 48,
+    maxShowCount: 2
+  },
+
+  {
+    id: 'portfolio_education_prompt',
+    route: '/dashboard/portfolio/',
+    agentId: 'advisor',
+    message: 'Want to be a smarter investor? 🧠 I notice you haven\'t explored our learning section yet. Investment education could really boost your portfolio performance!',
+    priority: 'medium',
+    conditions: [
+      { type: 'return_visit', value: true },
+      { type: 'route_pattern', value: 'no_learning_visited' },
+      { type: 'user_action', value: 'portfolio_has_holdings' }
+    ],
+    cooldownHours: 168,
+    maxShowCount: 2
+  },
+
+  {
+    id: 'portfolio_performance_review',
+    route: '/dashboard/portfolio/',
+    agentId: 'advisor',
+    message: 'Your portfolio is looking good! 📈 Want me to analyze your asset allocation and suggest improvements for better diversification?',
+    priority: 'medium',
+    conditions: [
+      { type: 'return_visit', value: true },
+      { type: 'time_since_last', value: 336, operator: 'gte' }, // 2+ weeks
+      { type: 'user_action', value: 'portfolio_has_performance_data' }
     ],
     cooldownHours: 336, // 2 weeks
     maxShowCount: 3
   },
 
-  // === TIMELINE SCENARIOS ===
+  // === USER SETTINGS SCENARIOS ===
   {
-    id: 'timeline_explanation',
-    route: '/dashboard/timeline/',
+    id: 'settings_first_visit',
+    route: '/dashboard/user-settings/',
     agentId: 'advisor',
-    message: 'Your financial timeline shows all your progress updates and milestones. Great way to see your journey!',
+    message: 'Smart move visiting your settings! ⚙️ A complete profile helps me give you much better personalized advice. Let\'s optimize your experience.',
     priority: 'medium',
     conditions: [
       { type: 'first_visit', value: true }
@@ -232,46 +406,169 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
     maxShowCount: 1
   },
 
-  // === SETTINGS SCENARIOS ===
   {
-    id: 'settings_profile_completion',
+    id: 'profile_completion_prompt',
+    route: '/dashboard/user-settings/profile',
+    agentId: 'advisor',
+    message: 'Your profile is the foundation of personalized advice! 👤 The more details you provide, the better recommendations I can make for your unique situation.',
+    priority: 'high',
+    conditions: [
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'incomplete_profile_reminder',
     route: '/dashboard/user-settings/',
     agentId: 'advisor',
-    message: 'Complete your profile to get more personalized financial advice and goal recommendations!',
+    message: 'I notice your profile isn\'t complete yet. 📝 Even basic info like your age and income goals helps me give much better financial advice!',
     priority: 'medium',
     conditions: [
-      { type: 'user_action', value: 'profile_incomplete' }
+      { type: 'user_action', value: 'profile_incomplete' },
+      { type: 'return_visit', value: true }
+    ],
+    cooldownHours: 168,
+    maxShowCount: 3
+  },
+
+  {
+    id: 'membership_introduction',
+    route: '/dashboard/user-settings/membership/',
+    agentId: 'advisor',
+    message: 'Interested in premium features? 👑 Our membership unlocks advanced calculators, detailed portfolio analysis, and exclusive investment strategies!',
+    priority: 'medium',
+    conditions: [
+      { type: 'first_visit', value: true }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'membership_value_proposition',
+    route: '/dashboard/user-settings/membership/',
+    agentId: 'advisor',
+    message: 'I can see you\'re serious about your finances! 🌟 Premium members typically see 20% better goal achievement rates with our advanced tools and insights.',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'active_user_multiple_goals' },
+      { type: 'return_visit', value: true },
+      { type: 'user_action', value: 'not_premium_member' }
+    ],
+    cooldownHours: 336,
+    maxShowCount: 2
+  },
+
+  // === ENGAGEMENT & RETENTION ===
+  {
+    id: 'return_user_welcome',
+    route: '/dashboard/',
+    agentId: 'advisor',
+    message: 'Welcome back! 😊 I\'m excited to see you continuing your financial journey. What would you like to focus on today?',
+    priority: 'medium',
+    conditions: [
+      { type: 'return_visit', value: true },
+      { type: 'time_since_last', value: 24, operator: 'gte' } // 1+ day
+    ],
+    cooldownHours: 168,
+    maxShowCount: 5
+  },
+
+  {
+    id: 'learning_to_action_bridge',
+    route: '/dashboard/',
+    agentId: 'educator',
+    message: 'You\'ve been learning a lot! 🎓 Knowledge is powerful, but action creates wealth. Ready to set some financial goals based on what you\'ve learned?',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'multiple_lessons_completed' },
+      { type: 'goal_status', value: 'no_goals' }
+    ],
+    cooldownHours: 72,
+    maxShowCount: 2
+  },
+
+  {
+    id: 'goals_to_learning_bridge',
+    route: '/dashboard/',
+    agentId: 'advisor',
+    message: 'Your goals are ambitious - I love it! 💪 Want to accelerate your progress? Our learning section has strategies specifically for goal achievement.',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'multiple_goals_created' },
+      { type: 'route_pattern', value: 'limited_learning_engagement' }
     ],
     cooldownHours: 168,
     maxShowCount: 2
   },
 
-  // === ADVANCED SCENARIOS ===
   {
-    id: 'feature_discovery_community',
+    id: 'comprehensive_user_celebration',
     route: '/dashboard/',
     agentId: 'educator',
-    message: 'Did you know we have community courses? Learn from other members\' experiences and share your own!',
+    message: 'Wow! You\'re using goals, learning, AND portfolio tracking! 🏆 You\'re in the top 5% of users. Your financial future is looking incredibly bright!',
+    priority: 'medium',
+    conditions: [
+      { type: 'user_action', value: 'comprehensive_platform_usage' }
+    ],
+    maxShowCount: 1
+  },
+
+  {
+    id: 'long_absence_return',
+    route: '/dashboard/',
+    agentId: 'advisor',
+    message: 'It\'s been a while! 🕐 Life gets busy, but your financial goals are still important. Let\'s do a quick check-in and get you back on track.',
+    priority: 'high',
+    conditions: [
+      { type: 'time_since_last', value: 504, operator: 'gte' } // 3+ weeks
+    ],
+    cooldownHours: 168,
+    maxShowCount: 3
+  },
+
+  // === CONTEXTUAL HELP ===
+  {
+    id: 'chat_introduction',
+    route: '/dashboard/',
+    agentId: 'advisor',
+    message: 'See me here on the right? 💬 I\'m your personal financial advisor! Click anytime to ask questions, get advice, or discuss your financial situation.',
+    priority: 'medium',
+    conditions: [
+      { type: 'route_pattern', value: 'no_chat_used' },
+      { type: 'time_since_last', value: 72, operator: 'gte' } // 3+ days
+    ],
+    cooldownHours: 168,
+    maxShowCount: 2
+  },
+
+  {
+    id: 'feature_discovery',
+    route: '/dashboard/',
+    agentId: 'educator',
+    message: 'Did you know you can track investment portfolios here too? 📊 Once you\'re comfortable with basic goals, portfolio tracking is the next level!',
     priority: 'low',
     conditions: [
-      { type: 'route_pattern', value: 'no_community_visited' },
-      { type: 'time_since_last', value: 240, operator: 'gte' } // 10+ days
+      { type: 'user_action', value: 'established_goal_user' },
+      { type: 'route_pattern', value: 'no_portfolio_visited' },
+      { type: 'time_since_last', value: 336, operator: 'gte' } // 2+ weeks
     ],
     cooldownHours: 336,
     maxShowCount: 1
   },
 
   {
-    id: 'engagement_boost',
+    id: 'seasonal_motivation',
     route: '/dashboard/',
     agentId: 'advisor',
-    message: 'It\'s been a while! How are your financial goals progressing? Let me help you get back on track.',
+    message: 'New year, new financial goals! 🎊 This is the perfect time to review your progress and set ambitious targets for the year ahead.',
     priority: 'medium',
     conditions: [
-      { type: 'time_since_last', value: 504, operator: 'gte' } // 3+ weeks
+      { type: 'user_action', value: 'seasonal_check' }, // Would be triggered by date logic
+      { type: 'return_visit', value: true }
     ],
-    cooldownHours: 168,
-    maxShowCount: 2
+    cooldownHours: 2160, // Monthly
+    maxShowCount: 1
   }
 ];
 
@@ -374,26 +671,56 @@ class DashboardGuidanceMonitor {
 
   // Main evaluation logic
   private evaluateScenarios() {
-    if (!this.userState.preferences.guidanceEnabled) return;
-    if (!this.onShowTooltip) return;
+    console.log('🔍 Evaluating scenarios...');
+    console.log('Guidance enabled:', this.userState.preferences.guidanceEnabled);
+    console.log('onShowTooltip callback exists:', !!this.onShowTooltip);
+    console.log('Current route:', this.currentRoute);
+    
+    if (!this.userState.preferences.guidanceEnabled) {
+      console.log('❌ Guidance disabled in preferences');
+      return;
+    }
+    if (!this.onShowTooltip) {
+      console.log('❌ No onShowTooltip callback found');
+      return;
+    }
 
     const applicableScenarios = this.getApplicableScenarios();
+    console.log('📋 Applicable scenarios found:', applicableScenarios.length);
+    applicableScenarios.forEach(scenario => {
+      console.log(`  - ${scenario.id}: ${scenario.message.substring(0, 50)}...`);
+    });
     
-    if (applicableScenarios.length === 0) return;
+    if (applicableScenarios.length === 0) {
+      console.log('❌ No applicable scenarios found');
+      return;
+    }
 
     // Sort by priority and select the best one
     const selectedScenario = this.selectBestScenario(applicableScenarios);
+    console.log('🎯 Selected scenario:', selectedScenario?.id);
     
     if (selectedScenario && this.shouldShowScenario(selectedScenario)) {
+      console.log('✅ Showing guidance tooltip for:', selectedScenario.id);
       this.showGuidanceTooltip(selectedScenario);
+    } else if (selectedScenario) {
+      console.log('❌ Scenario should not be shown (cooldown/max count):', selectedScenario.id);
+    } else {
+      console.log('❌ No scenario selected');
     }
   }
 
   private getApplicableScenarios(): GuidanceScenario[] {
-    return GUIDANCE_SCENARIOS.filter(scenario => 
-      this.matchesRoute(scenario.route) && 
-      this.evaluateConditions(scenario.conditions)
-    );
+    return GUIDANCE_SCENARIOS.filter(scenario => {
+      const routeMatch = this.matchesRoute(scenario.route);
+      const conditionsMatch = this.evaluateConditions(scenario.conditions);
+      
+      console.log(`  Checking scenario ${scenario.id}:`);
+      console.log(`    Route match (${scenario.route}): ${routeMatch}`);
+      console.log(`    Conditions match: ${conditionsMatch}`);
+      
+      return routeMatch && conditionsMatch;
+    });
   }
 
   private matchesRoute(scenarioRoute: string): boolean {
@@ -404,7 +731,11 @@ class DashboardGuidanceMonitor {
   }
 
   private evaluateConditions(conditions: GuidanceCondition[]): boolean {
-    return conditions.every(condition => this.evaluateCondition(condition));
+    return conditions.every(condition => {
+      const result = this.evaluateCondition(condition);
+      console.log(`      Condition ${condition.type}=${condition.value}: ${result}`);
+      return result;
+    });
   }
 
   private evaluateCondition(condition: GuidanceCondition): boolean {
@@ -455,6 +786,20 @@ class DashboardGuidanceMonitor {
       case 'no_chat_used':
         return !this.userState.userJourney.hasUsedChat;
         
+      case 'no_portfolio_visited':
+        return !this.userState.userJourney.hasViewedPortfolio;
+        
+      case 'no_major_sections_visited':
+        return !this.userState.userJourney.hasViewedLearning && 
+               !this.userState.userJourney.hasViewedPortfolio && 
+               !this.userState.userJourney.hasCreatedGoal;
+               
+      case 'no_courses_started':
+        return this.userState.userJourney.completedLessons.length === 0;
+        
+      case 'limited_learning_engagement':
+        return this.userState.userJourney.completedLessons.length < 3;
+        
       case 'no_community_visited':
         return !this.userState.routeVisits['/dashboard/community-courses/'];
         
@@ -479,10 +824,69 @@ class DashboardGuidanceMonitor {
 
   private evaluateUserAction(action: string): boolean {
     switch (action) {
+      case 'dashboard_idle_15s':
+        return (Date.now() - this.pageStartTime) > 15000;
       case 'dashboard_idle_30s':
         return (Date.now() - this.pageStartTime) > 30000;
+        
+      case 'multiple_sections_visited':
+        const sectionsVisited = [
+          this.userState.userJourney.hasViewedLearning,
+          this.userState.userJourney.hasViewedPortfolio,
+          this.userState.userJourney.hasCreatedGoal
+        ].filter(Boolean).length;
+        return sectionsVisited >= 2;
+        
+      case 'first_goal_created':
+        return this.userState.userJourney.hasCreatedGoal && 
+               Object.keys(this.userState.scenariosShown).length <= 3; // Recent user
+               
+      case 'first_lesson_started':
+        return this.userState.userJourney.completedLessons.length === 0 &&
+               this.currentRoute.includes('/lesson/');
+               
+      case 'multiple_lessons_completed':
+        return this.userState.userJourney.completedLessons.length >= 3;
+        
+      case 'multiple_goals_created':
+        return this.userState.userJourney.hasCreatedGoal; // Mock - would check actual count
+        
+      case 'comprehensive_platform_usage':
+        return this.userState.userJourney.hasViewedLearning &&
+               this.userState.userJourney.hasViewedPortfolio &&
+               this.userState.userJourney.hasCreatedGoal &&
+               this.userState.userJourney.completedLessons.length >= 5;
+               
+      case 'established_goal_user':
+        return this.userState.userJourney.hasCreatedGoal &&
+               this.userState.totalVisits >= 10; // Regular user
+               
+      case 'active_user_multiple_goals':
+        return this.userState.userJourney.hasCreatedGoal &&
+               this.userState.totalVisits >= 15; // Very active user
+               
+      case 'not_premium_member':
+        return true; // Would check actual subscription status
+        
+      case 'portfolio_empty':
+      case 'portfolio_has_holdings':
+      case 'portfolio_has_performance_data':
+        return true; // Would check actual portfolio data
+        
       case 'profile_incomplete':
         return true; // Would check actual profile data
+        
+      case 'struggling_with_concept':
+        return false; // Would be triggered by specific user behavior
+        
+      case 'essentials_progress_50_percent':
+      case 'course_halfway_complete':
+        return false; // Would check actual course progress
+        
+      case 'seasonal_check':
+        // Could implement date-based logic for seasonal messages
+        return false;
+        
       case 'course_completed':
         // Check if user just completed a lesson and navigated to course page
         const lastCompleted = this.userState.userJourney.lastCompletedLesson;
@@ -499,6 +903,15 @@ class DashboardGuidanceMonitor {
         return isRecentCompletion && 
                currentCourseId === lastCompleted.courseId &&
                this.userState.routeVisits[this.currentRoute] <= 2; // Don't show too often on same course
+               
+      case 'lesson_completed':
+        // Simple lesson completion check
+        const recentLesson = this.userState.userJourney.lastCompletedLesson;
+        if (!recentLesson) return false;
+        
+        const recentCompletion = Date.now() - recentLesson.completedAt;
+        return recentCompletion < (5 * 60 * 1000); // Within last 5 minutes
+        
       default:
         return false;
     }

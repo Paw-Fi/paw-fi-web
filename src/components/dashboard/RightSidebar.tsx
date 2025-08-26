@@ -1,19 +1,19 @@
 import { motion } from 'framer-motion';
 import { AI_ID, useAIChat } from '@/contexts/ai-chat-context';
 import { OptimizedImage } from '@/components/seo/optimized-image';
-import { useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import { useImperativeHandle, forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faLightbulb } from '@fortawesome/free-solid-svg-icons';
 import monekoLogo from '@/assets/images/logo/moneko.png';
 import finniLogo from '@/assets/images/logo/finni.png';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from 'react-tooltip';
+import { FloatingGuidanceBubble } from '@/components/ui/FloatingGuidanceBubble';
 
 interface ChatAgent {
   id: string;
   label: string;
   description: string;
-  aiType:AI_ID;
+  aiType: AI_ID;
   icon?: any; // FontAwesome icon
   onClick: () => void;
 }
@@ -50,39 +50,30 @@ const CHAT_AGENTS_DATA = [
 
 export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ className = '', isGuideHidden = false, showGuide }, ref) => {
   const { openChat } = useAIChat();
-  const [openTooltips, setOpenTooltips] = useState<Record<string, boolean>>({});
+  const [activeBubble, setActiveBubble] = useState<{
+    agentId: AI_ID;
+    message: string;
+  } | null>(null);
 
-  const hideGuidance = (tooltipId: string) => {
-    setOpenTooltips(prev => ({ ...prev, [tooltipId]: false }));
+  const hideGuidance = () => {
+    setActiveBubble(null);
   };
-  
-  // Create refs for each tooltip
-  const tooltipRefs = useRef<{ [key: string]: any }>({});
-  
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     showTooltip: (agentId: AI_ID, message: string, place: 'left' | 'right' | 'top' | 'bottom' = 'left') => {
-      const elementId = `ai-${agentId}`;
-      const tooltipId = `chat-tooltip-${elementId}`;
-      setOpenTooltips(prev => ({ ...prev, [tooltipId]: true }));
-      const tooltipRef = tooltipRefs.current[tooltipId];
-      if (tooltipRef) {
-        tooltipRef.open({
-          anchorSelect: `#chat-agent-${elementId}`,
-          content: message,
-          place: place
-        });
-      }
+      setActiveBubble({ agentId, message });
     },
     hideTooltip: (agentId: AI_ID) => {
-      const elementId = `ai-${agentId}`;
-      const tooltipId = `chat-tooltip-${elementId}`;
-      hideGuidance(tooltipId);
+      // Only hide if it's the same agent
+      if (activeBubble?.agentId === agentId) {
+        hideGuidance();
+      }
     },
     hideAllTooltips: () => {
-      setOpenTooltips({});
+      hideGuidance();
     }
-  }), []);
+  }), [activeBubble]);
 
   return (
     <>
@@ -94,10 +85,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
       >
         <div className="h-full rounded-2xl border border-border bg-background/70 shadow-sm">
           <div className="flex flex-col items-center py-6 space-y-4">
-          
-            {CHAT_AGENTS_DATA.map((agent, index) => {
-              const tooltipId = `chat-tooltip-${agent.id}`;
-              return (
+            {CHAT_AGENTS_DATA.map((agent, index) => (
               <motion.div
                 key={agent.id}
                 className="relative"
@@ -111,7 +99,6 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   size="icon"
                   className="size-10 shadow-sm hover:shadow-md transition-all duration-200"
                   onClick={() => openChat(agent.aiType)}
-                  data-tooltip-id={tooltipId}
                   asChild
                 >
                   <motion.div
@@ -129,53 +116,15 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                     </div>
                   </motion.div>
                 </Button>
-
-                {/* Tooltip */}
-                <Tooltip
-                  ref={(el) => {
-                    if (el) {
-                      tooltipRefs.current[tooltipId] = el;
-                    }
-                  }}
-                  id={tooltipId}
-                  isOpen={openTooltips[tooltipId]}
-                  clickable={true}
-                  style={{
-                    backgroundColor: 'hsl(var(--popover))',
-                    color: 'hsl(var(--popover-foreground))',
-                    borderRadius: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    maxWidth: '240px',
-                    zIndex: 1000
-                  }}
-                  place="left"
-                  offset={8}
-                  render={({ content }) => (
-                    <div className="flex items-start">
-                        <div>
-                            <div className="font-semibold text-popover-foreground mb-1">{agent.label}</div>
-                            <div className="text-muted-foreground text-xs">{content || agent.description}</div>
-                        </div>
-                        <button onClick={() => hideGuidance(tooltipId)} className="ml-2 p-1 text-muted-foreground hover:text-popover-foreground">
-                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                        </button>
-                    </div>
-                  )}
-                />
               </motion.div>
-            )})
-            }
-              {/* Show Guide Button - Only visible when guide is hidden */}
-              {isGuideHidden && showGuide && (
+            ))}
+
+            {/* Show Guide Button - Only visible when guide is hidden */}
+            {isGuideHidden && showGuide && (
               <Button
                 onClick={showGuide}
                 size="icon"
                 className="size-10 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-sm hover:shadow-md transition-all duration-200"
-                data-tooltip-id="show-guide-tooltip"
-                data-tooltip-content="Show setup guide to get started"
-                data-tooltip-place="left"
                 asChild
               >
                 <motion.div
@@ -193,37 +142,27 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                 </motion.div>
               </Button>
             )}
-
           </div>
         </div>
       </motion.div>
 
-      {/* Show Guide Tooltip */}
-      {isGuideHidden && showGuide && (
-        <Tooltip
-          id="show-guide-tooltip"
-          style={{
-            backgroundColor: 'hsl(var(--popover))',
-            color: 'hsl(var(--popover-foreground))',
-            borderRadius: '0.75rem',
-            padding: '0.75rem 1rem',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            maxWidth: '240px',
-            zIndex: 1000
+      {/* Floating Guidance Bubble */}
+      {activeBubble && (
+        <FloatingGuidanceBubble
+          agentId={activeBubble.agentId}
+          message={activeBubble.message}
+          isVisible={!!activeBubble}
+          onClose={hideGuidance}
+          onClick={() => {
+            openChat(activeBubble.agentId);
+            hideGuidance();
           }}
-          place="left"
-          offset={8}
-        >
-          <div>
-            <div className="font-semibold text-popover-foreground mb-1">
-              Setup Guide
-            </div>
-            <div className="text-muted-foreground text-xs">
-              Show setup guide to get started
-            </div>
-          </div>
-        </Tooltip>
+          position={{
+            bottom: '120px',
+            right: '80px'
+          }}
+          autoHideDelay={15000} // 15 seconds
+        />
       )}
     </>
   );
