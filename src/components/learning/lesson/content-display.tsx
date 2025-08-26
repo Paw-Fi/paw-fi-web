@@ -6,6 +6,7 @@ import { OptimizedImage } from "@/components/seo/optimized-image";
 import quizCompletedImage from "@/assets/images/lessons/quiz-completed.jpeg";
 import { LessonCardTitle } from "./lesson-card-title";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
+import { Button } from "@components/ui/button";
 
 export // Content display component for flashcard-style content
 function ContentDisplay({
@@ -161,24 +162,21 @@ function ContentDisplay({
         className="mt-auto flex justify-between pt-4"
         variants={contentVariants}
       >
-        <motion.button
-          onClick={onBack}
-          className="flex items-center justify-center rounded-full border border-gray-300 px-6 py-2 font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-100"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-          Back
-        </motion.button>
-        <motion.button
-          onClick={onNext}
-          className="flex items-center justify-center rounded-full bg-primary px-6 py-2 font-medium text-white transition-colors duration-200 hover:bg-secondary"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {isQuizTransition ? "Start Quiz" : "Next"}
-          <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-        </motion.button>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="rounded-full px-6 py-2"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+            Back
+          </Button>
+          <Button
+            onClick={onNext}
+            className="rounded-full px-6 py-2"
+          >
+            {isQuizTransition ? "Start Quiz" : "Next"}
+            <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+          </Button>
       </motion.div>
     </motion.div>
   );

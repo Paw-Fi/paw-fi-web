@@ -8,6 +8,7 @@ import {
   faCheck,
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@components/ui/button";
 import { useQuizDashboard } from "./useQuizDashboard";
 import { supabase } from "@/lib/supabase";
 import {
@@ -90,12 +91,14 @@ const DebtRepeater: React.FC<{
         <div key={debt.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
           <div className="flex justify-between items-center mb-3">
             <h4 className="font-medium text-gray-800 dark:text-gray-200">Debt #{index + 1}</h4>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => removeDebt(debt.id)}
-              className="text-red-500 hover:text-red-700 text-sm"
+              className="text-red-500 hover:text-red-700"
             >
               Remove
-            </button>
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -153,12 +156,13 @@ const DebtRepeater: React.FC<{
         </div>
       ))}
       
-      <button
+      <Button
+        variant="outline"
         onClick={addDebt}
-        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
       >
         + Add Debt
-      </button>
+      </Button>
       
       {debts.length === 0 && (
         <div className="text-center py-4">
@@ -1035,10 +1039,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
             animate="visible"
             variants={resultVariants}
             className="mx-auto max-w-3xl rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm"
-          >
-            <h2 className="mb-6 text-center text-2xl font-bold text-gray-800 dark:text-gray-200">
-              Your Financial Health Assessment
-            </h2>
+          >           
 
             {state.calculationResults && (
               <div className="mb-8 space-y-6">
@@ -1158,15 +1159,16 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 />
               </div>
 
-              <button
+              <Button
                 onClick={handleCreateDashboard}
                 disabled={status === "creating"}
-                className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 font-medium text-white shadow-sm transition-all hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full"
+                size="lg"
               >
                 {status === "creating"
                   ? "Creating Portfolio..."
                   : "Create Portfolio"}
-              </button>
+              </Button>
 
               {error && (
                 <div className="mt-4 rounded-lg border border-red-100 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-red-700 dark:text-red-300">
@@ -1230,12 +1232,14 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                       </p>
                     </div>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setState(prev => ({ ...prev, showPresetBanner: false }))}
-                    className="flex-shrink-0 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
+                    className="flex-shrink-0 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
                   >
                     <FontAwesomeIcon icon={faTimes} className="text-sm" />
-                  </button>
+                  </Button>
                 </motion.div>
               )}
             </div>
@@ -1325,9 +1329,11 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                   className={`grid grid-cols-1 ${question.optionsPerRow === 4 ? "md:grid-cols-4" : question.optionsPerRow === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-2`}
                                 >
                                   {question.options.map((option) => (
-                                    <button
+                                    <Button
                                       key={option.value}
-                                      className={`rounded-md p-2 text-sm transition-colors ${state.answers[question.id] === option.value ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+                                      variant={state.answers[question.id] === option.value ? "default" : "outline"}
+                                      size="sm"
+                                      className="p-2 text-sm"
                                       onClick={() =>
                                         handleAnswerChange(
                                           question.id,
@@ -1336,7 +1342,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                       }
                                     >
                                       {option.label}
-                                    </button>
+                                    </Button>
                                   ))}
                                 </div>
                               )}
@@ -1356,9 +1362,11 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                         state.answers[question.id] as string[]
                                       )?.includes(option.value);
                                     return (
-                                      <button
+                                      <Button
                                         key={option.value}
-                                        className={`rounded-md p-2 text-sm transition-colors ${isSelected ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+                                        variant={isSelected ? "default" : "outline"}
+                                        size="sm"
+                                        className="p-2 text-sm"
                                         onClick={() =>
                                           handleMultipleChoiceChange(
                                             question.id,
@@ -1367,7 +1375,7 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                                         }
                                       >
                                         {option.label}
-                                      </button>
+                                      </Button>
                                     );
                                   })}
                                 </div>
@@ -1391,8 +1399,8 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
 
             {/* Footer with navigation buttons */}
             <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 p-6 sm:p-8">
-              <button
-                className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+              <Button
+                variant="outline"
                 onClick={() => {
                   // Find previous category
                   const currentIndex = categories.findIndex(cat => cat.id === state.activeCategory);
@@ -1408,13 +1416,13 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
               >
                 <FontAwesomeIcon icon={faChevronLeft} className="mr-2" />
                 Previous
-              </button>
+              </Button>
 
               {state.activeCategory &&
               categories.findIndex(cat => cat.id === state.activeCategory) <
                 categories.length - 1 ? (
-                <button
-                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                <Button
+                  variant={isCategoryComplete(state.activeCategory) ? "default" : "secondary"}
                   onClick={() => {
                     // Only proceed if category is complete
                     if (isCategoryComplete(state.activeCategory)) {
@@ -1429,16 +1437,17 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 >
                   Next
                   <FontAwesomeIcon icon={faChevronRight} className="ml-2" />
-                </button>
+                </Button>
               ) : (
-                <button
-                  className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${isCategoryComplete(state.activeCategory) && isQuizComplete() ? "bg-green-500 text-white hover:bg-green-600" : "cursor-not-allowed bg-gray-300 text-gray-500"}`}
+                <Button
+                  variant={isCategoryComplete(state.activeCategory) && isQuizComplete() ? "default" : "secondary"}
+                  className={isCategoryComplete(state.activeCategory) && isQuizComplete() ? "bg-green-500 hover:bg-green-600" : ""}
                   onClick={handleSubmitQuiz}
                   disabled={!isCategoryComplete(state.activeCategory) || !isQuizComplete()}
                 >
                   Complete Assessment
                   <FontAwesomeIcon icon={faCheck} className="ml-2" />
-                </button>
+                </Button>
               )}
             </div>
           </motion.div>

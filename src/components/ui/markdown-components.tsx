@@ -475,12 +475,53 @@ export const createMarkdownComponents = ({
       );
     },
     
+    // Intercept paragraphs that contain course-card HTML
+    p: ({ node, ...props }: any) => {
+      
+      // Check if this paragraph contains a course-card
+      const childrenAsString = React.Children.toArray(props.children).join('');
+      if (typeof childrenAsString === 'string' && childrenAsString.includes('<course-card')) {
+        
+        // Extract course-card data using robust regex that handles nested JSON
+        // This regex matches data-course='...' handling nested quotes and complex JSON structures
+        const courseCardRegex = /<course-card\s+data-course='(\{(?:[^'\\]|\\.)*\})'\s*>(?:<\/course-card>)?/;
+        const match = childrenAsString.match(courseCardRegex);
+        
+        if (match && match[1]) {
+          const jsonString = match[1];
+          
+          try {
+            const courseData = JSON.parse(jsonString);
+            
+            return (
+              <div className="my-3">
+                <CourseCard
+                  title={courseData.title || ""}
+                  icon={courseData.icon || "📚"}
+                  description={courseData.description || ""}
+                  lessonCount={courseData.lesson_count || courseData.lessonCount || 1}
+                  onClick={handleCourseClick(courseData.id)}
+                />
+              </div>
+            );
+          } catch (error) {
+            console.error('🎯 P-COURSE-CARD: Parse error:', error);
+            return (
+              <div className="my-3 p-4 border border-red-300 bg-red-50 rounded-lg">
+                <h3 className="text-red-700 font-medium">Course Card Error</h3>
+                <p className="text-red-600 text-sm">Failed to parse course data</p>
+              </div>
+            );
+          }
+        }
+      }
+      
+      return <p {...props} />;
+    },
+
     "course-card": ({ node, ...props }: any) => {
-      console.log('🎯 COURSE-CARD: Component called! Props:', props);
-      console.log('🎯 COURSE-CARD: Node:', node);
       try {
         const dataString = props['data-course'] || '{}';
-        console.log('Raw data-course:', dataString);
         
         // Try to decode HTML entities if present
         const decodedString = dataString
@@ -491,10 +532,7 @@ export const createMarkdownComponents = ({
           .replace(/&gt;/g, '>')
           .replace(/&amp;/g, '&');
         
-        console.log('Decoded data-course:', decodedString);
         const courseData = JSON.parse(decodedString);
-        console.log('Parsed course data:', courseData);
-        console.log('Rendering course card:', courseData.title);
         
         return (
           <div className="my-3">

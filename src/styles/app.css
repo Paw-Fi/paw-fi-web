@@ -5,28 +5,27 @@
 
 /* Moneko color variables (light theme) */
 :root {
-  /* shadcn/ui color system with guaranteed visibility against halo background */
+  /* shadcn/ui color system - using HSL format for consistency */
   --radius: 0.625rem;
   --background: 0 0% 100%;
-  --foreground: 0 0% 5%; /* Almost black for maximum contrast */
+  --foreground: 0 0% 5%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 5%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 5%;
-  --primary: 254 100% 67%; /* #7458FF converted to HSL */
+  --primary: 254 100% 67%; /* #7458FF - Moneko brand purple */
   --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96%;
   --secondary-foreground: 0 0% 5%;
   --muted: 210 40% 96%;
-  --muted-foreground: 0 0% 20%; /* Very dark gray for visibility on light halo */
+  --muted-foreground: 0 0% 45%;
   --accent: 210 40% 96%;
   --accent-foreground: 0 0% 5%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 253 91% 67%;
-  --radius: 0.5rem;
+  --ring: 254 100% 67%;
 
   /* Moneko brand colors */
   --moneko-background: #F9FAFB;
@@ -92,28 +91,27 @@
   --markdown-button-border: #D1D5DB;
 }
 
-/* Dark theme overrides */
 .dark {
-  /* shadcn/ui dark theme with guaranteed visibility */
-  --background: 220 18% 8%;
-  --foreground: 0 0% 98%;
-  --card: 220 13% 15%;
-  --card-foreground: 0 0% 98%;
-  --popover: 220 13% 15%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 254 100% 70%; /* #8B70FF converted to HSL */
-  --primary-foreground: 220 18% 8%;
-  --secondary: 217 33% 18%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 217 33% 18%;
-  --muted-foreground: 215 20% 90%;
-  --accent: 217 33% 18%;
-  --accent-foreground: 0 0% 98%;
+  /* shadcn/ui dark theme - consistent HSL format */
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+  --card: 224 71% 4%;
+  --card-foreground: 210 20% 98%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 254 100% 70%; /* #8B70FF - Moneko brand purple dark */
+  --primary-foreground: 224 71% 4%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 210 20% 98%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 217 11% 65%;
+  --accent: 215 28% 17%;
+  --accent-foreground: 210 20% 98%;
   --destructive: 0 63% 31%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 217 33% 18%;
-  --input: 217 33% 18%;
-  --ring: 254 100% 71%;
+  --destructive-foreground: 210 20% 98%;
+  --border: 215 28% 17%;
+  --input: 215 28% 17%;
+  --ring: 254 100% 70%;
 
   /* Moneko dark colors */
   --moneko-background: #0A0E1A;
@@ -181,7 +179,7 @@
 
 /* Expose variables to Tailwind as theme tokens */
 @theme {
-  /* shadcn/ui colors using standard HSL format */
+  /* Core shadcn/ui colors - direct mapping to CSS variables */
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));

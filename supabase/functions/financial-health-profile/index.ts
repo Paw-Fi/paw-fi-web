@@ -209,7 +209,7 @@ Please generate a comprehensive financial profile description based on this data
       profile_description: profileDescription,
       quiz_answers: quizAnswers,
       profile_data: profileData, // Always use backend's calculated data
-    }, { onConflict: 'user_id' })
+    })
     .select()
     .single();
 
