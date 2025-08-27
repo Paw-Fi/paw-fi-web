@@ -190,7 +190,7 @@ function DashboardHome() {
         new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime()
       );
       
-      if (sortedCompleted[0]) {`
+      if (sortedCompleted[0]) {
         mostRecentCompletedLesson = sortedCompleted[0];
         // Find which course this lesson belongs to
         currentCourse = courses.find((course: any) => 
