@@ -88,23 +88,6 @@ const itemVariants: Variants = {
   },
 };
 
-const cardHoverVariants: Variants = {
-  rest: { 
-    y: 0,
-    scale: 1,
-  },
-  hover: { 
-    y: -2,
-    scale: 1.01,
-    transition: {
-      type: "spring",
-      damping: 25,
-      stiffness: 400,
-      mass: 0.5,
-    },
-  },
-};
-
 function DashboardHome() {
   const { user } = useAuth();
   // Rewards modal state
@@ -207,7 +190,7 @@ function DashboardHome() {
         new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime()
       );
       
-      if (sortedCompleted[0]) {
+      if (sortedCompleted[0]) {`
         mostRecentCompletedLesson = sortedCompleted[0];
         // Find which course this lesson belongs to
         currentCourse = courses.find((course: any) => 
@@ -598,8 +581,7 @@ function DashboardHome() {
             <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               
               {/* Financial Overview Card - Clean Design */}
-              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
-                <motion.div variants={cardHoverVariants}>
+       
                   <Card className="shadow-sm">
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -708,12 +690,10 @@ function DashboardHome() {
                       )}
                     </CardContent>
                   </Card>
-                </motion.div>
-              </motion.div>
+            
 
               {/* Learning Progress Card - Clean */}
-              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
-                <motion.div variants={cardHoverVariants}>
+       
                   <Card className="shadow-sm">
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -811,16 +791,14 @@ function DashboardHome() {
                       )}
                     </CardContent>
                   </Card>
-                </motion.div>
-              </motion.div>
+         
           </div>
 
             {/* Right Column - 1 span */}
             <div className="space-y-6 sm:space-y-8">
               
               {/* AI Assistant Card - Clean */}
-              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
-                <motion.div variants={cardHoverVariants}>
+        
                   <Card className="shadow-sm">
                     <CardHeader>
                       <div className="flex items-center space-x-4">
@@ -894,12 +872,10 @@ function DashboardHome() {
                       )}
                     </CardContent>
                   </Card>
-                </motion.div>
-              </motion.div>
+          
 
               {/* Quick Tools Card - Clean */}
-              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
-                <motion.div variants={cardHoverVariants}>
+       
                   <Card className="shadow-sm">
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -948,12 +924,10 @@ function DashboardHome() {
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
-              </motion.div>
+              
 
               {/* Essential Lessons Card - Clean */}
-              <motion.div variants={itemVariants} whileHover="hover" initial="rest">
-                <motion.div variants={cardHoverVariants}>
+          
                   <Card className="shadow-sm">
                     <CardHeader>
                       <div className="flex items-center space-x-4">
@@ -988,168 +962,233 @@ function DashboardHome() {
                       </Card>
                     </CardContent>
                   </Card>
-                </motion.div>
-              </motion.div>
+           
             </div>
           </div>
         </div>
       </motion.div>
 
-        {/* Modern Rewards Modal */}
+        {/* Premium Rewards Experience - 2025 Design */}
         {showRewardsModal && (
           <Modal
             isOpen={showRewardsModal}
             onClose={() => setShowRewardsModal(false)}
             width="xwide"
-            contentClassName="p-0"
+            contentClassName="p-0 bg-gradient-to-br from-background via-background to-muted/20"
           >
-            <Card className="w-full max-w-4xl max-h-full shadow-2xl overflow-hidden">
-              {/* Header */}
-              <CardHeader className="bg-primary text-primary-foreground p-8">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-primary-foreground/20">
-                      <Trophy className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-3xl font-bold mb-1">Rewards Roadmap</CardTitle>
-                      <CardDescription className="text-primary-foreground/70">
-                        {LEVEL_REWARDS.filter(r => levelInfo.level >= r.level).length} / {LEVEL_REWARDS.length} rewards unlocked
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowRewardsModal(false)}
-                    className="text-primary-foreground hover:bg-primary-foreground/20"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-              </CardHeader>
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-border/50 shadow-2xl">
               
-              {/* Scrollable Content */}
-              <div className="max-h-96 overflow-y-auto">
-                <CardContent className="p-8">
-                  <div className="relative">
-                    {/* Progress line */}
-                    <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border"></div>
+              {/* Glassmorphism Header */}
+              <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10"></div>
+                <div className="relative px-8 py-10">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3 mb-4">
+                        <motion.div 
+                          className="relative p-4 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30 backdrop-blur-sm border border-yellow-300/20"
+                          whileHover={{ scale: 1.05, rotate: 5 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                        >
+                          <Trophy className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 animate-pulse"></div>
+                        </motion.div>
+                        <div>
+                          <h1 className="text-4xl font-semibold text-foreground tracking-tight">Achievement Path</h1>
+                          <p className="text-lg text-muted-foreground/80">Your journey to financial mastery</p>
+                        </div>
+                      </div>
+                      
+                      {/* Progress Stats */}
                     
-                    <div className="space-y-6">
+                    </div>                 
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhanced Content Area */}
+              <div className="px-8 pb-8">
+                <div className="max-h-[65vh] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/30">
+                  <div className="relative">
+                    
+                    {/* Dynamic Progress Path */}
+                    <div className="absolute left-12 top-8 bottom-8 w-px">
+                      <div className="h-full bg-gradient-to-b from-green-400/60 via-blue-400/60 to-purple-400/60 rounded-full"></div>
+                    </div>
+                    
+                    <div className="space-y-8 pt-4">
                       {LEVEL_REWARDS.map((reward, index) => {
                         const isUnlocked = levelInfo.level >= reward.level;
                         const isNext = !isUnlocked && reward.level === levelInfo.level + 1;
+                        const isFuture = reward.level > levelInfo.level + 1;
                         const xpRequired = LEVEL_REQUIREMENTS[reward.level - 1] || 0;
                         
                         return (
                           <motion.div
                             key={reward.level}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ 
+                              duration: 0.4, 
+                              delay: index * 0.08,
+                              type: "spring",
+                              stiffness: 100,
+                              damping: 15
+                            }}
+                            className="relative"
                           >
-                            <Card className={cn(
-                              "transition-all duration-300",
-                              isUnlocked 
-                                ? "bg-primary/5 border-primary/20" 
-                                : isNext
-                                ? "bg-muted/50 border-border"
-                                : "bg-muted opacity-60"
-                            )}>
-                              <CardContent className="flex items-start gap-6 p-6">
-                                {/* Level indicator */}
-                                <div className="relative flex-shrink-0">
-                                  <div className={cn(
-                                    "p-4 rounded-xl shadow-sm",
-                                    isUnlocked 
-                                      ? "bg-primary text-primary-foreground" 
-                                      : isNext
-                                      ? "bg-muted text-muted-foreground"
-                                      : "bg-muted-foreground text-muted"
-                                  )}>
-                                    {isUnlocked ? (
-                                      <CheckCircle className="h-6 w-6 text-white" />
-                                    ) : (
-                                      React.createElement(reward.icon, { className: "h-6 w-6 text-white" })
+                            {/* Achievement Card */}
+                            <motion.div 
+                              className={cn(
+                                "ml-20 rounded-3xl border transition-all duration-500 group",
+                                "hover:shadow-lg hover:-translate-y-1",
+                                isUnlocked 
+                                  ? "bg-gradient-to-br from-background to-green-50/50 dark:to-green-950/30 border-green-200/50 dark:border-green-800/50 shadow-green-100/50 dark:shadow-green-900/20" 
+                                  : isNext
+                                  ? "bg-gradient-to-br from-background to-blue-50/50 dark:to-blue-950/30 border-blue-200/50 dark:border-blue-800/50 shadow-blue-100/50 dark:shadow-blue-900/20"
+                                  : "bg-gradient-to-br from-background to-muted/30 border-border/30 opacity-60"
+                              )}
+                              whileHover={isUnlocked || isNext ? { scale: 1.02 } : {}}
+                            >
+                              <div className="p-8">
+                                {/* Level Header */}
+                                <div className="flex items-start justify-between mb-6">
+                                  <div className="flex items-center gap-4">
+                                    <motion.div 
+                                      className={cn(
+                                        "text-3xl font-bold tracking-tight",
+                                        isUnlocked ? "text-green-600 dark:text-green-400"
+                                        : isNext ? "text-blue-600 dark:text-blue-400"
+                                        : "text-muted-foreground"
+                                      )}
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{ delay: index * 0.1 + 0.2 }}
+                                    >
+                                      {reward.level}
+                                    </motion.div>
+                                    
+                                    {isNext && (
+                                      <motion.div
+                                        initial={{ scale: 0, rotate: -10 }}
+                                        animate={{ scale: 1, rotate: 0 }}
+                                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-300/30"
+                                      >
+                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wide">NEXT</span>
+                                      </motion.div>
+                                    )}
+                                    
+                                    {isUnlocked && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-600/20 border border-green-300/30"
+                                      >
+                                        <span className="text-xs font-semibold text-green-600 dark:text-green-400 tracking-wide flex items-center gap-1.5">
+                                          <CheckCircle className="h-3.5 w-3.5" />
+                                          UNLOCKED
+                                        </span>
+                                      </motion.div>
                                     )}
                                   </div>
-                                </div>
-                                
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <h3 className={cn(
-                                        "text-2xl font-bold",
-                                        isUnlocked ? "text-primary" 
-                                        : isNext ? "text-muted-foreground" 
-                                        : "text-muted-foreground"
-                                      )}>
-                                        Level {reward.level}
-                                      </h3>
-                                      {isNext && (
-                                        <Badge variant="secondary">
-                                          NEXT
-                                        </Badge>
-                                      )}
-                                      {isUnlocked && (
-                                        <Badge variant="secondary">
-                                          ✓ UNLOCKED
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="text-sm font-medium text-muted-foreground">
+                                  
+                                  <div className="text-right">
+                                    <div className="text-sm font-medium text-muted-foreground">Required</div>
+                                    <div className="text-lg font-semibold text-foreground">
                                       {xpRequired.toLocaleString()} XP
                                     </div>
                                   </div>
-                                  
-                                  <h4 className="text-lg font-semibold mb-2">
-                                    {reward.title}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground mb-4">
-                                    {reward.description}
-                                  </p>
-                                  
-                                  <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 rounded-lg bg-muted">
-                                      <Gift className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                    <span className="text-sm font-medium">
-                                      🎁 {reward.reward}
-                                    </span>
+                                </div>
+                                
+                                {/* Achievement Details */}
+                                <div className="space-y-4">
+                                  <div>
+                                    <h3 className="text-2xl font-semibold text-foreground mb-2">{reward.title}</h3>
+                                    <p className="text-muted-foreground leading-relaxed">{reward.description}</p>
                                   </div>
                                   
+                                  {/* Reward Display */}
+                                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-background/50 border border-border/30">
+                                    <motion.div 
+                                      className="p-3 rounded-xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30"
+                                      whileHover={{ rotate: [0, -5, 5, 0] }}
+                                      transition={{ duration: 0.5 }}
+                                    >
+                                      <Gift className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                                    </motion.div>
+                                    <div>
+                                      <div className="text-sm font-medium text-muted-foreground mb-1">Reward</div>
+                                      <div className="font-semibold text-foreground">{reward.reward}</div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Next Level Progress */}
                                   {isNext && (
-                                    <Card>
-                                      <CardContent className="p-4">
-                                        <div className="text-sm font-medium mb-3">
-                                          {levelInfo.xpNeededForNext.toLocaleString()} XP needed to unlock
+                                    <motion.div 
+                                      className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/30 dark:border-blue-800/30"
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.3 }}
+                                    >
+                                      <div className="flex items-center justify-between mb-4">
+                                        <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                          Progress to unlock
                                         </div>
-                                        <Progress 
-                                          value={Math.min((currentXP / xpRequired) * 100, 100)} 
-                                          className="h-2"
-                                        />
-                                      </CardContent>
-                                    </Card>
+                                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                          {levelInfo.xpNeededForNext.toLocaleString()} XP needed
+                                        </div>
+                                      </div>
+                                      <div className="relative">
+                                        <div className="h-3 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
+                                          <motion.div 
+                                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-500"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min((currentXP / xpRequired) * 100, 100)}%` }}
+                                            transition={{ duration: 1, delay: 0.5 }}
+                                          />
+                                        </div>
+                                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                                      </div>
+                                    </motion.div>
                                   )}
                                 </div>
-                              </CardContent>
-                            </Card>
+                              </div>
+                            </motion.div>
+
+                            {/* Progress Path Node */}
+                            <motion.div 
+                              className="absolute left-10 top-12 w-6 h-6 rounded-full border-4 border-background z-10"
+                              style={{
+                                background: isUnlocked 
+                                  ? 'linear-gradient(135deg, #10b981, #059669)' 
+                                  : isNext 
+                                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                                  : 'linear-gradient(135deg, #6b7280, #4b5563)'
+                              }}
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ delay: index * 0.08 + 0.1 }}
+                              whileHover={{ scale: 1.2 }}
+                            >
+                              {isUnlocked && (
+                                <motion.div
+                                  className="absolute inset-1 rounded-full bg-white flex items-center justify-center"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: index * 0.08 + 0.3 }}
+                                >
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                </motion.div>
+                              )}
+                            </motion.div>
                           </motion.div>
                         );
                       })}
                     </div>
                   </div>
-                </CardContent>
-              </div>
-              
-              {/* Footer */}
-              <div className="p-6 bg-muted/30 border-t">
-                <div className="text-center text-muted-foreground">
-                  Keep learning and growing to unlock amazing rewards! 🚀
                 </div>
               </div>
-            </Card>
+            </div>
           </Modal>
         )}
     </>

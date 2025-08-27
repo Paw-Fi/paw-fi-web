@@ -180,18 +180,46 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
     console.log(`Webhook received: ${webhook.type} on ${webhook.table}`)
 
     // Handle users table events
-    if (webhook.table === 'users' && webhook.type === 'INSERT') {
-      if (webhook.record?.email) {
-        console.log(`Sending welcome email to: ${webhook.record.email}`)
+    if (webhook.table === 'users') {
+      if (webhook.type === 'INSERT') {
+        // Skip welcome email on user creation, wait for first login after verification
+        if (webhook.record?.email) {
+          console.log(`User record created for: ${webhook.record.email}, skipping welcome email until verified`)
+          return { success: true, id: 'user-created-no-email' }
+        }
+      }
+      
+      if (webhook.type === 'UPDATE' && webhook.record?.email && webhook.old_record) {
+        // Detect first login after verification (when last_login changes from null to a timestamp)
+        const wasFirstLogin = webhook.old_record.last_login === null && webhook.record.last_login !== null
         
-        // Send welcome email to new users
-        const template = welcomeTemplate({
-          name: webhook.record.full_name || '',
-          email: webhook.record.email,
-          dashboardUrl: 'https://moneko.io/dashboard'
-        })
-        
-        return await sendUserEmail(webhook.record.email, webhook.record.full_name || '', template)
+        if (wasFirstLogin) {
+          console.log(`First login detected for verified user: ${webhook.record.email}`)
+          
+          // Verify user is actually confirmed by checking auth.users
+          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(webhook.record.id)
+          
+          if (authError) {
+            console.error('Error fetching auth user:', authError)
+            return { success: false, error: 'Could not verify user status' }
+          }
+          
+          if (!authUser?.user?.email_confirmed_at) {
+            console.log(`User ${webhook.record.email} still not verified, skipping welcome email`)
+            return { success: true, id: 'user-not-verified-yet' }
+          }
+          
+          console.log(`Sending welcome email to newly verified user: ${webhook.record.email}`)
+          
+          // Send welcome email to newly verified users
+          const template = welcomeTemplate({
+            name: webhook.record.full_name || '',
+            email: webhook.record.email,
+            dashboardUrl: 'https://moneko.io/dashboard'
+          })
+          
+          return await sendUserEmail(webhook.record.email, webhook.record.full_name || '', template)
+        }
       }
     }
 

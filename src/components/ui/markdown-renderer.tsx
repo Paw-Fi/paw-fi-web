@@ -126,7 +126,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
   const handleCourseClick = (courseId: string) => () => {
     closeChat();
-    navigate({ to: `/dashboard/learning/${courseId}` });
+    navigate({ to: `/dashboard/learning/${courseId??""}` });
   };
 
 

@@ -21,7 +21,7 @@
   --muted-foreground: 0 0% 45%;
   --accent: 210 40% 96%;
   --accent-foreground: 0 0% 5%;
-  --destructive: 0 84% 60%;
+  --destructive: 0 63% 63%; /* Match danger color brightness */
   --destructive-foreground: 0 0% 100%;
   --border: 214 32% 91%;
   --input: 214 32% 91%;
@@ -107,7 +107,7 @@
   --muted-foreground: 217 11% 65%;
   --accent: 215 28% 17%;
   --accent-foreground: 210 20% 98%;
-  --destructive: 0 63% 31%;
+  --destructive: 0 63% 63%; /* Match danger color brightness */
   --destructive-foreground: 210 20% 98%;
   --border: 215 28% 17%;
   --input: 215 28% 17%;
