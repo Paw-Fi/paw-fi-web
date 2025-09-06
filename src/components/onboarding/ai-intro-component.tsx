@@ -167,7 +167,14 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
 
   // Initialize with welcome message or process initial message if provided
   useEffect(() => {
+    const abortController = new AbortController();
+    let isInitializing = false;
+    
     const initializeChat = async () => {
+      // Prevent multiple concurrent initializations
+      if (isInitializing) return;
+      isInitializing = true;
+
       // If there's an initial message, get both welcome and response
       if (initialMessage?.trim()) {
         const userMessage: ConversationMessage = {
@@ -187,6 +194,19 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
         loadingTimerRef.current = setInterval(() => {
           setLoadingDuration(prev => prev + 1);
         }, 1000);
+
+        // Add timeout protection
+        const timeoutId = setTimeout(() => {
+          if (!abortController.signal.aborted) {
+            console.warn('Initial message processing timed out, resetting state');
+            setIsSendingMessage(false);
+            setLoadingDuration(0);
+            if (loadingTimerRef.current) {
+              clearInterval(loadingTimerRef.current);
+              loadingTimerRef.current = null;
+            }
+          }
+        }, 30000); // 30 second timeout
         
         // Get both welcome message and response from the backend
         try {
@@ -200,7 +220,13 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
               message: initialMessage, 
               withWelcomeAndResponse: true 
             }),
+            signal: abortController.signal,
           });
+
+          // Clear timeout since request completed
+          clearTimeout(timeoutId);
+
+          if (abortController.signal.aborted) return;
 
           if (response.ok) {
             const data = await response.json();
@@ -225,9 +251,14 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
             };
             initialMessages.push(aiMessage);
             
-            setMessages(initialMessages);
+            if (!abortController.signal.aborted) {
+              setMessages(initialMessages);
+            }
           }
         } catch (aiError) {
+          clearTimeout(timeoutId);
+          if (abortController.signal.aborted) return;
+          
           console.error('Failed to process initial message:', aiError);
           // Add error message if API fails
           const errorMessage: ConversationMessage = {
@@ -239,14 +270,17 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
           };
           setMessages([userMessage, errorMessage]);
         } finally {
-          // Stop loading indicators
-          setIsSendingMessage(false);
-          setLoadingDuration(0);
-          
-          if (loadingTimerRef.current) {
-            clearInterval(loadingTimerRef.current);
-            loadingTimerRef.current = null;
+          // Always reset state, regardless of success/failure
+          if (!abortController.signal.aborted) {
+            setIsSendingMessage(false);
+            setLoadingDuration(0);
+            
+            if (loadingTimerRef.current) {
+              clearInterval(loadingTimerRef.current);
+              loadingTimerRef.current = null;
+            }
           }
+          isInitializing = false;
         }
         
         return;
@@ -261,7 +295,10 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
             'Authorization': `Bearer ${supabase.supabaseKey}`,
           },
           body: JSON.stringify({ isFirstMessage: true }),
+          signal: abortController.signal,
         });
+
+        if (abortController.signal.aborted) return;
 
         if (!response.ok) {
           throw new Error('Failed to initialize chat');
@@ -276,8 +313,12 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
           chat_session_id: "intro-session",
         };
 
-        setMessages([welcomeMessage]);
+        if (!abortController.signal.aborted) {
+          setMessages([welcomeMessage]);
+        }
       } catch (error) {
+        if (abortController.signal.aborted) return;
+        
         console.error('Failed to initialize chat:', error);
         // Fallback message
         const fallbackMessage: ConversationMessage = {
@@ -295,10 +336,25 @@ Sound good?`,
         };
         
         setMessages([fallbackMessage]);
+      } finally {
+        isInitializing = false;
       }
     };
 
     initializeChat();
+
+    // Cleanup function to abort requests and reset state
+    return () => {
+      abortController.abort();
+      isInitializing = false;
+      // Emergency state reset in case of component unmount during API call
+      setIsSendingMessage(false);
+      setLoadingDuration(0);
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    };
   }, [initialMessage]);
 
   const handleSendMessage = async (content: string) => {
@@ -312,6 +368,17 @@ Sound good?`,
     loadingTimerRef.current = setInterval(() => {
       setLoadingDuration(prev => prev + 1);
     }, 1000);
+
+    // Add timeout protection for message sending
+    const timeoutId = setTimeout(() => {
+      console.warn('Message sending timed out, resetting state');
+      setIsSendingMessage(false);
+      setLoadingDuration(0);
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    }, 30000); // 30 second timeout
     
     // Create optimistic user message
     const userMessage: ConversationMessage = {
@@ -334,6 +401,9 @@ Sound good?`,
         body: JSON.stringify({ message: content }),
       });
 
+      // Clear timeout since request completed
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
@@ -352,6 +422,7 @@ Sound good?`,
       setMessages(prev => [...prev, aiMessage]);
       
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Error sending message:', error);
       
       // Add error message
@@ -365,6 +436,7 @@ Sound good?`,
       
       setMessages(prev => [...prev, errorMessage]);
     } finally {
+      // Always reset state, regardless of success/failure
       setIsSendingMessage(false);
       setLoadingDuration(0);
       

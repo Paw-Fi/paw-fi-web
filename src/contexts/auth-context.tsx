@@ -48,9 +48,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(transformUser(session?.user ?? null));
+        
+        // Update last login for sign-in events
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            await supabase
+              .from('users')
+              .update({ last_login: new Date().toISOString() })
+              .eq('id', session.user.id);
+          } catch (error) {
+            console.error('Error updating last login:', error);
+          }
+        }
+        
         setIsLoading(false);
       }
     );
@@ -94,14 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       
-      // Update last login time
-      if (user) {
-        await supabase
-          .from('users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', user.id);
-      }
-      
       return { success: true, data };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -110,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
+
 
   const signOut = async () => {
     setIsLoading(true);

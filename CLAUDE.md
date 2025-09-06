@@ -96,4 +96,8 @@ The project uses extensive TypeScript path aliases defined in `tsconfig.json`:
 - **Firebase hosting** for production deployment
 
 ## IMPORTANT
-detailed project guideline at `/README.md`
+Always use:
+- serena for semantic code retrieval and editing tools
+- context7 for up to date documentation on third party code
+- sequential thinking for any decision making
+- detailed project guideline at `/README.md`

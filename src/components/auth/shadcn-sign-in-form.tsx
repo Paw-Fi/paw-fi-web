@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
 import {
   Form,
   FormControl,
@@ -20,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { GoogleLoginButton } from "@/components/auth/google-login-button"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEye, faEyeSlash, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons"
 
@@ -100,6 +102,23 @@ export function ShadcnSignInForm({
             </CardHeader>
           )}
           <CardContent className="space-y-4">
+            {/* Google Login Button */}
+            <GoogleLoginButton 
+              redirectUrl={redirectUrl}
+              disabled={isLoading}
+            />
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -199,6 +218,24 @@ export function ShadcnSignInForm({
               <p className="text-sm text-muted-foreground">Enter your email and password to access your account</p>
             </div>
           )}
+          
+          {/* Google Login Button */}
+          <GoogleLoginButton 
+            redirectUrl={redirectUrl}
+            disabled={isLoading}
+          />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
