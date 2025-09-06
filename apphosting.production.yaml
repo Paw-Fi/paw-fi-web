@@ -1,11 +1,27 @@
 # Production environment configuration
-runConfig:
-  minInstances: 1  # Keep at least one instance warm
-  maxInstances: 2
-  cpu: 2
-  memoryMiB: 1024
-  concurrency: 80
+runtime: nodejs20  # or your current Node.js version
 
+instance_class: F2  # Use F2 or higher for production; alternatives: F4, F4_1G
+service: default    # or give it a name if you have multiple services
+
+automatic_scaling:
+  min_instances: 2        # At least 2 instances for high availability
+  max_instances: 10       # Allow scaling based on traffic
+  target_cpu_utilization: 0.65  # Scale up when CPU usage > 65%
+  target_throughput_utilization: 0.75
+  max_concurrent_requests: 60
+
+resources:
+  cpu: 2
+  memory_gb: 2
+  disk_size_gb: 10  # Increase if you handle uploads
+
+handlers:
+  - url: /(.*)
+    static_files: build/\1
+    upload: build/(.*)
+    secure: always
+    redirect_http_response_code: 301
 
 env:
   # Production Supabase configuration
@@ -37,6 +53,17 @@ env:
       - BUILD
       - RUNTIME
 
-runtime: nodejs20  # or nodejs20
+
+# Logging & Error Reporting
+inbound_services:
+  - warmup
+
+# Enable HTTPS-only connections
+network:
+  forwarded_ports:
+    - 443
+
+# Set timeouts (default 60s, increase if needed)
+timeout: 300s
 # Note: Need to grant access to the secrets to the app engine service account by using:
 # firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
