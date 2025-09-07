@@ -69,27 +69,10 @@ export const Route = createFileRoute("/team")({
           "name": member.name.split(' – ')[0], // Extract name only
           "jobTitle": member.role,
           "image": `https://moneko.io${member.imageUrl}`, // Assuming image URLs are relative
-          "description": member.bio,
           "sameAs": [
             member.social.linkedin,
             member.social.twitter
-          ].filter(Boolean), // Filter out empty strings
-          "worksFor": {
-            "@type": "Organization",
-            "name": "Moneko",
-            "url": "https://moneko.io"
-          },
-          "knowsAbout": member.expertiseAreas,
-          "alumniOf": member.education.map(edu => ({
-            "@type": "Organization", 
-            "name": edu
-          })),
-          "hasCredential": member.credentials.map(cred => ({
-            "@type": "EducationalOccupationalCredential",
-            "name": cred
-          })),
-          "yearsOfExperience": member.yearsExperience,
-          "award": member.achievements
+          ].filter(Boolean) // Filter out empty strings
         }))
       ]
     };
@@ -118,54 +101,20 @@ const teamMembers = [
     role: "Design Lead & Brand",
     imageUrl: Sabina,
     social: {
-      linkedin: "https://linkedin.com/in/sabinashao",
-      twitter: "https://twitter.com/sabinashao",
+      linkedin: "",
+      twitter: "",
     },
     bio: "Product designer and founder with 8+ years building fintech and marketing tools. Led UX and design of consumer-first tools across fintech and marketing. Combines creative execution with business clarity to build products that resonate and scale.",
-    credentials: ["Product Design Certification", "UX/UI Design"],
-    education: ["University of Waterloo - Design", "Google UX Design Certificate"],
-    yearsExperience: "8+",
-    expertiseAreas: [
-      "Product Design",
-      "User Experience Design", 
-      "Financial Technology",
-      "Brand Strategy",
-      "Consumer Products",
-      "Startup Operations",
-      "Design Systems"
-    ],
-    achievements: [
-      "Led design for multiple successful fintech products",
-      "8+ years in product design and brand strategy",
-      "Expert in consumer-first financial tools"
-    ]
   },
   { 
     name: "Yifan Lim –CTO",
     role: "Full-stack Engineer",
     imageUrl: Yifan,
     social: {
-      linkedin: "https://linkedin.com/in/yifanlim",
-      twitter: "https://twitter.com/yifanlim",
+      linkedin: "",
+      twitter: "",
     },
     bio: "Full-stack engineer and startup builder. Co-founded multiple Web3 products including a DePin marketplace and NFT platform. Led ERP development at Intact and built scalable platforms across mobile, web, and blockchain.",
-    credentials: ["AWS Certified Solutions Architect", "Full-Stack Development"],
-    education: ["University of Toronto - Computer Science", "MIT OpenCourseWare - Blockchain"],
-    yearsExperience: "6+",
-    expertiseAreas: [
-      "Full-Stack Development",
-      "Financial Technology Systems",
-      "Blockchain Development",
-      "Cloud Architecture", 
-      "API Design",
-      "Database Engineering",
-      "Scalable Systems"
-    ],
-    achievements: [
-      "Co-founded multiple successful Web3 products",
-      "Led ERP development at major corporation",
-      "Expert in scalable financial platform architecture"
-    ]
   },
 ];
 
@@ -274,37 +223,11 @@ function TeamPage() {
                   {member.name}
                 </h3>
                 <p className="mb-2 text-sm font-medium text-purple-600 dark:text-purple-400">
-                  {member.role} • {member.yearsExperience} years
+                  {member.role}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {member.bio}
                 </p>
-                
-                {/* Expertise Areas */}
-                <div className="mb-3">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Expertise</p>
-                  <div className="flex flex-wrap gap-1">
-                    {member.expertiseAreas.slice(0, 3).map((area, index) => (
-                      <span 
-                        key={index}
-                        className="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full dark:bg-purple-900/30 dark:text-purple-300"
-                      >
-                        {area}
-                      </span>
-                    ))}
-                    {member.expertiseAreas.length > 3 && (
-                      <span className="inline-block px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full dark:bg-slate-800 dark:text-slate-300">
-                        +{member.expertiseAreas.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Education & Credentials */}
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  <p><strong>Education:</strong> {member.education[0]}</p>
-                  <p><strong>Credentials:</strong> {member.credentials.join(', ')}</p>
-                </div>
               </div>
             </motion.div>
           ))}
