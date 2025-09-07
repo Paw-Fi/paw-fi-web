@@ -1,5 +1,52 @@
 # https://www.robotstxt.org/robotstxt.html
-User-agent: *
-Disallow:
+# Moneko - AI-Powered Financial Learning Platform
 
+User-agent: *
+Allow: /
+Allow: /calculators/
+Allow: /budgeting-app/
+Allow: /blogs/
+Allow: /courses/
+Allow: /guides/
+Allow: /about
+Allow: /contact
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /api/private/
+Disallow: /dashboard/private/
+Disallow: /_next/
+Disallow: /node_modules/
+
+# Allow specific bots for better indexing
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /llm.txt
+
+User-agent: OpenAI-ChatGPT
+Allow: /
+Allow: /llm.txt
+
+User-agent: Claude-Web
+Allow: /
+Allow: /llm.txt
+
+User-agent: Perplexity
+Allow: /
+Allow: /llm.txt
+
+# Sitemaps and feeds
 Sitemap: https://moneko.io/sitemap.xml
+Sitemap: https://moneko.io/sitemap-images.xml
+Sitemap: https://moneko.io/rss.xml
+
+# Host specification
+Host: https://moneko.io

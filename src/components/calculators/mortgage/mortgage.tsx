@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { PieChart } from '../../ui/pie-chart';
+import { MortgageInsights } from '@/components/seo/calculator-insights';
 
 interface AmortizationRow {
   paymentNumber: number;
@@ -574,6 +575,22 @@ export const MortgageCalculator = () => {
           </div>
         )}
       </div>
+      
+      {/* Enhanced Results with Contextual Insights */}
+      {typeof homePrice === 'number' && typeof downPayment === 'number' && 
+       typeof loanAmount === 'number' && typeof interestRate === 'number' && 
+       homePrice > 0 && mortgageDetails.monthlyPrincipalAndInterest > 0 && (
+        <div className="mt-8">
+          <MortgageInsights
+            homePrice={homePrice}
+            downPayment={downPayment}
+            loanAmount={loanAmount}
+            monthlyPayment={mortgageDetails.monthlyPrincipalAndInterest}
+            totalInterest={mortgageDetails.totalInterestPaid}
+            interestRate={interestRate}
+          />
+        </div>
+      )}
     </div>
   )
 }

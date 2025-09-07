@@ -23,6 +23,7 @@ import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 import { OptimizedImage } from "@/components/seo/optimized-image";
+import { StructuredData } from "@/components/seo/structured-data";
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,
@@ -54,46 +55,12 @@ export const Route = createFileRoute("/blogs/$blogId")({
       url: pageUrl,
     });
     
-    // Create structured data for blog post
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      "headline": blog.title,
-      "image": blog.coverImage,
-      "datePublished": blog.publishedAt,
-      "dateModified": blog.publishedAt,
-      "author": {
-        "@type": "Person",
-        "name": blog.author.name
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "Moneko",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://moneko.io/icon.svg"
-        }
-      },
-      "description": blog.excerpt,
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": pageUrl
-      },
-      "keywords": blog.tags.map(tag => tag.name).join(", ")
-    };
-    
     return {
       meta,
       link: [
         {
           rel: "canonical",
           href: pageUrl
-        }
-      ],
-      script: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData)
         }
       ]
     };
@@ -104,6 +71,9 @@ function BlogDetailPage() {
   const { blog } = Route.useLoaderData();
   const navigate = useNavigate();
   const [relatedBlogs, setRelatedBlogs] = useState<Blog[]>([]);
+  
+  // Calculate word count for schema
+  const wordCount = blog.content.trim().split(/\s+/).length;
   
   // Scroll to top when the page loads
   useEffect(() => {
@@ -141,6 +111,61 @@ function BlogDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Enhanced Article Schema */}
+      <StructuredData
+        type="article"
+        data={{
+          title: blog.title,
+          description: blog.excerpt,
+          url: `https://moneko.io/blogs/${blog.slug}`,
+          datePublished: blog.publishedAt,
+          dateModified: blog.publishedAt,
+          author: {
+            name: blog.author.name,
+            url: `https://moneko.io/team#${blog.author.id}`,
+            jobTitle: blog.author.title,
+            image: blog.author.avatar,
+          },
+          image: blog.coverImage,
+          publisher: {
+            name: 'Moneko',
+            url: 'https://moneko.io',
+            logo: 'https://moneko.io/logo192.png',
+          },
+          wordCount,
+          timeRequired: `PT${blog.readTime}M`,
+          educationalLevel: "Beginner",
+          isAccessibleForFree: true,
+          speakable: {
+            cssSelector: ["h1", "h2", "h3", ".prose p"]
+          }
+        }}
+      />
+
+      {/* Author Person Schema */}
+      <StructuredData
+        type="person"
+        data={{
+          name: blog.author.name,
+          jobTitle: blog.author.title,
+          description: blog.author.bio,
+          image: blog.author.avatar,
+          url: `https://moneko.io/team#${blog.author.id}`,
+          worksFor: {
+            name: 'Moneko',
+            url: 'https://moneko.io',
+            logo: 'https://moneko.io/logo192.png',
+          },
+          knowsAbout: [
+            "Personal Finance",
+            "Investment Strategy", 
+            "Financial Planning",
+            "Portfolio Management",
+            "Financial Education"
+          ]
+        }}
+      />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

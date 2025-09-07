@@ -56,7 +56,13 @@ export const Route = createRootRouteWithContext<{
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',
-        href: '/logo192.png',
+        href: '/logo192.png',  // Keep PNG for iOS compatibility
+      },
+      {
+        rel: 'icon',
+        type: 'image/webp',
+        sizes: '192x192',
+        href: '/logo192.webp',
       },
       {
         rel: 'icon',
@@ -66,15 +72,33 @@ export const Route = createRootRouteWithContext<{
       },
       {
         rel: 'icon',
+        type: 'image/webp',
+        sizes: '512x512',
+        href: '/logo512.webp',
+      },
+      {
+        rel: 'icon',
         type: 'image/png',
         sizes: '512x512',
         href: '/logo512.png',
       },
       {
         rel: 'icon',
+        type: 'image/webp',
+        sizes: '32x32',
+        href: '/logo192.webp',
+      },
+      {
+        rel: 'icon',
         type: 'image/png',
         sizes: '32x32',
         href: '/logo192.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/webp',
+        sizes: '16x16',
+        href: '/logo192.webp',
       },
       {
         rel: 'icon',

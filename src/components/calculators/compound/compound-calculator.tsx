@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react';
 import { BarChart } from '@/components/ui/bar-chart';
+import { FinancialTooltip, CommonTooltips } from '@/components/ui/financial-tooltip';
 
 interface CalculationResult {
   finalAmount: number;
@@ -137,7 +138,9 @@ const CompoundCalculator = () => {
         <div className="space-y-4">
           <div>
             <label htmlFor="initialInvestment" className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground">
-              Initial Investment
+              <FinancialTooltip term="initial investment">
+                Initial Investment
+              </FinancialTooltip>
             </label>
             <input
               id="initialInvestment"
@@ -151,7 +154,9 @@ const CompoundCalculator = () => {
           
           <div>
             <label htmlFor="annualContribution" className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground">
-              Annual Contribution
+              <FinancialTooltip term="annual contribution">
+                Annual Contribution
+              </FinancialTooltip>
             </label>
             <input
               id="annualContribution"
@@ -165,7 +170,9 @@ const CompoundCalculator = () => {
           
           <div>
             <label htmlFor="annualReturn" className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground">
-              Annual Return (%)
+              <FinancialTooltip term="annual return">
+                Annual Return (%)
+              </FinancialTooltip>
             </label>
             <input
               id="annualReturn"
@@ -194,7 +201,9 @@ const CompoundCalculator = () => {
           
           <div>
             <label htmlFor="compoundingFrequency" className="block text-sm font-medium mb-1 text-foreground dark:text-dark-foreground">
-              Compounding Frequency
+              <FinancialTooltip term="compounding frequency">
+                Compounding Frequency
+              </FinancialTooltip>
             </label>
             <select
               id="compoundingFrequency"
@@ -222,7 +231,11 @@ const CompoundCalculator = () => {
                 <p className="text-lg font-bold text-secondary dark:text-dark-secondary">{formatCurrency(calculationResult.contributions)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground dark:text-dark-muted-foreground">Total Interest</p>
+                <p className="text-sm text-muted-foreground dark:text-dark-muted-foreground">
+                  <CommonTooltips.CompoundInterest>
+                    Total Interest
+                  </CommonTooltips.CompoundInterest>
+                </p>
                 <p className="text-lg font-bold text-success dark:text-dark-success">{formatCurrency(calculationResult.interest)}</p>
               </div>
               <div>
@@ -268,7 +281,11 @@ const CompoundCalculator = () => {
             
            
               <div className="mt-2 p-4 bg-warning-light dark:bg-dark-warning-light rounded-lg">
-                <h4 className="font-semibold mb-2 text-foreground dark:text-dark-foreground">The Shocking Power of Compounding</h4>
+                <h4 className="font-semibold mb-2 text-foreground dark:text-dark-foreground">
+                  <CommonTooltips.CompoundInterest>
+                    The Shocking Power of Compounding
+                  </CommonTooltips.CompoundInterest>
+                </h4>
                 <p className="text-sm mb-2 text-foreground dark:text-dark-foreground">
                   If you invest $1 with a <strong>1% daily return</strong> for 365 days, 
                   your investment would grow to <strong>${exampleCalculation.finalAmount}</strong>!

@@ -1,8 +1,16 @@
 import classNames from 'classnames'
 import React, { useState, useRef, useEffect } from 'react'
 
+interface ResponsiveSource {
+  src: string
+  width: number
+  format?: 'webp' | 'avif' | 'jpg' | 'png'
+}
+
 interface OptimizedImageProps {
   src: string
+  webpSrc?: string // Optional WebP version - parent must provide explicitly
+  responsiveSources?: ResponsiveSource[] // Multiple sizes for responsive srcset
   alt: string
   width?: number
   height?: number
@@ -14,12 +22,16 @@ interface OptimizedImageProps {
   aspectRatio?: string
   loading?: 'lazy' | 'eager'
   decoding?: 'async' | 'sync' | 'auto'
+  webpSupport?: boolean
+  fallbackFormat?: 'png' | 'jpg'
   onLoad?: () => void
   onError?: () => void
 }
 
 export function OptimizedImage({
   src,
+  webpSrc,
+  responsiveSources,
   alt,
   width,
   height,
@@ -31,6 +43,8 @@ export function OptimizedImage({
   aspectRatio,
   loading = 'lazy',
   decoding = 'async',
+  webpSupport = true,
+  fallbackFormat = 'png',
   onLoad,
   onError,
 }: OptimizedImageProps) {
@@ -72,11 +86,46 @@ export function OptimizedImage({
     onError?.()
   }
 
+  // Use provided sources - no automatic conversion
+  // WebP version only used if explicitly provided by parent component
+  const fallbackSrc = src
+
+  // Generate responsive srcset from multiple sources
+  const generateSrcSet = (sources: ResponsiveSource[], format?: string) => {
+    if (!sources || sources.length === 0) return undefined
+    
+    const filteredSources = format 
+      ? sources.filter(s => s.format === format)
+      : sources
+    
+    if (filteredSources.length === 0) return undefined
+    
+    return filteredSources
+      .map(source => `${source.src} ${source.width}w`)
+      .join(', ')
+  }
+
+  // Group responsive sources by format
+  const groupedSources = responsiveSources ? responsiveSources.reduce((acc, source) => {
+    const format = source.format || 'jpg'
+    if (!acc[format]) acc[format] = []
+    acc[format].push(source)
+    return acc
+  }, {} as Record<string, ResponsiveSource[]>) : {}
+
+  // Sort formats by preference (AVIF -> WebP -> JPG/PNG)
+  const formatOrder = ['avif', 'webp', 'jpg', 'png']
+  const sortedFormats = Object.keys(groupedSources).sort((a, b) => {
+    const aIndex = formatOrder.indexOf(a)
+    const bIndex = formatOrder.indexOf(b)
+    return (aIndex === -1 ? formatOrder.length : aIndex) - (bIndex === -1 ? formatOrder.length : bIndex)
+  })
+
   const containerStyle = aspectRatio ? { aspectRatio } : {}
   return (
     <div 
       ref={containerRef}
-      className="relative overflow-hidden"
+      className={classNames("relative overflow-hidden", className)}
       style={containerStyle}
     >
       {/* Placeholder */}
@@ -89,24 +138,48 @@ export function OptimizedImage({
         />
       )}
       
-      {/* Main image */}
+      {/* Main image with responsive srcset support */}
       {isInView && (
-        <img
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          className={classNames("transition-opacity duration-300 ease-in-out",className,{
-            "opacity-100":isLoaded,
-            "opacity-0":!isLoaded,
+        <picture className="w-full h-full">
+          {/* Responsive sources by format */}
+          {sortedFormats.map(format => {
+            const srcSet = generateSrcSet(groupedSources[format], format)
+            if (!srcSet) return null
+            
+            const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`
+            return (
+              <source
+                key={format}
+                srcSet={srcSet}
+                type={mimeType}
+                sizes={sizes}
+              />
+            )
           })}
-          loading={loading}
-          decoding={decoding}
-          onLoad={handleLoad}
-          onError={handleError}
-          sizes={sizes}
-         
-        />
+          
+          {/* Legacy single WebP source support */}
+          {webpSupport && webpSrc && webpSrc !== fallbackSrc && !responsiveSources && (
+            <source srcSet={webpSrc} type="image/webp" sizes={sizes} />
+          )}
+          
+          {/* Fallback img with responsive srcset */}
+          <img
+            src={fallbackSrc}
+            srcSet={responsiveSources ? generateSrcSet(responsiveSources) : undefined}
+            alt={alt}
+            width={width}
+            height={height}
+            className={classNames("w-full h-full transition-opacity duration-300 ease-in-out", className, {
+              "opacity-100": isLoaded,
+              "opacity-0": !isLoaded,
+            })}
+            loading={loading}
+            decoding={decoding}
+            onLoad={handleLoad}
+            onError={handleError}
+            sizes={sizes}
+          />
+        </picture>
       )}
       
       {/* Error state */}

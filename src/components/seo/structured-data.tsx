@@ -24,9 +24,19 @@ interface ArticleData {
   author?: {
     name: string
     url?: string
+    jobTitle?: string
+    image?: string
+    sameAs?: string[]
   }
   image?: string
   publisher?: OrganizationData
+  wordCount?: number
+  timeRequired?: string
+  educationalLevel?: string
+  isAccessibleForFree?: boolean
+  speakable?: {
+    cssSelector: string[]
+  }
 }
 
 interface BreadcrumbItem {
@@ -39,9 +49,58 @@ interface FAQItem {
   answer: string
 }
 
+interface HowToStep {
+  name: string
+  text: string
+  url?: string
+  image?: string
+}
+
+interface HowToData {
+  name: string
+  description: string
+  totalTime?: string
+  estimatedCost?: {
+    currency: string
+    value: string
+  }
+  steps: HowToStep[]
+  image?: string
+}
+
+interface SoftwareApplicationData {
+  name: string
+  description: string
+  url: string
+  applicationCategory: string
+  operatingSystem: string
+  requirements?: string
+  screenshot?: string[]
+  softwareVersion?: string
+  dateModified?: string
+  publisher?: OrganizationData
+  aggregateRating?: {
+    ratingValue: number
+    ratingCount: number
+  }
+}
+
+interface PersonData {
+  name: string
+  jobTitle?: string
+  description?: string
+  image?: string
+  url?: string
+  sameAs?: string[]
+  worksFor?: OrganizationData
+  knowsAbout?: string[]
+  alumniOf?: string[]
+  email?: string
+}
+
 interface StructuredDataProps {
-  type: 'organization' | 'website' | 'article' | 'breadcrumb' | 'faq'
-  data: OrganizationData | WebsiteData | ArticleData | BreadcrumbItem[] | FAQItem[]
+  type: 'organization' | 'website' | 'article' | 'breadcrumb' | 'faq' | 'howto' | 'software' | 'person'
+  data: OrganizationData | WebsiteData | ArticleData | BreadcrumbItem[] | FAQItem[] | HowToData | SoftwareApplicationData | PersonData
 }
 
 export function StructuredData({ type, data }: StructuredDataProps) {
@@ -86,9 +145,17 @@ export function StructuredData({ type, data }: StructuredDataProps) {
             '@type': 'Person',
             name: articleData.author.name,
             url: articleData.author.url,
+            jobTitle: articleData.author.jobTitle,
+            image: articleData.author.image,
+            sameAs: articleData.author.sameAs,
           } : undefined,
           image: articleData.image,
           publisher: articleData.publisher,
+          wordCount: articleData.wordCount,
+          timeRequired: articleData.timeRequired,
+          educationalLevel: articleData.educationalLevel,
+          isAccessibleForFree: articleData.isAccessibleForFree,
+          speakable: articleData.speakable,
         }
 
       case 'breadcrumb':
@@ -117,6 +184,65 @@ export function StructuredData({ type, data }: StructuredDataProps) {
               text: item.answer,
             },
           })),
+        }
+
+      case 'howto':
+        const howtoData = data as HowToData
+        return {
+          '@context': baseContext,
+          '@type': 'HowTo',
+          name: howtoData.name,
+          description: howtoData.description,
+          totalTime: howtoData.totalTime,
+          estimatedCost: howtoData.estimatedCost,
+          image: howtoData.image,
+          step: howtoData.steps.map((step, index) => ({
+            '@type': 'HowToStep',
+            position: index + 1,
+            name: step.name,
+            text: step.text,
+            url: step.url,
+            image: step.image,
+          })),
+        }
+
+      case 'software':
+        const softwareData = data as SoftwareApplicationData
+        return {
+          '@context': baseContext,
+          '@type': 'SoftwareApplication',
+          name: softwareData.name,
+          description: softwareData.description,
+          url: softwareData.url,
+          applicationCategory: softwareData.applicationCategory,
+          operatingSystem: softwareData.operatingSystem,
+          requirements: softwareData.requirements,
+          screenshot: softwareData.screenshot,
+          softwareVersion: softwareData.softwareVersion,
+          dateModified: softwareData.dateModified,
+          publisher: softwareData.publisher,
+          aggregateRating: softwareData.aggregateRating ? {
+            '@type': 'AggregateRating',
+            ratingValue: softwareData.aggregateRating.ratingValue,
+            ratingCount: softwareData.aggregateRating.ratingCount,
+          } : undefined,
+        }
+
+      case 'person':
+        const personData = data as PersonData
+        return {
+          '@context': baseContext,
+          '@type': 'Person',
+          name: personData.name,
+          jobTitle: personData.jobTitle,
+          description: personData.description,
+          image: personData.image,
+          url: personData.url,
+          sameAs: personData.sameAs,
+          worksFor: personData.worksFor,
+          knowsAbout: personData.knowsAbout,
+          alumniOf: personData.alumniOf,
+          email: personData.email,
         }
 
       default:
