@@ -1,5 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
-# Moneko - AI-Powered Financial Learning Platform
+# Moneko - AI-Powered Financial Learning Platform for 2025
+# Comprehensive Financial Education, Calculators, and AI-Driven Budgeting Tools
 
 User-agent: *
 Allow: /
@@ -10,6 +11,27 @@ Allow: /courses/
 Allow: /guides/
 Allow: /about
 Allow: /contact
+Allow: /pricing
+Allow: /team
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /cookie-policy
+
+# High-priority content for financial education
+Allow: /guides/401k-vs-ira-complete-comparison
+Allow: /guides/complete-beginner-guide-to-investing
+Allow: /guides/how-much-do-i-need-to-retire
+Allow: /guides/how-much-house-can-i-afford
+Allow: /guides/how-to-calculate-emergency-fund
+Allow: /guides/should-i-pay-off-debt-or-save-first
+
+# Financial calculators - high SEO value
+Allow: /calculators/compound-calculator
+Allow: /calculators/mortgage-calculator
+Allow: /calculators/retirement-calculator
+Allow: /calculators/investment-calculator
+Allow: /calculators/auto-loan-calculator
+Allow: /calculators/saving-goals-calculator
 
 # Disallow admin and private areas
 Disallow: /admin/
@@ -17,36 +39,146 @@ Disallow: /api/private/
 Disallow: /dashboard/private/
 Disallow: /_next/
 Disallow: /node_modules/
+Disallow: /.git/
+Disallow: /src/
+Disallow: /build/
+Disallow: /temp/
+Disallow: /test/
+Disallow: /debug/
 
-# Allow specific bots for better indexing
+# Major search engines - prioritized crawling
 User-agent: Googlebot
 Allow: /
 Crawl-delay: 1
+Request-rate: 1/10s
 
 User-agent: Bingbot
 Allow: /
 Crawl-delay: 1
+Request-rate: 1/10s
 
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+# AI Training and Research Bots - Full Access for Financial Education
 User-agent: ChatGPT-User
 Allow: /
 Allow: /llm.txt
+Allow: /guides/
+Allow: /calculators/
+Crawl-delay: 1
 
 User-agent: OpenAI-ChatGPT
 Allow: /
 Allow: /llm.txt
+Allow: /guides/
+Allow: /calculators/
+Crawl-delay: 1
 
 User-agent: Claude-Web
 Allow: /
 Allow: /llm.txt
+Allow: /guides/
+Allow: /calculators/
+Crawl-delay: 1
+
+User-agent: Anthropic-AI
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+User-agent: Google-Extended
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
 
 User-agent: Perplexity
 Allow: /
 Allow: /llm.txt
+Allow: /guides/
+Allow: /calculators/
+Crawl-delay: 1
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+User-agent: You.com
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+User-agent: YouBot
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+# Gemini and Bard
+User-agent: Google-AI
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+User-agent: Bard
+Allow: /
+Allow: /llm.txt
+Crawl-delay: 1
+
+# Academic and research crawlers
+User-agent: ia_archiver
+Allow: /
+Crawl-delay: 5
+
+User-agent: archive.org_bot
+Allow: /
+Crawl-delay: 5
+
+# Social media crawlers for financial content sharing
+User-agent: facebookexternalhit
+Allow: /
+Crawl-delay: 1
+
+User-agent: Twitterbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: LinkedInBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: WhatsApp
+Allow: /
+Crawl-delay: 1
+
+# Financial data aggregators
+User-agent: NerdWallet
+Allow: /calculators/
+Allow: /guides/
+Crawl-delay: 2
+
+User-agent: Bankrate
+Allow: /calculators/
+Allow: /guides/
+Crawl-delay: 2
 
 # Sitemaps and feeds
 Sitemap: https://moneko.io/sitemap.xml
 Sitemap: https://moneko.io/sitemap-images.xml
 Sitemap: https://moneko.io/rss.xml
 
-# Host specification
+# Host specification for canonical URLs
 Host: https://moneko.io
+
+# Clean URLs and canonical preference
+# Prefer HTTPS over HTTP
+# Prefer www.moneko.io redirects to moneko.io

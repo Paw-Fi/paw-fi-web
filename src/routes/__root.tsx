@@ -53,6 +53,7 @@ export const Route = createRootRouteWithContext<{
       // Add canonical link to prevent duplicate content issues
       { rel: 'canonical', href: pageUrl },
       { rel: 'stylesheet', href: appCss },
+      
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',

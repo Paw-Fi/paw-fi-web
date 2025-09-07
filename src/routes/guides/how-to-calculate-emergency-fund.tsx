@@ -8,7 +8,9 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips } from '@/components/seo/content-blocks';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/how-to-calculate-emergency-fund')(({
+export const Route = createFileRoute('/guides/how-to-calculate-emergency-fund')({
+  // Enable Static Site Generation for this content-heavy guide page  
+  ssr: 'static',
   component: EmergencyFundGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-to-calculate-emergency-fund');

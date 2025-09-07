@@ -9,7 +9,7 @@ import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips } from '@/components
 import { CurrentMortgageRates } from '@/components/seo/financial-data-tables';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/how-much-house-can-i-afford')(({
+export const Route = createFileRoute('/guides/how-much-house-can-i-afford')({
   component: HouseAffordabilityGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-much-house-can-i-afford');

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { saveToStorage, getFromStorage, removeFromStorage } from './storage';
 
 /**
@@ -37,35 +37,34 @@ export function useLocalStorage<T>(
   }, [key, defaultValue]);
 
   // Function to update both state and localStorage
-  const setValue = useCallback(
-    (value: T | ((prev: T) => T)) => {
-      try {
-        // Allow value to be a function so we have the same API as useState
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
+  // Removed useCallback - React 19 compiler handles memoization automatically
+  const setValue = (value: T | ((prev: T) => T)) => {
+    try {
+      // Allow value to be a function so we have the same API as useState
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      
+      // Update React state
+      setStoredValue(valueToStore);
+      
+      // Update localStorage only on client
+      if (isClient && typeof window !== 'undefined') {
+        saveToStorage(key, valueToStore);
         
-        // Update React state
-        setStoredValue(valueToStore);
-        
-        // Update localStorage only on client
-        if (isClient && typeof window !== 'undefined') {
-          saveToStorage(key, valueToStore);
-          
-          // Dispatch custom event for cross-tab synchronization
-          window.dispatchEvent(
-            new CustomEvent('local-storage-change', {
-              detail: { key, value: valueToStore }
-            })
-          );
-        }
-      } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
+        // Dispatch custom event for cross-tab synchronization
+        window.dispatchEvent(
+          new CustomEvent('local-storage-change', {
+            detail: { key, value: valueToStore }
+          })
+        );
       }
-    },
-    [key, storedValue, isClient]
-  );
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  };
 
   // Function to remove the item from localStorage
-  const removeValue = useCallback(() => {
+  // Removed useCallback - React 19 compiler handles memoization automatically
+  const removeValue = () => {
     try {
       setStoredValue(defaultValue);
       
@@ -82,7 +81,7 @@ export function useLocalStorage<T>(
     } catch (error) {
       console.error(`Error removing localStorage key "${key}":`, error);
     }
-  }, [key, defaultValue, isClient]);
+  };
 
   // Listen for storage events (cross-tab synchronization)
   useEffect(() => {
@@ -147,12 +146,13 @@ export function useLocalStorageState<T>(key: string, defaultValue: T) {
 export function useLocalStorageBoolean(key: string, defaultValue = false) {
   const [value, setValue, removeValue] = useLocalStorage(key, defaultValue);
   
-  const toggle = useCallback(() => {
+  // Removed useCallback - React 19 compiler handles memoization automatically
+  const toggle = () => {
     setValue(prev => !prev);
-  }, [setValue]);
+  };
   
-  const setTrue = useCallback(() => setValue(true), [setValue]);
-  const setFalse = useCallback(() => setValue(false), [setValue]);
+  const setTrue = () => setValue(true);
+  const setFalse = () => setValue(false);
   
   return {
     value,
@@ -171,25 +171,26 @@ export function useLocalStorageBoolean(key: string, defaultValue = false) {
 export function useLocalStorageArray<T>(key: string, defaultValue: T[] = []) {
   const [array, setArray, removeValue] = useLocalStorage(key, defaultValue);
   
-  const push = useCallback((item: T) => {
+  // Removed useCallback - React 19 compiler handles memoization automatically
+  const push = (item: T) => {
     setArray(prev => [...prev, item]);
-  }, [setArray]);
+  };
   
-  const remove = useCallback((index: number) => {
+  const remove = (index: number) => {
     setArray(prev => prev.filter((_, i) => i !== index));
-  }, [setArray]);
+  };
   
-  const removeByValue = useCallback((item: T) => {
+  const removeByValue = (item: T) => {
     setArray(prev => prev.filter(i => i !== item));
-  }, [setArray]);
+  };
   
-  const clear = useCallback(() => {
+  const clear = () => {
     setArray([]);
-  }, [setArray]);
+  };
   
-  const update = useCallback((index: number, item: T) => {
+  const update = (index: number, item: T) => {
     setArray(prev => prev.map((existingItem, i) => i === index ? item : existingItem));
-  }, [setArray]);
+  };
   
   return {
     array,

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { VitePluginRadar } from 'vite-plugin-radar';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import  compression  from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -35,6 +36,14 @@ export default defineConfig({
     tailwindcss(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
+    }),
+    // TanStack Router with automatic code splitting enabled
+    TanStackRouterVite({
+      autoCodeSplitting: true,
+      // Keep loader functions in main bundle to prevent network waterfall
+      codesSplitGroupings: [
+        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent']
+      ]
     }),
     VitePluginRadar({
       analytics: {

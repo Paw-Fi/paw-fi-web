@@ -100,6 +100,8 @@ const capitalizeWords = (text: string): string => {
 
 // Define route with loader and head
 export const Route = createFileRoute('/budgeting-app/$slug')({
+  // Use Streaming SSR for dynamic content based on slug parameter
+  ssr: true,
   loader: async ({ params }) => {
     try {
       const pageData = await fetchSEOPageBySlug(params.slug);

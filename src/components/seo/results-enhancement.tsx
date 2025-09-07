@@ -1,6 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLightbulb, faArrowRight, faCheckCircle, faTrendingUp, faExclamationTriangle, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
+import { faLightbulb, faArrowRight, faCheckCircle, faChartLine, faExclamationTriangle, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 interface CalculatorResultsProps {
   title?: string
@@ -52,7 +52,7 @@ export function CalculatorResults({
   const getStatusIcon = (status?: string) => {
     switch (status) {
       case 'excellent': return faCheckCircle
-      case 'good': return faTrendingUp
+      case 'good': return faChartLine
       case 'warning': return faExclamationTriangle
       case 'poor': return faExclamationTriangle
       default: return faInfoCircle
@@ -197,7 +197,7 @@ export function ComparisonInsight({
 
   const statusIcons = {
     excellent: faCheckCircle,
-    good: faTrendingUp,
+    good: faChartLine,
     warning: faExclamationTriangle,
     poor: faExclamationTriangle
   }

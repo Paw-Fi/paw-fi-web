@@ -8,9 +8,10 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips, ComparisonBlock } from '@/components/seo/content-blocks';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/401k-vs-ira-complete-comparison')(
-  {
-    component: Comparison401kVsIRA,
+export const Route = createFileRoute('/guides/401k-vs-ira-complete-comparison')({
+  // Enable Static Site Generation for this content-heavy guide page
+  ssr: 'static',
+  component: Comparison401kVsIRA,
     head: () => {
       const pageUrl = getCanonicalUrl('/guides/401k-vs-ira-complete-comparison');
       const title = '401(k) vs IRA: Complete 2025 Comparison Guide | Moneko';

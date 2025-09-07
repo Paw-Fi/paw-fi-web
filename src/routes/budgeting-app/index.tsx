@@ -78,6 +78,8 @@ const financialGoals = [
 ];
 
 export const Route = createFileRoute("/budgeting-app/")({
+  // Use Streaming SSR for dynamic personalized content
+  ssr: true,
   component: BudgetingApp,
 
   head: () => {

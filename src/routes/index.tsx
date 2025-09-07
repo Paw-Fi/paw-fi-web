@@ -1,12 +1,30 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import "@/types/route-types"; // Import route type definitions
 import { motion } from "framer-motion";
+
+// Lazy load Lottie animations for better performance - import JSON directly for now
 import Lottie from "lottie-react";
 import aiChatAnimation from "@/assets/videos/AI-Chat.json";
 import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
+
+// Create lazy-loaded Lottie wrapper
+const LazyLottieAnimation = React.lazy(() => 
+  Promise.resolve({
+    default: ({ animationData, className = "w-3/4 h-3/4", ...props }: { animationData: any, className?: string }) => (
+      <Suspense fallback={<div className={`${className} bg-muted animate-pulse rounded-lg`} />}>
+        <Lottie
+          animationData={animationData}
+          loop={true}
+          className={className}
+          {...props}
+        />
+      </Suspense>
+    )
+  })
+);
 
 import catCoin from "@/assets/images/icon.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -26,6 +44,8 @@ import { MotionGlobalConfig } from "framer-motion";
 import { Helmet } from "@dr.pogodin/react-helmet";
 
 export const Route = createFileRoute("/")({
+  // Enable Static Site Generation for this landing page since content is mostly static
+  ssr: 'static',
   component: HomePage,
   head: () => {
     // Use canonical helper for consistent URLs
@@ -172,6 +192,7 @@ import { FaqSection } from "@/components/ui/faq-section";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { useDeviceType } from "@/hooks/use-device-type";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
+import { OptimizedImage } from "@/components/seo/optimized-image";
 
 import { HomeHeader } from "@/components/index/header";
 import { AISearchInput } from "@/components/ui/ai-search-input";
@@ -348,10 +369,16 @@ export default function HomePage() {
                   <video
                     className="h-full w-full object-cover"
                     src="/Moneko-onboard%20.webm"
+                    poster="/video-poster.webp"
+                    width="800"
+                    height="450" 
                     muted
                     autoPlay
                     loop
                     playsInline
+                    loading="lazy"
+                    preload="metadata"
+                    decoding="async"
                   />
                   
                   {/* Text overlay container */}
@@ -380,9 +407,14 @@ export default function HomePage() {
                 <video
                   className="absolute inset-0 h-full w-full object-contain"
                   src="/Moneko-onboard .webm"
+                  poster="/video-poster.webp"
+                  width="1920"
+                  height="1080"
                   controls
                   autoPlay
                   playsInline
+                  preload="metadata"
+                  decoding="async"
                 />
               </div>
             </DialogContent>
@@ -429,11 +461,12 @@ export default function HomePage() {
               <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200 touch-manipulation active:scale-[0.98]">
                 <CardContent className="p-0">
                   <div className="aspect-square bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 flex items-center justify-center">
-                    <Lottie
-                      animationData={aiChatAnimation}
-                      loop={true}
-                      className="w-3/4 h-3/4"
-                    />
+                    <Suspense fallback={<div className="w-3/4 h-3/4 bg-muted animate-pulse rounded-lg" />}>
+                      <LazyLottieAnimation
+                        animationData={aiChatAnimation}
+                        className="w-3/4 h-3/4"
+                      />
+                    </Suspense>
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
@@ -458,11 +491,12 @@ export default function HomePage() {
               <Card className="group h-full border-border bg-card overflow-hidden hover:border-primary/50 transition-all duration-200 touch-manipulation active:scale-[0.98]">
                 <CardContent className="p-0">
                   <div className="aspect-square bg-gradient-to-br from-accent/20 to-secondary/20 dark:from-accent/10 dark:to-secondary/10 flex items-center justify-center">
-                    <Lottie
-                      animationData={badgeUnlockAnimation}
-                      loop={true}
-                      className="w-3/4 h-3/4"
-                    />
+                    <Suspense fallback={<div className="w-3/4 h-3/4 bg-muted animate-pulse rounded-lg" />}>
+                      <LazyLottieAnimation
+                        animationData={badgeUnlockAnimation}
+                        className="w-3/4 h-3/4"
+                      />
+                    </Suspense>
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
@@ -566,13 +600,14 @@ export default function HomePage() {
             {/* Brand */}
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center">
-                <img
+                <OptimizedImage
                   src={catCoin}
                   alt="Moneko Logo"
                   className="h-6 w-6 sm:h-8 sm:w-8"
-                  width="32"
-                  height="32"
+                  width={32}
+                  height={32}
                   loading="lazy"
+                  decoding="async"
                 />
                 <span className="ml-2 text-lg sm:text-xl font-bold text-card-foreground">
                   Moneko

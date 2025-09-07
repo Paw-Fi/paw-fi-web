@@ -8,9 +8,10 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips, ComparisonBlock } from '@/components/seo/content-blocks';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/complete-beginner-guide-to-investing')(
-  {
-    component: CompleteInvestingGuide,
+export const Route = createFileRoute('/guides/complete-beginner-guide-to-investing')({
+  // Enable Static Site Generation for this content-heavy guide page
+  ssr: 'static',
+  component: CompleteInvestingGuide,
     head: () => {
       const pageUrl = getCanonicalUrl('/guides/complete-beginner-guide-to-investing');
       const title = 'Complete Beginner\'s Guide to Investing in 2025 | Step-by-Step | Moneko';
@@ -497,7 +498,7 @@ function CompleteInvestingGuide() {
                     <h4 className="font-semibold mb-2 text-gray-800 dark:text-gray-200">Quarterly Reviews</h4>
                     <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                       <li>• Check account balances and progress toward goals</li>
-                      <li>• Rebalance if allocations drift >5% from targets</li>
+                      <li>• Rebalance if allocations drift &gt;5% from targets</li>
                       <li>• Increase contributions with salary raises</li>
                     </ul>
                   </div>

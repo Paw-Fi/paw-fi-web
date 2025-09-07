@@ -8,7 +8,7 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips } from '@/components/seo/content-blocks';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/how-much-do-i-need-to-retire')(({
+export const Route = createFileRoute('/guides/how-much-do-i-need-to-retire')({
   component: RetirementNeedsGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-much-do-i-need-to-retire');

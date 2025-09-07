@@ -8,7 +8,7 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { KeyTakeaways, QuickFacts, AtAGlance, FinancialTips } from '@/components/seo/content-blocks';
 import { useState } from 'react';
 
-export const Route = createFileRoute('/guides/when-will-i-reach-my-savings-goal')(({
+export const Route = createFileRoute('/guides/when-will-i-reach-my-savings-goal')({
   component: SavingsGoalTimelineGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/when-will-i-reach-my-savings-goal');
