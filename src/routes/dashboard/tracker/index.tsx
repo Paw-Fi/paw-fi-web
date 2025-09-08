@@ -21,6 +21,8 @@ import { useTrackerIndexWalkthrough } from "@/hooks/walkthrough/use-tracker-inde
 import { useSpotlightGoals } from "@/hooks/goal-tracker/use-spotlight-goals";
 import { getGoalIcon } from "@/lib/utils/goal-icons";
 import travelBgImage from "@/assets/images/tracker/spotlight-travel.svg";
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
 const trackerSearchSchema = z.object({
   filter: z.enum(['all', 'on-track', 'needs-attention', 'completed']).optional().default('all'),
@@ -30,43 +32,232 @@ const trackerSearchSchema = z.object({
 export const Route = createFileRoute("/dashboard/tracker/")(({
   validateSearch: trackerSearchSchema,
   component: GoalsTracker,
-  head: () => ({
-    meta: [
-      { title: 'Goal Tracker | Moneko - AI-Powered Financial Goal Management' },
-      { 
-        name: 'description', 
-        content: 'Track your financial goals with AI-powered insights and milestone management. Set, monitor, and achieve your financial objectives with personalized strategies and smart recommendations.' 
-      },
-      {
-        name: 'keywords',
-        content: 'financial goals, goal tracker, AI financial planning, milestone management, savings tracker, financial objectives, budgeting, personal finance'
-      },
-      {
-        property: 'og:title',
-        content: 'Goal Tracker - AI-Powered Financial Goal Management | Moneko'
-      },
-      {
-        property: 'og:description',
-        content: 'Set and achieve your financial goals with AI-powered insights, smart milestones, and personalized strategies.'
-      },
-      {
-        property: 'og:type',
-        content: 'website'
-      },
-      {
-        name: 'twitter:card',
-        content: 'summary_large_image'
-      },
-      {
-        name: 'twitter:title',
-        content: 'Goal Tracker - AI-Powered Financial Management'
-      },
-      {
-        name: 'twitter:description',
-        content: 'Track and achieve your financial goals with personalized AI insights and milestone management.'
-      }
-    ],
-  }),
+  head: () => {
+    const canonicalUrl = getCanonicalUrl('/dashboard/tracker/');
+    const title = 'Financial Goal Tracker - AI-Powered Achievement & Progress Monitoring | Moneko';
+    const description = 'Set, track, and achieve your financial goals with AI-powered insights, smart milestones, and personalized strategies. Monitor progress, celebrate achievements, and stay motivated on your wealth-building journey.';
+    const keywords = 'financial goal tracker, AI financial planning, savings goals, investment goals, milestone management, financial objectives, goal setting, progress tracking, wealth building goals, retirement planning goals';
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      image: "https://moneko.io/og-img.png",
+      url: canonicalUrl,
+    });
+
+    // Comprehensive structured data for goal tracking platform
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": `${canonicalUrl}#webapp`,
+          "name": "Moneko Goal Tracker",
+          "description": "AI-powered financial goal tracking and achievement platform with smart milestones and personalized strategies",
+          "url": canonicalUrl,
+          "applicationCategory": "ProductivityApplication",
+          "applicationSubCategory": "Goal Management",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "validFrom": "2024-01-01"
+          },
+          "featureList": [
+            "AI-Powered Goal Strategy",
+            "Smart Milestone Creation",
+            "Progress Tracking & Analytics",
+            "Achievement Celebration",
+            "Deadline Management",
+            "Visual Progress Indicators",
+            "Goal Categories & Tags",
+            "Motivational Insights",
+            "Performance Analytics",
+            "Goal Templates"
+          ],
+          "screenshot": "https://moneko.io/og-img.png",
+          "softwareVersion": "2.0",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": ["Goal Setters", "Financial Planners", "Savers", "Investors", "Young Professionals"]
+          }
+        },
+        {
+          "@type": "Service",
+          "@id": `${canonicalUrl}#service`,
+          "name": "Personal Financial Goal Management",
+          "description": "Comprehensive financial goal tracking service with AI-powered insights and milestone management",
+          "provider": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization",
+            "name": "Moneko",
+            "description": "AI-powered personal finance platform providing goal tracking, education, and portfolio management tools",
+            "url": "https://moneko.io",
+            "logo": "https://moneko.io/og-img.png"
+          },
+          "serviceType": "Financial Goal Management",
+          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
+          "audience": {
+            "@type": "Audience",
+            "audienceType": ["Individual Savers", "Investment Goal Setters", "Retirement Planners"]
+          },
+          "hasOfferingCatalog": {
+            "@type": "OfferingCatalog",
+            "name": "Goal Management Features",
+            "itemListElement": [
+              {
+                "@type": "Service",
+                "name": "AI Goal Strategy",
+                "description": "Personalized strategies and recommendations for achieving financial goals faster"
+              },
+              {
+                "@type": "Service", 
+                "name": "Smart Milestones",
+                "description": "Intelligent breakdown of large goals into achievable milestones with timeline management"
+              },
+              {
+                "@type": "Service",
+                "name": "Progress Analytics",
+                "description": "Real-time tracking with visual progress indicators and performance insights"
+              }
+            ]
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://moneko.io#organization",
+          "name": "Moneko",
+          "alternateName": "Moneko Financial Platform",
+          "description": "Leading AI-powered personal finance platform providing comprehensive goal tracking, education, and wealth management tools",
+          "url": "https://moneko.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          },
+          "image": "https://moneko.io/og-img.png",
+          "foundingDate": "2024",
+          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "support@moneko.io",
+            "availableLanguage": "English"
+          },
+          "sameAs": [
+            "https://twitter.com/moneko_io",
+            "https://linkedin.com/company/moneko"
+          ]
+        },
+        {
+          "@type": "ItemList",
+          "@id": `${canonicalUrl}#features`,
+          "name": "Goal Tracker Features",
+          "description": "Comprehensive features of Moneko's financial goal tracking and management platform",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "item": {
+                "@type": "Service",
+                "name": "AI-Powered Goal Strategy",
+                "description": "Personalized strategies and recommendations based on your financial situation and timeline"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "item": {
+                "@type": "Service",
+                "name": "Smart Milestone Tracking",
+                "description": "Intelligent breakdown of goals into achievable milestones with automatic progress updates"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "item": {
+                "@type": "Service",
+                "name": "Visual Progress Analytics",
+                "description": "Real-time progress tracking with charts, graphs, and performance insights"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "item": {
+                "@type": "Service",
+                "name": "Goal Categories",
+                "description": "Organize goals by category: savings, investment, retirement, debt payoff, and more"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 5,
+              "item": {
+                "@type": "Service",
+                "name": "Deadline Management",
+                "description": "Smart deadline tracking with alerts and notifications to keep you on track"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 6,
+              "item": {
+                "@type": "Service",
+                "name": "Achievement Celebration",
+                "description": "Milestone achievements and progress celebrations to maintain motivation"
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${canonicalUrl}#breadcrumb`,
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Dashboard",
+              "item": {
+                "@type": "WebPage",
+                "@id": "https://moneko.io/dashboard"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Goal Tracker",
+              "item": {
+                "@type": "WebPage",
+                "@id": canonicalUrl
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    return {
+      meta,
+      link: [
+        {
+          rel: "canonical",
+          href: canonicalUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData)
+        }
+      ]
+    };
+  },
   }))
 
 

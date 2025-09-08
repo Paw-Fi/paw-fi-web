@@ -40,43 +40,214 @@ import { getCanonicalUrl } from "@/utils/canonical";
 export const Route = createFileRoute("/dashboard/portfolio/")({
   component: Profile,
   head: () => {
-    const pageUrl = getCanonicalUrl("/dashboard/portfolio");
-    const title = "Financial Portfolio | Moneko - Your Personalized Dashboard";
-    const description = "Manage your financial health with Moneko's personalized portfolio dashboard. Track assets, liabilities, and financial goals in one place.";
-    const keywords = "financial portfolio, personal finance dashboard, asset tracking, liability management, financial goals, Moneko";
-    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+    const canonicalUrl = getCanonicalUrl("/dashboard/portfolio");
+    const title = "Financial Portfolio Dashboard - Real-Time Wealth & Health Tracking | Moneko";
+    const description = "Monitor your complete financial picture with customizable portfolio dashboards. Track investments, assets, goals, and financial health metrics with real-time insights and AI-powered recommendations.";
+    const keywords = "financial portfolio dashboard, investment tracking, asset management, financial health monitoring, wealth tracking, portfolio analytics, financial dashboard, retirement planning, investment portfolio";
+    const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({
       title,
       description,
       keywords,
       image: imageUrl,
-      url: pageUrl,
+      url: canonicalUrl,
     });
 
+    // Comprehensive structured data for portfolio platform
     const structuredData = {
       "@context": "https://schema.org",
-      "@type": "WebPage",
-      "name": title,
-      "description": description,
-      "url": pageUrl,
-      "breadcrumb": {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Dashboard",
-            "item": getCanonicalUrl("/dashboard")
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": `${canonicalUrl}#webapp`,
+          "name": "Moneko Portfolio Dashboard",
+          "description": "Comprehensive financial portfolio tracking and management platform with customizable dashboards and real-time analytics",
+          "url": canonicalUrl,
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "validFrom": "2024-01-01"
           },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Portfolio",
-            "item": pageUrl
+          "featureList": [
+            "Customizable Portfolio Dashboards",
+            "Real-time Financial Health Scoring",
+            "Investment Performance Tracking",
+            "Asset and Liability Management",
+            "Goal Progress Monitoring",
+            "Risk Assessment Analytics",
+            "Financial Wellness Insights",
+            "Multi-view Portfolio Management",
+            "Drag-and-Drop Widget Configuration",
+            "Automated Financial Health Reports"
+          ],
+          "screenshot": "https://moneko.io/og-img.png",
+          "softwareVersion": "2.0",
+          "applicationSubCategory": "Portfolio Management",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": ["Investors", "Savers", "Retirees", "Young Professionals", "Financial Planners"]
           }
-        ]
-      }
+        },
+        {
+          "@type": "Service",
+          "@id": `${canonicalUrl}#service`,
+          "name": "Personal Portfolio Management",
+          "description": "Comprehensive financial portfolio tracking service with customizable dashboards and real-time analytics",
+          "provider": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization",
+            "name": "Moneko",
+            "description": "AI-powered personal finance platform providing portfolio tracking, education, and financial planning tools",
+            "url": "https://moneko.io",
+            "logo": "https://moneko.io/og-img.png"
+          },
+          "serviceType": "Financial Portfolio Management",
+          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
+          "audience": {
+            "@type": "Audience",
+            "audienceType": ["Individual Investors", "Retirement Planners", "Wealth Builders"]
+          },
+          "hasOfferingCatalog": {
+            "@type": "OfferingCatalog",
+            "name": "Portfolio Management Features",
+            "itemListElement": [
+              {
+                "@type": "Service",
+                "name": "Financial Health Scoring",
+                "description": "AI-calculated comprehensive financial wellness score based on multiple factors"
+              },
+              {
+                "@type": "Service", 
+                "name": "Investment Tracking",
+                "description": "Real-time monitoring of investment performance and portfolio allocation"
+              },
+              {
+                "@type": "Service",
+                "name": "Goal Management",
+                "description": "Track progress toward financial goals with visual progress indicators"
+              }
+            ]
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://moneko.io#organization",
+          "name": "Moneko",
+          "alternateName": "Moneko Financial Platform",
+          "description": "Leading AI-powered personal finance platform providing comprehensive portfolio tracking, financial education, and wealth building tools",
+          "url": "https://moneko.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          },
+          "image": "https://moneko.io/og-img.png",
+          "foundingDate": "2024",
+          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "support@moneko.io",
+            "availableLanguage": "English"
+          },
+          "sameAs": [
+            "https://twitter.com/moneko_io",
+            "https://linkedin.com/company/moneko"
+          ]
+        },
+        {
+          "@type": "ItemList",
+          "@id": `${canonicalUrl}#features`,
+          "name": "Portfolio Dashboard Features",
+          "description": "Comprehensive features of Moneko's financial portfolio management platform",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "item": {
+                "@type": "Service",
+                "name": "Customizable Dashboards",
+                "description": "Create multiple portfolio views tailored to different financial goals and strategies"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "item": {
+                "@type": "Service",
+                "name": "Financial Health Score",
+                "description": "AI-powered comprehensive scoring based on assets, liabilities, income, and financial habits"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "item": {
+                "@type": "Service",
+                "name": "Real-time Analytics",
+                "description": "Live tracking of portfolio performance, asset allocation, and investment returns"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "item": {
+                "@type": "Service",
+                "name": "Goal Tracking",
+                "description": "Visual progress monitoring for retirement, savings, investment, and debt payoff goals"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 5,
+              "item": {
+                "@type": "Service",
+                "name": "Risk Assessment",
+                "description": "Comprehensive portfolio risk analysis with diversification recommendations"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 6,
+              "item": {
+                "@type": "Service",
+                "name": "Wealth Tracking",
+                "description": "Complete net worth monitoring with asset and liability categorization"
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${canonicalUrl}#breadcrumb`,
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Dashboard",
+              "item": {
+                "@type": "WebPage",
+                "@id": "https://moneko.io/dashboard"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Portfolio",
+              "item": {
+                "@type": "WebPage",
+                "@id": canonicalUrl
+              }
+            }
+          ]
+        }
+      ]
     };
 
     return {
@@ -84,7 +255,7 @@ export const Route = createFileRoute("/dashboard/portfolio/")({
       link: [
         {
           rel: "canonical",
-          href: pageUrl,
+          href: canonicalUrl,
         },
       ],
       script: [

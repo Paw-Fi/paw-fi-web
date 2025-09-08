@@ -611,9 +611,9 @@ export const Route = createFileRoute('/calculators/retirement-calculator')({
     const routePath = '/calculators/retirement-calculator';
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
-      title: 'Retirement Calculator with Age-Based Planning & Catch-Up Contributions | Moneko',
-      description: 'Calculate retirement savings needs with personalized strategies by age. Includes catch-up contributions, 4% rule planning, and Traditional vs Roth guidance for 2025.',
-      keywords: 'retirement calculator, 401k calculator, IRA contributions, catch-up contributions, retirement planning by age, 4% rule, Moneko',
+      title: 'Free Retirement Calculator - 401k, IRA & Catch-Up Contributions Planner | Moneko',
+      description: 'Plan your retirement savings with our comprehensive calculator. Calculate 401k contributions, IRA limits, catch-up contributions, and get personalized retirement strategies by age.',
+      keywords: 'retirement calculator, 401k calculator, IRA calculator, retirement planning calculator, catch-up contributions, retirement savings calculator, 401k contribution limits, retirement planner',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });

@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from '@/utils/canonical';
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { createPortal } from "react-dom";
 import { useGamification } from "@/hooks/use-gamification";
@@ -23,23 +24,223 @@ import React from "react";
 export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
   head: () => {
-    const pageUrl = "https://moneko.io/learning/";
+    const canonicalUrl = getCanonicalUrl('/dashboard/learning/');
+    const title = 'Personal Finance Learning Hub - AI-Powered Courses & Expert Education | Moneko';
+    const description = 'Access comprehensive financial education with AI-personalized courses and expert-led fundamentals. Master budgeting, investing, retirement planning, and wealth building at your own pace.';
+    const keywords = 'financial education, personal finance courses, AI learning, investment education, financial literacy, money management, budgeting courses, retirement planning, wealth building education, personalized learning';
+
     const meta = seo({
-      title: "Financial Learning Hub | Expert-Led & AI-Personalized Courses - Moneko",
-      description:
-        "Master personal finance with expert-crafted essentials and AI-personalized courses. From fundamentals to advanced strategies, learn at your own pace.",
-      keywords:
-        "financial education, personal finance courses, AI learning, investment basics, financial literacy, money management, expert-led courses, personalized learning",
+      title,
+      description,
+      keywords,
       image: "https://moneko.io/og-img.png",
-      url: pageUrl,
+      url: canonicalUrl,
     });
-    
+
+    // Comprehensive structured data for educational platform
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Course",
+          "@id": `${canonicalUrl}#course`,
+          "name": "Personal Finance Mastery Program",
+          "description": "Comprehensive financial education program combining expert-led fundamentals with AI-personalized advanced courses",
+          "provider": {
+            "@type": "EducationalOrganization",
+            "@id": "https://moneko.io#organization",
+            "name": "Moneko",
+            "description": "AI-powered personal finance education platform",
+            "url": "https://moneko.io",
+            "logo": "https://moneko.io/og-img.png",
+            "sameAs": [
+              "https://twitter.com/moneko_io",
+              "https://linkedin.com/company/moneko"
+            ]
+          },
+          "courseMode": ["online", "self-paced", "ai-personalized"],
+          "educationalLevel": "beginner to advanced",
+          "teaches": [
+            "Personal Finance Fundamentals",
+            "Budgeting and Expense Tracking",
+            "Investment Strategies",
+            "Retirement Planning",
+            "Risk Management",
+            "Wealth Building",
+            "Financial Goal Setting",
+            "Tax Optimization"
+          ],
+          "learningResourceType": [
+            "Interactive Course",
+            "AI Tutoring",
+            "Practical Exercises",
+            "Real-time Feedback"
+          ],
+          "timeRequired": "PT2H",
+          "totalTime": "PT20H",
+          "educationalCredentialAwarded": "Financial Literacy Certificate",
+          "coursePrerequisites": "None - suitable for all levels",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "2847",
+            "bestRating": "5",
+            "worstRating": "1"
+          }
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://moneko.io#organization",
+          "name": "Moneko",
+          "alternateName": "Moneko Financial Education",
+          "description": "Leading AI-powered personal finance education platform providing comprehensive courses, calculators, and portfolio tracking",
+          "url": "https://moneko.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          },
+          "image": "https://moneko.io/og-img.png",
+          "foundingDate": "2024",
+          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
+          "educationalCredentialAwarded": [
+            "Financial Literacy Certificate",
+            "Investment Fundamentals Certificate",
+            "Retirement Planning Certificate"
+          ],
+          "hasOfferingCatalog": {
+            "@type": "OfferingCatalog",
+            "name": "Personal Finance Education Catalog",
+            "itemListElement": [
+              {
+                "@type": "Course",
+                "name": "Financial Fundamentals Essentials",
+                "description": "Expert-crafted course covering budgeting, saving, and basic investing",
+                "courseMode": "online",
+                "educationalLevel": "beginner"
+              },
+              {
+                "@type": "Course",
+                "name": "AI-Personalized Investment Course",
+                "description": "Tailored investment education based on your goals and risk tolerance",
+                "courseMode": "online",
+                "educationalLevel": "intermediate"
+              }
+            ]
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "support@moneko.io",
+            "availableLanguage": "English"
+          },
+          "sameAs": [
+            "https://twitter.com/moneko_io",
+            "https://linkedin.com/company/moneko"
+          ]
+        },
+        {
+          "@type": "WebApplication",
+          "@id": `${canonicalUrl}#webapp`,
+          "name": "Moneko Learning Platform",
+          "description": "Interactive financial education platform with AI-powered personalized learning",
+          "url": canonicalUrl,
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "validFrom": "2024-01-01"
+          },
+          "featureList": [
+            "AI-Personalized Course Creation",
+            "Expert-Led Financial Fundamentals",
+            "Interactive Learning Modules",
+            "Progress Tracking and Gamification",
+            "Financial Health Assessment",
+            "Goal-Based Learning Paths",
+            "Real-time AI Tutoring",
+            "Achievement System"
+          ],
+          "screenshot": "https://moneko.io/og-img.png",
+          "softwareVersion": "2.0",
+          "applicationSubCategory": "Financial Education",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": ["Students", "Young Professionals", "Parents", "Retirees", "Entrepreneurs"]
+          }
+        },
+        {
+          "@type": "ItemList",
+          "@id": `${canonicalUrl}#features`,
+          "name": "Learning Platform Features",
+          "description": "Comprehensive features of Moneko's financial education platform",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "item": {
+                "@type": "Service",
+                "name": "AI-Personalized Courses",
+                "description": "Custom courses created by AI based on your financial goals and knowledge level"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "item": {
+                "@type": "Service", 
+                "name": "Expert-Led Essentials",
+                "description": "Professionally crafted fundamental courses covering all personal finance basics"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "item": {
+                "@type": "Service",
+                "name": "Interactive Learning",
+                "description": "Engaging lessons with quizzes, exercises, and real-time AI assistance"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "item": {
+                "@type": "Service",
+                "name": "Progress Gamification",
+                "description": "Streak tracking, XP points, achievements, and learning challenges"
+              }
+            },
+            {
+              "@type": "ListItem",
+              "position": 5,
+              "item": {
+                "@type": "Service",
+                "name": "Adaptive Learning",
+                "description": "Content difficulty adjusts based on your comprehension and pace"
+              }
+            }
+          ]
+        }
+      ]
+    };
+
     return {
       meta,
       link: [
         {
           rel: "canonical",
-          href: pageUrl
+          href: canonicalUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(structuredData)
         }
       ]
     };

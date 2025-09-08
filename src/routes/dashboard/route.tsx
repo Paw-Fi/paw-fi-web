@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatContext } from "@/contexts/chat-context";
 import { getCanonicalUrl } from '@/utils/canonical';
+import { seo } from '@/utils/seo';
 import { useUserCourses } from "@/services/course-service";
 import { supabase } from "@/lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -86,23 +87,164 @@ export const Route = createFileRoute("/dashboard")({
   head: () => {
     // Add canonical URL for dashboard page
     const pageUrl = getCanonicalUrl('/dashboard');
+    const title = 'Personal Finance Dashboard - AI-Powered Portfolio Tracking & Financial Education | Moneko';
+    const description = 'Access your comprehensive financial dashboard with AI-powered portfolio tracking, personalized learning paths, goal management, and smart financial calculators. Start building wealth today.';
+    const keywords = 'personal finance dashboard, portfolio tracking, AI financial coach, financial education platform, investment tracking, budgeting tools, financial goal tracker, wealth building dashboard';
+    const imageUrl = 'https://moneko.io/og-img.png';
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      url: pageUrl,
+      image: imageUrl,
+    });
+
+    // Comprehensive structured data for dashboard
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "logo": "https://moneko.io/icon.svg",
+          "sameAs": [
+            "https://www.facebook.com/monekoai/",
+            "https://www.instagram.com/moneko_ai/",
+            "https://x.com/moneko_ai"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://moneko.io/#website",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          }
+        },
+        {
+          "@type": "WebPage",
+          "@id": pageUrl,
+          "url": pageUrl,
+          "name": title,
+          "description": description,
+          "isPartOf": {
+            "@id": "https://moneko.io/#website"
+          },
+          "about": [
+            {
+              "@type": "Thing",
+              "name": "Personal Finance Management"
+            },
+            {
+              "@type": "Thing", 
+              "name": "Portfolio Tracking"
+            },
+            {
+              "@type": "Thing",
+              "name": "Financial Education"
+            }
+          ],
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://moneko.io"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Dashboard",
+                "item": pageUrl
+              }
+            ]
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Moneko Personal Finance Dashboard",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Any",
+          "description": "Comprehensive personal finance dashboard with AI-powered portfolio tracking, goal management, and financial education tools",
+          "url": pageUrl,
+          "author": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "featureList": [
+            "AI-powered portfolio analysis and tracking",
+            "Personalized financial goal setting and monitoring",
+            "Interactive financial education courses",
+            "Smart budgeting and spending analysis",
+            "Investment performance tracking",
+            "Debt management tools",
+            "Retirement planning calculators",
+            "Real-time financial health scoring"
+          ],
+          "offers": [
+            {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "name": "Basic Plan",
+              "description": "Free access to basic portfolio tracking and financial calculators"
+            },
+            {
+              "@type": "Offer",
+              "price": "9.99",
+              "priceCurrency": "USD",
+              "name": "Premium Plan",
+              "description": "Full AI coaching, advanced analytics, and personalized recommendations",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "9.99",
+                "priceCurrency": "USD",
+                "unitText": "month"
+              }
+            }
+          ]
+        },
+        {
+          "@type": "Service",
+          "name": "AI Financial Coaching",
+          "description": "Personalized AI-powered financial coaching and education",
+          "provider": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "serviceType": "Financial Education and Coaching",
+          "areaServed": "Worldwide",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Individual Investors and Savers"
+          }
+        }
+      ]
+    };
     
     return {
-      meta: [
-        {
-          title: 'Portfolio | Moneko',
-        },
-        {
-          name: 'description',
-          content: 'Your personalized financial education portfolio. Access learning materials, and tools.',
-        },
-      ],
+      title,
+      meta,
       link: [
         {
           rel: 'canonical',
           href: pageUrl
         }
-      ]
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
     };
   },
 });

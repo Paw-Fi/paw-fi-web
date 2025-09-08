@@ -4,6 +4,8 @@ import React from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { getCanonicalUrl } from '@/utils/canonical';
+import { seo } from '@/utils/seo';
 import { motion, Variants } from "framer-motion";
 import {
   TrendingUp,
@@ -51,6 +53,250 @@ import { GuidanceTestPanel } from "@/components/dashboard/GuidanceTestPanel";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
+  head: () => {
+    const pageUrl = getCanonicalUrl('/dashboard');
+    const title = 'Personal Finance Dashboard Home - AI Portfolio Tracker & Learning Center | Moneko';
+    const description = 'Your comprehensive personal finance command center. Track investments, monitor financial health, access AI coaching, complete learning modules, and use advanced calculators to build wealth.';
+    const keywords = 'personal finance dashboard, investment portfolio tracker, financial health monitor, AI financial coaching, financial education platform, wealth building tools, budgeting dashboard, retirement planning';
+    const imageUrl = 'https://moneko.io/og-img.png';
+
+    const meta = seo({
+      title,
+      description,
+      keywords,
+      url: pageUrl,
+      image: imageUrl,
+    });
+
+    // Comprehensive structured data for dashboard home
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "logo": "https://moneko.io/icon.svg",
+          "sameAs": [
+            "https://www.facebook.com/monekoai/",
+            "https://www.instagram.com/moneko_ai/",
+            "https://x.com/moneko_ai"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://moneko.io/#website",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          }
+        },
+        {
+          "@type": "WebPage",
+          "@id": pageUrl,
+          "url": pageUrl,
+          "name": title,
+          "description": description,
+          "isPartOf": {
+            "@id": "https://moneko.io/#website"
+          },
+          "about": [
+            {
+              "@type": "Thing",
+              "name": "Personal Finance Dashboard"
+            },
+            {
+              "@type": "Thing", 
+              "name": "Investment Portfolio Tracking"
+            },
+            {
+              "@type": "Thing",
+              "name": "Financial Education Platform"
+            },
+            {
+              "@type": "Thing",
+              "name": "AI Financial Coaching"
+            }
+          ],
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://moneko.io"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Dashboard",
+                "item": pageUrl
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "Home",
+                "item": pageUrl
+              }
+            ]
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Moneko Personal Finance Dashboard",
+          "applicationCategory": "FinanceApplication",
+          "applicationSubCategory": "Personal Finance Management",
+          "operatingSystem": "Any",
+          "description": "Comprehensive personal finance dashboard with AI-powered portfolio tracking, goal management, financial education, and smart calculators",
+          "url": pageUrl,
+          "author": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "featureList": [
+            "Real-time portfolio tracking and analysis",
+            "AI-powered financial health assessment",
+            "Personalized investment recommendations",
+            "Interactive financial education courses",
+            "Smart budgeting and expense tracking",
+            "Goal-based financial planning",
+            "Advanced financial calculators",
+            "Progress tracking and gamification",
+            "Personalized AI financial coaching",
+            "Comprehensive financial reporting"
+          ],
+          "browserRequirements": "Requires JavaScript and modern web browser",
+          "offers": [
+            {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "name": "Basic Dashboard Access",
+              "description": "Free access to basic portfolio tracking and financial calculators"
+            },
+            {
+              "@type": "Offer",
+              "price": "9.99",
+              "priceCurrency": "USD",
+              "name": "Premium Dashboard Features",
+              "description": "Full AI coaching, advanced analytics, personalized recommendations, and unlimited access",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "9.99",
+                "priceCurrency": "USD",
+                "unitText": "month"
+              }
+            }
+          ]
+        },
+        {
+          "@type": "Service",
+          "name": "Personal Finance Management Platform",
+          "description": "Comprehensive personal finance management with AI-powered insights, education, and portfolio tracking",
+          "provider": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "serviceType": "Financial Technology Platform",
+          "category": "Personal Finance Management",
+          "areaServed": "Worldwide",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Individual Investors, Students, Young Professionals, Families"
+          },
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Financial Tools and Services",
+            "itemListElement": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Portfolio Tracking",
+                  "description": "Real-time investment portfolio monitoring and analysis"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Financial Education",
+                  "description": "Interactive courses and lessons on personal finance topics"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "AI Financial Coaching",
+                  "description": "Personalized financial advice and recommendations powered by AI"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "@type": "ItemList",
+          "name": "Dashboard Features",
+          "description": "Key features available in the Moneko personal finance dashboard",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Financial Overview",
+              "description": "Comprehensive view of income, savings, expenses, and financial health metrics"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Learning Progress",
+              "description": "Track educational progress through financial courses and lessons with XP rewards"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "AI Assistant",
+              "description": "24/7 AI-powered financial advisor for personalized guidance and support"
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "name": "Quick Tools",
+              "description": "Access to essential financial calculators for planning and analysis"
+            },
+            {
+              "@type": "ListItem",
+              "position": 5,
+              "name": "Goal Tracking",
+              "description": "Monitor progress toward financial objectives with visual progress indicators"
+            }
+          ]
+        }
+      ]
+    };
+    
+    return {
+      title,
+      meta,
+      link: [
+        {
+          rel: 'canonical',
+          href: pageUrl
+        }
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
+    };
+  },
 });
 
 // Modern 2025 animation variants with ultra-smooth spring physics

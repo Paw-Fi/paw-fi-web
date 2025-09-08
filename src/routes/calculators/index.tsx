@@ -21,10 +21,10 @@ export const Route = createFileRoute('/calculators/')({
   head: () => {
     const pageUrl = getCanonicalUrl('/calculators');
     const meta = seo({
-      title: 'Financial Calculators | Moneko',
-      description: 'Explore our suite of financial calculators to help you make informed decisions about your money, investments, loans, and more.',
-      keywords: 'financial calculators, investment, mortgage, savings, auto loan, retirement, compound interest, loan amortization, moneko, moneko',
-      image: 'https://moneko.io/og-img.png', // Ensure this OG image is updated for the new design if needed
+      title: 'Free Financial Calculators - Budgeting, Investment, Mortgage & Retirement Tools | Moneko',
+      description: 'Calculate compound interest, mortgage payments, investment returns, retirement savings, and more with our comprehensive suite of free financial planning calculators.',
+      keywords: 'financial calculators, compound interest calculator, mortgage calculator, retirement calculator, investment calculator, auto loan calculator, savings goal calculator, budgeting tools, financial planning',
+      image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });
     
@@ -135,44 +135,44 @@ const cardVariants: Variants = {
 function CalculatorsPage() {
   const calculators: CalculatorCardData[] = [
     {
-      title: 'Compound Interest',
-      description: 'See your investments snowball with the magic of compound interest.',
+      title: 'Compound Interest Calculator',
+      description: 'Calculate how compound interest grows your investments over time with monthly contributions and annual returns.',
       icon: faChartLine,
       path: '/calculators/compound-calculator',
       available: true
     },
     {
-      title: 'Mortgage',
-      description: 'Estimate monthly payments and understand your home loan better.',
+      title: 'Mortgage Payment Calculator',
+      description: 'Estimate monthly mortgage payments, total interest, and loan amortization schedules for home purchases.',
       icon: faHome,
       path: '/calculators/mortgage-calculator',
       available: true
     },
     {
-      title: 'Savings Goal',
-      description: 'Chart a course to your financial dreams, one saving step at a time.',
+      title: 'Savings Goal Calculator',
+      description: 'Calculate how much to save monthly to reach your financial goals by your target date.',
       icon: faPiggyBank,
       path: '/calculators/saving-goals-calculator',
       available: true
     },
     {
-      title: 'Investment Growth',
-      description: 'Project potential returns and explore different investment scenarios.',
-      icon: faPercent, // Could use faSeedling or faChartPie for more visual variety if desired
+      title: 'Investment Return Calculator',
+      description: 'Project potential investment returns and analyze different portfolio scenarios with historical data.',
+      icon: faPercent,
       path: '/calculators/investment-calculator',
       available: true
     },
     {
-      title: 'Auto Loan',
-      description: 'Calculate car loan payments and total costs, including taxes and fees.',
-      icon: faMoneyBillWave, // Could use faCar
+      title: 'Auto Loan Calculator',
+      description: 'Calculate monthly car payments, total interest costs, and compare different loan terms and rates.',
+      icon: faMoneyBillWave,
       path: '/calculators/auto-loan-calculator',
       available: true
     },
     {
-      title: 'Retirement Planner',
-      description: 'Map out your golden years with retirement savings and withdrawal estimates.',
-      icon: faCreditCard, // Could use faUmbrellaBeach or faMountainSun
+      title: 'Retirement Planning Calculator',
+      description: 'Plan your retirement savings strategy with 401(k), IRA, and Social Security projections.',
+      icon: faCreditCard,
       path: '/calculators/retirement-calculator',
       available: true
     },
@@ -194,7 +194,7 @@ function CalculatorsPage() {
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          Financial Calculators
+          Free Financial Planning Calculators
         </motion.h1>
         <motion.p 
           className="text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto"
@@ -202,7 +202,7 @@ function CalculatorsPage() {
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          Empower your financial journey. Explore our suite of intuitive calculators to make informed decisions about your money, investments, and future plans.
+          Plan your financial future with powerful calculators for budgeting, investing, mortgage planning, and retirement savings. Get instant results to make informed money decisions.
         </motion.p>
       </div>
 

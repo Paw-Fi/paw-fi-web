@@ -1,6 +1,7 @@
 # https://www.robotstxt.org/robotstxt.html
 # Moneko - AI-Powered Financial Learning Platform for 2025
-# Comprehensive Financial Education, Calculators, and AI-Driven Budgeting Tools
+# Comprehensive Financial Education, Smart Budgeting, and Personalized AI Coaching
+# Enhanced GEO-Optimized Content for Local Financial Planning
 
 User-agent: *
 Allow: /
@@ -17,7 +18,15 @@ Allow: /privacy-policy
 Allow: /terms-of-service
 Allow: /cookie-policy
 
-# High-priority content for financial education
+# High-priority content for financial education and AI-powered budgeting
+Allow: /budgeting-app/
+Allow: /budgeting-app/students-budgeting
+Allow: /budgeting-app/young-professionals-budgeting
+Allow: /budgeting-app/parents-budgeting
+Allow: /budgeting-app/couples-budgeting
+Allow: /budgeting-app/freelancers-budgeting
+Allow: /budgeting-app/entrepreneurs-budgeting
+Allow: /budgeting-app/retirees-budgeting
 Allow: /guides/401k-vs-ira-complete-comparison
 Allow: /guides/complete-beginner-guide-to-investing
 Allow: /guides/how-much-do-i-need-to-retire
@@ -75,6 +84,7 @@ Allow: /
 Allow: /llm.txt
 Allow: /guides/
 Allow: /calculators/
+Allow: /budgeting-app/
 Crawl-delay: 1
 
 User-agent: OpenAI-ChatGPT
@@ -82,6 +92,7 @@ Allow: /
 Allow: /llm.txt
 Allow: /guides/
 Allow: /calculators/
+Allow: /budgeting-app/
 Crawl-delay: 1
 
 User-agent: Claude-Web
@@ -89,6 +100,7 @@ Allow: /
 Allow: /llm.txt
 Allow: /guides/
 Allow: /calculators/
+Allow: /budgeting-app/
 Crawl-delay: 1
 
 User-agent: Anthropic-AI
@@ -106,6 +118,7 @@ Allow: /
 Allow: /llm.txt
 Allow: /guides/
 Allow: /calculators/
+Allow: /budgeting-app/
 Crawl-delay: 1
 
 User-agent: PerplexityBot

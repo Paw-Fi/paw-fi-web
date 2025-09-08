@@ -249,9 +249,9 @@ export const Route = createFileRoute('/calculators/auto-loan-calculator')({
     const routePath = '/calculators/auto-loan-calculator';
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
-      title: 'Auto Loan Calculator | Moneko',
-      description: "Calculate your auto loan payments, interest, and total cost with Moneko's easy-to-use car loan calculator.",
-      keywords: 'auto loan calculator, car loan calculator, vehicle financing, car payment estimator, Moneko',
+      title: 'Free Auto Loan Calculator - Car Payment Estimator & Financing Calculator | Moneko',
+      description: 'Calculate monthly car payments, total interest costs, and loan terms with our auto loan calculator. Compare financing options and find the best car loan rates.',
+      keywords: 'auto loan calculator, car loan calculator, car payment calculator, vehicle financing calculator, car loan rates, auto financing, car payment estimator',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,
     });

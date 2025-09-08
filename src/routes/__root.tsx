@@ -143,10 +143,136 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <MonekoOrganizationData />
         <MonekoWebsiteData />
+        
+        {/* Pure CSS loading screen styles */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            #moneko-initial-loader {
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100vw;
+              height: 100vh;
+              background: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 9999;
+              opacity: 1;
+              transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+            }
+            
+            #moneko-initial-loader.hidden {
+              opacity: 0;
+              visibility: hidden;
+            }
+            
+            .moneko-loader-content {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+            }
+            
+            .moneko-logo {
+              width: 60px;
+              height: 60px;
+              background: #7458FF;
+              border-radius: 50%;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 24px;
+              font-weight: bold;
+              color: white;
+              animation: pulse 2s infinite ease-in-out;
+            }
+            
+            @keyframes pulse {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.1); }
+              100% { transform: scale(1); }
+            }
+            
+            .moneko-loader-title {
+              font-size: 24px;
+              font-weight: 600;
+              margin-bottom: 8px;
+              color: #1f2937;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+            
+            .moneko-loader-subtitle {
+              font-size: 14px;
+              color: #6b7280;
+              margin-bottom: 24px;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+          `
+        }} />
       </head>
         <GoogleTagManager gtmId="G-KBNN5QXD4G" />
       
       <body className="h-screen">      
+        {/* Pure HTML/CSS Loading Screen */}
+        <div id="moneko-initial-loader">
+          <div className="moneko-loader-content">
+            <div className="moneko-logo">M</div>
+            <div className="moneko-loader-title">Moneko</div>
+            <div className="moneko-loader-subtitle">Initializing your financial journey...</div>
+          </div>
+        </div>
+
+        {/* Hide loading screen once React hydrates */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.addEventListener('DOMContentLoaded', function() {
+              // Additional safety: hide after a maximum timeout
+              setTimeout(function() {
+                const loader = document.getElementById('moneko-initial-loader');
+                if (loader) {
+                  loader.classList.add('hidden');
+                  setTimeout(function() {
+                    loader.remove();
+                  }, 500);
+                }
+              }, 8000); // 8 second max timeout
+            });
+
+            // Hide when React has mounted (more reliable)
+            document.addEventListener('DOMContentLoaded', function() {
+              const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                  if (mutation.addedNodes.length > 0) {
+                    // Check if React router has mounted by looking for data-reactroot or router elements
+                    const reactMounted = document.querySelector('[data-reactroot], [data-tanstack-router]') ||
+                                       document.querySelector('main, nav, header') ||
+                                       document.documentElement.hasAttribute('data-react-hydrated');
+                    
+                    if (reactMounted) {
+                      const loader = document.getElementById('moneko-initial-loader');
+                      if (loader) {
+                        loader.classList.add('hidden');
+                        setTimeout(function() {
+                          loader.remove();
+                        }, 500);
+                      }
+                      observer.disconnect();
+                    }
+                  }
+                });
+              });
+              
+              observer.observe(document.body, {
+                childList: true,
+                subtree: true
+              });
+            });
+          `
+        }} />
+        
       <AuthProvider>
         <ChatProvider>
           {/* Use ClientOnly wrapper to prevent hydration mismatches */}

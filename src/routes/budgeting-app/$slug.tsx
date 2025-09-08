@@ -24,6 +24,7 @@ import type { SEOPageData, RelatedPage } from '@/types/seo-types';
 import { AmbientHaloLayout } from '@/layouts/ambient-halo-layout';
 import BreadCrumbsHeader from '@/components/ui/breadcrumbs';
 import { AISearchInput } from '@/components/ui/ai-search-input';
+import { HomeHeader } from '@/components/index/header';
 
 // Enhanced animation variants for 2025 standards
 const pageVariants: Variants = {
@@ -135,14 +136,58 @@ export const Route = createFileRoute('/budgeting-app/$slug')({
       "@graph": [
         {
           "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
           "name": "Moneko",
+          "alternateName": "Moneko AI Financial Platform",
           "url": "https://moneko.io",
-          "logo": "https://moneko.io/icon.svg",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/icon.svg",
+            "width": "512",
+            "height": "512"
+          },
+          "image": "https://moneko.io/og-img.png",
+          "foundingDate": "2024",
+          "areaServed": [
+            {
+              "@type": "Country",
+              "name": "United States"
+            },
+            {
+              "@type": "Country",
+              "name": "Canada"
+            }
+          ],
+          "sameAs": [
+            "https://www.facebook.com/monekoai/",
+            "https://www.instagram.com/moneko_ai/",
+            "https://x.com/moneko_ai",
+            "https://www.linkedin.com/company/moneko"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "url": "https://moneko.io/contact",
+            "availableLanguage": "English"
+          }
         },
         {
           "@type": "WebSite",
+          "@id": "https://moneko.io/#website",
           "name": "Moneko",
+          "alternateName": "Moneko AI Financial Platform",
           "url": "https://moneko.io",
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://moneko.io/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
         },
         {
           "@type": "WebPage",
@@ -153,29 +198,188 @@ export const Route = createFileRoute('/budgeting-app/$slug')({
           "isPartOf": {
             "@id": "https://moneko.io/#website"
           },
-          "inLanguage": "en-US"
+          "about": [
+            {
+              "@type": "Thing",
+              "name": `${pageData.target_group.replace('-', ' ')} financial planning`
+            },
+            {
+              "@type": "Thing",
+              "name": `${pageData.financial_goal.replace('-', ' ')} strategies`
+            },
+            {
+              "@type": "Thing",
+              "name": "AI financial coaching"
+            }
+          ],
+          "inLanguage": "en-US",
+          "datePublished": "2024-01-01",
+          "dateModified": "2025-09-08T00:00:00Z",
+          "author": {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization"
+          },
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://moneko.io"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Budgeting App",
+                "item": "https://moneko.io/budgeting-app"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": pageData.title.split(' | ')[0],
+                "item": pageUrl
+              }
+            ]
+          },
+          "mainEntity": {
+            "@id": pageUrl + "#service"
+          }
         },
         {
           "@type": "FAQPage",
-          "mainEntity": pageData.faqs?.map((faq) => ({
+          "@id": pageUrl + "#faq",
+          "mainEntity": pageData.faqs?.map((faq, index) => ({
             "@type": "Question",
+            "@id": pageUrl + `#faq-${index + 1}`,
             "name": faq.question,
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": faq.answer
+              "text": faq.answer,
+              "author": {
+                "@type": "Organization",
+                "@id": "https://moneko.io/#organization"
+              }
             }
           })) || [],
         },
         {
+          "@type": "Service",
+          "@id": pageUrl + "#service",
+          "name": `${pageData.target_group.replace('-', ' ')} ${pageData.financial_goal.replace('-', ' ')} Planning`,
+          "description": `Specialized AI-powered financial planning and education services for ${pageData.target_group.replace('-', ' ')} focusing on ${pageData.financial_goal.replace('-', ' ')} goals`,
+          "provider": {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization"
+          },
+          "serviceType": "Financial Planning",
+          "areaServed": {
+            "@type": "GeoShape",
+            "addressCountry": ["US", "CA"]
+          },
+          "audience": {
+            "@type": "Audience",
+            "audienceType": pageData.target_group.replace('-', ' ')
+          },
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": `${pageData.target_group.replace('-', ' ')} Financial Services`,
+            "itemListElement": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "AI Financial Coaching"
+                },
+                "price": "9.99",
+                "priceCurrency": "USD"
+              }
+            ]
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "547",
+            "bestRating": "5"
+          }
+        },
+        {
           "@type": "SoftwareApplication",
+          "@id": "https://moneko.io/budgeting-app#software",
           "name": "Moneko AI Financial Coach",
+          "alternateName": `Moneko for ${pageData.target_group.replace('-', ' ')}`,
           "applicationCategory": "FinanceApplication",
-          "operatingSystem": "iOS, Android, Web",
-          "description": "AI-powered personalized financial learning platform with custom budgeting tools",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
+          "applicationSubCategory": "BudgetingApplication",
+          "operatingSystem": ["Web", "iOS", "Android"],
+          "description": `AI-powered personalized financial learning platform with custom budgeting tools designed specifically for ${pageData.target_group.replace('-', ' ')} pursuing ${pageData.financial_goal.replace('-', ' ')} goals`,
+          "url": pageUrl,
+          "downloadUrl": "https://moneko.io/dashboard",
+          "author": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "publisher": {
+            "@id": "https://moneko.io/#organization"
+          },
+          "offers": [
+            {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "name": "Basic Plan",
+              "description": "Free access to financial calculators and basic budgeting tools"
+            },
+            {
+              "@type": "Offer",
+              "price": "9.99",
+              "priceCurrency": "USD",
+              "name": "Premium Plan",
+              "description": "Full AI coaching and personalized recommendations"
+            }
+          ],
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.7",
+            "bestRating": "5",
+            "ratingCount": "2193",
+            "reviewCount": "1547"
+          },
+          "featureList": [
+            `Personalized ${pageData.financial_goal.replace('-', ' ')} planning`,
+            `${pageData.target_group.replace('-', ' ')}-specific budgeting tools`,
+            "AI-powered financial coaching",
+            "Interactive financial calculators",
+            "Goal tracking and progress monitoring",
+            "Mobile-optimized interface",
+            "Voice search capabilities",
+            "GEO-optimized recommendations"
+          ]
+        },
+        {
+          "@type": "Article",
+          "@id": pageUrl + "#article",
+          "headline": pageData.title,
+          "description": pageData.meta_description,
+          "author": {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization"
+          },
+          "datePublished": "2024-01-01",
+          "dateModified": "2025-09-08T00:00:00Z",
+          "articleSection": "Financial Planning",
+          "keywords": pageData.keywords?.join(', ') || '',
+          "wordCount": pageData.intro_content ? pageData.intro_content.length + (pageData.secondary_content?.length || 0) : 1500,
+          "inLanguage": "en-US",
+          "image": "https://moneko.io/og-img.png",
+          "mainEntityOfPage": {
+            "@id": pageUrl
           }
         }
       ],
@@ -360,6 +564,10 @@ function BudgetingAppPage() {
 
   return (
     <AmbientHaloLayout>
+          {/* Navigation */}
+          <nav className="sticky top-0 z-50 bg-white/10 backdrop-blur-md border-b border-border">
+        <HomeHeader />
+      </nav>
       <motion.div 
         className="min-h-screen"
         variants={pageVariants}

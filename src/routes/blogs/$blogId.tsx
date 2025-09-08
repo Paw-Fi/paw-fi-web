@@ -21,7 +21,8 @@ import { Blog } from "@/components/blogs/blogs.typing";
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
-import remarkGfm from 'remark-gfm'; // Import the GFM plugin
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
 
@@ -229,8 +230,132 @@ function BlogDetailPage() {
           </a>
         </div>
 
-        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg prose-headings:text-foreground dark:prose-headings:text-dark-foreground prose-p:text-foreground dark:prose-p:text-dark-foreground prose-li:text-foreground dark:prose-li:text-dark-foreground prose-strong:text-foreground dark:prose-strong:text-dark-foreground prose-a:text-primary dark:prose-a:text-dark-primary hover:prose-a:text-secondary dark:hover:prose-a:text-dark-secondary">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} >{blog.content}</ReactMarkdown>
+        <article className="prose prose-lg prose-slate mx-auto max-w-none dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-4xl prose-h1:mb-8 prose-h1:mt-12 prose-h2:text-3xl prose-h2:mb-6 prose-h2:mt-10 prose-h3:text-2xl prose-h3:mb-4 prose-h3:mt-8 prose-h4:text-xl prose-h4:mb-3 prose-h4:mt-6 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-6 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:leading-relaxed prose-li:mb-2 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-strong:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:font-medium prose-a:no-underline hover:prose-a:text-blue-800 dark:hover:prose-a:text-blue-300 hover:prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50 dark:prose-blockquote:bg-blue-900/20 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:my-8 prose-blockquote:rounded-r-lg prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-6 prose-pre:overflow-x-auto prose-table:border-collapse prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:bg-gray-50 dark:prose-th:bg-gray-800 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-4 prose-td:py-3 prose-ul:space-y-2 prose-ol:space-y-2 prose-img:rounded-lg prose-img:shadow-lg prose-img:my-8">
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]} 
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              // Custom heading components with better spacing
+              h1: ({ children }) => (
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-8 mt-12 leading-tight border-b border-gray-200 dark:border-gray-700 pb-4">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-10 leading-tight">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 mt-8 leading-tight">
+                  {children}
+                </h3>
+              ),
+              h4: ({ children }) => (
+                <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3 mt-6 leading-tight">
+                  {children}
+                </h4>
+              ),
+              // Enhanced paragraph styling
+              p: ({ children }) => (
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 text-lg">
+                  {children}
+                </p>
+              ),
+              // Better link styling
+              a: ({ href, children }) => (
+                <a 
+                  href={href} 
+                  className="text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 hover:underline transition-colors duration-200 border-b border-blue-200 dark:border-blue-600 hover:border-blue-400 dark:hover:border-blue-300"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              ),
+              // Enhanced list styling
+              ul: ({ children }) => (
+                <ul className="space-y-3 mb-6 pl-6">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="space-y-3 mb-6 pl-6">
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {children}
+                </li>
+              ),
+              // Enhanced blockquote
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20 py-4 px-6 my-8 rounded-r-lg italic text-gray-800 dark:text-gray-200">
+                  {children}
+                </blockquote>
+              ),
+              // Better code styling
+              code: ({ children, className }) => {
+                const isInline = !className;
+                if (isInline) {
+                  return (
+                    <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200">
+                      {children}
+                    </code>
+                  );
+                }
+                return (
+                  <code className={className}>
+                    {children}
+                  </code>
+                );
+              },
+              // Enhanced table styling
+              table: ({ children }) => (
+                <div className="overflow-x-auto my-8">
+                  <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden shadow-sm">
+                    {children}
+                  </table>
+                </div>
+              ),
+              th: ({ children }) => (
+                <th className="border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-700 dark:text-gray-300">
+                  {children}
+                </td>
+              ),
+              // Enhanced image styling
+              img: ({ src, alt }) => (
+                <div className="my-8">
+                  <img 
+                    src={src} 
+                    alt={alt} 
+                    className="rounded-lg shadow-lg w-full h-auto"
+                    loading="lazy"
+                  />
+                </div>
+              ),
+              // Strong text enhancement
+              strong: ({ children }) => (
+                <strong className="font-semibold text-gray-900 dark:text-gray-100">
+                  {children}
+                </strong>
+              ),
+              // Emphasis enhancement
+              em: ({ children }) => (
+                <em className="italic text-gray-800 dark:text-gray-200">
+                  {children}
+                </em>
+              )
+            }}
+          >
+            {blog.content}
+          </ReactMarkdown>
         </article>
 
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">

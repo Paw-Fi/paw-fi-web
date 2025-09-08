@@ -51,11 +51,11 @@ export const Route = createFileRoute("/")({
     // Use canonical helper for consistent URLs
     const pageUrl = getCanonicalUrl("/");
     const title =
-      "Moneko – Save Money and Start Investing from Zero";
+      "AI Personal Finance Coach - Learn Budgeting, Investing & Save Money | Moneko";
     const description =
-      "Struggling to save or invest? Moneko helps beginners build savings goals, grow money step by step, and start investing with confidence.";
+      "Transform your financial future with Moneko's AI-powered personal finance coach. Get personalized budgeting plans, learn investing basics, and achieve your money goals with expert guidance.";
     const keywords =
-      "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
+      "AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({
@@ -224,9 +224,9 @@ export default function HomePage() {
 
   // SEO metadata
   const pageUrl = getCanonicalUrl("/");
-  const title = "Moneko – Save Money and Start Investing from Zero";
-  const description = "Struggling to save or invest? Moneko helps beginners build savings goals, grow money step by step, and start investing with confidence.";
-  const keywords = "financial education, personal finance, money management, investing, saving, budgeting, financial literacy, free financial tools, Moneko";
+  const title = "AI Personal Finance Coach - Learn Budgeting, Investing & Save Money | Moneko";
+  const description = "Transform your financial future with Moneko's AI-powered personal finance coach. Get personalized budgeting plans, learn investing basics, and achieve your money goals with expert guidance.";
+  const keywords = "AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
   const imageUrl = "https://moneko.io/og-img.png";
 
   return (
@@ -265,8 +265,7 @@ export default function HomePage() {
 
       {/* Hidden H1 for SEO */}
       <h1 className="sr-only">
-        Learn How to Save and Start Investing for Beginners with Moneko, Your AI
-        Money Coach
+        AI Personal Finance Coach: Learn Budgeting, Investing, and Money Management with Moneko
       </h1>
 
       {/* Navigation */}
@@ -285,7 +284,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              Your AI Personal Money Coach
+              Master Your Money with AI Personal Finance Coach
             </motion.h2>
             
             <motion.p
@@ -294,7 +293,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             >
-              Start with your goal. Moneko builds the plan.
+              Get personalized budgeting plans, learn smart investing strategies, and achieve your financial goals with expert AI guidance tailored to your unique situation.
             </motion.p>
           </div>
 
@@ -306,7 +305,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
           >
             <AISearchInput 
-              placeholder="Ask Moneko to create personalized financial journey for my..."
+              placeholder="Ask your AI finance coach: 'Help me create a budget' or 'How should I start investing?'"
               suggestions={chatSuggestions}
             />
           </motion.div>
@@ -342,7 +341,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              See Moneko in Action
+              See AI-Powered Financial Planning in Action
             </motion.h2>
             <motion.p
               className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
@@ -351,7 +350,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Watch how Moneko transforms your financial journey with AI-powered personalized learning and expert guidance.
+              Discover how Moneko's AI personal finance coach creates customized budgeting strategies, investment recommendations, and savings plans tailored specifically to your financial goals and lifestyle.
             </motion.p>
           </div>
 
@@ -384,8 +383,8 @@ export default function HomePage() {
                   {/* Text overlay container */}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent flex items-center">
                     <div className="text-white p-4 sm:p-6 md:p-8 lg:p-12 max-w-2xl">
-                      <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 leading-tight">Experience Personalized Learning</h3>
-                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 mb-4 sm:mb-6 leading-relaxed">See how our AI creates custom financial plans tailored to your goals and learning style.</p>
+                      <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 leading-tight">Personalized Financial Education & Planning</h3>
+                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 mb-4 sm:mb-6 leading-relaxed">Watch how our AI analyzes your financial situation and creates personalized budgeting strategies and investment recommendations.</p>
                       <div className="inline-flex items-center gap-1.5 sm:gap-2 text-white/80 font-medium text-sm sm:text-base">
                         <FontAwesomeIcon icon={faPlay} className="text-xs sm:text-sm" />
                         <span>Watch Demo</span>
@@ -437,7 +436,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              Smart Tools for Your Financial Journey
+              AI-Powered Financial Tools & Learning Platform
             </motion.h2>
             <motion.p
               className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
@@ -446,7 +445,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Discover powerful features designed to make financial learning engaging and effective.
+              Access comprehensive budgeting calculators, investment planning tools, and personalized financial education designed to accelerate your journey to financial independence.
             </motion.p>
           </div>
 
@@ -470,10 +469,10 @@ export default function HomePage() {
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
-                      AI-Powered Chat Assistant
+                      24/7 AI Personal Finance Coach
                     </CardTitle>
                     <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Get personalized financial guidance and instant answers to your money questions.
+                      Get instant, personalized advice on budgeting, investing, debt management, and financial planning from your AI money mentor.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -500,10 +499,10 @@ export default function HomePage() {
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground mb-2 sm:mb-3 leading-tight">
-                      Achievement System
+                      Gamified Learning & Progress Tracking
                     </CardTitle>
                     <CardDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Earn badges and track your progress as you master new financial concepts.
+                      Stay motivated with achievement badges, XP rewards, and visual progress tracking as you build essential money management skills.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -526,7 +525,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              Expert-Led Financial Courses
+              Professional Financial Education Courses
             </motion.h2>
             <motion.p
               className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
@@ -535,7 +534,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Our foundational courses are crafted by seasoned Financial Instructors (CFA, CSC, MBA) with over 10 years of experience, making complex topics clear and actionable.
+              Master personal finance fundamentals through expert-designed courses covering budgeting strategies, investment principles, retirement planning, and debt management - created by certified financial professionals (CFA, CSC, MBA) with 10+ years of experience.
             </motion.p>
           </div>
           
@@ -614,7 +613,7 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-sm sm:text-base text-muted-foreground max-w-xs leading-relaxed">
-                Empowering your financial journey with intelligent, personalized learning.
+                Your trusted AI personal finance coach for budgeting, investing, and building wealth with confidence.
               </p>
             </div>
 
@@ -629,7 +628,7 @@ export default function HomePage() {
                     to="/dashboard/learning"
                     className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
-                    AI Learning
+                    AI Financial Education
                   </Link>
                 </li>
                 <li>
@@ -637,7 +636,7 @@ export default function HomePage() {
                     to={`/dashboard/learning/${basicLessonsData.course_id}`}
                     className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
-                    Expert Courses
+                    Financial Planning Courses
                   </Link>
                 </li>
                 <li>
@@ -645,7 +644,7 @@ export default function HomePage() {
                     to="/calculators"
                     className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
-                    Financial Calculators
+                    Budgeting & Investment Calculators
                   </Link>
                 </li>
                 <li>
@@ -653,7 +652,7 @@ export default function HomePage() {
                     to="/dashboard"
                     className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors touch-manipulation active:scale-95"
                   >
-                    Chat with AI
+                    AI Finance Coach Chat
                   </Link>
                 </li>
                 <li>

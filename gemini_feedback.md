@@ -3,12 +3,12 @@ Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, this is an excellent set of changes that significantly enhances the website's SEO foundation, content strategy for both users and AI, and crawler management. The updates are thorough, well-structured, and demonstrate a sophisticated understanding of modern SEO and AI interaction.
+Overall, this is an excellent set of changes that significantly improves the SEO implementation, page performance, and content strategy of the website. The refactoring to a centralized `StructuredData` component is a major improvement for code quality and maintainability. The addition of rich content and detailed schemas to the calculator pages transforms them from simple tools into valuable, authoritative resources.
 
 #### Suggestions (Consider Improving)
 
-*   **Dynamic `lastmod` in Sitemap**: In `public/sitemap.xml`, the `<lastmod>` date for the new guide pages is set to a static date (`2025-01-07`). For optimal SEO, this date should reflect the last time the content of the page was actually modified. Consider implementing a system where this date is updated automatically when you deploy changes to that specific content. For now, this is perfectly acceptable, but a dynamic approach is better for long-term maintenance.
+*   **Dynamic `dateModified`:** In the `SoftwareApplication` schema for each calculator, the `dateModified` is set to `new Date().toISOString()`. This will cause the date to change on every server render. It's generally better for this field to reflect the date the tool or its content was last meaningfully updated. Consider using a static date that you update manually when you deploy significant changes to the calculators.
 
-*   **Consolidate AI User-Agents**: In `public/robots.txt`, several AI bots are granted the same permissions (e.g., `ChatGPT-User`, `OpenAI-ChatGPT`, `Claude-Web`). While the current approach is perfectly valid and explicit, you could consider grouping them under a common, more generic rule if you find the file becoming difficult to manage. However, the current explicit approach is also very clear and leaves no room for misinterpretation by crawlers.
+*   **Behavioral Change on `/budgeting-app`:** The `useEffect` that redirected users from `/budgeting-app` to `/budgeting-app/students-investing` has been removed. This is a significant change in user flow. Was this intentional? If so, ensure that any links pointing to the old base URL are updated and that the content on the new `/budget-gapp` page fully replaces the need for the redirect.
 
-There are no critical issues or warnings to report. This is a high-quality contribution that dramatically improves the site's public-facing SEO and AI-readiness posture. Great work.
+There are no critical issues or warnings to report. This is a high-quality contribution that dramatically improves the codebase and the site's SEO potential. Great work.
