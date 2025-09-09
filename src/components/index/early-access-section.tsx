@@ -125,11 +125,11 @@ export const EarlyAccessSection = () => {
 
           {/* Paragraph */}
           <motion.p
-            className="mx-auto max-w-2xl text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed"
+            className="mx-auto max-w-2xl text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed dark:text-moneko-foreground"
             variants={itemVariants}
           >
             Be among the first{" "}
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
+            <span className="font-semibold text-blue-600 dark:text-blue-600">
               100 pioneers
             </span>{" "}
             to experience the future of financial learning.
@@ -195,7 +195,7 @@ export const EarlyAccessSection = () => {
                   Loading...
                 </span>
               ) : (
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                <span className="font-semibold text-blue-600 dark:text-blue-600">
                   Only {remainingSpots} spots remaining
                 </span>
               )}
@@ -211,7 +211,7 @@ export const EarlyAccessSection = () => {
           animate="visible"
         >
           <motion.p
-            className="mb-3 sm:mb-4 text-sm sm:text-base text-muted-foreground"
+            className="mb-3 sm:mb-4 text-sm sm:text-base text-muted-foreground dark:text-moneko-foreground"
             variants={itemVariants}
           >
             Join our vibrant community

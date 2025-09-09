@@ -247,7 +247,7 @@ export function AISearchInput({
               icon={faLightbulb}
               className="text-warning h-3 w-3 sm:h-4 sm:w-4"
             />
-            <span className="text-xs sm:text-sm font-medium text-muted-foreground">
+            <span className="text-xs sm:text-sm font-medium text-muted-foreground dark:text-moneko-foreground">
               Popular questions to get started
             </span>
           </div>
