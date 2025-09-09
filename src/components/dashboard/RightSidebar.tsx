@@ -97,14 +97,11 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                   id={`chat-agent-${agent.id}`}
                   variant="ghost"
                   size="icon"
-                  className="size-10 shadow-sm hover:shadow-md transition-all duration-200"
+                  className="size-10 shadow-sm hover:shadow-md transition-all duration-200 rounded-full cursor-pointer"
                   onClick={() => openChat(agent.aiType)}
                   asChild
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
+               
                     <div className="relative flex items-center justify-center">
                       {agent.icon && (
                          <OptimizedImage 
@@ -114,7 +111,6 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
                        />
                       )}                   
                     </div>
-                  </motion.div>
                 </Button>
               </motion.div>
             ))}
@@ -124,22 +120,17 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
               <Button
                 onClick={showGuide}
                 size="icon"
-                className="size-10 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-sm hover:shadow-md transition-all duration-200"
+                className="size-10 rounded-full cursor-pointer bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-sm hover:shadow-md transition-all duration-200"
                 asChild
               >
-                <motion.div
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
+                <div               
                   className="flex items-center justify-center"
                 >
                   <FontAwesomeIcon
                     className="h-6 w-6 text-white"
                     icon={faLightbulb}
                   />
-                </motion.div>
+                </div>
               </Button>
             )}
           </div>

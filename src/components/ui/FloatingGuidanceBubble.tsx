@@ -20,6 +20,7 @@ interface FloatingGuidanceBubbleProps {
     right?: string;
   };
   autoHideDelay?: number; // Auto-hide after X milliseconds (0 = no auto-hide)
+  isMobile?: boolean; // Flag to enable mobile positioning
 }
 
 export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
@@ -29,7 +30,8 @@ export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
   onClose,
   onClick,
   position = { bottom: '100px', right: '20px' },
-  autoHideDelay = 10000 // 10 seconds default
+  autoHideDelay = 10000, // 10 seconds default
+  isMobile = false
 }) => {
   const [isTypewriterComplete, setIsTypewriterComplete] = useState(false);
   const [shouldAutoHide, setShouldAutoHide] = useState(false);
@@ -94,11 +96,20 @@ export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
 
   if (!message || !isVisible) return null;
 
-  const positionStyles = {
-    position: 'fixed' as const,
-    zIndex: 1000,
-    ...position
-  };
+  // Mobile-responsive positioning
+  const positionStyles = isMobile 
+    ? {
+        position: 'fixed' as const,
+        zIndex: 1000,
+        bottom: '120px', // Above FAB buttons
+        left: '16px',
+        right: '80px', // Leave space for FABs
+      }
+    : {
+        position: 'fixed' as const,
+        zIndex: 1000,
+        ...position
+      };
 
   return (
     <AnimatePresence>
@@ -113,11 +124,11 @@ export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
           }}
           exit={{ opacity: 0, scale: 0.8, y: 20 }}
           transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
-          className="max-w-sm"
+          className={isMobile ? "w-full max-w-xs" : "max-w-sm"}
         >
           {/* Main bubble container */}
           <motion.div
-            className={`${agentInfo.bgColor} rounded-xl p-4 shadow-xl border ${agentInfo.borderColor} backdrop-blur-lg backdrop-saturate-150 min-w-[25rem]`}
+            className={`${agentInfo.bgColor} rounded-xl p-3 sm:p-4 shadow-xl border ${agentInfo.borderColor} backdrop-blur-lg backdrop-saturate-150 ${isMobile ? 'min-w-0 w-full' : 'min-w-[20rem] sm:min-w-[25rem]'}`}
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >

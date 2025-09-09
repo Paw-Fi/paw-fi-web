@@ -21,7 +21,7 @@ import catBottle from "@/assets/images/lessons/cat-black.svg";
 import catCash from "@/assets/images/lessons/cat-cashbag.svg";
 import catCoin from "@/assets/images/lessons/cat-coin.svg";
 import catPig from "@/assets/images/lessons/cat-pig.svg";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LessonSkeleton } from "@/components/learning/lesson-skeleton";
 import { ContentDisplay } from "@/components/learning/lesson/content-display";
@@ -275,14 +275,66 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   const currentItem = flashcardItems[currentItemIndex];
 
   const handleBack = () => {
-    // Use the correct route based on dataSource
-    const basePath = dataSource === 'local' ? '/dashboard/essentials' : '/dashboard/learning';
-    navigate({ to: `${basePath}/${courseId}` });
+    // If we're on the first step, go back to course page
+    if (currentItemIndex === 0) {
+      const basePath = dataSource === 'local' ? '/dashboard/essentials' : '/dashboard/learning';
+      navigate({ to: `${basePath}/${courseId}` });
+    } else {
+      // Go to previous step
+      scrollToTop();
+      resetQuestionStates();
+      setCurrentItemIndex(currentItemIndex - 1);
+    }
+  };
+
+  // Utility function for immediate scroll to top
+  const scrollToTop = () => {
+    // Try multiple approaches to ensure scroll works
+    const scrollToTopImmediate = () => {
+      // First, scroll the main window
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      // Target the main dashboard content container specifically
+      const mainContentContainer = document.querySelector('main.overflow-auto, main[class*="overflow-auto"]');
+      if (mainContentContainer && mainContentContainer instanceof HTMLElement) {
+        mainContentContainer.scrollTop = 0;
+      }
+      
+      // Also try to scroll any other potential scrollable containers
+      const scrollableElements = document.querySelectorAll('.overflow-auto, .overflow-y-auto, [data-scroll-container]');
+      scrollableElements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.scrollTop = 0;
+        }
+      });
+      
+      // Try to scroll the flex container that centers content
+      const flexContainers = document.querySelectorAll('.min-h-\\[calc\\(100vh-200px\\)\\]');
+      flexContainers.forEach(el => {
+        if (el instanceof HTMLElement && el.parentElement) {
+          el.parentElement.scrollTop = 0;
+        }
+      });
+    };
+    
+    // Execute immediately
+    scrollToTopImmediate();
+    
+    // Execute on next animation frame to override any competing animations
+    requestAnimationFrame(scrollToTopImmediate);
+    
+    // Execute again after animation completes
+    setTimeout(scrollToTopImmediate, 150);
   };
 
   // Create a custom check answer function that works with the current flashcard item
   const checkCurrentAnswer = () => {
     if (currentItem.type !== "question") return;
+    
+    // Immediately scroll to top before any processing
+    scrollToTop();
     
     // Use the current flashcard item's question data for validation
     const answer = answers[currentItem.data.question_id];
@@ -317,6 +369,9 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
   
   // Handle moving to the next item (content or question)
   const handleNext = () => {
+    // Immediately scroll to top
+    scrollToTop();
+    
     // For question items, only allow proceeding if the answer is correct
     // This prevents skipping questions without answering
     if (currentItem.type === "question") {
@@ -381,25 +436,6 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
       // If not the last item, move to the next one
       resetQuestionStates();
       setCurrentItemIndex(currentItemIndex + 1);
-      
-      // Scroll to top smoothly for better UX
-      setTimeout(() => {
-        if ('scrollBehavior' in document.documentElement.style) {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
-        } else {
-          const scrollToTop = () => {
-            const currentScroll = window.scrollY;
-            if (currentScroll > 0) {
-              window.requestAnimationFrame(scrollToTop);
-              window.scrollTo(0, currentScroll - (currentScroll / 8));
-            }
-          };
-          scrollToTop();
-        }
-      }, 50);
     }
   };
 
@@ -408,16 +444,28 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     (currentItemIndex / flashcardItems.length) * 100;
 
   return (
-    <div className="flex flex-1 flex-col bg-background dark:bg-dark-background px-4 lg:flex-row">
-      <div className="mb-4 flex flex-1 flex-col lg:mb-0 lg:mr-4">
-        {/* Secondary Navigation Menu */}
-        
+    <div className="min-h-screen bg-background dark:bg-dark-background">
+      {/* Sticky progress bar with step indicators */}
+      <div className=" sticky lg:hidden top-0 z-10 bg-background/95 dark:bg-dark-background/95 backdrop-blur-sm border-b border-border">
+        <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground/70">
+                Step {currentItemIndex + 1} of {flashcardItems.length}
+              </span>
+              <span className="text-sm font-medium text-foreground/70">
+                {Math.round(calculatedProgressPercentage)}%
+              </span>
+            </div>
+            <LessonProgressBar progressPercentage={calculatedProgressPercentage} />
+          </div>
+        </div>
       </div>
-      <div className="flex flex-col gap-4 container">
-        {/* Progress bar */}
-        <LessonProgressBar progressPercentage={calculatedProgressPercentage} />
-        {/* Main content */}
-        <div className="relative my-auto perspective-1000">
+      
+      {/* Main content */}
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 pb-8">
+        <div className="max-w-4xl mx-auto min-h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="relative perspective-1000">
           {/* Content or Question container with AnimatePresence for smooth transitions */}
           <AnimatePresence mode="popLayout" initial={false}>
             {currentItem.type === "tutorials" ? (
@@ -479,7 +527,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-3xl bg-background p-8 shadow-md">
+            <div className="rounded-2xl sm:rounded-3xl bg-background p-4 sm:p-6 md:p-8 shadow-lg border border-border/50">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle
@@ -525,9 +573,9 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
         </div>
       </div>
-      <div className="flex flex-1 flex-col"></div>
 
       {/* Completion message - success case */}
       <CompletionDisplay

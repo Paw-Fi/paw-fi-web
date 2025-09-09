@@ -30,6 +30,7 @@ import {
   faHeadphones,
   faCrown,
   faTrophy,
+  faLightbulb,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -47,6 +48,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
+import { ExpandableFAB } from "@/components/ui/expandable-fab";
 import { useAIChat } from "@/contexts/ai-chat-context";
 import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
 import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
@@ -54,6 +56,8 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
 import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 import { Button } from "@/components/ui/button";
+import monekoLogo from '@/assets/images/logo/moneko.png';
+import finniLogo from '@/assets/images/logo/finni.png';
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -1190,13 +1194,42 @@ export function Dashboard() {
         </motion.main>
           </div>
 
-          {/* Right Sidebar */}
+          {/* Right Sidebar - Desktop */}
           <RightSidebar 
             className="hidden lg:block" 
             ref={rightSidebarRef}
             isGuideHidden={isGuideHidden}
             showGuide={showGuide}
           />
+
+          {/* Mobile Expandable FAB - Only visible on mobile */}
+          <div className="lg:hidden">
+            <ExpandableFAB
+              options={[
+                {
+                  id: 'advisor',
+                  label: 'Financial Advisor',
+                  icon: monekoLogo,
+                  gradient: 'bg-gradient-to-br from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90',
+                  onClick: () => openChat('advisor')
+                },
+                {
+                  id: 'educator',
+                  label: 'Financial Educator', 
+                  icon: finniLogo,
+                  gradient: 'bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600',
+                  onClick: () => openChat('educator')
+                },
+                ...(isGuideHidden && showGuide ? [{
+                  id: 'guide',
+                  label: '',
+                  icon: faLightbulb,
+                  gradient: 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700',
+                  onClick: showGuide
+                }] : [])
+              ]}
+            />
+          </div>
         </div>
       </div>
       {/* AI Chat Drawer - Mobile optimized full screen experience */}

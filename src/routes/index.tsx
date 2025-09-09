@@ -66,7 +66,7 @@ export const Route = createFileRoute("/")({
     const description =
       "Transform your financial future with Moneko's AI-powered personal finance coach. Get personalized budgeting plans, learn investing basics, and achieve your money goals with expert guidance.";
     const keywords =
-      "AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
+      "moneko, AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({

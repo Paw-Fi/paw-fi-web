@@ -25,7 +25,7 @@ export const LessonCardTitle = ({
           {lessonTitle}
         </h3>
       </div>
-      <div className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-secondary">
+      <div className="hidden lg:block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-black">
         {index + 1} of {allItemsTotal}
       </div>
     </div>

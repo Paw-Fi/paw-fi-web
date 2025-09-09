@@ -178,9 +178,9 @@ const LoadingMessage = React.memo<{
               </div>
             ) : (
               <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]"></div>
-                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]"></div>
-                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-bounce rounded-full bg-purple-400"></div>
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-pulse rounded-full bg-purple-400"></div>
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-pulse rounded-full bg-purple-400 opacity-75"></div>
+                <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 animate-pulse rounded-full bg-purple-400 opacity-50"></div>
               </div>
             )}
           </div>

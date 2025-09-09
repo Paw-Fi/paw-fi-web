@@ -395,25 +395,25 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   
         {/* Clean Header inspired by the design */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            <div className="flex items-center justify-between" data-tour="page-header">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0" data-tour="page-header">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
                   Goals
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base lg:text-lg">
                   Track your financial goals with AI-powered insights
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
               
                 <Link to="/dashboard/tracker/create">
                   <button 
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 dark:from-purple-600 dark:to-blue-600 dark:hover:from-purple-700 dark:hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg"
+                    className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 dark:from-purple-600 dark:to-blue-600 dark:hover:from-purple-700 dark:hover:to-blue-700 text-white rounded-xl font-medium text-sm sm:text-base transition-all duration-200 shadow-lg w-full sm:w-auto justify-center"
                     data-tour="create-goal-btn"
                   >
                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                    Create Goal
+                    <span className="">Create Goal</span>
                   </button>
                 </Link>
               </div>
@@ -422,7 +422,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         </div>
   
         {/* Main Content */}
-        <div id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8" tabIndex={-1}>
+        <div id="main-content" className="max-w-6xl mx-auto px-0 sm:px-6 py-0 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8" tabIndex={-1}>
           {hasGoals ? (
             <>
               <div data-tour="spotlight-section">
@@ -471,7 +471,7 @@ const SpotlightSection = memo(function SpotlightSection({
       transition={{ duration: 0.4 }}
     >
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Spotlight</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         {spotlightGoals.map((goal, index) => (
           <SpotlightCard 
             key={goal.id}
@@ -522,25 +522,25 @@ const SpotlightCard = memo(function SpotlightCard({
     <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
       
       <motion.div 
-        className={`relative overflow-hidden flex justify-center items-center bg-[#d6cffe] dark:bg-gray-700 rounded-3xl h-40 p-8 cursor-pointer transition-all duration-300 hover:shadow-lg dark:hover:bg-gray-600 ${cardBackground}`}
+        className={`relative overflow-hidden flex justify-center items-center bg-[#d6cffe] dark:bg-gray-700 rounded-2xl sm:rounded-3xl h-32 sm:h-36 lg:h-40 p-4 sm:p-6 lg:p-8 cursor-pointer transition-all duration-300 hover:shadow-lg dark:hover:bg-gray-600 ${cardBackground}`}
         whileHover={{ y: -2, scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >                
           {/* Main Content */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1 sm:gap-2 text-center">
             {/* Days Display */}
-            <div className="text-4xl font-hepta-slab  font-bold text-gray-900 dark:text-white">
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-hepta-slab font-bold text-gray-900 dark:text-white">
               {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
             </div>
             
             {/* Goal Title */}
-            <div className="text-gray-500 dark:text-gray-300 font-medium text-lg leading-tight line-clamp-2 text-ellipsis">
+            <div className="text-gray-500 dark:text-gray-300 font-medium text-sm sm:text-base lg:text-lg leading-tight line-clamp-2 text-ellipsis">
               Until {goal.title}
             </div>
             
             {/* Additional Info for certain types */}
             {(type === 'attention' || type === 'stagnant') && (
-              <div className="text-sm text-gray-700 dark:text-gray-200 font-medium mt-3">
+              <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-medium mt-2 sm:mt-3">
                 {reason || 'Next Milestone:'}
               </div>
             )}
@@ -586,7 +586,7 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
   
   return (
     <motion.section 
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
@@ -594,20 +594,20 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
       {statItems.map((stat) => (
         <motion.div 
           key={stat.label} 
-          className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 text-center border border-gray-100 dark:border-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300"
+          className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 text-center border border-gray-100 dark:border-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300"
           whileHover={{ y: -2 }}
         >
-          <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-            <FontAwesomeIcon icon={stat.icon} className={`w-5 h-5 ${stat.iconColor}`} />
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 lg:mb-4`}>
+            <FontAwesomeIcon icon={stat.icon} className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
             {stat.value}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium leading-tight">
             {stat.label}
           </div>
           {stat.subtitle && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-tight hidden sm:block">
               {stat.subtitle}
             </div>
           )}
@@ -636,7 +636,7 @@ const CommandCenter = memo(function CommandCenter({
     >
       {/* Header */}
       <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Goals</h2>
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Goals</h2>
       </div>
       
       {/* Goals List */}
@@ -683,40 +683,43 @@ const GoalCard = memo(function GoalCard({
   return (
     <Link to={`/dashboard/tracker/${goal.id}` as '/dashboard/tracker/$goalId'}>
       <motion.div 
-        className="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
-        whileHover={{ x: 4 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
+        className="group relative p-4 sm:p-6 bg-card-bg dark:bg-dark-card-bg dark:hover:border-dark-primary/30 hover:shadow-md dark:hover:shadow-primary/5 transition-all duration-200 cursor-pointer"
+      >     
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Icon */}
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0">
+          {/* Enhanced Icon */}
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-subtle-background to-gray-100 dark:from-dark-subtle-background dark:to-gray-700 group-hover:from-primary/5 group-hover:to-primary/10 dark:group-hover:from-dark-primary/5 dark:group-hover:to-dark-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 border border-subtle-border dark:border-dark-subtle-border group-hover:border-primary/20 dark:group-hover:border-dark-primary/20">
             <FontAwesomeIcon 
               icon={getGoalIcon(goal)} 
-              className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-300" 
+              className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-muted-foreground-color dark:text-dark-muted-foreground-color group-hover:text-primary dark:group-hover:text-dark-primary transition-colors duration-200" 
             />
           </div>
           
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
+            <div className="flex items-start sm:items-center justify-between mb-2 gap-2">
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-card-foreground-color dark:text-dark-card-foreground-color group-hover:text-primary dark:group-hover:text-dark-primary truncate flex-1 transition-colors duration-200">
                 {goal.title}
               </h3>
-              <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white ml-2 sm:ml-4">
+              <span className="text-sm sm:text-base lg:text-lg font-bold text-card-foreground-color dark:text-dark-card-foreground-color group-hover:text-primary dark:group-hover:text-dark-primary shrink-0 transition-colors duration-200">
                 {Math.round(progress)}%
               </span>
             </div>
             
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 sm:h-3 overflow-hidden">
+            {/* Enhanced Progress Bar */}
+            <div className="w-full bg-gray-200 dark:bg-gray-600 group-hover:bg-primary/10 dark:group-hover:bg-dark-primary/10 rounded-full h-2 sm:h-3 overflow-hidden transition-colors duration-200">
               <motion.div 
-                className={`h-full rounded-full ${getProgressColor(progress)}`}
+                className={`h-full rounded-full ${getProgressColor(progress)} group-hover:shadow-sm transition-shadow duration-200`}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(progress, 100)}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
+            
           </div>
+          <FontAwesomeIcon 
+            icon={faArrowRight} 
+            className="w-4 h-4 text-muted-foreground-color dark:text-dark-muted-foreground-color group-hover:text-primary dark:group-hover:text-dark-primary transition-colors duration-200" 
+          />
         </div>
       </motion.div>
     </Link>
@@ -730,15 +733,15 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="flex flex-col items-center justify-center py-20 px-4"
+      className="flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20 px-4"
       role="region"
       aria-labelledby="empty-state-heading"
     >
       <div className="max-w-lg text-center">
         {/* Enhanced Icon Design */}
-        <div className="relative mb-12">
+        <div className="relative mb-8 sm:mb-10 lg:mb-12">
           <motion.div 
-            className="w-40 h-40 mx-auto rounded-3xl flex items-center justify-center shadow-2xl"
+            className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 mx-auto rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl"
             style={{
               background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)",
               backdropFilter: "blur(20px)",
@@ -754,17 +757,17 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
               ease: "easeInOut"
             }}
           >
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl">
+            <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl">
               <FontAwesomeIcon 
                 icon={faBullseye} 
-                className="w-10 h-10 text-white"
+                className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 text-white"
                 aria-hidden="true"
               />
             </div>
           </motion.div>
           
           <motion.div 
-            className="absolute -bottom-4 -right-4 w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-xl"
+            className="absolute -bottom-3 -right-3 sm:-bottom-4 sm:-right-4 w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-xl"
             animate={{ 
               y: [0, -8, 0],
               rotate: [0, 180, 360]
@@ -777,7 +780,7 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
           >
             <FontAwesomeIcon 
               icon={faPlus} 
-              className="w-6 h-6 text-white"
+              className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white"
               aria-hidden="true"
             />
           </motion.div>
@@ -786,19 +789,19 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
         {/* Content with Expressive Typography */}
         <motion.h2 
           id="empty-state-heading" 
-          className="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight"
+          className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight"
         >
           Start Your Financial Journey
         </motion.h2>
         
         <motion.p 
-          className="text-lg text-gray-600 dark:text-gray-400 mb-12 leading-relaxed max-w-md mx-auto"
+          className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 sm:mb-10 lg:mb-12 leading-relaxed max-w-md mx-auto px-2"
         >
           Transform your financial dreams into achievable goals with AI-powered strategies, smart milestones, and progress tracking.
         </motion.p>
 
         {/* Enhanced Benefits Grid */}
-        <div className="grid grid-cols-3 gap-8 mb-12" role="list" aria-label="Goal tracker benefits">
+        <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10 lg:mb-12" role="list" aria-label="Goal tracker benefits">
           {[
             { icon: faWandSparkles, label: 'AI Strategy', color: 'from-blue-500 to-blue-600' },
             { icon: faBullseye, label: 'Smart Milestones', color: 'from-green-500 to-emerald-600' },
@@ -816,10 +819,10 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
                 ease: [0.25, 0.8, 0.5, 1]
               }}
             >
-              <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
-                <FontAwesomeIcon icon={benefit.icon} className="w-7 h-7 text-white" aria-hidden="true" />
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto bg-gradient-to-br ${benefit.color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shadow-lg`}>
+                <FontAwesomeIcon icon={benefit.icon} className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" aria-hidden="true" />
               </div>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {benefit.label}
               </p>
             </motion.div>
@@ -832,10 +835,11 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
           whileTap={{ scale: 0.98 }}
         >
           <Link to="/dashboard/tracker/create" aria-describedby="empty-state-heading">
-            <button className="group h-14 px-10 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-2xl border-0 font-bold text-lg rounded-2xl transition-all duration-300" aria-label="Create your first financial goal">
-              <FontAwesomeIcon icon={faWandSparkles} className="mr-3 group-hover:rotate-12 transition-transform" aria-hidden="true" />
-              Create Your First Goal
-              <FontAwesomeIcon icon={faArrowRight} className="ml-3 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+            <button className="group h-12 sm:h-14 px-6 sm:px-8 lg:px-10 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-2xl border-0 font-bold text-base sm:text-lg rounded-xl sm:rounded-2xl transition-all duration-300 w-full sm:w-auto" aria-label="Create your first financial goal">
+              <FontAwesomeIcon icon={faWandSparkles} className="mr-2 sm:mr-3 group-hover:rotate-12 transition-transform" aria-hidden="true" />
+              <span className="hidden xs:inline">Create Your First Goal</span>
+              <span className="xs:hidden">Create Goal</span>
+              <FontAwesomeIcon icon={faArrowRight} className="ml-2 sm:ml-3 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
           </Link>
         </motion.div>

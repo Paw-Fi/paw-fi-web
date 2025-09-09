@@ -72,7 +72,14 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
   }
 
   return (
-    <div className={classNames("fixed bottom-6 right-6 z-40", className)}>
+    <div className={classNames(
+      "fixed z-40",
+      // Mobile positioning - avoid FAB overlap by adding more bottom spacing
+      "bottom-5 left-4 right-20 lg:bottom-8 lg:right-6 lg:left-auto lg:max-w-[340px]",
+      // Ensure it doesn't overlap with the expandable FAB on mobile
+      "lg:right-6",
+      className
+    )}>
       <AnimatePresence mode="wait">
         {!isExpanded ? (
           // Collapsed State - Minimized teaser
@@ -85,7 +92,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             className="relative"
           >
             <motion.div
-              className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground p-3 rounded-xl shadow-lg cursor-pointer min-w-[200px] max-w-[240px]"
+              className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground p-3 rounded-xl shadow-lg cursor-pointer w-full min-w-[200px] max-w-[280px] mx-auto lg:mx-0 lg:max-w-[240px]"
               onClick={handleToggle}
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
@@ -140,7 +147,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.3 }}
-            className="bg-background rounded-xl shadow-xl border border-border w-[340px] max-h-[480px] overflow-hidden"
+            className="bg-background rounded-xl shadow-xl border border-border w-full max-w-[340px] mx-auto lg:mx-0 lg:max-h-[65vh] sm:max-h-[480px] overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground p-3">
@@ -187,7 +194,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             </div>
 
             {/* Steps list */}
-            <div className="p-3 max-h-[300px] overflow-y-auto">
+            <div className="p-3 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
               <div className="space-y-2">
                 {steps.map((step) => (
                   <Link key={step.id} to={step.path} className="block">

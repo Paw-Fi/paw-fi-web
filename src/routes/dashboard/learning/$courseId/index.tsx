@@ -559,11 +559,11 @@ export default function ModernCourseDetailPage() {
                         `}
                         disabled={!isUnlocked}
                       >
-                        <div className="p-6">
-                          <div className="flex items-start gap-4">
+                        <div className="p-4 sm:p-6">
+                          <div className="flex items-start gap-3 sm:gap-4">
                             {/* Lesson Number/Status */}
                             <div className={`
-                              w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0
+                              w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0
                               ${isCompleted
                                 ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white'
                                 : isUnlocked
@@ -597,28 +597,28 @@ export default function ModernCourseDetailPage() {
                                     {lesson.description}
                                   </p>
                                 </div>
-                                <div className="text-3xl flex-shrink-0">
+                                <div className="text-2xl sm:text-3xl flex-shrink-0">
                                   {lesson.icon || '📚'}
                                 </div>
                               </div>
                               
                               {/* ===== FIX START ===== */}
                               {/* Lesson Meta */}
-                              <div className="flex items-center gap-4 mt-4">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
                                 <div className="flex items-center gap-1.5">
-                                  <FontAwesomeIcon icon={faBookOpen} className={`h-4 w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
-                                  <span className={`text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
+                                  <FontAwesomeIcon icon={faBookOpen} className={`h-3 w-3 sm:h-4 sm:w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
+                                  <span className={`text-xs sm:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
                                     {lesson.questions.length} Questions
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <FontAwesomeIcon icon={faClock} className={`h-4 w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
-                                  <span className={`text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
+                                  <FontAwesomeIcon icon={faClock} className={`h-3 w-3 sm:h-4 sm:w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
+                                  <span className={`text-xs sm:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
                                     ~{Math.max(5, lesson.questions.length * 2)} min
                                   </span>
                                 </div>
                                 <div className={`
-                                  ml-auto px-3 py-1 rounded-full text-sm font-semibold
+                                  ml-auto px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
                                   ${isCompleted
                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                     : isUnlocked
