@@ -4,16 +4,13 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
-import { initialLoadingStyles, initialLoadingHTML } from '@/components/initial-loading-screen'
 import appCss from '@/styles/main.css?url'
 import { seo } from '@/utils/seo'
-import { getCanonicalUrl, getCanonicalPath, getRedirectMap } from '@/utils/canonical'
+import { getCanonicalUrl} from '@/utils/canonical'
 // Import ToastContainer dynamically to avoid SSR issues
 import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
@@ -145,62 +142,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <MonekoOrganizationData />
         <MonekoWebsiteData />
         
-        {/* Professional loading screen styles using design system */}
-        <style dangerouslySetInnerHTML={{ __html: initialLoadingStyles }} />
       </head>
         <GoogleTagManager gtmId="G-KBNN5QXD4G" />
       
       <body className="h-screen">      
-        {/* Professional loading screen using design system */}
-        <div dangerouslySetInnerHTML={{ __html: initialLoadingHTML }} />
-
-        {/* Hide loading screen once React hydrates */}
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            window.addEventListener('DOMContentLoaded', function() {
-              // Additional safety: hide after a maximum timeout
-              setTimeout(function() {
-                const loader = document.getElementById('moneko-initial-loader');
-                if (loader) {
-                  loader.classList.add('hidden');
-                  setTimeout(function() {
-                    loader.remove();
-                  }, 500);
-                }
-              }, 8000); // 8 second max timeout
-            });
-
-            // Hide when React has mounted (more reliable)
-            document.addEventListener('DOMContentLoaded', function() {
-              const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                  if (mutation.addedNodes.length > 0) {
-                    // Check if React router has mounted by looking for data-reactroot or router elements
-                    const reactMounted = document.querySelector('[data-reactroot], [data-tanstack-router]') ||
-                                       document.querySelector('main, nav, header') ||
-                                       document.documentElement.hasAttribute('data-react-hydrated');
-                    
-                    if (reactMounted) {
-                      const loader = document.getElementById('moneko-initial-loader');
-                      if (loader) {
-                        loader.classList.add('hidden');
-                        setTimeout(function() {
-                          loader.remove();
-                        }, 500);
-                      }
-                      observer.disconnect();
-                    }
-                  }
-                });
-              });
-              
-              observer.observe(document.body, {
-                childList: true,
-                subtree: true
-              });
-            });
-          `
-        }} />
         
       <AuthProvider>
         <ChatProvider>

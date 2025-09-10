@@ -31,6 +31,8 @@ import {
   faCrown,
   faTrophy,
   faLightbulb,
+  faMoneyBillWave,
+  faHammer,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -499,6 +501,8 @@ export function Dashboard() {
     { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard"},
     { id: "tracker", label: "Goal Guide", icon: faTrophy, path: "/dashboard/tracker"},
     { id: "portfolio", label: "Portfolio", icon: faHandHoldingDollar, path: "/dashboard/portfolio"},
+    { id: "income-builder", label: "Income Builder", icon: faHammer, path: "/dashboard/income-builder"},
+
     {
       id: "learning",
       label: "Learning",
@@ -554,150 +558,6 @@ export function Dashboard() {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-
-  // if(true)
-  // {
-  //   return   <div className="fixed w-screen h-screen z-20 flex items-center justify-center overflow-hidden">
-  //   {/* Background Image Carousel */}
-  //   <div className="absolute inset-0 w-full h-full overflow-hidden">
-  //     <motion.div 
-  //       className="flex w-[200%] h-full"
-  //       animate={{
-  //         x: ["0%", "-50%"]
-  //       }}
-  //       transition={{
-  //         x: {
-  //           duration: 40,
-  //           ease: "linear",
-  //           repeat: Infinity,
-  //           repeatType: "loop"
-  //         }
-  //       }}
-  //     >
-  //       <div 
-  //         className="w-1/2 h-full flex-shrink-0" 
-  //         style={{
-  //           backgroundImage: `url(${dashboardHomeImage})`,
-  //           backgroundSize: 'cover',
-  //           backgroundPosition: 'center',
-  //         }}
-  //       />
-  //       <div 
-  //         className="w-1/2 h-full flex-shrink-0" 
-  //         style={{
-  //           backgroundImage: `url(${dashboardHomeImage})`,
-  //           backgroundSize: 'cover',
-  //           backgroundPosition: 'center',
-  //         }}
-  //         aria-hidden="true"
-  //       />
-  //   </motion.div>
-  //     </div>
-                 
-
-    
-  //   {/* Animation is handled through inline styles */}                 
-    
-  //   {/* Modal Content */}
-  //   <motion.div
-  //     className="relative z-10 max-w-2xl w-full mx-4 p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 shadow-2xl"
-  //     initial={{ opacity: 0, y: 20, scale: 0.95 }}
-  //     animate={{ opacity: 1, y: 0, scale: 1 }}
-  //     transition={{ duration: 0.5 }}
-  //   >
-  //     {/* Logo and Glow Effect */}
-  //     <div className="relative flex justify-center mb-8">
-  //       <div className="absolute -top-4 opacity-70 w-24 h-24 bg-primary/30 rounded-full blur-xl" />
-  //       <motion.div
-  //         className="relative z-10 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-purple-500/30"
-  //         initial={{ rotateY: 0 }}
-  //         animate={{ rotateY: 360 }}
-  //         transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
-  //       >
-  //         <img src={logo} className="size-16" alt="Moneko Logo" />
-  //       </motion.div>
-  //     </div>
-
-  //     <motion.h2
-  //       className="mb-4 text-center bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-3xl font-bold text-transparent"
-  //       initial={{ opacity: 0 }}
-  //       animate={{ opacity: 1 }}
-  //       transition={{ delay: 0.2, duration: 0.5 }}
-  //     >
-  //       Unlock Your Financial Dashboard
-  //     </motion.h2>
-
-  //     <motion.p
-  //       className="mb-6 text-center text-lg text-gray-700 dark:text-gray-300"
-  //       initial={{ opacity: 0 }}
-  //       animate={{ opacity: 1 }}
-  //       transition={{ delay: 0.3, duration: 0.5 }}
-  //     >
-  //       Sign in to access your personalized financial command center
-  //     </motion.p>
-      
-  //     {/* Feature List */}
-  //     <motion.div
-  //       className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
-  //       initial={{ opacity: 0 }}
-  //       animate={{ opacity: 1 }}
-  //       transition={{ delay: 0.4, duration: 0.5 }}
-  //     >
-  //       {[
-  //         { icon: faChartLine, text: "Track your financial progress" },
-  //         { icon: faCalculator, text: "Access premium calculators" },
-  //         { icon: faBookOpen, text: "Save your learning progress" },
-  //         { icon: faUser, text: "Get personalized insights" }
-  //       ].map((feature, index) => (
-  //         <motion.div 
-  //           key={index}
-  //           className="flex items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/30"
-  //           initial={{ opacity: 0, x: -10 }}
-  //           animate={{ opacity: 1, x: 0 }}
-  //           transition={{ delay: 0.5 + (index * 0.1), duration: 0.4 }}
-  //         >
-  //           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/80 to-purple-500/80 text-white shadow-md">
-  //             <FontAwesomeIcon icon={feature.icon} className="h-5 w-5" />
-  //           </div>
-  //           <span className="ml-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
-  //             {feature.text}
-  //           </span>
-  //         </motion.div>
-  //       ))}
-  //     </motion.div>
-
-  //     <motion.div
-  //       className="flex justify-center"
-  //       initial={{ opacity: 0, y: 10 }}
-  //       animate={{ opacity: 1, y: 0 }}
-  //       transition={{ delay: 0.8, duration: 0.5 }}
-  //     >
-  //       <Link to="/login" className="group w-full sm:w-auto">
-  //         <motion.div
-  //           className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
-  //           whileHover={{ scale: 1.03, y: -2 }}
-  //           whileTap={{ scale: 0.98 }}
-  //           transition={{
-  //             type: "spring",
-  //             stiffness: 400,
-  //             damping: 25,
-  //           }}
-  //         >
-  //           <FontAwesomeIcon
-  //             className="h-5 w-5"
-  //             icon={faSignInAlt}
-  //           />
-  //           <span className="text-lg font-medium">
-  //             Sign In to Continue
-  //           </span>
-  //         </motion.div>
-  //       </Link>
-  //     </motion.div>
-  //   </motion.div>
-  // </div>
-  // }
-
-
 
   return (
     <ProtectedRouteSubscription>

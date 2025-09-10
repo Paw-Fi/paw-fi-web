@@ -1,0 +1,349 @@
+{
+  "high-interest-portfolios": {
+    "meta": {
+      "title": "High-Interest Passive Income Portfolios - Build Wealth Without Trading | Moneko",
+      "description": "Build wealth through high-yield passive income portfolios without complex trading. Learn simple compound interest strategies and create sustainable income streams to live on interest.",
+      "keywords": "passive income, high-interest portfolios, compound interest, passive investing, income investing, high-yield investments, dividend investing, wealth building, live on interest, passive income strategies"
+    },
+    "hero": {
+      "title": "Build Wealth with High-Interest Passive Income Portfolios",
+      "subtitle": "Skip complex trading. Focus on simple, high-yield investments that grow your money automatically through compound interest. Build income streams to live on interest, not paycheck.",
+      "ctaText": "Start Building Passive Income",
+      "ctaRoute": "/dashboard/income-builder",
+      "chatSuggestions": [
+        "How to build passive income portfolio?",
+        "What are high-yield investments?",
+        "How much do I need to live on interest?",
+        "Show me compound interest examples",
+        "Best passive income strategies for beginners",
+        "How to create sustainable income streams?"
+      ]
+    },
+    "videoSection": {
+      "title": "See How Simple Passive Income Really Works",
+      "subtitle": "Discover how our platform helps you identify and build high-interest portfolios that generate sustainable passive income, without requiring trading expertise or constant monitoring.",
+      "videoUrl": "/passive-income-demo.webm",
+      "poster": "/passive-income-poster.webp"
+    },
+    "features": [
+      {
+        "title": "High-Interest Portfolio Builder",
+        "description": "AI-powered portfolio suggestions focusing on high-yield dividend stocks, REITs, and bonds that generate consistent passive income.",
+        "icon": "💰",
+        "route": "/dashboard/income-builder"
+      },
+      {
+        "title": "Live on Interest Calculator",
+        "description": "Calculate exactly how much you need to invest to live entirely on passive income from your high-interest portfolio.",
+        "icon": "🏖️",
+        "route": "/calculators/retirement"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "High-Yield Dividend Investing",
+        "description": "Learn how to identify and invest in high-dividend stocks that provide steady passive income streams.",
+        "icon": "📈"
+      },
+      {
+        "title": "Living on Interest Strategy",
+        "description": "Master the art of building enough wealth to live entirely on investment income without touching principal.",
+        "icon": "🎯"
+      }
+    ],
+    "benefits": [
+      "No complex trading required",
+      "Focus on high-yield investments",
+      "Build sustainable income streams",
+      "Simple compound interest strategies"
+    ]
+  },
+  "goal-tracker-focus": {
+    "meta": {
+      "title": "Track Your Financial Freedom Goals with AI - Passive Income Journey | Moneko",
+      "description": "Set and track your passive income goals with AI-powered insights. Monitor progress towards financial independence and living on investment income.",
+      "keywords": "financial freedom goals, passive income tracking, financial independence tracker, investment goal tracking, AI financial planning, wealth building goals"
+    },
+    "hero": {
+      "title": "Track Your Journey to Financial Freedom",
+      "subtitle": "Set clear passive income goals and track your progress towards living on investment returns. Our AI helps you stay on course with personalized milestones and strategies.",
+      "ctaText": "Start Tracking Goals",
+      "ctaRoute": "/dashboard/tracker",
+      "chatSuggestions": [
+        "Help me set passive income goals",
+        "How to track financial freedom progress?",
+        "What's my path to living on interest?",
+        "Create investment milestones for me",
+        "Track my wealth building progress",
+        "Show me passive income benchmarks"
+      ]
+    },
+    "videoSection": {
+      "title": "AI-Powered Goal Tracking for Passive Income",
+      "subtitle": "Watch how our intelligent goal tracker helps you set realistic passive income targets, break them into achievable milestones, and stay motivated on your journey to financial independence.",
+      "videoUrl": "/goal-tracking-demo.webm",
+      "poster": "/goal-tracking-poster.webp"
+    },
+    "features": [
+      {
+        "title": "Smart Financial Freedom Goals",
+        "description": "Set and track goals for building passive income streams, from your first $100/month to full financial independence.",
+        "icon": "🎯",
+        "route": "/dashboard/tracker"
+      },
+      {
+        "title": "AI Milestone Planning",
+        "description": "Get AI-generated milestones and strategies to reach your passive income targets faster and more efficiently.",
+        "icon": "🧠",
+        "route": "/dashboard/tracker/create"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Setting SMART Passive Income Goals",
+        "description": "Learn how to set specific, measurable, achievable passive income goals that lead to financial freedom.",
+        "icon": "🎯"
+      },
+      {
+        "title": "Milestone-Based Wealth Building",
+        "description": "Break down your journey to living on interest into manageable milestones and track your progress.",
+        "icon": "📊"
+      }
+    ],
+    "benefits": [
+      "AI-powered goal setting",
+      "Track passive income progress",
+      "Smart milestone planning",
+      "Stay motivated with achievements"
+    ]
+  },
+  "compound-interest-focus": {
+    "meta": {
+      "title": "Harness Compound Interest for Passive Wealth Building - Simple Strategies | Moneko",
+      "description": "Master compound interest to build passive wealth automatically. Learn time-tested strategies that work without active trading or complex financial knowledge.",
+      "keywords": "compound interest, passive wealth building, compound investing, automatic wealth building, simple investing, long-term wealth, passive compound growth"
+    },
+    "hero": {
+      "title": "Harness the Magic of Compound Interest",
+      "subtitle": "Let time and compound interest do the heavy lifting. Build substantial wealth through simple, consistent investing strategies that require no active trading or complex knowledge.",
+      "ctaText": "Calculate My Compound Growth",
+      "ctaRoute": "/calculators/compound",
+      "chatSuggestions": [
+        "Explain compound interest to me",
+        "How much will $500/month grow?",
+        "Show me compound interest examples",
+        "Best compound interest strategies",
+        "How long to double my money?",
+        "Compound vs simple interest difference"
+      ]
+    },
+    "videoSection": {
+      "title": "Watch Your Money Compound Automatically",
+      "subtitle": "See real examples of how compound interest transforms small, regular investments into substantial wealth over time, without requiring any trading skills or market timing.",
+      "videoUrl": "/compound-interest-demo.webv",
+      "poster": "/compound-interest-poster.webp"
+    },
+    "features": [
+      {
+        "title": "Compound Interest Calculator",
+        "description": "Visualize how your money grows exponentially over time with our advanced compound interest calculator and projections.",
+        "icon": "📈",
+        "route": "/calculators/compound"
+      },
+      {
+        "title": "Automated Wealth Builder",
+        "description": "Set up automated investment strategies that harness compound interest for long-term wealth accumulation.",
+        "icon": "🤖",
+        "route": "/dashboard/income-builder"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Understanding Compound Interest",
+        "description": "Master the fundamental principle that Albert Einstein called 'the eighth wonder of the world' - compound interest.",
+        "icon": "🧮"
+      },
+      {
+        "title": "Time Value of Money",
+        "description": "Learn why starting early is the most powerful wealth-building strategy, even with smaller amounts.",
+        "icon": "⏰"
+      }
+    ],
+    "benefits": [
+      "Automatic wealth growth",
+      "No active trading required",
+      "Time-tested strategy",
+      "Power of starting early"
+    ]
+  },
+  "financial-learning-focus": {
+    "meta": {
+      "title": "Master Financial Education - AI-Powered Personal Finance Learning Platform | Moneko",
+      "description": "Learn personal finance through expert-led courses and AI-personalized education. Master budgeting, investing, retirement planning, and wealth building at your own pace with comprehensive financial literacy training.",
+      "keywords": "financial education, personal finance courses, financial literacy, money management education, investment education, budgeting courses, retirement planning education, AI learning, financial knowledge, wealth building education"
+    },
+    "hero": {
+      "title": "Master Your Financial Future Through Education",
+      "subtitle": "Build lasting wealth through knowledge. Access expert-led financial fundamentals and AI-personalized courses covering everything from budgeting basics to advanced investing strategies.",
+      "ctaText": "Start Learning Journey",
+      "ctaRoute": "/dashboard/learning",
+      "chatSuggestions": [
+        "Create a personalized financial course for me",
+        "What should I learn first about money?",
+        "Help me understand investing basics",
+        "Teach me about retirement planning",
+        "Create lessons for my financial goals",
+        "Explain budgeting fundamentals"
+      ]
+    },
+    "videoSection": {
+      "title": "Transform Your Financial Knowledge with AI",
+      "subtitle": "Experience how our AI creates personalized financial courses tailored to your knowledge level, goals, and learning style. Combined with expert-led essentials for comprehensive education.",
+      "videoUrl": "/financial-learning-demo.webm",
+      "poster": "/financial-learning-poster.webp"
+    },
+    "features": [
+      {
+        "title": "AI-Personalized Courses",
+        "description": "Custom financial courses created by AI based on your specific goals, knowledge level, and learning preferences for maximum effectiveness.",
+        "icon": "🤖",
+        "route": "/dashboard/learning"
+      },
+      {
+        "title": "Expert-Led Fundamentals",
+        "description": "Professionally crafted essential courses covering budgeting, investing, retirement planning, and wealth building fundamentals.",
+        "icon": "🎓",
+        "route": "/dashboard/learning"
+      },
+      {
+        "title": "Interactive Learning Tools",
+        "description": "Engage with calculators, quizzes, and practical exercises that reinforce concepts and help you apply knowledge immediately.",
+        "icon": "⚡",
+        "route": "/calculators"
+      },
+      {
+        "title": "Progress Gamification",
+        "description": "Stay motivated with XP points, learning streaks, achievements, and milestone tracking as you advance your financial knowledge.",
+        "icon": "🏆",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Personal Finance Fundamentals",
+        "description": "Master the essential building blocks: budgeting, emergency funds, debt management, and basic investment principles.",
+        "icon": "📚"
+      },
+      {
+        "title": "Investment Education & Strategy",
+        "description": "Learn investment basics, portfolio construction, risk management, and long-term wealth building strategies.",
+        "icon": "📈"
+      },
+      {
+        "title": "Retirement & Tax Planning",
+        "description": "Understand retirement accounts, Social Security optimization, and tax-efficient strategies for wealth accumulation.",
+        "icon": "🎯"
+      },
+      {
+        "title": "Advanced Wealth Building",
+        "description": "Explore real estate, business finances, estate planning, and sophisticated wealth preservation strategies.",
+        "icon": "💎"
+      }
+    ],
+    "benefits": [
+      "AI-personalized learning paths",
+      "Expert-validated curriculum",
+      "Interactive courses with practice",
+      "Gamified progress tracking",
+      "Beginner to advanced content",
+      "Learn at your own pace",
+      "Direct integration with calculators",
+      "Real-world application focus"
+    ]
+  },
+  "automated-portfolios": {
+    "meta": {
+      "title": "High-Interest Portfolios On Autopilot - Automated Portfolio Management | Moneko",
+      "description": "Moneko builds you a high-interest portfolio and automates the cash flow into it. Get AI-driven portfolio construction with automated rebalancing and cash flow optimization for maximum returns.",
+      "keywords": "automated portfolios, high-interest portfolios, automated investing, portfolio automation, AI portfolio management, automated cash flow, passive portfolio management, robo advisor, automated rebalancing"
+    },
+    "hero": {
+      "title": "High-Interest Portfolios. On Autopilot.",
+      "subtitle": "Moneko builds you a high-interest portfolio and automates the cash flow into it. Set it once, let AI handle the optimization, rebalancing, and cash flow management for maximum returns.",
+      "ctaText": "Build My Automated Portfolio",
+      "ctaRoute": "/dashboard/portfolio-builder",
+      "chatSuggestions": [
+        "Build me an automated high-interest portfolio",
+        "How does automated portfolio management work?",
+        "What's the best cash flow strategy?",
+        "Show me automated rebalancing benefits",
+        "Create a hands-off investment strategy",
+        "Optimize my portfolio automation"
+      ]
+    },
+    "videoSection": {
+      "title": "Watch Your Portfolio Work On Autopilot",
+      "subtitle": "See how Moneko's AI continuously optimizes your high-interest portfolio, automatically rebalances allocations, and manages cash flows to maximize your returns without any manual intervention.",
+      "videoUrl": "/automated-portfolio-demo.webm",
+      "poster": "/automated-portfolio-poster.webp"
+    },
+    "features": [
+      {
+        "title": "AI Portfolio Construction",
+        "description": "Advanced algorithms build diversified high-interest portfolios tailored to your risk tolerance and income goals with optimal asset allocation.",
+        "icon": "🤖",
+        "route": "/dashboard/portfolio-builder"
+      },
+      {
+        "title": "Automated Cash Flow Management",
+        "description": "Smart cash flow optimization automatically directs funds to highest-yielding opportunities and manages dividend reinvestment strategies.",
+        "icon": "💸",
+        "route": "/dashboard/cash-flow"
+      },
+      {
+        "title": "Dynamic Rebalancing System",
+        "description": "Intelligent rebalancing maintains optimal allocations automatically, buying low and selling high without emotional decision-making.",
+        "icon": "⚖️",
+        "route": "/dashboard/rebalancing"
+      },
+      {
+        "title": "Tax-Optimized Automation",
+        "description": "Automated tax-loss harvesting and tax-efficient fund placement maximize your after-tax returns while minimizing tax burden.",
+        "icon": "📊",
+        "route": "/dashboard/tax-optimization"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Automated Portfolio Theory",
+        "description": "Understand how AI-driven portfolio management eliminates emotional investing and optimizes returns through systematic automation.",
+        "icon": "🎯"
+      },
+      {
+        "title": "Cash Flow Optimization Strategies",
+        "description": "Learn how automated cash flow management maximizes compound growth and income generation through smart fund allocation.",
+        "icon": "💰"
+      },
+      {
+        "title": "Rebalancing & Risk Management",
+        "description": "Master the principles of automated rebalancing and how it maintains optimal risk-return profiles without manual intervention.",
+        "icon": "⚡"
+      },
+      {
+        "title": "Tax-Efficient Automation",
+        "description": "Discover how automated tax strategies enhance portfolio performance through intelligent tax-loss harvesting and asset location.",
+        "icon": "🎓"
+      }
+    ],
+    "benefits": [
+      "Hands-off portfolio management",
+      "AI-optimized asset allocation",
+      "Automated rebalancing system",
+      "Smart cash flow management",
+      "Tax-loss harvesting automation",
+      "Emotion-free investing",
+      "24/7 portfolio monitoring",
+      "Maximum return optimization"
+    ]
+  }
+}

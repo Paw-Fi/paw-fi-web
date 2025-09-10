@@ -42,8 +42,8 @@ const crownIconSizeClasses = {
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   size = 'md',
-  showPremiumBorder = true,
-  showPremiumCrown = true,
+  showPremiumBorder = false,
+  showPremiumCrown = false,
   onClick,
   className = ''
 }) => {

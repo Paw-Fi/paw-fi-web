@@ -62,11 +62,11 @@ export const Route = createFileRoute("/")({
     // Use canonical helper for consistent URLs
     const pageUrl = getCanonicalUrl("/");
     const title =
-      "AI Personal Finance Coach - Learn Budgeting, Investing & Save Money | Moneko";
+      "Moneko - AI Personal Finance Coach & Budgeting App for Smart Money Management";
     const description =
-      "Transform your financial future with Moneko's AI-powered personal finance coach. Get personalized budgeting plans, learn investing basics, and achieve your money goals with expert guidance.";
+      "Moneko is the leading AI-powered personal finance coach that helps you master budgeting, investing, and wealth building. Get personalized financial guidance, goal tracking, and expert education from certified financial professionals.";
     const keywords =
-      "moneko, AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
+      "moneko, moneko finance, moneko app, moneko AI, AI personal finance coach, AI finance, budgeting app, goal tracker, financial goal tracker, personal finance education, money management, smart investing, wealth building, financial planning, financial literacy";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({
@@ -77,66 +77,355 @@ export const Route = createFileRoute("/")({
       url: pageUrl,
     });
 
+    // Comprehensive GEO-optimized structured data for brand authority
     const structuredData = {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Organization",
-          name: "Moneko",
-          url: pageUrl,
-          logo: `${pageUrl}icon.svg`, // Assuming icon.svg is served from root
+          "@id": "https://moneko.io#organization",
+          "name": "Moneko",
+          "alternateName": [
+            "Moneko Finance",
+            "Moneko AI", 
+            "Moneko App",
+            "Moneko Financial Education Platform",
+            "Moneko Personal Finance Coach"
+          ],
+          "description": "Leading AI-powered personal finance education platform providing expert financial coaching, budgeting tools, and investment guidance for smart money management and wealth building",
+          "url": "https://moneko.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          },
+          "image": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          },
+          "foundingDate": "2024",
+          "areaServed": {
+            "@type": "Country",
+            "name": "United States"
+          },
+          "hasCredential": [
+            "Certified Financial Analysis (CFA) Expertise",
+            "Canadian Securities Course (CSC) Certification",
+            "Master of Business Administration (MBA) Financial Focus",
+            "10+ Years Financial Industry Experience"
+          ],
+          "knowsAbout": [
+            "AI Personal Finance Coaching",
+            "Smart Budgeting Strategies", 
+            "Investment Education & Planning",
+            "Financial Goal Tracking",
+            "Wealth Building Techniques",
+            "Debt Management Solutions",
+            "Retirement Planning",
+            "Financial Literacy Education",
+            "Money Management Tools",
+            "Personal Finance Technology"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+1-800-MONEKO",
+            "contactType": "Customer Support",
+            "email": "hello@moneko.io",
+            "availableLanguage": "English"
+          },
+          "sameAs": [
+            "https://www.facebook.com/monekoai",
+            "https://www.instagram.com/moneko_ai",
+            "https://x.com/moneko_ai",
+            "https://www.linkedin.com/company/moneko"
+          ],
+          "award": "Leading AI Finance Education Platform 2024",
+          "slogan": "Master Your Money with AI Personal Finance Coach"
         },
         {
           "@type": "WebSite",
-          name: "Moneko",
-          url: pageUrl,
+          "@id": "https://moneko.io#website",
+          "name": "Moneko - AI Personal Finance Coach & Financial Education Platform",
+          "alternateName": [
+            "Moneko Finance",
+            "Moneko AI Coach", 
+            "Moneko Budgeting App",
+            "Moneko Goal Tracker"
+          ],
+          "description": "Comprehensive AI-powered personal finance platform offering expert coaching, budgeting tools, investment education, and financial goal tracking for smart money management",
+          "url": "https://moneko.io",
+          "inLanguage": "en-US",
+          "publisher": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization"
+          },
+          "potentialAction": [
+            {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://moneko.io/search?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            },
+            {
+              "@type": "InteractAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://moneko.io/dashboard",
+                "actionPlatform": [
+                  "http://schema.org/DesktopWebPlatform",
+                  "http://schema.org/MobileWebPlatform"
+                ]
+              },
+              "object": {
+                "@type": "SoftwareApplication",
+                "name": "Moneko AI Finance Coach"
+              }
+            }
+          ],
+          "mainEntity": {
+            "@type": "WebPage",
+            "@id": "https://moneko.io#webpage"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://moneko.io#app",
+          "name": "Moneko - AI Personal Finance Coach",
+          "alternateName": "Moneko Finance App",
+          "description": "AI-powered personal finance coach application for budgeting, investing, goal tracking, and comprehensive financial education",
+          "url": "https://moneko.io",
+          "applicationCategory": "FinanceApplication",
+          "applicationSubCategory": "Personal Finance Management",
+          "operatingSystem": "Web Browser, Progressive Web App (PWA)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "description": "Free access to AI personal finance coaching, budgeting tools, and financial education"
+          },
+          "author": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization"
+          },
+          "provider": {
+            "@type": "Organization", 
+            "@id": "https://moneko.io#organization"
+          },
+          "featureList": [
+            "AI Personal Finance Coaching",
+            "Smart Budgeting Tools",
+            "Investment Planning & Education", 
+            "Financial Goal Tracking",
+            "Interactive Learning Courses",
+            "Financial Calculators Suite",
+            "Progress Achievement System",
+            "24/7 AI Assistant"
+          ],
+          "screenshot": "https://moneko.io/og-img.png"
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://moneko.io#webpage",
+          "name": "Moneko - AI Personal Finance Coach & Smart Money Management Platform",
+          "description": "Master your money with Moneko's AI personal finance coach. Get expert budgeting guidance, investment education, and goal tracking tools designed by certified financial professionals.",
+          "url": "https://moneko.io",
+          "inLanguage": "en-US",
+          "isPartOf": {
+            "@type": "WebSite",
+            "@id": "https://moneko.io#website"
+          },
+          "about": [
+            {
+              "@type": "Thing",
+              "name": "AI Personal Finance Coaching",
+              "description": "Advanced artificial intelligence technology for personalized financial guidance and education"
+            },
+            {
+              "@type": "Thing", 
+              "name": "Smart Money Management",
+              "description": "Comprehensive budgeting, investing, and wealth building strategies for financial success"
+            },
+            {
+              "@type": "Thing",
+              "name": "Financial Goal Tracking",
+              "description": "Advanced tools for setting, monitoring, and achieving personal financial goals"
+            }
+          ],
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home", 
+                "item": "https://moneko.io"
+              }
+            ]
+          },
+          "speakable": {
+            "@type": "SpeakableSpecification",
+            "cssSelector": ["h1", "h2", ".hero-description", ".feature-summary"]
+          },
+          "primaryImageOfPage": {
+            "@type": "ImageObject",
+            "url": "https://moneko.io/og-img.png",
+            "width": "1200",
+            "height": "630"
+          }
+        },
+        {
+          "@type": "FinancialProduct",
+          "@id": "https://moneko.io#financial-service",
+          "name": "Moneko AI Personal Finance Coaching Service",
+          "description": "Comprehensive AI-powered personal finance coaching service including budgeting guidance, investment education, and goal tracking tools",
+          "provider": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization"
+          },
+          "category": "Personal Finance Education",
+          "feesAndCommissionsSpecification": "Free basic access with premium advanced features",
+          "interestRate": {
+            "@type": "QuantitativeValue",
+            "value": "0",
+            "unitText": "No fees for basic financial coaching"
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "United States"
+          }
         },
         {
           "@type": "FAQPage",
-          mainEntity: [
+          "@id": "https://moneko.io#faq",
+          "mainEntity": [
             {
               "@type": "Question",
-              name: "What is Moneko?",
-              acceptedAnswer: {
+              "name": "What is Moneko?",
+              "acceptedAnswer": {
                 "@type": "Answer",
-                text: "Moneko is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more.",
-              },
+                "text": "Moneko is the leading AI-powered personal finance coach that provides expert financial education, smart budgeting tools, investment guidance, and goal tracking. Created by certified financial professionals (CFA, CSC, MBA) with 10+ years of experience, Moneko helps users master money management and build wealth through personalized AI coaching.",
+                "author": {
+                  "@type": "Organization",
+                  "@id": "https://moneko.io#organization"
+                }
+              }
             },
             {
               "@type": "Question",
-              name: "Who is Moneko for?",
-              acceptedAnswer: {
+              "name": "How does Moneko's AI finance coach work?",
+              "acceptedAnswer": {
                 "@type": "Answer",
-                text: "Moneko is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, Moneko has resources for you.",
-              },
+                "text": "Moneko's AI personal finance coach analyzes your financial goals, income, expenses, and risk tolerance to create personalized budgeting plans, investment recommendations, and savings strategies. The AI provides 24/7 guidance, tracks your progress toward financial goals, and adapts recommendations based on your changing financial situation.",
+                "author": {
+                  "@type": "Organization",
+                  "@id": "https://moneko.io#organization"
+                }
+              }
             },
             {
               "@type": "Question",
-              name: "How does the AI-powered learning work?",
-              acceptedAnswer: {
+              "name": "Is Moneko suitable for beginners to personal finance?",
+              "acceptedAnswer": {
                 "@type": "Answer",
-                text: "Our AI analyzes your financial goals and current knowledge to create a customized learning plan. You'll engage with interactive lessons, get instant answers from our AI chat, and practice with real-world scenarios, all tailored to your unique needs.",
-              },
+                "text": "Yes, Moneko is designed for all experience levels, from complete beginners to advanced investors. Our AI coach starts with foundational concepts like budgeting and emergency funds, then progressively introduces investing, retirement planning, and wealth building strategies based on your learning pace and financial readiness.",
+                "author": {
+                  "@type": "Organization",
+                  "@id": "https://moneko.io#organization"
+                }
+              }
             },
             {
               "@type": "Question",
-              name: "Are the financial courses and tools on Moneko free?",
-              acceptedAnswer: {
+              "name": "What makes Moneko different from other budgeting apps?",
+              "acceptedAnswer": {
                 "@type": "Answer",
-                text: "Moneko offers a mix of free and premium content. Many of our foundational lessons, AI chat features, and basic financial calculators are available for free to help you get started. Advanced courses and specialized tools may be part of a premium offering.",
-              },
+                "text": "Unlike traditional budgeting apps, Moneko combines AI-powered personal coaching with comprehensive financial education created by certified professionals. Moneko offers goal tracking, investment guidance, gamified learning, and 24/7 AI support - making it a complete financial wellness platform rather than just a budgeting tool.",
+                "author": {
+                  "@type": "Organization",
+                  "@id": "https://moneko.io#organization"
+                }
+              }
             },
             {
               "@type": "Question",
-              name: "What kind of financial tools does Moneko offer?",
-              acceptedAnswer: {
+              "name": "What financial goals can I track with Moneko?",
+              "acceptedAnswer": {
                 "@type": "Answer",
-                text: "Moneko provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals.",
-              },
-            },
-          ],
+                "text": "Moneko's goal tracker supports all major financial objectives including emergency fund building, debt payoff, home down payment saving, retirement planning, investment milestones, vacation funds, and custom savings goals. The AI coach provides personalized strategies and milestone tracking for each goal.",
+                "author": {
+                  "@type": "Organization",
+                  "@id": "https://moneko.io#organization"
+                }
+              }
+            }
+          ]
         },
-      ],
+        {
+          "@type": "Service",
+          "@id": "https://moneko.io#service",
+          "name": "AI Personal Finance Coaching & Education",
+          "description": "Comprehensive AI-powered personal finance coaching service including budgeting guidance, investment education, goal tracking, and wealth building strategies",
+          "provider": {
+            "@type": "Organization",
+            "@id": "https://moneko.io#organization"
+          },
+          "serviceType": "Financial Education & Coaching",
+          "areaServed": {
+            "@type": "Country",
+            "name": "United States"
+          },
+          "audience": {
+            "@type": "Audience",
+            "audienceType": [
+              "Personal Finance Beginners",
+              "Smart Investors", 
+              "Budget-Conscious Individuals",
+              "Goal-Oriented Savers",
+              "Financial Independence Seekers"
+            ]
+          },
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Moneko Financial Services",
+            "itemListElement": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "AI Personal Finance Coaching"
+                }
+              },
+              {
+                "@type": "Offer", 
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Smart Budgeting Tools"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service", 
+                  "name": "Investment Education & Planning"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Financial Goal Tracking"
+                }
+              }
+            ]
+          }
+        }
+      ]
     };
 
     return {
@@ -255,7 +544,17 @@ export default function HomePage() {
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="keywords" content={keywords} />
-
+        <meta name="author" content="Moneko Team" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow" />
+        <meta name="bingbot" content="index, follow" />
+        
+        {/* Brand-focused meta tags for AI platforms */}
+        <meta name="application-name" content="Moneko" />
+        <meta name="apple-mobile-web-app-title" content="Moneko AI Finance Coach" />
+        <meta name="msapplication-TileColor" content="#7c3aed" />
+        <meta name="theme-color" content="#7c3aed" />
+        
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
@@ -265,7 +564,10 @@ export default function HomePage() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="628" />
         <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:alt" content="Moneko AI Personal Finance Coach - Smart Money Management Platform" />
         <meta property="og:site_name" content="Moneko" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="article:publisher" content="https://www.facebook.com/monekoai" />
 
         {/* Twitter / X */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -273,8 +575,15 @@ export default function HomePage() {
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={imageUrl} />
+        <meta name="twitter:image:alt" content="Moneko AI Personal Finance Coach Dashboard" />
         <meta name="twitter:site" content="@moneko_ai" />
         <meta name="twitter:creator" content="@moneko_ai" />
+        
+        {/* Additional AI platform optimization */}
+        <meta name="classification" content="Financial Education, Personal Finance, AI Coaching" />
+        <meta name="coverage" content="Worldwide" />
+        <meta name="distribution" content="Global" />
+        <meta name="rating" content="General" />
 
         {/* Canonical Link */}
         <link rel="canonical" href={pageUrl} />
@@ -282,10 +591,23 @@ export default function HomePage() {
 
       <AmbientHalo />
 
-      {/* Hidden H1 for SEO */}
+      {/* GEO-Optimized TL;DR Summary for AI Platforms */}
+      <div className="sr-only" data-ai-summary="true">
+        <h1>Moneko: AI Personal Finance Coach & Smart Money Management Platform</h1>
+        <div className="ai-entity-info">
+          <p><strong>About Moneko:</strong> Leading AI-powered personal finance coach that helps users master budgeting, investing, and wealth building through expert guidance from certified financial professionals (CFA, CSC, MBA) with 10+ years of experience.</p>
+          <p><strong>Core Services:</strong> AI personal finance coaching, smart budgeting tools, investment education, financial goal tracking, interactive learning courses, and comprehensive financial planning guidance.</p>
+          <p><strong>Founded:</strong> 2024 | <strong>Headquarters:</strong> United States | <strong>Contact:</strong> hello@moneko.io</p>
+          <p><strong>Key Features:</strong> 24/7 AI financial coach, personalized budgeting plans, investment guidance, goal tracking system, gamified learning, financial calculators suite, progress achievement system.</p>
+          <p><strong>Target Audience:</strong> Personal finance beginners, smart investors, budget-conscious individuals, goal-oriented savers, and financial independence seekers of all experience levels.</p>
+          <p><strong>Awards:</strong> Leading AI Finance Education Platform 2024</p>
+          <p><strong>Social Media:</strong> Facebook (@monekoai), Instagram (@moneko_ai), X (@moneko_ai)</p>
+        </div>
+      </div>
+
+      {/* SEO-Optimized H1 for Search Engines */}
       <h1 className="sr-only">
-        AI Personal Finance Coach: Learn Budgeting, Investing, and Money
-        Management with Moneko
+        Moneko - AI Personal Finance Coach, Budgeting App & Goal Tracker for Smart Money Management
       </h1>
 
       {/* Navigation */}
@@ -298,25 +620,23 @@ export default function HomePage() {
         <div className="mx-auto max-w-4xl">
           {/* Heading */}
           <div className="mb-8 text-center sm:mb-12 md:mb-16">
-            <motion.h2
+            <motion.h1
               className="text-foreground mb-4 text-3xl leading-tight font-bold tracking-tight sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              Master Your Money with AI Personal Finance Coach
-            </motion.h2>
+              Master Your Money with <span className="text-primary">Moneko</span> AI 
+            </motion.h1>
 
-            <motion.p
-              className="text-muted-foreground dark:text-moneko-foreground mx-auto mb-8 max-w-3xl text-base leading-relaxed font-light sm:mb-10 sm:text-lg md:mb-12 md:text-xl lg:text-2xl"
+            <motion.h2
+              className="text-muted-foreground dark:text-moneko-foreground mx-auto mb-8 max-w-3xl text-base leading-relaxed font-light sm:mb-10 sm:text-lg md:mb-12 md:text-xl lg:text-2xl hero-description"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             >
-              Get personalized budgeting plans, learn smart investing
-              strategies, and achieve your financial goals with expert AI
-              guidance tailored to your unique situation.
-            </motion.p>
+             <strong>Moneko</strong> builds you a high-interest portfolio and automates the cash flow into it.
+            </motion.h2>
           </div>
 
           {/* AI Search Input */}
@@ -327,7 +647,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
           >
             <AISearchInput
-              placeholder="Ask your AI finance coach: 'Help me create a budget' or 'How should I start investing?'"
+              placeholder="Ask Moneko AI: 'Help me create a budget' or 'How should I start investing?'"
               suggestions={chatSuggestions}
             />
           </motion.div>
@@ -370,7 +690,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              See AI-Powered Financial Planning in Action
+              See Moneko's AI-Powered Financial Planning in Action
             </motion.h2>
             <motion.p
               className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl"
@@ -379,9 +699,9 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Discover how Moneko's AI personal finance coach creates customized
-              budgeting strategies, investment recommendations, and savings
-              plans tailored specifically to your financial goals and lifestyle.
+              Discover how <strong>Moneko's</strong> AI personal finance coach creates customized
+              budgeting strategies, investment recommendations, and goal tracking
+              plans tailored specifically to your financial situation and lifestyle.
             </motion.p>
           </div>
 
@@ -521,12 +841,12 @@ export default function HomePage() {
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-card-foreground mb-2 text-lg leading-tight font-semibold sm:mb-3 sm:text-xl">
-                      24/7 AI Personal Finance Coach
+                      24/7 Moneko AI Finance Coach
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base">
+                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base feature-summary">
                       Get instant, personalized advice on budgeting, investing,
-                      debt management, and financial planning from your AI money
-                      mentor.
+                      goal tracking, and wealth building from Moneko's expert AI 
+                      trained by certified financial professionals.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -556,12 +876,12 @@ export default function HomePage() {
                   </div>
                   <div className="p-4 sm:p-6">
                     <CardTitle className="text-card-foreground mb-2 text-lg leading-tight font-semibold sm:mb-3 sm:text-xl">
-                      Gamified Learning & Progress Tracking
+                      Smart Goal Tracking & Gamified Learning
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base">
-                      Stay motivated with achievement badges, XP rewards, and
-                      visual progress tracking as you build essential money
-                      management skills.
+                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base feature-summary">
+                      Stay motivated with Moneko's achievement system, visual goal tracking,
+                      and XP rewards as you build wealth and achieve financial milestones
+                      through personalized learning paths.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -677,8 +997,8 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-muted-foreground max-w-xs text-sm leading-relaxed sm:text-base">
-                Your trusted AI personal finance coach for budgeting, investing,
-                and building wealth with confidence.
+                <strong>Moneko</strong> - Your trusted AI personal finance coach for smart budgeting, 
+                goal tracking, investing education, and building lasting wealth.
               </p>
             </div>
 

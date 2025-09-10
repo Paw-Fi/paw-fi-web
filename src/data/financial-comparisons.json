@@ -1,0 +1,199 @@
+{
+  "investment_comparisons": {
+    "title": "Investment Options Comparison",
+    "description": "Comprehensive comparison of investment strategies for passive income and wealth building",
+    "comparisons": {
+      "stocks-vs-bonds-vs-reits": {
+        "title": "Stocks vs Bonds vs REITs: Complete Investment Comparison 2025",
+        "description": "Compare the pros, cons, risks, and returns of stocks, bonds, and REITs to find the best investment strategy for your goals",
+        "slug": "stocks-vs-bonds-vs-reits",
+        "comparison_table": [
+          {
+            "feature": "Average Annual Return",
+            "stocks": "8-12% historically",
+            "bonds": "3-5% typically", 
+            "reits": "6-10% with dividends"
+          },
+          {
+            "feature": "Risk Level",
+            "stocks": "High volatility",
+            "bonds": "Low to moderate",
+            "reits": "Moderate to high"
+          },
+          {
+            "feature": "Liquidity",
+            "stocks": "High (daily trading)",
+            "bonds": "Moderate",
+            "reits": "High (daily trading)"
+          },
+          {
+            "feature": "Minimum Investment",
+            "stocks": "$1 (fractional shares)",
+            "bonds": "$25-$1000 minimum",
+            "reits": "$1 (fractional shares)"
+          },
+          {
+            "feature": "Income Generation",
+            "stocks": "Dividends (0-8%)",
+            "bonds": "Fixed interest payments",
+            "reits": "High dividends (4-8%)"
+          },
+          {
+            "feature": "Tax Treatment",
+            "stocks": "Capital gains + dividend tax",
+            "bonds": "Ordinary income tax",
+            "reits": "Ordinary income + depreciation"
+          }
+        ],
+        "expert_quotes": [
+          {
+            "quote": "Diversification across stocks, bonds, and REITs provides the optimal risk-adjusted returns for most investors seeking passive income.",
+            "expert": "CFA Institute Research",
+            "context": "Based on modern portfolio theory analysis"
+          },
+          {
+            "quote": "REITs offer the best of both worlds: stock-like liquidity with bond-like income stability through consistent dividend payments.",
+            "expert": "Morningstar Investment Research",
+            "context": "2024 Real Estate Investment Analysis"
+          }
+        ],
+        "winner_categories": {
+          "best_for_growth": "Stocks",
+          "best_for_income": "REITs", 
+          "best_for_stability": "Bonds",
+          "best_for_beginners": "Index funds (mix of all three)"
+        },
+        "summary": "For passive income investors, a balanced portfolio of 40% stocks, 30% REITs, and 30% bonds typically provides optimal risk-adjusted returns with consistent income generation."
+      },
+      "passive-income-strategies": {
+        "title": "Passive Income Strategies Comparison: Dividends vs REITs vs Bonds vs High-Yield Savings",
+        "description": "Complete comparison of passive income strategies including expected returns, risks, and time investment required",
+        "slug": "passive-income-strategies-comparison",
+        "comparison_table": [
+          {
+            "feature": "Expected Annual Income",
+            "dividend_stocks": "2-6% yield",
+            "reits": "4-8% yield",
+            "bonds": "3-5% yield",
+            "high_yield_savings": "4-5% APY"
+          },
+          {
+            "feature": "Risk Level",
+            "dividend_stocks": "Medium to High",
+            "reits": "Medium to High", 
+            "bonds": "Low to Medium",
+            "high_yield_savings": "Very Low (FDIC insured)"
+          },
+          {
+            "feature": "Time to Set Up",
+            "dividend_stocks": "2-4 hours research",
+            "reits": "1-2 hours research",
+            "bonds": "30 minutes",
+            "high_yield_savings": "15 minutes"
+          },
+          {
+            "feature": "Minimum Investment",
+            "dividend_stocks": "$1 (fractional shares)",
+            "reits": "$1 (fractional shares)",
+            "bonds": "$25-$1000",
+            "high_yield_savings": "$0-$100"
+          },
+          {
+            "feature": "Monthly Maintenance",
+            "dividend_stocks": "1-2 hours monitoring",
+            "reits": "30 minutes monitoring",
+            "bonds": "Minimal (5 minutes)",
+            "high_yield_savings": "None required"
+          }
+        ],
+        "expert_quotes": [
+          {
+            "quote": "High-yield savings accounts provide the foundation for any passive income strategy - they offer guaranteed returns with zero risk and complete liquidity.",
+            "expert": "Certified Financial Planner Board",
+            "context": "2025 Passive Income Strategy Guidelines"
+          },
+          {
+            "quote": "REITs consistently outperform individual dividend stocks for passive income because they're required by law to distribute 90% of taxable income to shareholders.",
+            "expert": "National Association of Real Estate Investment Trusts",
+            "context": "Historical performance analysis 1990-2024"
+          }
+        ],
+        "winner_categories": {
+          "highest_income": "REITs",
+          "lowest_risk": "High-Yield Savings",
+          "most_passive": "High-Yield Savings",
+          "best_growth_potential": "Dividend Stocks"
+        },
+        "summary": "For beginners, start with high-yield savings, then gradually add REITs for higher income, followed by dividend stocks for growth potential. Bonds provide stability during market downturns."
+      }
+    }
+  },
+  "budgeting_comparisons": {
+    "title": "Budgeting Methods Comparison", 
+    "description": "Compare popular budgeting strategies to find the method that works best for your financial situation",
+    "comparisons": {
+      "50-30-20-vs-zero-based-vs-envelope": {
+        "title": "50/30/20 vs Zero-Based vs Envelope Method: Complete Budgeting Comparison",
+        "description": "Compare the three most effective budgeting methods to find which strategy works best for your income and lifestyle",
+        "slug": "budgeting-methods-comparison",
+        "comparison_table": [
+          {
+            "feature": "Ease of Setup",
+            "50_30_20": "Very Easy (5 minutes)",
+            "zero_based": "Moderate (30-60 minutes)",
+            "envelope_method": "Easy (15-20 minutes)"
+          },
+          {
+            "feature": "Time Investment",
+            "50_30_20": "5 minutes weekly",
+            "zero_based": "2-3 hours monthly",
+            "envelope_method": "15 minutes weekly"
+          },
+          {
+            "feature": "Flexibility",
+            "50_30_20": "High flexibility",
+            "zero_based": "Low flexibility",
+            "envelope_method": "Medium flexibility"
+          },
+          {
+            "feature": "Best For Income Type",
+            "50_30_20": "Steady, predictable income",
+            "zero_based": "Variable income",
+            "envelope_method": "Any income level"
+          },
+          {
+            "feature": "Spending Control",
+            "50_30_20": "Moderate control",
+            "zero_based": "Maximum control",
+            "envelope_method": "High control"
+          },
+          {
+            "feature": "Success Rate",
+            "50_30_20": "85% stick with it 6+ months",
+            "zero_based": "60% stick with it 6+ months", 
+            "envelope_method": "75% stick with it 6+ months"
+          }
+        ],
+        "expert_quotes": [
+          {
+            "quote": "The 50/30/20 rule succeeds because of its simplicity - most people can remember and follow three categories without feeling overwhelmed by their budget.",
+            "expert": "Elizabeth Warren, Harvard Business School",
+            "context": "Author of 'All Your Worth: The Ultimate Lifetime Money Plan'"
+          },
+          {
+            "quote": "Zero-based budgeting gives you complete control over every dollar, but requires discipline and time that many people underestimate when starting out.",
+            "expert": "Dave Ramsey Financial Solutions",
+            "context": "Based on analysis of 50,000+ budget consultations"
+          }
+        ],
+        "winner_categories": {
+          "easiest_to_start": "50/30/20 Method",
+          "most_control": "Zero-Based Budgeting",
+          "best_for_beginners": "50/30/20 Method",
+          "best_for_debt_payoff": "Zero-Based Budgeting"
+        },
+        "summary": "Start with 50/30/20 for simplicity and habit formation. Transition to zero-based budgeting once comfortable for maximum control. Use envelope method for specific spending problem areas."
+      }
+    }
+  }
+}

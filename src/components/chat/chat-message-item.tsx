@@ -69,9 +69,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
       isUser ? (
         user ? (
           <UserAvatar
-            size="md"
-            showPremiumBorder={true}
-            showPremiumCrown={true}
+            size="md"        
           />
         ) : (
           <div className="flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-full shrink-0 bg-[#F9F9F9] dark:bg-slate-600">

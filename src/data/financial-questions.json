@@ -1,0 +1,488 @@
+{
+  "debt_and_crisis": {
+    "category": "Debt & Crisis Management",
+    "description": "For users dealing with financial stress, debt problems, and urgent money issues",
+    "questions": {
+      "how-to-get-out-of-credit-card-debt-fast": {
+        "question": "How to get out of credit card debt fast",
+        "keywords": "credit card debt, debt payoff, debt avalanche, debt snowball, high interest debt, credit card help",
+        "title": "How to Get Out of Credit Card Debt Fast - Proven Strategies That Work | Moneko",
+        "description": "Escape credit card debt quickly with proven debt avalanche and snowball methods. Get personalized debt payoff plans and learn how to stop paying thousands in interest.",
+        "urgency": "high",
+        "content": {
+          "problem": "Drowning in high-interest credit card debt and need an immediate, actionable plan to become debt-free.",
+          "solution": "Learn the Debt Avalanche (pay highest interest first) vs. Debt Snowball (pay smallest balance first) methods with our free calculator.",
+          "call_to_action": "Get your personalized debt elimination plan and see exactly when you'll be debt-free.",
+          "benefits": [
+            "Calculate exact payoff dates for each method",
+            "Save thousands in interest payments", 
+            "Get step-by-step debt elimination plan",
+            "Learn how to negotiate with creditors",
+            "Prevent future debt accumulation"
+          ]
+        }
+      },
+      "student-loan-forgiveness-2025-update": {
+        "question": "Student loan forgiveness update 2025",
+        "keywords": "student loan forgiveness, SAVE plan, PSLF, student debt relief, Biden student loans, loan forgiveness programs",
+        "title": "Student Loan Forgiveness 2025 Update - Latest Programs & Requirements | Moneko",
+        "description": "Get the latest updates on federal student loan forgiveness programs including SAVE, PSLF, and new 2025 initiatives. Find out if you qualify and how to apply.",
+        "urgency": "high",
+        "content": {
+          "problem": "Confused about complex government student loan forgiveness programs and recent policy changes.",
+          "solution": "Up-to-date summary of current federal student loan forgiveness and repayment plans with qualification requirements.",
+          "call_to_action": "Check your eligibility for loan forgiveness programs and create a strategic repayment plan.",
+          "benefits": [
+            "Latest 2025 program updates",
+            "Qualification requirements explained",
+            "Application process guidance",
+            "Alternative repayment strategies",
+            "Tax implications of forgiveness"
+          ]
+        }
+      },
+      "good-credit-score-to-buy-car": {
+        "question": "What is a good credit score to buy a car",
+        "keywords": "credit score car loan, auto loan credit requirements, good credit score, car financing, credit score ranges",
+        "title": "What Credit Score Do You Need to Buy a Car in 2025? | Moneko",
+        "description": "Learn what credit score you need for car financing and how to get the best auto loan rates. Tips to boost your score before applying for car loans.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Need to know specific credit score targets for car purchases to avoid high interest rates.",
+          "solution": "Understand FICO score ranges and what lenders look for, plus tips to quickly boost your score.",
+          "call_to_action": "Get personalized credit improvement strategies and prepare for your car purchase.",
+          "benefits": [
+            "Know exact credit score requirements",
+            "Get tips to boost score quickly",
+            "Understand auto loan terms",
+            "Compare lender requirements",
+            "Save money on interest rates"
+          ]
+        }
+      },
+      "stop-living-paycheck-to-paycheck": {
+        "question": "How to stop living paycheck to paycheck",
+        "keywords": "paycheck to paycheck, financial stress, budgeting help, money management, break the cycle, financial stability",
+        "title": "How to Stop Living Paycheck to Paycheck - 5 Steps to Financial Freedom | Moneko",
+        "description": "Break the paycheck-to-paycheck cycle with proven strategies. Learn budgeting, saving, and income optimization techniques to build financial stability.",
+        "urgency": "high",
+        "content": {
+          "problem": "Frustrated and trapped in the cycle of having no money left before the next payday.",
+          "solution": "Step-by-step guide: track expenses, create bare-bones budget, find cost cuts, automate small savings.",
+          "call_to_action": "Start building your financial safety net with a personalized action plan.",
+          "benefits": [
+            "Break the paycheck cycle permanently",
+            "Build emergency fund gradually",
+            "Reduce financial stress",
+            "Create automated savings",
+            "Develop better money habits"
+          ]
+        }
+      },
+      "medical-debt-collections-help": {
+        "question": "Medical debt collections help",
+        "keywords": "medical debt, debt collections, medical bills, hospital debt, debt collector rights, medical bankruptcy",
+        "title": "Medical Debt Collections Help - Know Your Rights & Get Relief | Moneko",
+        "description": "Learn your rights against medical debt collectors and strategies to negotiate medical bills. Get help dealing with unexpected healthcare costs.",
+        "urgency": "high",
+        "content": {
+          "problem": "Dealing with aggressive collectors for unexpected medical bills and need to know your rights.",
+          "solution": "Understand consumer protections and strategies for negotiating with hospitals and collectors.",
+          "call_to_action": "Get help managing medical debt and build protection against future medical expenses.",
+          "benefits": [
+            "Know your legal rights",
+            "Negotiate medical bills effectively", 
+            "Stop aggressive collection calls",
+            "Prevent credit damage",
+            "Build medical emergency fund"
+          ]
+        }
+      }
+    }
+  },
+  "budgeting_and_saving": {
+    "category": "Budgeting & Saving Foundations", 
+    "description": "For cautious planners wanting to build solid financial foundations",
+    "questions": {
+      "high-yield-savings-vs-cd": {
+        "question": "High yield savings account vs CD",
+        "keywords": "high yield savings, certificate of deposit, CD vs savings, best savings rates, money market account, cash investments",
+        "title": "High Yield Savings vs CD: Which Is Better in 2025? | Moneko",
+        "description": "Compare high yield savings accounts and CDs. Learn which option gives better returns for your emergency fund and short-term savings goals.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Want to maximize returns on cash savings but confused about the best options available.",
+          "solution": "Clear comparison of HYSA liquidity vs CD fixed rates, with pros and cons of each option.",
+          "call_to_action": "Find the perfect savings strategy for your financial goals and timeline.",
+          "benefits": [
+            "Compare current rates and terms",
+            "Understand liquidity trade-offs",
+            "Maximize earnings on cash",
+            "Build foundation for investing",
+            "Protect against inflation"
+          ]
+        }
+      },
+      "50-30-20-budget-rule": {
+        "question": "50/30/20 budget rule explained",
+        "keywords": "50 30 20 budget, budgeting rules, budget template, money management, budgeting for beginners, simple budget",
+        "title": "50/30/20 Budget Rule: Simple Money Management That Works | Moneko",
+        "description": "Master the popular 50/30/20 budgeting rule. Get free templates and learn how to allocate your income for needs, wants, and savings effectively.",
+        "urgency": "low",
+        "content": {
+          "problem": "Need a simple, popular framework for managing money without complex budgeting systems.",
+          "solution": "Easy-to-follow 50% needs, 30% wants, 20% savings framework with free templates.",
+          "call_to_action": "Start your personalized 50/30/20 budget and see your savings grow automatically.",
+          "benefits": [
+            "Simple budgeting framework",
+            "Free budget templates included",
+            "Automated savings suggestions",
+            "Flexible spending guidelines", 
+            "Foundation for wealth building"
+          ]
+        }
+      },
+      "emergency-fund-amount": {
+        "question": "How much should I have in my emergency fund",
+        "keywords": "emergency fund, emergency savings, how much emergency fund, financial safety net, rainy day fund",
+        "title": "How Much Should Your Emergency Fund Be? Calculator & Guide | Moneko", 
+        "description": "Calculate the right emergency fund amount for your situation. Learn the 3-6 month rule and strategies to build your financial safety net faster.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Want a concrete financial goal to protect against job loss or unexpected events.",
+          "solution": "Learn the 3-6 months rule and use our calculator to find your specific emergency fund target.",
+          "call_to_action": "Calculate your emergency fund goal and get a personalized savings plan.",
+          "benefits": [
+            "Calculate exact fund amount needed",
+            "Build financial peace of mind",
+            "Protect against emergencies",
+            "Create automated savings plan",
+            "Foundation for investing goals"
+          ]
+        }
+      },
+      "sinking-funds-for-beginners": {
+        "question": "Sinking funds for beginners",
+        "keywords": "sinking funds, targeted savings, savings goals, budget categories, vacation fund, car fund, savings strategy",
+        "title": "Sinking Funds for Beginners - Smart Way to Save for Goals | Moneko",
+        "description": "Learn how sinking funds help you save for specific goals without derailing your budget. Get templates for vacation, car, and home funds.",
+        "urgency": "low",
+        "content": {
+          "problem": "Want to save for specific expenses without derailing monthly budget or going into debt.",
+          "solution": "Create multiple small savings pots for different goals like car maintenance or vacations.",
+          "call_to_action": "Set up your sinking funds and make saving for goals automatic.",
+          "benefits": [
+            "Save for goals systematically",
+            "Avoid debt for known expenses",
+            "Reduce financial stress",
+            "Build multiple savings pots",
+            "Improve budget consistency"
+          ]
+        }
+      }
+    }
+  },
+  "investing_and_wealth": {
+    "category": "Investing & Wealth Building",
+    "description": "For aspiring investors wanting to grow wealth and create passive income",
+    "questions": {
+      "how-to-start-investing-100-dollars": {
+        "question": "How to start investing with $100",
+        "keywords": "start investing, invest 100 dollars, beginner investing, fractional shares, small investment, micro investing",
+        "title": "How to Start Investing with Just $100 - Beginner's Guide 2025 | Moneko",
+        "description": "Start investing with only $100. Learn about fractional shares, ETFs, and low-cost index funds perfect for beginning investors.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Want to start investing but think you need a lot of money to begin building wealth.",
+          "solution": "Learn about fractional shares, ETFs, and low-cost index funds that make investing accessible.",
+          "call_to_action": "Start your investment journey with a personalized beginner portfolio.",
+          "benefits": [
+            "Start with any amount",
+            "Learn investing fundamentals",
+            "Build diversified portfolio",
+            "Automate investments",
+            "Grow wealth over time"
+          ]
+        }
+      },
+      "roth-ira-vs-traditional-ira": {
+        "question": "Roth IRA vs Traditional IRA comparison",
+        "keywords": "Roth IRA, traditional IRA, IRA comparison, retirement accounts, tax-free growth, IRA rules 2025",
+        "title": "Roth IRA vs Traditional IRA: Complete 2025 Comparison | Moneko",
+        "description": "Compare Roth and Traditional IRAs to choose the best retirement account. Understand tax implications, income limits, and withdrawal rules.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Confused about tax implications of different retirement accounts and which one to choose.",
+          "solution": "Simple comparison of 'pay taxes now' (Roth) vs 'pay taxes later' (Traditional) with income limits.",
+          "call_to_action": "Choose the right IRA for your situation and maximize your retirement savings.",
+          "benefits": [
+            "Understand tax implications",
+            "Choose optimal account type",
+            "Maximize retirement savings",
+            "Plan for tax-free income",
+            "Optimize investment strategy"
+          ]
+        }
+      },
+      "best-investments-for-passive-income": {
+        "question": "Best investments for passive income",
+        "keywords": "passive income, dividend investing, REITs, passive income investments, income investing, dividend stocks",
+        "title": "Best Passive Income Investments 2025 - Build Income Streams | Moneko", 
+        "description": "Discover the best passive income investments including dividend stocks, REITs, and bonds. Start building income streams that work while you sleep.",
+        "urgency": "high",
+        "content": {
+          "problem": "Want to create regular cash flow from investments without active trading or management.",
+          "solution": "Learn about dividend stocks, REITs, bonds and how to build a passive income portfolio.",
+          "call_to_action": "Start building your passive income portfolio with expert-selected investments.",
+          "benefits": [
+            "Generate monthly income",
+            "Build wealth automatically",
+            "Diversified income sources",
+            "No active management needed",
+            "Path to financial independence"
+          ]
+        }
+      },
+      "401k-rollover-when-leaving-job": {
+        "question": "What to do with 401k when you leave a job",
+        "keywords": "401k rollover, job change 401k, rollover IRA, 401k options, retirement account transfer, old 401k",
+        "title": "401k Rollover Guide: What to Do When You Leave Your Job | Moneko",
+        "description": "Learn your 401k options when changing jobs. Understand rollovers, transfers, and why cashing out early costs you thousands.",
+        "urgency": "high",
+        "content": {
+          "problem": "Left employer and unsure what to do with old retirement account to avoid penalties.",
+          "solution": "Understand options: leave it, roll to new employer, roll to IRA, or cash out (and why not to).",
+          "call_to_action": "Get guidance on the best 401k rollover strategy for your situation.",
+          "benefits": [
+            "Avoid costly mistakes",
+            "Minimize taxes and penalties",
+            "Consolidate retirement accounts",
+            "Continue tax-deferred growth",
+            "Optimize investment options"
+          ]
+        }
+      },
+      "investing-during-recession": {
+        "question": "Should I invest during a recession",
+        "keywords": "recession investing, market downturn, dollar cost averaging, recession strategy, bear market investing, economic uncertainty",
+        "title": "Investing During a Recession: Smart Strategies for Market Downturns | Moneko",
+        "description": "Learn how to invest during economic uncertainty. Discover why recessions can create the best investment opportunities for long-term wealth building.",
+        "urgency": "high",
+        "content": {
+          "problem": "Worried about market volatility and unsure whether to invest, pause, or sell during economic uncertainty.",
+          "solution": "Learn about dollar-cost averaging and historical data showing downturns are often best investment times.",
+          "call_to_action": "Create a recession-proof investment strategy that builds wealth in any market.",
+          "benefits": [
+            "Buy assets at lower prices",
+            "Use dollar-cost averaging",
+            "Build long-term wealth",
+            "Stay calm during volatility",
+            "Benefit from market recovery"
+          ]
+        }
+      }
+    }
+  },
+  "advanced_planning": {
+    "category": "Advanced Financial Planning",
+    "description": "For experienced planners optimizing finances and pursuing major goals",
+    "questions": {
+      "how-to-retire-early-fire": {
+        "question": "How to retire early FIRE movement",
+        "keywords": "FIRE, financial independence retire early, early retirement, FIRE calculator, lean FIRE, fat FIRE, retire early",
+        "title": "How to Retire Early: Complete FIRE Movement Guide 2025 | Moneko",
+        "description": "Master the FIRE movement principles. Calculate your FIRE number, optimize savings rates, and create the investment strategy for early retirement.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Want to achieve financial independence and retire early but need a concrete plan and strategy.",
+          "solution": "Learn FIRE principles: calculate FIRE number (25x expenses), high savings rates, optimal investing.",
+          "call_to_action": "Calculate your FIRE number and get a personalized early retirement plan.",
+          "benefits": [
+            "Calculate exact FIRE number",
+            "Optimize savings rate",
+            "Build passive income streams",
+            "Retire decades early",
+            "Achieve financial independence"
+          ]
+        }
+      },
+      "what-is-hsa-account": {
+        "question": "What is an HSA account and how does it work",
+        "keywords": "HSA account, health savings account, triple tax advantage, HSA rules, HSA investing, medical expenses",
+        "title": "HSA Account Guide: Triple Tax Advantage for Health & Retirement | Moneko",
+        "description": "Understand Health Savings Accounts and their unique triple tax advantage. Learn eligibility, contribution limits, and investment strategies.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Want to understand the unique tax advantages of Health Savings Accounts for health and retirement.",
+          "solution": "Learn HSA eligibility, benefits as both health and retirement savings tool with triple tax advantage.",
+          "call_to_action": "Maximize your HSA benefits and create a comprehensive tax-advantaged strategy.",
+          "benefits": [
+            "Triple tax advantage explained",
+            "Health and retirement benefits",
+            "Contribution strategies",
+            "Investment growth potential",
+            "Long-term wealth building"
+          ]
+        }
+      },
+      "house-down-payment-savings": {
+        "question": "How to save for a house down payment",
+        "keywords": "down payment, save for house, home buying, first time buyer, house fund, mortgage down payment",
+        "title": "How to Save for a House Down Payment Fast - Smart Strategies | Moneko",
+        "description": "Save for your dream home down payment faster. Learn the best savings vehicles based on your timeline and get a personalized savings plan.",
+        "urgency": "high",
+        "content": {
+          "problem": "Actively saving for first home and need strategy for down payment fund based on timeline.",
+          "solution": "Analyze pros and cons of different savings options based on timeline (HYSA short-term, investments long-term).",
+          "call_to_action": "Create your personalized down payment savings strategy and reach your goal faster.",
+          "benefits": [
+            "Reach down payment goal faster",
+            "Choose optimal savings vehicle",
+            "Build wealth while saving",
+            "Prepare for homeownership",
+            "Maximize purchasing power"
+          ]
+        }
+      },
+      "calculate-net-worth": {
+        "question": "How to calculate my net worth",
+        "keywords": "net worth calculator, net worth formula, assets vs liabilities, financial net worth, wealth tracking",
+        "title": "How to Calculate Net Worth: Free Calculator & Tracking Guide | Moneko",
+        "description": "Calculate your net worth with our free tool. Learn the assets minus liabilities formula and track your wealth building progress over time.",
+        "urgency": "low",
+        "content": {
+          "problem": "Want to track overall financial progress by calculating assets minus liabilities accurately.",
+          "solution": "Simple net worth formula with free calculator and tracking templates for monitoring progress.",
+          "call_to_action": "Calculate your net worth and create a wealth building tracking system.",
+          "benefits": [
+            "Track financial progress",
+            "Free calculation tools",
+            "Monitor wealth growth",
+            "Set financial goals",
+            "Make informed decisions"
+          ]
+        }
+      }
+    }
+  },
+  "trending_2025": {
+    "category": "Trending Financial Topics 2025",
+    "description": "Latest financial trends and questions people are searching for in 2025",
+    "questions": {
+      "ai-investing-robo-advisors": {
+        "question": "AI investing and robo advisors worth it",
+        "keywords": "AI investing, robo advisors, automated investing, AI portfolio management, algorithmic trading, fintech investing",
+        "title": "AI Investing & Robo Advisors 2025: Are They Worth It? | Moneko",
+        "description": "Discover how AI and robo advisors are changing investing. Compare costs, benefits, and performance of automated investment platforms.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Curious about AI-powered investing but unsure if automated platforms deliver better returns than traditional methods.",
+          "solution": "Compare AI investing platforms, costs, and performance vs traditional investing approaches.",
+          "call_to_action": "Discover how AI can optimize your investment strategy and portfolio management.",
+          "benefits": [
+            "AI-optimized portfolios",
+            "Lower investment fees",
+            "Automated rebalancing",
+            "Tax-loss harvesting",
+            "24/7 portfolio monitoring"
+          ]
+        }
+      },
+      "cryptocurrency-investing-2025": {
+        "question": "Should I invest in cryptocurrency in 2025",
+        "keywords": "cryptocurrency investing, Bitcoin 2025, crypto portfolio, digital assets, blockchain investing, crypto allocation",
+        "title": "Cryptocurrency Investing 2025: Smart Strategies & Portfolio Allocation | Moneko",
+        "description": "Learn how to safely invest in cryptocurrency as part of a diversified portfolio. Understand risks, allocation strategies, and tax implications.",
+        "urgency": "high",
+        "content": {
+          "problem": "Interested in cryptocurrency but need guidance on safe allocation and risk management strategies.",
+          "solution": "Learn proper crypto portfolio allocation, risk management, and how to integrate digital assets safely.",
+          "call_to_action": "Create a balanced investment strategy that includes cryptocurrency exposure.",
+          "benefits": [
+            "Safe crypto allocation strategies",
+            "Risk management techniques",
+            "Tax-efficient crypto investing",
+            "Portfolio diversification",
+            "Long-term wealth potential"
+          ]
+        }
+      },
+      "inflation-hedge-investments": {
+        "question": "Best investments to hedge against inflation",
+        "keywords": "inflation hedge, inflation protection, TIPS, I bonds, real estate inflation, commodity investing, inflation-proof investments",
+        "title": "Best Inflation Hedge Investments 2025 - Protect Your Purchasing Power | Moneko",
+        "description": "Protect your wealth from inflation with proven hedge strategies. Learn about TIPS, I Bonds, real estate, and commodities for inflation protection.",
+        "urgency": "high",
+        "content": {
+          "problem": "Worried about inflation eroding purchasing power and need investments that maintain real value.",
+          "solution": "Learn about TIPS, I Bonds, real estate, commodities and other inflation-hedging strategies.",
+          "call_to_action": "Build an inflation-resistant portfolio that protects and grows your wealth.",
+          "benefits": [
+            "Protect against inflation",
+            "Maintain purchasing power",
+            "Diversified hedge strategies",
+            "Real asset exposure",
+            "Long-term wealth preservation"
+          ]
+        }
+      },
+      "remote-work-financial-planning": {
+        "question": "Financial planning for remote workers",
+        "keywords": "remote work finances, work from home taxes, freelancer finances, digital nomad money, remote worker savings",
+        "title": "Remote Work Financial Planning 2025 - Taxes, Savings & Benefits | Moneko", 
+        "description": "Navigate remote work finances including tax deductions, retirement savings without employer plans, and location-independent wealth building.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Working remotely presents unique financial challenges including taxes, benefits, and retirement planning.",
+          "solution": "Learn home office deductions, self-employment taxes, and retirement savings strategies for remote workers.",
+          "call_to_action": "Optimize your remote work financial strategy and maximize your earning potential.",
+          "benefits": [
+            "Home office tax deductions",
+            "Self-employment planning", 
+            "Location independence",
+            "Retirement without employer plans",
+            "Optimized remote work finances"
+          ]
+        }
+      },
+      "side-hustle-tax-strategies": {
+        "question": "Side hustle taxes and financial planning",
+        "keywords": "side hustle taxes, gig economy, freelance taxes, 1099 income, side business, extra income taxes",
+        "title": "Side Hustle Tax Strategies & Financial Planning 2025 | Moneko",
+        "description": "Maximize your side hustle profits with smart tax strategies. Learn about deductions, quarterly payments, and retirement contributions for extra income.",
+        "urgency": "medium",
+        "content": {
+          "problem": "Earning side income but need guidance on taxes, deductions, and optimal financial strategies.",
+          "solution": "Learn side hustle tax strategies, business deductions, and how to optimize additional income streams.",
+          "call_to_action": "Maximize your side hustle profits with personalized tax and investment strategies.",
+          "benefits": [
+            "Minimize side hustle taxes",
+            "Business deduction strategies",
+            "Quarterly payment planning",
+            "SEP-IRA contributions",
+            "Scale side income efficiently"
+          ]
+        }
+      },
+      "housing-market-rent-vs-buy": {
+        "question": "Rent vs buy calculator 2025 housing market",
+        "keywords": "rent vs buy, housing market 2025, rent vs own, housing calculator, mortgage vs rent, real estate 2025",
+        "title": "Rent vs Buy Calculator 2025: Housing Market Analysis & Decision Tool | Moneko",
+        "description": "Make the right housing decision with our rent vs buy calculator. Analyze the 2025 housing market and determine your best financial option.",
+        "urgency": "high",
+        "content": {
+          "problem": "Trying to decide between renting and buying in the current housing market with high prices and rates.",
+          "solution": "Use comprehensive rent vs buy analysis including opportunity cost, market conditions, and personal factors.",
+          "call_to_action": "Get a personalized rent vs buy analysis for your situation and location.",
+          "benefits": [
+            "Data-driven housing decision",
+            "Market condition analysis",
+            "Opportunity cost calculation",
+            "Location-specific insights",
+            "Long-term wealth optimization"
+          ]
+        }
+      }
+    }
+  }
+}

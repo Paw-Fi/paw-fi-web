@@ -27,6 +27,40 @@ Allow: /budgeting-app/couples-budgeting
 Allow: /budgeting-app/freelancers-budgeting
 Allow: /budgeting-app/entrepreneurs-budgeting
 Allow: /budgeting-app/retirees-budgeting
+
+# Passive income and financial learning content - high SEO value
+Allow: /passive-income/
+Allow: /passive-income/high-interest-portfolios
+Allow: /passive-income/goal-tracker-focus
+Allow: /passive-income/compound-interest-focus
+Allow: /passive-income/financial-learning-focus
+
+# Financial questions and advice - high-priority content for SEO
+Allow: /questions/
+Allow: /questions/how-to-get-out-of-credit-card-debt-fast
+Allow: /questions/student-loan-forgiveness-2025-update
+Allow: /questions/good-credit-score-to-buy-car
+Allow: /questions/stop-living-paycheck-to-paycheck
+Allow: /questions/medical-debt-collections-help
+Allow: /questions/high-yield-savings-vs-cd
+Allow: /questions/50-30-20-budget-rule
+Allow: /questions/emergency-fund-amount
+Allow: /questions/sinking-funds-for-beginners
+Allow: /questions/how-to-start-investing-100-dollars
+Allow: /questions/roth-ira-vs-traditional-ira
+Allow: /questions/best-investments-for-passive-income
+Allow: /questions/401k-rollover-when-leaving-job
+Allow: /questions/investing-during-recession
+Allow: /questions/how-to-retire-early-fire
+Allow: /questions/what-is-hsa-account
+Allow: /questions/house-down-payment-savings
+Allow: /questions/calculate-net-worth
+Allow: /questions/ai-investing-robo-advisors
+Allow: /questions/cryptocurrency-investing-2025
+Allow: /questions/inflation-hedge-investments
+Allow: /questions/remote-work-financial-planning
+Allow: /questions/side-hustle-tax-strategies
+Allow: /questions/housing-market-rent-vs-buy
 Allow: /guides/401k-vs-ira-complete-comparison
 Allow: /guides/complete-beginner-guide-to-investing
 Allow: /guides/how-much-do-i-need-to-retire
