@@ -61,9 +61,9 @@ export const Route = createFileRoute("/")({
   head: () => {
     // Use canonical helper for consistent URLs
     const pageUrl = getCanonicalUrl("/");
-    const title = "AI Personal Finance Coach - Budgeting & Investing | Moneko";
+    const title = "AI Finance Coach - Budgeting & Investing | Moneko";
     const description =
-      "Master budgeting, investing & wealth building with Moneko's AI personal finance coach. Get expert guidance from certified professionals.";
+      "Master budgeting, investing & wealth building with Moneko's AI finance coach. Expert guidance from certified CFA professionals.";
     const keywords =
       "moneko, moneko finance, moneko app, moneko AI, AI personal finance coach, AI finance, budgeting app, goal tracker, financial goal tracker, personal finance education, money management, smart investing, wealth building, financial planning, financial literacy";
     const imageUrl = "https://moneko.io/og-img.png";
@@ -544,9 +544,9 @@ export default function HomePage() {
 
   // SEO metadata
   const pageUrl = getCanonicalUrl("/");
-  const title = "AI Personal Finance Coach - Budgeting & Investing | Moneko";
+  const title = "AI Finance Coach - Budgeting & Investing | Moneko";
   const description =
-    "Master budgeting, investing & wealth building with Moneko's AI personal finance coach. Get expert guidance from certified professionals.";
+    "Master budgeting, investing & wealth building with Moneko's AI personal finance coach. Expert guidance from certified CFA professionals.";
   const keywords =
     "AI personal finance coach, budgeting app, learn investing, personal finance education, money management tools, savings goals, financial planning, financial literacy, investment calculator, retirement planning";
   const imageUrl = "https://moneko.io/og-img.png";
@@ -609,8 +609,7 @@ export default function HomePage() {
         <meta name="twitter:site" content="@moneko_ai" />
         <meta name="twitter:creator" content="@moneko_ai" />
 
-        {/* Canonical Link */}
-        <link rel="canonical" href={pageUrl} />
+        {/* Canonical Link - Removed duplicate, already handled in head() function */}
 
         {/* Additional AI platform optimization */}
         <meta

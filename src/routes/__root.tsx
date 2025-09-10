@@ -132,7 +132,7 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <head>
         {/* Ensure theme is set before CSS loads to avoid FOUC and to switch shadcn tokens */}
         <ThemeInitScript />

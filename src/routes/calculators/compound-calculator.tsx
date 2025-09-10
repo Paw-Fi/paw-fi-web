@@ -17,7 +17,7 @@ export const Route = createFileRoute('/calculators/compound-calculator')({
   head: () => {
     const pageUrl = 'https://moneko.io/calculators/compound-calculator';
     const meta = seo({
-      title: 'Free Compound Interest Calculator - Investment Growth & Returns Calculator | Moneko',
+      title: 'Compound Interest Calculator - Investment Growth | Moneko',
       description: 'Calculate compound interest on investments with our free calculator. See how your money grows with compounding returns, monthly contributions, and different interest rates over time.',
       keywords: 'compound interest calculator, investment growth calculator, compounding calculator, investment returns, financial planning calculator, retirement calculator, savings growth, investment projections',
       image: 'https://moneko.io/og-img.png',

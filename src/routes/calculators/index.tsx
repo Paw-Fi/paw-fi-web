@@ -21,7 +21,7 @@ export const Route = createFileRoute('/calculators/')({
   head: () => {
     const pageUrl = getCanonicalUrl('/calculators');
     const meta = seo({
-      title: 'Free Financial Calculators - Budgeting, Investment, Mortgage & Retirement Tools | Moneko',
+      title: 'Financial Calculators - Investment & Planning Tools | Moneko',
       description: 'Calculate compound interest, mortgage payments, investment returns, retirement savings, and more with our comprehensive suite of free financial planning calculators.',
       keywords: 'financial calculators, compound interest calculator, mortgage calculator, retirement calculator, investment calculator, auto loan calculator, savings goal calculator, budgeting tools, financial planning',
       image: 'https://moneko.io/og-img.png',

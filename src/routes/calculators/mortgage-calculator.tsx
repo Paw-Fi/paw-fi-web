@@ -20,7 +20,7 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
     const routePath = '/calculators/mortgage-calculator';
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
-      title: 'Free Mortgage Calculator - Home Loan Payment Estimator & Amortization Schedule | Moneko',
+      title: 'Mortgage Calculator - Home Loan Payment Estimator | Moneko',
       description: 'Calculate monthly mortgage payments with our free home loan calculator. Get accurate PITI estimates, view amortization schedules, and compare loan terms with taxes and insurance.',
       keywords: 'mortgage calculator, home loan calculator, mortgage payment calculator, amortization schedule, PITI calculator, home affordability calculator, mortgage rates, loan calculator',
       image: 'https://moneko.io/og-img.png',

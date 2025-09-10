@@ -4,6 +4,7 @@ import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import AmbientHalo from '@/components/ui/ambient-halo';
 import { 
   faRocket, 
   faCheckCircle, 
@@ -62,13 +63,14 @@ export function FinancialQuestionPage({
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-br from-background via-background/80 to-primary/5"
+      className="relative min-h-screen bg-transparent"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      <AmbientHalo />
       {/* Hero Section */}
-      <section className="relative pt-16 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative z-10 pt-16 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-48 h-48 bg-purple-200/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
@@ -131,7 +133,7 @@ export function FinancialQuestionPage({
       </section>
 
       {/* Problem & Solution Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Problem - GEO Optimized with semantic markup */}
@@ -198,7 +200,7 @@ export function FinancialQuestionPage({
       </section>
 
       {/* Benefits Section - GEO Optimized */}
-      <section className="benefits-section py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className="benefits-section relative z-10 py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="text-center mb-12"
@@ -256,7 +258,7 @@ export function FinancialQuestionPage({
       </section>
 
       {/* Trust & Social Proof */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ y: 20, opacity: 0 }}

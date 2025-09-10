@@ -14,7 +14,7 @@ export const Route = createFileRoute("/team")({
   component: TeamPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/team");
-    const title = "Meet Our Team - AI Personal Finance Experts & Financial Education Leaders | Moneko";
+    const title = "Meet Our Financial Expert Team | Moneko";
     const description = "Meet the certified financial professionals and AI experts behind Moneko's personal finance coaching platform. Our team combines decades of financial expertise with cutting-edge AI technology.";
     const keywords = "Moneko team, AI personal finance experts, certified financial professionals, financial education team, fintech founders, CFA professionals, financial coaching experts";
     const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image

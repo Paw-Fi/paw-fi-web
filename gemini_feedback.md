@@ -3,32 +3,59 @@ Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, this is an excellent set of changes that significantly expands the website's content and SEO footprint. The new sections on passive income and financial questions are well-structured and the necessary SEO configurations (`sitemap.xml`, `robots.txt`) have been correctly updated to support them. The content added to `llm.txt` is comprehensive and aligns perfectly with the new pages. The cleanup in `dashboard/route.tsx` by removing a large block of commented-out code is also a welcome improvement for maintainability.
+Overall, this is a good set of changes focused on improving SEO and cleaning up unused assets. The modifications enhance content specificity and accessibility. However, there is a key area for improvement regarding code duplication in the metadata.
 
-There are no critical issues or warnings to report. This is a high-quality contribution.
+#### Warnings (Should Fix)
+
+*   **Duplicated SEO Meta Tags**
+
+    In `src/routes/index.tsx`, the SEO metadata (like `title`, `description`, Open Graph tags, etc.) is defined in two separate places: once in the `Route.head` function and again inside the `HomePage` component's JSX.
+
+    This duplication is problematic because:
+    1.  **Inconsistency:** It can easily lead to the metadata becoming out of sync, as seen with the different `keywords` lists in the `head` function versus the component.
+    2.  **Maintenance:** You have to update the information in two places, which is inefficient and error-prone.
+    3.  **SEO Risk:** Search engines may get confused by conflicting or duplicated tags, potentially impacting your ranking.
+
+    **Recommendation:**
+    The `head` function provided by TanStack Router is the correct, centralized place for this logic. You should remove the redundant meta tags from the `HomePage` component's return statement. The existing comment `Canonical Link - Removed duplicate...` shows you're already aware of this pattern, so it should be applied to all head tags.
+
+    ```tsx
+    // src/routes/index.tsx
+
+    export default function HomePage() {
+      // ... component logic ...
+
+      // SEO metadata (This block should be removed)
+      // const pageUrl = getCanonicalUrl("/");
+      // const title = "AI Finance Coach - Budgeting & Investing | Moneko";
+      // const description =
+      //   "Master budgeting, investing & wealth building with Moneko's AI personal finance coach. Expert guidance from certified CFA professionals.";
+      // const keywords =
+      //   "AI personal finance coach, budgeting app, learn investing, ...";
+      // const imageUrl = "https://moneko.io/og-img.png";
+
+      return (
+        <>
+          {/* This entire block of meta tags should be deleted. */}
+          {/* The `head()` function already handles this. */}
+          <Helmet>
+            <title>{title}</title>
+            <meta name="description" content={description} />
+            {/* ... all other meta tags ... */}
+          </Helmet>
+
+          <div className="flex flex-col min-h-screen">
+            {/* ... rest of the component JSX ... */}
+          </div>
+        </>
+      );
+    }
+    ```
 
 #### Suggestions (Consider Improving)
 
-*   **Sitemap `lastmod` Automation:** All new entries in `sitemap.xml` have a hardcoded `<lastmod>` date of `2025-09-10`. For better SEO accuracy, this date should reflect when the content of a specific page was last meaningfully updated. Consider implementing a script (perhaps in `scripts/update-sitemap.js`) that automatically updates the `lastmod` date for a page when its content changes.
+*   **HTML Language Attribute:** The change to `<html lang="en">` in `src/routes/__root.tsx` is an excellent improvement for accessibility and SEO. It's a small change with a positive impact.
+*   **Content Specificity:** Updating the meta description to mention `"certified CFA professionals"` is a great move. It adds credibility and authority to your content, which is valuable for both users and search engines.
+*   **Asset Cleanup:** Removing the unused "PawFi" assets is good project hygiene.
 
-*   **Sitemap Priority Strategy:** Many new pages in `sitemap.xml` are assigned a high priority of `0.9`. While this signals importance to search engines, having too many pages with high priority can dilute its effectiveness. A more tiered approach might be beneficial. For example:
-    *   Main hub pages (`/questions`, `/passive-income/*` variants) could remain at `0.9`.
-    *   Individual, high-value articles could be `0.8`.
-    *   More niche or specific question pages could be `0.7`.
-    This helps guide search engines to what you consider the most important entry points.
-
-*   **Consistency in `robots.txt`:** The new `Allow` directives in `robots.txt` are great for ensuring crawlers can find the new content. For consistency and future maintainability, consider adding a comment block to group the new sections, similar to the existing comments for other sections. For example:
-
-    ```diff
-    ...
-     Allow: /budgeting-app/freelancers-budgeting
-     Allow: /budgeting-app/entrepreneurs-budgeting
-     Allow: /budgeting-app/retirees-budgeting
-    +
-    +# Passive income and financial learning content
-    +Allow: /passive-income/
-    +Allow: /passive-income/high-interest-portfolios
-    ...
-    ```
-
-These are minor suggestions to further enhance an already strong set of changes. Great work on expanding the site's authority and content.
+There are no critical issues to report. Addressing the duplicated metadata will make the code cleaner, more maintainable, and better optimized.

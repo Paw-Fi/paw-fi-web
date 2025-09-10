@@ -30,7 +30,7 @@ export const Route = createFileRoute("/pricing")({
   head: () => {
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
-      title: "AI Personal Finance Coach Pricing - Free & Premium Plans | Moneko",
+      title: "Pricing - Free to use | Moneko",
       description:
         "Start free with Moneko's AI personal finance coach. Choose from our affordable pricing plans to unlock advanced budgeting tools, investment guidance, and personalized financial education.",
       keywords:

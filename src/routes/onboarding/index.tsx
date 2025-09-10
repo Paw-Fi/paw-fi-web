@@ -17,10 +17,83 @@ export const Route = createFileRoute('/onboarding/')({
   },
   head: () => {
     const pageUrl = getCanonicalUrl("/onboarding");
-    const title = "Moneko Onboarding: Start Your Financial Journey";
-    const description = "Begin your personalized financial journey with Moneko. Our onboarding process helps you set up your profile and goals for a tailored experience.";
-    const keywords = "Moneko onboarding, financial journey, personal finance setup, financial goals, new user guide";
-    const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
+    const title = "Start Free Financial Journey - No Login Required | Moneko";
+    const description = "Start your personalized financial journey with Moneko instantly - no login, signup, or account required. Get immediate AI financial guidance and personalized recommendations.";
+    const keywords = "Moneko onboarding, no login required, no signup, instant financial advice, free AI coach, financial journey, personal finance setup, financial goals, anonymous financial guidance";
+    const imageUrl = "https://moneko.io/og-img.png";
+
+    // GEO-optimized structured data for onboarding page
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${pageUrl}#webpage`,
+          "name": "Start Free Financial Journey - No Login Required | Moneko",
+          "description": "Start your personalized financial journey with Moneko instantly - no login, signup, or account required. Get immediate AI financial guidance and personalized recommendations.",
+          "url": pageUrl,
+          "inLanguage": "en-US",
+          "isPartOf": {
+            "@type": "WebSite",
+            "@id": "https://moneko.io#website"
+          },
+          "about": [
+            {
+              "@type": "Thing",
+              "name": "No Login Required Financial Coaching",
+              "description": "Instant access to AI personal finance coaching without account creation, signup, or login requirements"
+            },
+            {
+              "@type": "Thing",
+              "name": "Anonymous Financial Guidance",
+              "description": "Private, secure financial coaching that protects user privacy with no personal information required"
+            }
+          ],
+          "mainEntity": {
+            "@type": "Service",
+            "name": "Instant AI Financial Coaching - No Account Required",
+            "description": "Free AI-powered financial coaching service that provides immediate personalized guidance without requiring user registration, login, or personal information sharing",
+            "provider": {
+              "@type": "Organization",
+              "@id": "https://moneko.io#organization"
+            },
+            "serviceType": "Anonymous Financial Education",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock",
+              "description": "Free instant access to AI financial coaching with no login, signup, or account required"
+            },
+            "audience": {
+              "@type": "Audience",
+              "audienceType": ["Privacy-Conscious Users", "Quick Start Seekers", "Anonymous Help Seekers"]
+            }
+          },
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://moneko.io"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Start Free Journey",
+                "item": pageUrl
+              }
+            ]
+          },
+          "speakable": {
+            "@type": "SpeakableSpecification",
+            "cssSelector": [".no-login-message", ".instant-access-info", ".privacy-assurance"]
+          }
+        }
+      ]
+    };
 
     return {
       meta: seo({
@@ -34,6 +107,12 @@ export const Route = createFileRoute('/onboarding/')({
         {
           rel: "canonical",
           href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
         },
       ],
     };
@@ -83,32 +162,38 @@ function RouteComponent() {
             <div className="flex sm:hidden items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-1">
                 <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                <span>Secure</span>
+                <span>No Login</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-1 h-1 bg-purple-500 rounded-full"></div>
                 <span>AI Coach</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                <span>Free</span>
               </div>
             </div>
             
             {/* Desktop: Full footer with more information */}
             <div className="hidden sm:flex items-center justify-center gap-4 text-xs lg:text-sm text-slate-600 dark:text-slate-300">
               <div className="flex items-center gap-4 lg:gap-6">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 no-login-message">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span className="font-medium">Bank-Level Security</span>
+                  <span className="font-medium">No Login Required</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 instant-access-info">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span className="font-medium">AI-Powered Insights</span>
+                  <span className="font-medium">Instant AI Guidance</span>
+                </div>
+                <div className="flex items-center gap-1.5 privacy-assurance">
+                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                  <span className="font-medium">100% Anonymous</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                  <span className="font-medium">Personalized Plans</span>
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                  <span className="font-medium">Always Free</span>
                 </div>
               </div>
-              
-             
             </div>
           </div>
         </div>
