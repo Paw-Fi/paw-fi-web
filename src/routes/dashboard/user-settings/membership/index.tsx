@@ -8,8 +8,8 @@ export const Route = createFileRoute("/dashboard/user-settings/membership/")({
   head: () => {
     const pageUrl = getCanonicalUrl('/dashboard/membership');
     const meta = seo({
-      title: 'Membership | Moneko',
-      description: 'Manage your Moneko membership, view your subscription status, and explore premium features.',
+      title: 'Membership - Subscription & Premium Features | Moneko',
+      description: 'Manage Moneko membership, subscription status & explore premium AI financial features.',
       keywords: 'membership, subscription, premium features, Moneko',
       url: pageUrl,
     });

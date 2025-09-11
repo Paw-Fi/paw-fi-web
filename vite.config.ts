@@ -37,12 +37,11 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    // TanStack Router with automatic code splitting enabled
+    // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
     TanStackRouterVite({
       autoCodeSplitting: true,
-      // Keep loader functions in main bundle to prevent network waterfall
       codesSplitGroupings: [
-        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent']
+        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent', 'loader']
       ]
     }),
     VitePluginRadar({

@@ -9,8 +9,8 @@ export const Route = createFileRoute("/dashboard/essentials/")({
   component: Essentials,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/essentials/');
-    const title = 'Essential Financial Education - Expert-Led Fundamentals Course | Moneko';
-    const description = 'Master personal finance fundamentals with expert-crafted essentials course. Learn budgeting, investing, saving, and money management basics in structured, easy-to-follow lessons.';
+    const title = 'Financial Education - Expert Fundamentals Course | Moneko';
+    const description = 'Master personal finance fundamentals with expert essentials course. Learn budgeting, investing & money management basics.';
     const keywords = 'financial essentials course, personal finance fundamentals, money basics, budgeting basics, investing fundamentals, financial literacy, expert financial education, essential money skills';
 
     const meta = seo({

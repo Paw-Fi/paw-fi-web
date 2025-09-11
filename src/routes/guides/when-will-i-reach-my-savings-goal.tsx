@@ -12,8 +12,8 @@ export const Route = createFileRoute('/guides/when-will-i-reach-my-savings-goal'
   component: SavingsGoalTimelineGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/when-will-i-reach-my-savings-goal');
-    const title = 'When Will I Reach My Savings Goal? | Timeline Calculator 2025 | Moneko';
-    const description = 'Calculate exactly when you\'ll reach your savings goal with compound interest. Learn how to accelerate your timeline with higher contributions and better returns.';
+    const title = 'When Will I Reach My Savings Goal? | Calculator 2025 | Moneko';
+    const description = 'Calculate exactly when you\'ll reach your savings goal with compound interest. Learn how to accelerate your timeline with higher contributions.';
     const keywords = 'savings goal calculator, when will I save, savings timeline, compound interest calculator, financial goal planning';
 
     const meta = seo({

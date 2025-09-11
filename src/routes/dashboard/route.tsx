@@ -93,8 +93,8 @@ export const Route = createFileRoute("/dashboard")({
   head: () => {
     // Add canonical URL for dashboard page
     const pageUrl = getCanonicalUrl('/dashboard');
-    const title = 'Personal Finance Dashboard - AI-Powered Portfolio Tracking & Financial Education | Moneko';
-    const description = 'Access your comprehensive financial dashboard with AI-powered portfolio tracking, personalized learning paths, goal management, and smart financial calculators. Start building wealth today.';
+    const title = 'Personal Finance Dashboard - AI Portfolio Tracking | Moneko';
+    const description = 'Access comprehensive financial dashboard with AI portfolio tracking, learning paths, goal management & smart calculators.';
     const keywords = 'personal finance dashboard, portfolio tracking, AI financial coach, financial education platform, investment tracking, budgeting tools, financial goal tracker, wealth building dashboard';
     const imageUrl = 'https://moneko.io/og-img.png';
 

@@ -19,7 +19,7 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
       title: 'Savings Goal Calculator - Monthly Planner | Moneko',
-      description: 'Calculate monthly savings needed to reach your financial goals. Plan for emergency funds, vacations, home down payments, and major purchases with our savings calculator.',
+      description: 'Calculate monthly savings needed for financial goals. Plan emergency funds, vacations, down payments, and major purchases with interest calculations.',
       keywords: 'savings goal calculator, savings planner, monthly savings calculator, emergency fund calculator, financial goals calculator, savings tracker, goal planner',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,

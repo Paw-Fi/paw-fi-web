@@ -14,11 +14,11 @@ import { InvestmentReturnsBenchmarks, EconomicIndicatorsTable } from '@/componen
 
 export const Route = createFileRoute('/calculators/compound-calculator')({
   component: CompoundCalculatorPage,
-  head: () => {
+head: () => {
     const pageUrl = 'https://moneko.io/calculators/compound-calculator';
     const meta = seo({
       title: 'Compound Interest Calculator - Investment Growth | Moneko',
-      description: 'Calculate compound interest on investments with our free calculator. See how your money grows with compounding returns, monthly contributions, and different interest rates over time.',
+      description: 'Calculate compound interest on investments with free calculator. See money growth with compounding returns & contributions.',
       keywords: 'compound interest calculator, investment growth calculator, compounding calculator, investment returns, financial planning calculator, retirement calculator, savings growth, investment projections',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,
@@ -101,19 +101,15 @@ function CompoundCalculatorPage() {
           requirements: "Web Browser, JavaScript enabled",
           softwareVersion: "2.1",
           dateModified: new Date().toISOString().split('T')[0],
-          screenshot: screenshotData.screenshot,
+          screenshot: [screenshotData.screenshot],
           publisher: {
             name: 'Moneko',
             url: 'https://moneko.io',
             logo: 'https://moneko.io/logo192.png',
           },
           aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: "4.8",
-            bestRating: "5",
-            worstRating: "1",
-            ratingCount: "2,847",
-            reviewCount: "1,923"
+            ratingValue: 4.8,
+            ratingCount: 2847
           }
         }}
       />

@@ -34,8 +34,8 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   component: GoalsTracker,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/tracker/');
-    const title = 'Financial Goal Tracker - AI-Powered Achievement & Progress Monitoring | Moneko';
-    const description = 'Set, track, and achieve your financial goals with AI-powered insights, smart milestones, and personalized strategies. Monitor progress, celebrate achievements, and stay motivated on your wealth-building journey.';
+    const title = 'Goal Tracker - AI-Powered Achievement & Progress | Moneko';
+    const description = 'Set, track & achieve financial goals with AI insights, smart milestones & personalized strategies for wealth building.';
     const keywords = 'financial goal tracker, AI financial planning, savings goals, investment goals, milestone management, financial objectives, goal setting, progress tracking, wealth building goals, retirement planning goals';
 
     const meta = seo({
@@ -94,9 +94,17 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
             "@type": "Organization",
             "@id": "https://moneko.io#organization",
             "name": "Moneko",
-            "description": "AI-powered personal finance platform providing goal tracking, education, and portfolio management tools",
+            "description": "AI-powered personal finance platform providing goal tracking, education, and portfolio management tools, founded by CFA charterholder Sabina Shao",
             "url": "https://moneko.io",
-            "logo": "https://moneko.io/og-img.png"
+            "logo": "https://moneko.io/og-img.png",
+            "founder": {
+              "@type": "Person",
+              "name": "Sabina Shao",
+              "jobTitle": "CEO & Financial Education Expert",
+              "hasCredential": "CFA Charterholder",
+              "knowsAbout": ["Personal Finance", "Financial Goal Setting", "Investment Strategy", "Wealth Building"],
+              "yearsOfExperience": "10+"
+            }
           },
           "serviceType": "Financial Goal Management",
           "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
@@ -242,6 +250,46 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
       ]
     };
 
+    // GEO-Optimized FAQ Schema for Goal Tracker
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does Moneko's AI-powered goal tracking work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Moneko's AI analyzes your financial situation, timeline, and goals to provide personalized strategies and smart milestones. Our system, designed by CFA charterholder Sabina Shao, breaks down large financial goals into achievable steps with realistic timelines and progress tracking."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of financial goals can I track with Moneko?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can track all types of financial goals including savings targets, investment milestones, debt payoff plans, retirement savings, emergency fund building, and major purchases like homes or cars. Our expert-designed system adapts to any financial objective."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How reliable are Moneko's goal achievement strategies?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our strategies are based on proven financial planning principles developed by CFA charterholder Sabina Shao with over 10 years of experience. The AI recommendations follow established wealth-building methodologies and are continuously refined based on user success rates."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can Moneko help me stay motivated to achieve my financial goals?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! Moneko includes milestone celebrations, progress visualization, achievement tracking, and motivational insights designed by behavioral finance experts. Our system helps maintain momentum through positive reinforcement and clear progress indicators."
+          }
+        }
+      ]
+    };
+
     return {
       meta,
       link: [
@@ -254,6 +302,10 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData)
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(faqSchema)
         }
       ]
     };

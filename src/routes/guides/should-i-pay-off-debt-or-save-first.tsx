@@ -12,8 +12,8 @@ export const Route = createFileRoute('/guides/should-i-pay-off-debt-or-save-firs
   component: DebtVsSavingsGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/should-i-pay-off-debt-or-save-first');
-    const title = 'Should I Pay Off Debt or Save First? | Decision Tree Guide 2025 | Moneko';
-    const description = 'Use our interactive decision tree to determine whether you should pay off debt or build savings first. Expert guidance for credit cards, student loans, and emergency funds.';
+    const title = 'Pay Off Debt or Save First? | Decision Guide 2025 | Moneko';
+    const description = 'Use our interactive decision tree to determine whether to pay off debt or build savings first. Expert guidance for credit cards and emergency funds.';
     const keywords = 'pay off debt or save first, debt vs savings, emergency fund vs debt, financial priority decision tree, debt payoff strategy';
 
     const meta = seo({

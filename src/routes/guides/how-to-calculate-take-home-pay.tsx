@@ -12,8 +12,8 @@ export const Route = createFileRoute('/guides/how-to-calculate-take-home-pay')({
   component: TakeHomePayGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-to-calculate-take-home-pay');
-    const title = 'How to Calculate Take-Home Pay | Net Pay Calculator 2025 | Moneko';
-    const description = 'Calculate your exact take-home pay after taxes, deductions, and benefits. Understand federal taxes, state taxes, Social Security, Medicare, and voluntary deductions.';
+    const title = 'How to Calculate Take-Home Pay | Calculator 2025 | Moneko';
+    const description = 'Calculate your exact take-home pay after taxes, deductions, and benefits. Understand federal taxes, state taxes, Social Security, and Medicare.';
     const keywords = 'take home pay calculator, net pay calculator, after tax income, paycheck calculator, salary after deductions';
 
     const meta = seo({

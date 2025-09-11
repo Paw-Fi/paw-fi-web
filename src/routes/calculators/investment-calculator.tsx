@@ -19,7 +19,7 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
     const routePath = '/calculators/investment-calculator';
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
-      title: 'Free Investment Calculator - Portfolio Growth & Return Projections | Moneko',
+      title: 'Investment Calculator - Portfolio Growth Projections | Moneko',
       description: 'Calculate investment returns and portfolio growth over time. Project your wealth building with different contribution amounts, rates of return, and time horizons.',
       keywords: 'investment calculator, investment return calculator, portfolio calculator, investment growth calculator, stock market calculator, wealth building calculator, investment projections',
       image: 'https://moneko.io/og-img.png',

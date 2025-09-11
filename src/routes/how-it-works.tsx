@@ -47,11 +47,11 @@ export const Route = createFileRoute('/how-it-works')({
   head: () => ({
     meta: [
       {
-        title: 'How It Works - AI Personal Finance Coach & Financial Education Platform | Moneko',
+        title: 'How It Works - AI Personal Finance Coach | Moneko',
       },
       {
         name: 'description',
-        content: 'Learn how Moneko\'s AI personal finance coach works. Discover our step-by-step approach to budgeting, investing education, goal tracking, and personalized financial planning.',
+        content: 'Learn how Moneko\'s AI coach works. Step-by-step budgeting, investing education, goal tracking, and personalized financial planning.',
       },
       {
         name: 'keywords',

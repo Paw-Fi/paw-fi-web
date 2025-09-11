@@ -35,8 +35,8 @@ export const Route = createFileRoute('/dashboard/user-settings/profile')({
   head: () => {
     const pageUrl = getCanonicalUrl('/dashboard/user-settings/financial-profile');
     const meta = seo({
-      title: 'Financial Profile Settings | Moneko',
-      description: 'Update your financial information and preferences to get personalized recommendations.',
+      title: 'Financial Profile Settings - Personal Info | Moneko',
+      description: 'Update financial information & preferences for personalized AI recommendations and financial planning.',
       keywords: 'financial profile, settings, personal finance, Moneko',
       url: pageUrl,
     });

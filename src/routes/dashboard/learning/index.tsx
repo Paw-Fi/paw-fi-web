@@ -25,8 +25,8 @@ export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/learning/');
-    const title = 'Personal Finance Learning Hub - AI-Powered Courses & Expert Education | Moneko';
-    const description = 'Access comprehensive financial education with AI-personalized courses and expert-led fundamentals. Master budgeting, investing, retirement planning, and wealth building at your own pace.';
+    const title = 'Finance Learning Hub - AI Courses & Expert Education | Moneko';
+    const description = 'Comprehensive financial education with AI courses & expert fundamentals. Master budgeting, investing & wealth building.';
     const keywords = 'financial education, personal finance courses, AI learning, investment education, financial literacy, money management, budgeting courses, retirement planning, wealth building education, personalized learning';
 
     const meta = seo({
@@ -50,9 +50,17 @@ export const Route = createFileRoute("/dashboard/learning/")({
             "@type": "EducationalOrganization",
             "@id": "https://moneko.io#organization",
             "name": "Moneko",
-            "description": "AI-powered personal finance education platform",
+            "description": "AI-powered personal finance education platform founded by CFA charterholder Sabina Shao",
             "url": "https://moneko.io",
             "logo": "https://moneko.io/og-img.png",
+            "founder": {
+              "@type": "Person",
+              "name": "Sabina Shao",
+              "jobTitle": "CEO & Financial Education Expert",
+              "hasCredential": "CFA Charterholder",
+              "knowsAbout": ["Personal Finance", "Investment Strategy", "Financial Planning", "Wealth Building"],
+              "yearsOfExperience": "10+"
+            },
             "sameAs": [
               "https://twitter.com/moneko_io",
               "https://linkedin.com/company/moneko"
@@ -229,6 +237,46 @@ export const Route = createFileRoute("/dashboard/learning/")({
       ]
     };
 
+    // GEO-Optimized FAQ Schema for Learning Platform
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does Moneko's AI-personalized learning work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Moneko's AI analyzes your financial goals, experience level, and learning preferences to create custom courses tailored specifically for you. The AI draws from content created and reviewed by CFA charterholder Sabina Shao and certified financial experts to ensure accuracy and quality."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What makes Moneko's financial education different from other platforms?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Moneko combines expert-designed foundational courses by CFA charterholder Sabina Shao with AI-powered personalized learning paths. This unique approach ensures you get both proven financial education principles and content customized to your specific situation and goals."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I trust Moneko's financial advice and education?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. All educational content is created and reviewed by certified financial professionals, including CFA charterholders with over 10 years of experience. Our approach is based on academic research, proven investment principles, and real-world financial planning expertise."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do the expert-designed essentials courses compare to AI courses?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Expert essentials courses provide foundational knowledge created by CFA charterholder Sabina Shao, covering universal financial principles. AI personalized courses build on these fundamentals with content tailored to your specific goals, timeline, and risk tolerance."
+          }
+        }
+      ]
+    };
+
     return {
       meta,
       link: [
@@ -241,6 +289,10 @@ export const Route = createFileRoute("/dashboard/learning/")({
         {
           type: 'application/ld+json',
           children: JSON.stringify(structuredData)
+        },
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(faqSchema)
         }
       ]
     };
