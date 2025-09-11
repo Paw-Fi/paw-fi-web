@@ -6,38 +6,31 @@ import { Link } from "@tanstack/react-router";
 const features = [
   {
     id: "ai-coach",
-    title: "AI Personal Finance Coach",
-    description: "Get personalized budgeting advice, investment recommendations, and money-saving insights from CFA-certified AI that learns your spending habits and financial goals.",
-    image: "/src/assets/images/home-showcase/finni-ai.png",
-    stats: "95% accuracy rate"
-  },  
-  {
-    id: "ai-assistant",
-    title: "Smart Budgeting App",
-    description: "Create budgets that actually work with AI-powered spending analysis, bill tracking, and automated savings recommendations. Better than Mint's basic categorization.",
+    title: "AI Financial Coach",
+    description: "Get personalized financial advice and insights powered by certified CFA professionals. Your AI coach learns your habits and provides tailored recommendations.",
     image: "/src/assets/images/home-showcase/moneko-ai.png",
-    stats: "Users save $15K+ annually"
-  },  
+    stats: "95% accuracy rate"
+  },
   {
     id: "goal-tracking",
-    title: "Financial Goal Tracker",
-    description: "Set and achieve specific savings goals like emergency funds, vacation money, or debt payoff. Track progress automatically and celebrate milestones with gamified rewards.",
+    title: "Smart Goal Tracking",
+    description: "Set, monitor, and achieve your financial goals with intelligent progress tracking and automated milestone celebrations.",
     image: "/src/assets/images/home-showcase/dashboard-goal-tracker.png",
-    stats: "Average $15K saved in year 1"
+    stats: "Average $15K saved"
   },
   {
     id: "portfolio",
-    title: "Investment Portfolio Manager",
-    description: "Build diversified investment portfolios with AI-guided asset allocation, automatic rebalancing, and risk management. Outperform traditional robo-advisors.",
+    title: "Portfolio Analytics",
+    description: "Track your investments with real-time performance insights, risk analysis, and automated rebalancing recommendations.",
     image: "/src/assets/images/home-showcase/dashboard-porfolio.png",
-    stats: "127% better returns than savings"
+    stats: "127% better returns"
   },
   {
     id: "learning",
-    title: "Financial Education Platform",
-    description: "Master personal finance with interactive courses on budgeting, investing, retirement planning, and debt management. Learn from MBA and CFA-certified instructors.",
+    title: "Financial Education Hub",
+    description: "Learn from expert-led courses, interactive lessons, and personalized learning paths designed by certified professionals.",
     image: "/src/assets/images/home-showcase/dashboard-learning.png",
-    stats: "50+ courses from financial experts"
+    stats: "50+ expert courses"
   }
 ];
 
@@ -46,7 +39,7 @@ export function DashboardShowcase() {
 
   return (
     <section className="relative z-10 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-6xl">
         {/* Section Header */}
         <div className="mb-16 text-center">
           <motion.h2
