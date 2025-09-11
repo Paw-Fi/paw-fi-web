@@ -64,8 +64,9 @@ export default defineConfig({
         id: 'G-KBNN5QXD4G',
       },
     }),
-    tanstackStart(),
-    react(),
+    tanstackStart({
+      customViteReactPlugin: true
+    }),
     compression({
       algorithm: 'gzip',
       ext: '.gz',
