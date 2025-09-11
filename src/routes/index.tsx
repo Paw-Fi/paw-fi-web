@@ -86,11 +86,11 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
     const pageUrl = getCanonicalUrl("/");
-    const title = "Best Mint Alternative 2024: AI Finance Coach | Moneko | 50,000+ Users";
+    const title = "AI Finance Coach | Moneko | 50,000+ Users";
     const description =
       "The #1 Mint alternative! Join 50,000+ former Mint users who've saved $2.3M+ with Moneko's AI personal finance coach. Free budgeting app with automated investing, CFA-certified guidance, and 127% better returns. Start saving your first $1,000 in 90 days.";
     const keywords =
-      "mint alternative, best mint alternative 2024, AI finance coach, personal finance app, budgeting app after mint, mint replacement, free budgeting app, investment advisor, robo advisor, financial planning, wealth building, CFA certified, financial education, money management, portfolio optimization, retirement planning, debt management, financial literacy, Y Combinator, SOC 2 certified, behavioral finance, compound interest calculator, emergency fund, financial goals, mint app replacement, budgeting app like mint";
+      "mint alternative, best mint alternative 2025, AI finance coach, personal finance app, budgeting app after mint, mint replacement, free budgeting app, investment advisor, robo advisor, financial planning, wealth building, CFA certified, financial education, money management, portfolio optimization, retirement planning, debt management, financial literacy, Y Combinator, SOC 2 certified, behavioral finance, compound interest calculator, emergency fund, financial goals, mint app replacement, budgeting app like mint";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({

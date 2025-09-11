@@ -2,34 +2,38 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import monekoImg from "@/assets/images/home-showcase/moneko-ai.png"
+import goalImg from "@/assets/images/home-showcase/dashboard-goal-tracker.png"
+import portfolioImg from "@/assets/images/home-showcase/dashboard-porfolio.png"
+import learningImg from "@/assets/images/home-showcase/dashboard-learning.png"
 
 const features = [
   {
     id: "ai-coach",
     title: "AI Financial Coach",
     description: "Get personalized financial advice and insights powered by certified CFA professionals. Your AI coach learns your habits and provides tailored recommendations.",
-    image: "/src/assets/images/home-showcase/moneko-ai.png",
+    image: monekoImg,
     stats: "95% accuracy rate"
   },
   {
     id: "goal-tracking",
     title: "Smart Goal Tracking",
     description: "Set, monitor, and achieve your financial goals with intelligent progress tracking and automated milestone celebrations.",
-    image: "/src/assets/images/home-showcase/dashboard-goal-tracker.png",
+    image: goalImg,
     stats: "Average $15K saved"
   },
   {
     id: "portfolio",
     title: "Portfolio Analytics",
     description: "Track your investments with real-time performance insights, risk analysis, and automated rebalancing recommendations.",
-    image: "/src/assets/images/home-showcase/dashboard-porfolio.png",
+    image: portfolioImg,
     stats: "127% better returns"
   },
   {
     id: "learning",
     title: "Financial Education Hub",
     description: "Learn from expert-led courses, interactive lessons, and personalized learning paths designed by certified professionals.",
-    image: "/src/assets/images/home-showcase/dashboard-learning.png",
+    image: learningImg,
     stats: "50+ expert courses"
   }
 ];
