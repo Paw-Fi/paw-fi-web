@@ -16,36 +16,18 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   build: {
     rollupOptions: {
-      treeshake: true, // Enable tree shaking for smaller bundles
-      output: {
-        // More aggressive chunk splitting to reduce memory usage
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('@tanstack')) {
-              return 'tanstack-vendor';
-            }
-            if (id.includes('@fortawesome')) {
-              return 'icons-vendor';
-            }
-            if (id.includes('framer-motion')) {
-              return 'animation-vendor';
-            }
-            return 'vendor';
-          }
-        },
-      }
+      treeshake: false,
     },
-    minify: 'esbuild', // Faster and more memory-efficient than terser
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    cssMinify: true,
     target: 'es2020',
-    chunkSizeWarningLimit: 300, // Smaller chunks
-    sourcemap: false, // Disable sourcemaps in production
-    // Aggressive memory optimizations
-    reportCompressedSize: false, // Skip gzip size reporting to save memory
-    assetsInlineLimit: 2048, // Smaller inline limit
-    cssMinify: 'esbuild', // Use esbuild for CSS too
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     port: 3000,
@@ -55,9 +37,12 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    // TanStack Router - disable auto code splitting to prevent CSS recursion
+    // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
     TanStackRouterVite({
-      autoCodeSplitting: false,
+      autoCodeSplitting: true,
+      codesSplitGroupings: [
+        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent', 'loader']
+      ]
     }),
     VitePluginRadar({
       analytics: {
@@ -67,6 +52,7 @@ export default defineConfig({
     tanstackStart({
       customViteReactPlugin: true
     }),
+    react(),
     compression({
       algorithm: 'gzip',
       ext: '.gz',
