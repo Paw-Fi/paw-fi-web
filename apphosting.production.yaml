@@ -1,112 +1,69 @@
-# Production configuration for 10-50 daily users
-runtime: nodejs20
+# Production environment configuration
+runtime: nodejs20  # or your current Node.js version
 
-# F2 minimum for production builds (F1 causes memory errors during build)
-instance_class: F2  # 1.2GHz CPU, 256MB RAM - required for successful builds
-service: default
+instance_class: F2  # Use F2 or higher for production; alternatives: F4, F4_1G
+service: default    # or give it a name if you have multiple services
 
 automatic_scaling:
-  min_instances: 0        # Scale to zero during off-peak to minimize costs
-  max_instances: 3        # Sufficient for 10-50 daily users
-  target_cpu_utilization: 0.70  # Higher threshold for cost optimization
-  target_throughput_utilization: 0.80
-  max_concurrent_requests: 80    # Adequate for small user base
+  min_instances: 2        # At least 2 instances for high availability
+  max_instances: 10       # Allow scaling based on traffic
+  target_cpu_utilization: 0.65  # Scale up when CPU usage > 65%
+  target_throughput_utilization: 0.75
+  max_concurrent_requests: 60
+
+resources:
+  cpu: 2
+  memory_gb: 2
+  disk_size_gb: 10  # Increase if you handle uploads
 
 handlers:
-  # Static assets with aggressive caching
-  - url: /(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif))
-    static_files: build/\1
-    upload: build/(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif))
-    secure: always
-    http_headers:
-      Cache-Control: "public, max-age=31536000, immutable"
-      Vary: "Accept-Encoding"
-    expiration: "365d"
-
-  # HTML files with shorter cache
-  - url: /(.*\.html)$
-    static_files: build/\1
-    upload: build/(.*\.html)$
-    secure: always
-    http_headers:
-      Cache-Control: "public, max-age=3600, must-revalidate"
-      Vary: "Accept-Encoding"
-    expiration: "1h"
-
-  # Root and other routes
   - url: /(.*)
-    static_files: build/index.html
-    upload: build/index.html
+    static_files: build/\1
+    upload: build/(.*)
     secure: always
     redirect_http_response_code: 301
-    http_headers:
-      Cache-Control: "public, max-age=3600, must-revalidate"
-      Vary: "Accept-Encoding"
-      X-Content-Type-Options: "nosniff"
-      X-Frame-Options: "DENY"
-      X-XSS-Protection: "1; mode=block"
-      Referrer-Policy: "strict-origin-when-cross-origin"
 
 env:
-  # Optimized Node.js settings for F2 instances and build process
+  # Production Supabase configuration
+  # Using secrets for secure environment variables
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=2048"  # Increased memory allocation for complex build
+    value: "--max-old-space-size=4096"
 
   - variable: VITE_SUPABASE_URL
-    secret: supabaseUrlSecretProd
+    secret: supabaseUrlSecretProd  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
     
   - variable: VITE_SUPABASE_ANON_KEY
-    secret: supabaseAnonKeySecretProd
+    secret: supabaseAnonKeySecretProd  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
 
   - variable: VITE_STRIPE_PUBLISHABLE_KEY
-    secret: stripePK_PROD
+    secret: stripePK_PROD  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
 
   - variable: VITE_STRIPE_SECRET_KEY
-    secret: stripeSK_PROD
+    secret: stripeSK_PROD  # Reference to a secret in Cloud Secret Manager
     availability:
       - BUILD
       - RUNTIME
 
-# Performance and reliability settings
+
+# Logging & Error Reporting
 inbound_services:
-  - warmup  # Keeps instances warm to reduce cold starts
+  - warmup
 
-# Optimized timeout for static content (was 300s - way too high!)
-timeout: 30s  # Sufficient for static files, forces optimization
-
-# Health checks for better reliability
-readiness_check:
-  path: "/"
-  check_interval_sec: 5
-  timeout_sec: 4
-  failure_threshold: 2
-  success_threshold: 2
-  app_start_timeout_sec: 300
-
-liveness_check:
-  path: "/"
-  check_interval_sec: 30
-  timeout_sec: 4
-  failure_threshold: 4
-  success_threshold: 2
-
-# Security and performance headers
+# Enable HTTPS-only connections
 network:
   forwarded_ports:
     - 443
-  session_affinity: false  # Not needed for static content
 
-# Note: Grant access to secrets using:
+# Set timeouts (default 60s, increase if needed)
+timeout: 300s
+# Note: Need to grant access to the secrets to the app engine service account by using:
 # firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
-# firebase apphosting:secrets:grantaccess supabaseUrlSecretProd --backend prod-paw-fi-web
-# firebase apphosting:secrets:grantaccess supabaseAnonKeySecretProd --backend prod-paw-fi-web
-# firebase apphosting:secrets:grantaccess stripePK_PROD --backend prod-paw-fi-web
