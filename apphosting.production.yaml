@@ -50,7 +50,7 @@ handlers:
 env:
   # Optimized Node.js settings for F2 instances and build process
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=1024"  # Proper memory allocation for F2 (256MB RAM)
+    value: "--max-old-space-size=2048"  # Increased memory allocation for complex build
 
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecretProd

@@ -18,32 +18,34 @@ export default defineConfig({
     rollupOptions: {
       treeshake: true, // Enable tree shaking for smaller bundles
       output: {
-        // Split chunks to reduce memory usage during build
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['@tanstack/react-router', '@tanstack/react-start'],
-          ui: ['@fortawesome/react-fontawesome', '@fortawesome/free-solid-svg-icons'],
+        // More aggressive chunk splitting to reduce memory usage
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@tanstack')) {
+              return 'tanstack-vendor';
+            }
+            if (id.includes('@fortawesome')) {
+              return 'icons-vendor';
+            }
+            if (id.includes('framer-motion')) {
+              return 'animation-vendor';
+            }
+            return 'vendor';
+          }
         },
       }
     },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
-      },
-      mangle: {
-        safari10: true, // Fix Safari 10 issues
-      },
-    },
-    cssMinify: true,
+    minify: 'esbuild', // Faster and more memory-efficient than terser
     target: 'es2020',
-    chunkSizeWarningLimit: 500, // Lower threshold to catch large chunks
-    sourcemap: false, // Disable sourcemaps in production for smaller files
-    // Optimize build memory usage
+    chunkSizeWarningLimit: 300, // Smaller chunks
+    sourcemap: false, // Disable sourcemaps in production
+    // Aggressive memory optimizations
     reportCompressedSize: false, // Skip gzip size reporting to save memory
-    assetsInlineLimit: 4096, // Inline smaller assets
+    assetsInlineLimit: 2048, // Smaller inline limit
+    cssMinify: 'esbuild', // Use esbuild for CSS too
   },
   server: {
     port: 3000,
