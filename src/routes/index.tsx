@@ -79,6 +79,7 @@ import { useDeviceType } from "@/hooks/use-device-type";
 import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
 import basicLessonsData from "@/data/basic-lessons.json";
 import { Footer } from "@/components/homepage/footer";
+import { useEffect } from "react";
 
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
@@ -311,11 +312,14 @@ export default function HomePage() {
   ];
 
   const { isMobile } = useDeviceType();
-  disableAnimationsOnMobile();
-
-  if (isMobile) {
-    MotionGlobalConfig.skipAnimations = true;
-  }
+  
+  // Apply mobile animation disabling
+  useEffect(() => {
+    disableAnimationsOnMobile();
+    if (isMobile) {
+      MotionGlobalConfig.skipAnimations = true;
+    }
+  }, [isMobile]);
 
   const title = "Best Mint Alternative 2024: AI Finance Coach | Moneko | 50,000+ Users";
   const description =
@@ -346,6 +350,7 @@ export default function HomePage() {
         <meta name="twitter:image" content="https://moneko.io/og-img.png" />
         
         {/* Additional SEO Tags */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Moneko" />
@@ -365,80 +370,141 @@ export default function HomePage() {
       <section className="relative z-10 px-4 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 text-center sm:mb-10 md:mb-12">
-            <motion.h2
-              className="text-foreground mb-4 text-2xl leading-tight font-bold sm:mb-6 sm:text-3xl md:text-4xl lg:text-5xl"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              Why 50,000+ Users Switched from Mint to Moneko's AI Finance Coach
-            </motion.h2>
-            <motion.p
-              className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              Watch how <strong>Moneko's AI personal finance coach</strong> creates personalized budgeting strategies, automates investment portfolios, and helps users save their first $1,000 in 90 days. See why we're rated the <strong>#1 Mint alternative</strong> for intelligent financial planning.
-            </motion.p>
+            {isMobile ? (
+              <>
+                <h2 className="text-foreground mb-4 text-2xl leading-tight font-bold sm:mb-6 sm:text-3xl md:text-4xl lg:text-5xl">
+                  Why 50,000+ Users Switched from Mint to Moneko's AI Finance Coach
+                </h2>
+                <p className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl">
+                  Watch how <strong>Moneko's AI personal finance coach</strong> creates personalized budgeting strategies, automates investment portfolios, and helps users save their first $1,000 in 90 days. See why we're rated the <strong>#1 Mint alternative</strong> for intelligent financial planning.
+                </p>
+              </>
+            ) : (
+              <>
+                <motion.h2
+                  className="text-foreground mb-4 text-2xl leading-tight font-bold sm:mb-6 sm:text-3xl md:text-4xl lg:text-5xl"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  viewport={{ once: true }}
+                >
+                  Why 50,000+ Users Switched from Mint to Moneko's AI Finance Coach
+                </motion.h2>
+                <motion.p
+                  className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  viewport={{ once: true }}
+                >
+                  Watch how <strong>Moneko's AI personal finance coach</strong> creates personalized budgeting strategies, automates investment portfolios, and helps users save their first $1,000 in 90 days. See why we're rated the <strong>#1 Mint alternative</strong> for intelligent financial planning.
+                </motion.p>
+              </>
+            )}
           </div>
 
           <Dialog>
             <DialogTrigger asChild>
-              <motion.div
-                className="group border-border relative cursor-pointer touch-manipulation overflow-hidden rounded-xl border sm:rounded-2xl"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                viewport={{ once: true }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <div className="relative aspect-video w-full">
-                  <video
-                    className="h-full w-full object-cover"
-                    src="/Moneko-onboard%20.webm"
-                    poster="/video-poster.webp"
-                    width={800}
-                    height={450}
-                    muted
-                    autoPlay
-                    loop
-                    playsInline
-                    preload="metadata"
-                  />
+              {isMobile ? (
+                <div className="group border-border relative cursor-pointer touch-manipulation overflow-hidden rounded-xl border sm:rounded-2xl">
+                  <div className="relative aspect-video w-full">
+                    <video
+                      className="h-full w-full object-cover"
+                      src="/Moneko-onboard%20.webm"
+                      poster="/video-poster.webp"
+                      width={800}
+                      height={450}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      preload="metadata"
+                    />
 
-                  {/* Text overlay container */}
-                  <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/30 to-transparent">
-                    <div className="max-w-2xl p-4 text-white sm:p-6 md:p-8 lg:p-12">
-                      <h3 className="mb-3 text-lg leading-tight font-bold sm:mb-4 sm:text-xl md:text-2xl lg:text-3xl">
-                        AI-Powered Budgeting & Investment Planning
-                      </h3>
-                      <p className="mb-4 text-sm leading-relaxed text-white/90 sm:mb-6 sm:text-base md:text-lg lg:text-xl">
-                        See how our CFA-certified AI personal finance coach creates custom budget plans, automates investment portfolios, and helps you achieve financial goals faster than traditional budgeting apps.
-                      </p>
-                      <div className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 sm:gap-2 sm:text-base">
+                    {/* Text overlay container */}
+                    <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/30 to-transparent">
+                      <div className="max-w-2xl p-4 text-white sm:p-6 md:p-8 lg:p-12">
+                        <h3 className="mb-3 text-lg leading-tight font-bold sm:mb-4 sm:text-xl md:text-2xl lg:text-3xl">
+                          AI-Powered Budgeting & Investment Planning
+                        </h3>
+                        <p className="mb-4 text-sm leading-relaxed text-white/90 sm:mb-6 sm:text-base md:text-lg lg:text-xl">
+                          See how our CFA-certified AI personal finance coach creates custom budget plans, automates investment portfolios, and helps you achieve financial goals faster than traditional budgeting apps.
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 sm:gap-2 sm:text-base">
+                          <FontAwesomeIcon
+                            icon={faPlay}
+                            className="text-xs sm:text-sm"
+                          />
+                          <span>Watch 3-Minute Demo</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Play button overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100 group-active:opacity-100">
+                      <div className="bg-background flex h-12 w-12 items-center justify-center rounded-full shadow-lg sm:h-14 sm:w-14 md:h-16 md:w-16">
                         <FontAwesomeIcon
                           icon={faPlay}
-                          className="text-xs sm:text-sm"
+                          className="text-primary ml-0.5 text-sm sm:ml-1 sm:text-base md:text-lg"
                         />
-                        <span>Watch 3-Minute Demo</span>
                       </div>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <motion.div
+                  className="group border-border relative cursor-pointer touch-manipulation overflow-hidden rounded-xl border sm:rounded-2xl"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                  viewport={{ once: true }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="relative aspect-video w-full">
+                    <video
+                      className="h-full w-full object-cover"
+                      src="/Moneko-onboard%20.webm"
+                      poster="/video-poster.webp"
+                      width={800}
+                      height={450}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      preload="metadata"
+                    />
 
-                  {/* Play button overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100 group-active:opacity-100">
-                    <div className="bg-background flex h-12 w-12 items-center justify-center rounded-full shadow-lg sm:h-14 sm:w-14 md:h-16 md:w-16">
-                      <FontAwesomeIcon
-                        icon={faPlay}
-                        className="text-primary ml-0.5 text-sm sm:ml-1 sm:text-base md:text-lg"
-                      />
+                    {/* Text overlay container */}
+                    <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/30 to-transparent">
+                      <div className="max-w-2xl p-4 text-white sm:p-6 md:p-8 lg:p-12">
+                        <h3 className="mb-3 text-lg leading-tight font-bold sm:mb-4 sm:text-xl md:text-2xl lg:text-3xl">
+                          AI-Powered Budgeting & Investment Planning
+                        </h3>
+                        <p className="mb-4 text-sm leading-relaxed text-white/90 sm:mb-6 sm:text-base md:text-lg lg:text-xl">
+                          See how our CFA-certified AI personal finance coach creates custom budget plans, automates investment portfolios, and helps you achieve financial goals faster than traditional budgeting apps.
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 sm:gap-2 sm:text-base">
+                          <FontAwesomeIcon
+                            icon={faPlay}
+                            className="text-xs sm:text-sm"
+                          />
+                          <span>Watch 3-Minute Demo</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Play button overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100 group-active:opacity-100">
+                      <div className="bg-background flex h-12 w-12 items-center justify-center rounded-full shadow-lg sm:h-14 sm:w-14 md:h-16 md:w-16">
+                        <FontAwesomeIcon
+                          icon={faPlay}
+                          className="text-primary ml-0.5 text-sm sm:ml-1 sm:text-base md:text-lg"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-6xl border-none bg-black p-0">
               <div

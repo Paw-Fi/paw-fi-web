@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatContext } from "@/contexts/chat-context";
+// Removed useAuthQuerySync import - now handled at root level
 import { getCanonicalUrl } from '@/utils/canonical';
 import { seo } from '@/utils/seo';
 import { useUserCourses } from "@/services/course-service";
@@ -256,6 +257,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
+  // Auth query sync is now handled at root level - removed redundant call
   // Query client for cache invalidation
   const queryClient = useQueryClient();
   

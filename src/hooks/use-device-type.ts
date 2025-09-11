@@ -36,6 +36,11 @@ export const useDeviceType = () => {
   const isDesktop = deviceType === DeviceType.DESKTOP;
 
   useEffect(() => {
+    // Skip on server-side rendering
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const handleResize = () => {
       const width = window.innerWidth;
       let newDeviceType: DeviceType;
@@ -53,6 +58,7 @@ export const useDeviceType = () => {
       }
     };
 
+    // Set initial device type based on current window size
     handleResize();
 
     window.addEventListener("resize", handleResize);
@@ -60,9 +66,7 @@ export const useDeviceType = () => {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [window.innerWidth]);
+  }, [deviceType]); // Remove window.innerWidth from dependency array
 
   return { deviceType, isMobile, isTablet, isDesktop };
 };

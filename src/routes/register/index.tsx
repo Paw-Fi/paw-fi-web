@@ -126,19 +126,7 @@ export function Register() {
           </div>
           <div className="flex-1 flex items-center">
             <div className="w-full max-w-md mx-auto px-6 py-8">
-              {/* Expert Attribution & Value Proposition */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg border">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="text-xs">FREE ACCOUNT</Badge>
-                  <Badge variant="outline" className="text-xs">EXPERT-DESIGNED</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Join 50,000+ users building wealth with expert-designed financial education
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Created by:</strong> Sabina Shao, CFA • Financial Education Expert
-                </p>
-              </div>
+            
 
               {/* Header */}
               <div className="mb-8">

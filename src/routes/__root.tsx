@@ -19,7 +19,10 @@ const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
 const ThemeSystemListener = lazy(() => import('../components/theme/theme-system-listener'))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ChatProvider } from '@/contexts/chat-context'
+import { AIChatProvider } from '@/contexts/ai-chat-context'
 import { ClientOnly } from '@/components/client-only'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
@@ -122,6 +125,13 @@ export const Route = createRootRouteWithContext<{
   component: RootComponent,
 })
 
+// Component to sync auth with query cache - must be inside AuthProvider
+function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
+  // Temporarily disabled to isolate the auth context issue
+  // useAuthQuerySync();
+  return <>{children}</>;
+}
+
 function RootComponent() {
   return (
     <RootDocument>
@@ -141,39 +151,46 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <MonekoOrganizationData />
         <MonekoWebsiteData />
-        
-      </head>
         <GoogleTagManager gtmId="G-KBNN5QXD4G" />
+      </head>
       
       <body className="h-screen">      
         
-      <AuthProvider>
-        <ChatProvider>
-          {/* Use ClientOnly wrapper to prevent hydration mismatches */}
-          <ClientOnly>
-            <Suspense fallback={null}>
-              {/* Listen for system theme changes and sync .dark when no explicit user override */}
-              <ThemeSystemListener />
-              <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-              />
-            </Suspense>
-          </ClientOnly>
-         {children}
-          {/* <TanStackRouterDevtools position="bottom-right" />
-          <ReactQueryDevtools buttonPosition="bottom-left" /> */}
-          <Scripts />
-        </ChatProvider>
-      </AuthProvider>
+      <HelmetProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <AIChatProvider>
+              <ChatProvider>
+                <AuthSyncWrapper>
+                {/* Use ClientOnly wrapper to prevent hydration mismatches */}
+                <ClientOnly>
+                  <Suspense fallback={null}>
+                    {/* Listen for system theme changes and sync .dark when no explicit user override */}
+                    <ThemeSystemListener />
+                    <ToastContainer
+                      position="top-right"
+                      autoClose={5000}
+                      hideProgressBar={false}
+                      newestOnTop={false}
+                      closeOnClick
+                      rtl={false}
+                      pauseOnFocusLoss
+                      draggable
+                      pauseOnHover
+                      theme="light"
+                    />
+                  </Suspense>
+                </ClientOnly>
+               {children}
+                {/* <TanStackRouterDevtools position="bottom-right" />
+                <ReactQueryDevtools buttonPosition="bottom-left" /> */}
+                <Scripts />
+                </AuthSyncWrapper>
+              </ChatProvider>
+            </AIChatProvider>
+          </AuthProvider>
+        </ErrorBoundary>
+      </HelmetProvider>
       </body>
     </html>
   )

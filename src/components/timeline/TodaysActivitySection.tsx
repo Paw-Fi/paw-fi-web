@@ -4,6 +4,7 @@ import { faCalendarDay, faPlus, faTrophy, faChartLine, faCalendarCheck, faRocket
 import { Activity } from '@/hooks/useUserActivities';
 import { ActivityCard } from './ActivityCard';
 import { Link } from '@tanstack/react-router';
+import { Calendar, Trophy, TrendingUp, BookOpen } from 'lucide-react';
 
 interface TodaysActivitySectionProps {
   activities: Activity[];
@@ -12,84 +13,58 @@ interface TodaysActivitySectionProps {
 export function TodaysActivitySection({ activities }: TodaysActivitySectionProps) {
   const hasActivities = activities.length > 0;
 
+  // Clean Apple-inspired animation variants
   const sectionVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
+    initial: { opacity: 0 },
+    animate: {
       opacity: 1,
-      y: 0,
       transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.4,
         staggerChildren: 0.1,
+        ease: [0.25, 0.46, 0.45, 0.94],
       },
     },
   };
 
-  const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
+  const itemVariants: Variants = {
+    initial: { opacity: 0, y: 16 },
+    animate: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
     },
   };
 
   const emptyStateVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: {
+    initial: { opacity: 0, y: 12 },
+    animate: {
       opacity: 1,
-      scale: 1,
+      y: 0,
       transition: {
-        duration: 0.5,
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.4,
         staggerChildren: 0.1,
+        ease: [0.25, 0.46, 0.45, 0.94],
       },
-    },
-  };
-
-  const iconVariants: Variants = {
-    hidden: { opacity: 0, rotate: -10 },
-    visible: {
-      opacity: 1,
-      rotate: 0,
-      transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-    },
-  };
-
-  const textVariants: Variants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-    },
-  };
-
-  const buttonVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
     },
   };
 
   return (
     <motion.div
       variants={sectionVariants}
-      initial="hidden"
-      animate="visible"
-      className="mb-8 p-8 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-3xl"
+      initial="initial"
+      animate="animate"
+      className="mb-16 p-8 bg-background rounded-3xl"
     >
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-xl">
-          <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5 text-white" />
+      {/* Clean Header */}
+      <motion.div className="flex items-center gap-4 mb-8" variants={itemVariants}>
+        <div className="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+          <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-3xl font-light text-foreground mb-2">
             Today's Activity
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             {new Date().toLocaleDateString('en-US', { 
               weekday: 'long', 
               year: 'numeric', 
@@ -98,23 +73,24 @@ export function TodaysActivitySection({ activities }: TodaysActivitySectionProps
             })}
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {hasActivities ? (
-        <motion.div className="space-y-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-2xl text-sm font-medium">
-              <FontAwesomeIcon icon={faTrophy} className="w-3 h-3" />
+        <motion.div className="space-y-8" variants={itemVariants}>
+          {/* Clean Activity Counter */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-2xl w-fit">
+            <Trophy className="w-4 h-4" />
+            <span className="font-medium">
               {activities.length} {activities.length === 1 ? 'activity' : 'activities'} completed
-            </div>
+            </span>
           </div>
           
+          {/* Clean Activity List */}
           <div className="space-y-6">
             {activities.map((activity, index) => (
               <motion.div
                 key={activity.id}
-                variants={cardVariants}
-                className="transform"
+                variants={itemVariants}
               >
                 <ActivityCard activity={activity} index={index} />
               </motion.div>
@@ -124,47 +100,79 @@ export function TodaysActivitySection({ activities }: TodaysActivitySectionProps
       ) : (
         <motion.div
           variants={emptyStateVariants}
-          className="text-center py-12"
+          initial="initial"
+          animate="animate"
+          className="text-center py-16"
         >
+          {/* Clean Empty State Icon */}
           <motion.div
-            variants={iconVariants}
-            className="w-16 h-16 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center"
+            variants={itemVariants}
+            className="w-20 h-20 mx-auto mb-8 bg-muted/20 rounded-3xl flex items-center justify-center"
           >
-            <FontAwesomeIcon 
-              icon={faCalendarCheck} 
-              className="w-8 h-8 text-gray-400 dark:text-gray-500" 
-            />
+            <Calendar className="w-10 h-10 text-muted-foreground" />
           </motion.div>
+          
+          {/* Clean Typography */}
           <motion.h3
-            variants={textVariants}
-            className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            variants={itemVariants}
+            className="text-2xl font-light text-foreground mb-4"
           >
             No activities yet today
           </motion.h3>
+          
           <motion.p
-            variants={textVariants}
-            className="text-gray-500 dark:text-gray-400 mb-8"
+            variants={itemVariants}
+            className="text-muted-foreground mb-12 max-w-md mx-auto leading-relaxed"
           >
-            Start your day by completing a goal milestone or making progress
+            Start your financial journey today. Set a goal, track progress, or complete a lesson to see your activity here.
           </motion.p>
+          
+          {/* Clean Action Buttons */}
           <motion.div
-            variants={buttonVariants}
-            className="flex flex-col sm:flex-row gap-3 justify-center items-center"
+            variants={itemVariants}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <Link 
               to="/dashboard/tracker" 
-              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-2xl transition-all duration-200 hover:shadow-sm"
+              className="flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground font-medium rounded-full hover:opacity-90 transition-opacity duration-200"
             >
-              <FontAwesomeIcon icon={faRocket} className="w-4 h-4 mr-2" />
+              <TrendingUp className="w-5 h-5" />
               View Goals
             </Link>
             <Link 
-              to="/dashboard/income-builder" 
-              className="px-6 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-2xl border border-gray-200 dark:border-gray-600 transition-all duration-200 hover:shadow-sm"
+              to="/dashboard/learning" 
+              className="flex items-center gap-3 px-8 py-4 border border-border bg-background hover:bg-muted/50 text-foreground font-medium rounded-full transition-colors duration-200"
             >
-              <FontAwesomeIcon icon={faDollarSign} className="w-4 h-4 mr-2" />
-              Build Income
+              <BookOpen className="w-5 h-5" />
+              Start Learning
             </Link>
+          </motion.div>
+          
+          {/* Clean Feature Icons */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-16 grid grid-cols-3 gap-8 max-w-sm mx-auto"
+          >
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-sm text-muted-foreground">Set Goals</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <p className="text-sm text-muted-foreground">Track Progress</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-sm text-muted-foreground">Stay Active</p>
+            </div>
           </motion.div>
         </motion.div>
       )}

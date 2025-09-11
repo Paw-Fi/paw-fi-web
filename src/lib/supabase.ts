@@ -59,35 +59,51 @@ if (!supabaseUrl || supabaseUrl.includes('${') || !supabaseAnonKey || supabaseAn
   console.error('Missing or invalid Supabase environment variables');
 }
 
-// Create a safe version of createClient that validates inputs first
+// Global singleton to prevent multiple GoTrueClient instances
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
+
+// Create a safe version of createClient that validates inputs first and ensures singleton
 const createSafeClient = () => {
+  // Return existing instance if it exists
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
   try {
     // Validate URL format before creating client
     if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('${') || supabaseAnonKey.includes('${')) {
       console.error('Invalid Supabase credentials. Check environment variables.');
       // Return a dummy client that won't crash but will log errors
-      return {
+      const dummyClient = {
         auth: { onAuthStateChange: () => ({ data: null, error: new Error('Invalid credentials') }) },
         from: () => ({ select: () => Promise.resolve({ data: null, error: new Error('Invalid credentials') }) })
       } as any;
+      supabaseInstance = dummyClient;
+      return dummyClient;
     }
     
     // Only create the client if we have valid credentials
-    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        // Add storage key to prevent conflicts between multiple apps
+        storageKey: 'moneko-supabase-auth-token',
       }
       // Removed global Content-Type header to allow proper MIME types for file uploads
     });
+    
+    return supabaseInstance;
   } catch (error) {
     console.error('Error creating Supabase client:', error);
     // Return a dummy client that won't crash but will log errors
-    return {
+    const errorClient = {
       auth: { onAuthStateChange: () => ({ data: null, error }) },
       from: () => ({ select: () => Promise.resolve({ data: null, error }) })
     } as any;
+    supabaseInstance = errorClient;
+    return errorClient;
   }
 };
 

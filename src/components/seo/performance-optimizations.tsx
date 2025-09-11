@@ -15,7 +15,8 @@ export function PerformanceHints() {
       <link rel="preconnect" href="https://www.googletagmanager.com" />
       
       {/* Early hints for critical resources */}
-      <link rel="modulepreload" href="/src/main.tsx" />
+      {/* TanStack Start uses client.tsx as entry point */}
+      <link rel="modulepreload" href="/src/client.tsx" />
       <link rel="modulepreload" href="/src/router.tsx" />
     </>
   )

@@ -62,19 +62,26 @@ export function CriticalResources({
 
 export function MonekoCriticalResources() {
   return (
-    <CriticalResources
-      fonts={[
-        '/fonts/Poppins-400.woff2',
-        '/fonts/Poppins-600.woff2',
-        '/fonts/HeptaSlab-600.woff2',
-      ]}
-      images={[
-        '/logo192.webp',  // Updated to WebP with PNG fallback
-        '/logo512.webp',  // Added larger WebP logo
-        '/hero-bg.webp',
-        '/og-img.png',    // OG image for social sharing
-      ]}
-    />
+    <>
+      {/* Use Google Fonts for better performance and reliability */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" 
+        rel="stylesheet" 
+      />
+      
+      <CriticalResources
+        fonts={[]}  // Empty array since we're using Google Fonts
+        images={[
+          // Only preload images that are actually used on the initial page load
+          '/logo192.webp',  // Used in favicon and initial load
+          // Remove unused preloads to avoid warnings
+          // '/logo512.webp',  // Only preload if used immediately
+          // '/og-img.png',    // Only needed for social sharing, not initial load
+        ]}
+      />
+    </>
   )
 }
 
@@ -99,7 +106,8 @@ export function PerformanceHints() {
       <link rel="preconnect" href="https://js.stripe.com" />
       
       {/* Early hints for critical resources - load essential modules first */}
-      <link rel="modulepreload" href="/src/main.tsx" />
+      {/* TanStack Start uses client.tsx as entry point */}
+      <link rel="modulepreload" href="/src/client.tsx" />
       <link rel="modulepreload" href="/src/router.tsx" />
       <link rel="modulepreload" href="/src/client.tsx" />
       

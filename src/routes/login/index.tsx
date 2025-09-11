@@ -144,15 +144,7 @@ export function Login() {
           {/* Main content */}
           <div className="flex-1 flex items-center">
             <div className="w-full max-w-md mx-auto px-6 py-8">
-              {/* Expert Attribution & Security Notice */}
-              <div className="mb-6 p-4 bg-card/50 rounded-lg border">
-                <p className="text-sm text-muted-foreground mb-2">
-                  <strong>Secure Login Portal</strong> - Protected by bank-level encryption
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Expert-Designed Platform:</strong> Built by CFA charterholder Sabina Shao and financial technology experts
-                </p>
-              </div>
+            
 
               {/* Heading */}
               <div className="mb-8">

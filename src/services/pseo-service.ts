@@ -5,7 +5,7 @@
  * It handles fetching SEO page data, related pages, and provides utilities for sitemap access.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 // Define the SEO page data interface to match our database schema
 export interface SEOPageData {
@@ -44,12 +44,11 @@ interface FunctionInvokeOptions {
   body?: any;
 }
 
-// Ensure environment variables are loaded
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// We intentionally reuse the shared Supabase client from '@/lib/supabase'
+// to prevent multiple GoTrueClient instances in the same browser context.
 
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// For helper URL functions below, we still need the Supabase base URL
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL as string;
 
 /**
  * Fetch SEO page data by slug

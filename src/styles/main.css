@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "./app.css";
 @import "./page-transitions.css";
-@import "./fonts.css";
+/* Temporarily disable local fonts.css - using Google Fonts instead */
+/* @import "./fonts.css"; */
 @import "./animations.css";
 @import "./image-choice-question.css";
 @import "./scrollbar.css";

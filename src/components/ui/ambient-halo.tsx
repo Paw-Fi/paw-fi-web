@@ -1,10 +1,26 @@
 import React from 'react';
+import { useDeviceType } from '@/hooks/use-device-type';
 
 /**
- * Optimized AmbientHalo component using CSS animations instead of Framer Motion
- * for better performance and reduced bundle size.
+ * Optimized AmbientHalo component with mobile-specific optimizations
+ * to prevent flashing and performance issues on mobile devices.
  */
 const AmbientHalo = () => {
+  const { isMobile } = useDeviceType();
+
+  // Disable on mobile to prevent disco flashing effect
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-halo-bg dark:bg-dark-halo-bg">
+        {/* Simple static gradient for mobile - no animations */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="w-[400px] h-[400px] rounded-full blur-xl bg-gradient-radial from-purple-200/20 via-blue-200/10 to-transparent dark:from-purple-800/20 dark:via-blue-800/10 dark:to-transparent opacity-60" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-halo-bg dark:bg-dark-halo-bg">
       {/* Primary Ambient Halo - Light Purple */}

@@ -53,7 +53,7 @@ interface ChatProviderProps {
   children: ReactNode;
 }
 
-export function ChatProvider({ children }: ChatProviderProps) {
+function ChatProviderImpl({ children }: ChatProviderProps) {
   const { user } = useAuth();
   const isAuthenticated = !!user;
   
@@ -280,6 +280,14 @@ export function ChatProvider({ children }: ChatProviderProps) {
       {children}
     </ChatContext.Provider>
   );
+}
+
+export function ChatProvider({ children }: ChatProviderProps) {
+  // Avoid invoking useAuth on the server to prevent hydration/SSR context issues
+  if (typeof window === 'undefined') {
+    return <>{children}</>;
+  }
+  return <ChatProviderImpl>{children}</ChatProviderImpl>;
 }
 
 export function useChatContext() {

@@ -37,7 +37,10 @@ export const useCompletedLessons = (userId: string | undefined) => {
       return response.completed_lessons || [];
     },
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    // More balanced stale time for better performance
+    staleTime: 60 * 1000, // 1 minute (was 30 seconds)
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    // Refetch only when data is stale (more efficient than 'always')
+    refetchOnMount: true, // Default behavior - only refetch if stale
   });
 };

@@ -176,8 +176,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  
+  // During SSR/hydration, context might be temporarily undefined
+  // Add a safety check to prevent hydration errors
+  if (typeof window !== 'undefined' && context === undefined) {
+    // On client-side, if context is undefined, it means we're in a hydration race condition
+    // Return a safe default state that matches the initial AuthProvider state
+    return {
+      user: null,
+      session: null,
+      isLoading: true, // Keep loading true during hydration
+      isAuthenticated: false,
+      signUp: async () => ({ success: false, data: null }),
+      signIn: async () => ({ success: false, data: null }),
+      signOut: async () => ({ success: false }),
+      resetPassword: async () => ({ success: false }),
+      deleteAccount: async () => ({ success: false }),
+    } as AuthContextType;
+  }
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
 };
