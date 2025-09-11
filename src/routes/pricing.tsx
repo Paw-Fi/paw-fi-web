@@ -24,6 +24,7 @@ import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-g
 import { SocialProofSection } from "@/components/pricing/social-proof-section";
 import { useAuth } from "@/contexts/auth-context";
 import { useSubscription } from "@/hooks/use-subscription";
+import { StructuredData } from "@/components/seo/structured-data";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -38,16 +39,29 @@ export const Route = createFileRoute("/pricing")({
       url: pageUrl,
     });
 
+    // Enhanced GEO-Optimized Product Schema with Expert Attribution
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Product",
       name: "Moneko Subscription Plans",
       description:
-        "Subscription plans for Moneko financial education and management application.",
+        "Expert-designed financial education subscription plans created by CFA charterholder Sabina Shao, offering AI-powered coaching, investment guidance, and personalized budgeting tools.",
       image: "https://moneko.io/og-img.png",
       brand: {
         "@type": "Brand",
         name: "Moneko",
+      },
+      creator: {
+        "@type": "Person",
+        "name": "Sabina Shao",
+        "jobTitle": "CEO & Financial Education Expert",
+        "hasCredential": "CFA Charterholder",
+        "knowsAbout": ["Personal Finance", "Investment Strategy", "Financial Planning", "Wealth Building"]
+      },
+      category: "Financial Education Software",
+      audience: {
+        "@type": "Audience",
+        "audienceType": "Individual Financial Learners"
       },
       offers: {
         "@type": "OfferCatalog",
@@ -290,6 +304,29 @@ function PricingPage() {
 
   return (
     <AmbientHaloLayout>
+      {/* GEO-Optimized FAQ Schema for Pricing */}
+      <StructuredData
+        type="faq"
+        data={[
+          {
+            question: "What makes Moneko's financial education different from other apps?",
+            answer: "Moneko is created by CFA charterholder Sabina Shao with over 10 years of financial expertise. Our AI-powered platform provides personalized coaching, expert-designed courses, and real-time portfolio tracking - all backed by proven investment strategies and behavioral finance principles."
+          },
+          {
+            question: "Can I trust Moneko with my financial planning decisions?",
+            answer: "Yes. Moneko's content is created and reviewed by certified financial experts including CFA charterholders. Our educational approach is based on academic research, proven investment principles, and decades of real-world financial planning experience."
+          },
+          {
+            question: "How does Moneko's AI coaching compare to human financial advisors?",
+            answer: "Moneko's AI coaching provides 24/7 access to expert-designed financial guidance at a fraction of the cost of traditional advisors. While not replacing human advisors for complex situations, our AI delivers personalized education and actionable insights based on CFA-level expertise."
+          },
+          {
+            question: "What credentials do Moneko's financial experts have?",
+            answer: "Moneko is founded and led by Sabina Shao, a CFA charterholder with over 10 years of experience in personal finance and investment strategy. Our content team includes certified financial experts with combined decades of experience in wealth management and financial education."
+          }
+        ]}
+      />
+
       <HomeHeader />
       <motion.div
         initial={prefersReducedMotion ? undefined : "hidden"} // Use undefined for props if variants are undefined
@@ -298,6 +335,17 @@ function PricingPage() {
         variants={prefersReducedMotion ? undefined : pageVariants}
         className="container mx-auto min-h-screen px-4 py-12 md:py-20"
       >
+        {/* Expert Attribution Header */}
+        <motion.div 
+          className="mb-8 text-center"
+          variants={prefersReducedMotion ? undefined : cardVariants}
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-full border mb-4">
+            <Badge variant="secondary" className="text-xs">EXPERT-DESIGNED</Badge>
+            <span className="text-sm font-medium">By CFA Charterholder Sabina Shao</span>
+          </div>
+        </motion.div>
+
         <motion.header
           // Removed variants from header as children are individually animated
           className="mb-12 text-center md:mb-16"
@@ -306,13 +354,13 @@ function PricingPage() {
             className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
             variants={prefersReducedMotion ? undefined : cardVariants} // Re-use card variant for simple entrance
           >
-            Master Your Money with Personalized Financial Education
+            Master Your Money with Expert Financial Education
           </motion.h1>
           <motion.p
             className="mx-auto max-w-2xl text-lg text-gray-700 md:text-xl dark:text-gray-300"
             variants={prefersReducedMotion ? undefined : cardVariants}
           >
-            From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor.
+            From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor. Created by certified financial experts.
           </motion.p>
 
           <motion.div
