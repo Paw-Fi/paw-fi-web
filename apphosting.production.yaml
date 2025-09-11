@@ -1,19 +1,16 @@
-# Optimized production configuration for small project
+# Production configuration for 10-50 daily users
 runtime: nodejs20
 
-# F1 is sufficient for small production projects (saves ~60% costs vs F2)
-instance_class: F1  # 600MHz CPU, 128MB RAM - perfect for static sites with Cloudflare
+# F2 minimum for production builds (F1 causes memory errors during build)
+instance_class: F2  # 1.2GHz CPU, 256MB RAM - required for successful builds
 service: default
 
 automatic_scaling:
-  min_instances: 1        # Start with 1 instance to save costs
-  max_instances: 5        # Reduced max for small project
-  target_cpu_utilization: 0.70  # Slightly higher threshold
+  min_instances: 0        # Scale to zero during off-peak to minimize costs
+  max_instances: 3        # Sufficient for 10-50 daily users
+  target_cpu_utilization: 0.70  # Higher threshold for cost optimization
   target_throughput_utilization: 0.80
-  max_concurrent_requests: 80   # F1 can handle more concurrent requests for static content
-
-# F1 instances have fixed resources, no need to specify
-# resources section not needed for F1
+  max_concurrent_requests: 80    # Adequate for small user base
 
 handlers:
   # Static assets with aggressive caching
@@ -51,9 +48,9 @@ handlers:
       Referrer-Policy: "strict-origin-when-cross-origin"
 
 env:
-  # Optimized Node.js settings for F1 instances
+  # Optimized Node.js settings for F2 instances and build process
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=512"  # Reduced for F1 instance (128MB RAM)
+    value: "--max-old-space-size=1024 --optimize-for-size"  # Proper memory allocation for F2 (256MB RAM) + build optimization
 
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecretProd

@@ -17,7 +17,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       treeshake: true, // Enable tree shaking for smaller bundles
-      output: {       
+      output: {
+        // Split chunks to reduce memory usage during build
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['@tanstack/react-router', '@tanstack/react-start'],
+          ui: ['@fortawesome/react-fontawesome', '@fortawesome/free-solid-svg-icons'],
+        },
       }
     },
     minify: 'terser',
@@ -27,11 +33,17 @@ export default defineConfig({
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
+      mangle: {
+        safari10: true, // Fix Safari 10 issues
+      },
     },
     cssMinify: true,
     target: 'es2020',
     chunkSizeWarningLimit: 500, // Lower threshold to catch large chunks
     sourcemap: false, // Disable sourcemaps in production for smaller files
+    // Optimize build memory usage
+    reportCompressedSize: false, // Skip gzip size reporting to save memory
+    assetsInlineLimit: 4096, // Inline smaller assets
   },
   server: {
     port: 3000,
@@ -41,12 +53,9 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
+    // TanStack Router with balanced code splitting
     TanStackRouterVite({
       autoCodeSplitting: true,
-      codesSplitGroupings: [
-        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent', 'loader']
-      ]
     }),
     VitePluginRadar({
       analytics: {
